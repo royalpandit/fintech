@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: flexi-postgres
+    environment:
+      POSTGRES_USER: flexi
+      POSTGRES_PASSWORD: flexi
+      POSTGRES_DB: flexi
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: flexi-redis
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./apps/backend
+    container_name: flexi-backend
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://flexi:flexi@postgres:5432/flexi
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: change-me
+    ports:
+      - "4000:4000"
+    depends_on:
+      - postgres
+      - redis
+
+  ai:
+    build: ./apps/ai
+    container_name: flexi-ai
+    environment:
+      PORT: 8000
+      OPENAI_API_KEY: ""
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+
+  admin:
+    build: ./apps/admin
+    container_name: flexi-admin
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

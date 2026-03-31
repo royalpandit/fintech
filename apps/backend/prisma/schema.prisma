@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  user
+  advisor
+  admin
+}
+
+enum VerificationStatus {
+  pending
+  approved
+  rejected
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  phone     String   @unique
+  password  String
+  role      RoleName @default(user)
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdvisorProfile {
+  id                 Int                @id @default(autoincrement())
+  userId             Int                @unique
+  sebiRegistrationNo String             @unique
+  experienceYears    Int?
+  bio                String?
+  verificationStatus VerificationStatus @default(pending)
+  createdAt          DateTime           @default(now())
+}
+
+model MarketPost {
+  id               Int      @id @default(autoincrement())
+  advisorId        Int
+  title            String
+  content          String
+  assetType        String
+  sentiment        String
+  riskLevel        String
+  disclaimer       String
+  complianceStatus String   @default("approved")
+  createdAt        DateTime @default(now())
+}
+
+model CommunityPost {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  content   String
+  mediaUrl  String?
+  category  String
+  createdAt DateTime @default(now())
+}
+
+model Portfolio {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  totalValue   Float    @default(0)
+  riskScore    Float    @default(0)
+  lastSyncedAt DateTime @default(now())
+}
+
+model Holding {
+  id           Int    @id @default(autoincrement())
+  portfolioId  Int
+  symbol       String
+  quantity     Float
+  averagePrice Float
+  currentPrice Float
+  sector       String?
+}
+
+model VirtualWallet {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  balance   Float
+  createdAt DateTime @default(now())
+}
+
+model VirtualTrade {
+  id        Int      @id @default(autoincrement())
+  walletId  Int
+  symbol    String
+  tradeType String
+  quantity  Float
+  price     Float
+  tradeDate DateTime @default(now())
+}
+
+model Transaction {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  amount          Float
+  transactionType String
+  merchantName    String
+  category        String
+  transactionDate DateTime @default(now())
+}
+
+model Budget {
+  id           Int    @id @default(autoincrement())
+  userId       Int
+  category     String
+  monthlyLimit Float
+  month        String
+}
+
+model Course {
+  id          Int      @id @default(autoincrement())
+  advisorId   Int
+  title       String
+  description String
+  price       Float
+  videoUrl    String?
+  createdAt   DateTime @default(now())
+}
+
+model Subscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  advisorId Int
+  amount    Float
+  status    String
+  startDate DateTime @default(now())
+  endDate   DateTime
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  actorId   Int?
+  action    String
+  module    String
+  payload   Json?
+  createdAt DateTime @default(now())
+}

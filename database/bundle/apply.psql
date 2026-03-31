@@ -1,0 +1,8 @@
+\set ON_ERROR_STOP on
+
+-- Flexi DB bundle entrypoint (psql script)
+-- Runs schema + seed in the correct order.
+
+\i database/migrations/001_init.sql
+\i database/migrations/002_seed.sql
+

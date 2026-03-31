@@ -1,0 +1,51 @@
+# API Coverage (PTDD Mapping)
+
+Base: `/api/v1`
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/logout`
+- `GET /user/profile`
+- `PUT /user/profile`
+- `POST /advisor/verify`
+- `GET /advisor/status`
+- `POST /advisor/:id/subscribe`
+- `POST /market/posts`
+- `GET /market/posts`
+- `POST /market/posts/:id/comment`
+- `POST /market/posts/:id/like`
+- `POST /market/posts/:id/report`
+- `POST /community/posts`
+- `GET /community/posts`
+- `POST /community/follow/:userId`
+- `DELETE /community/unfollow/:userId`
+- `POST /community/posts/:id/save`
+- `POST /portfolio/connect`
+- `GET /portfolio`
+- `GET /portfolio/ai-insights`
+- `POST /portfolio/manual-add`
+- `GET /portfolio/performance`
+- `POST /lab/create`
+- `GET /lab/balance`
+- `POST /lab/trade`
+- `GET /lab/portfolio`
+- `GET /lab/leaderboard`
+- `POST /ai/chat`
+- `POST /ai/risk-profile`
+- `GET /ai/expense-analysis`
+- `POST /finance/connect-upi`
+- `GET /finance/transactions`
+- `POST /finance/categorize`
+- `POST /finance/budget`
+- `GET /finance/monthly-report`
+- `POST /courses/create`
+- `GET /courses`
+- `POST /courses/:id/purchase`
+- `GET /notifications`
+- `POST /notifications/read`
+- `POST /admin/advisor/:id/approve`
+- `POST /admin/posts/:id/moderate`
+- `GET /admin/reports`
+- `GET /admin/audit-logs`
+- `POST /moderation/analyze`
+- `GET /health`
