@@ -141,6 +141,47 @@ enum NotificationChannel {
   @@map("notification_channel")
 }
 
+enum RiskAppetite {
+  conservative
+  moderate
+  aggressive
+
+  @@map("risk_appetite")
+}
+
+enum ChatContextType {
+  general
+  portfolio
+  expense
+  market
+
+  @@map("chat_context_type")
+}
+
+enum AlertDirection {
+  above
+  below
+
+  @@map("alert_direction")
+}
+
+enum DevicePlatform {
+  ios
+  android
+  web
+
+  @@map("device_platform")
+}
+
+enum InvoiceStatus {
+  draft
+  issued
+  paid
+  void
+
+  @@map("invoice_status")
+}
+
 // ─── 1) Identity & Access ────────────────────────────────
 
 model Role {
@@ -210,6 +251,19 @@ model User {
   payoutReviews        PayoutRequest[]       @relation("payoutReviewer")
   notifications        Notification[]
   auditLogs            AuditLog[]
+  riskProfile          RiskProfile?
+  chatSessions         AiChatSession[]
+  watchlists           Watchlist[]
+  communityReactions   CommunityReaction[]
+  advisorPlans         AdvisorPlan[]
+  lessonProgress       CourseLessonProgress[]
+  courseReviews         CourseReview[]
+  devices              UserDevice[]
+  notificationPref     NotificationPreference?
+  userPreference       UserPreference?
+  priceAlerts          PriceAlert[]
+  strategies           StrategyTemplate[]
+  invoices             Invoice[]
 
   @@map("users")
 }
@@ -337,6 +391,7 @@ model MarketPost {
   advisor   User              @relation(fields: [advisorUserId], references: [id], onDelete: Cascade)
   comments  MarketComment[]
   reactions MarketReaction[]
+  tags      MarketPostTag[]
 
   @@index([advisorUserId])
   @@index([marketSymbol])
@@ -431,9 +486,11 @@ model CommunityPost {
   updatedAt  DateTime       @updatedAt @map("updated_at")
   deletedAt  DateTime?      @map("deleted_at")
 
-  user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comments CommunityComment[]
-  saves    CommunityPostSave[]
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments  CommunityComment[]
+  saves     CommunityPostSave[]
+  reactions CommunityReaction[]
+  tags      CommunityPostTag[]
 
   @@index([userId])
   @@index([createdAt(sort: Desc)])
@@ -825,7 +882,8 @@ model SavingsGoal {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contributions SavingsGoalContribution[]
 
   @@map("savings_goals")
 }
@@ -912,6 +970,7 @@ model Course {
   advisor     User               @relation("courseAdvisor", fields: [advisorUserId], references: [id], onDelete: Cascade)
   lessons     CourseLesson[]
   enrollments CourseEnrollment[]
+  reviews     CourseReview[]
 
   @@index([advisorUserId])
   @@map("courses")
@@ -926,7 +985,8 @@ model CourseLesson {
   durationSeconds Int?     @map("duration_seconds")
   createdAt       DateTime @default(now()) @map("created_at")
 
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course   Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress CourseLessonProgress[]
 
   @@unique([courseId, position])
   @@index([courseId, position])
@@ -984,7 +1044,8 @@ model Payment {
   metadata          Json?
   createdAt         DateTime      @default(now()) @map("created_at")
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  invoice Invoice?
 
   @@index([status, createdAt(sort: Desc)])
   @@index([referenceKind, referenceId])
@@ -1054,4 +1115,345 @@ model AuditLog {
   @@index([module, createdAt(sort: Desc)])
   @@index([targetKind, targetId])
   @@map("audit_logs")
+}
+
+// ─── 11) Risk Profiling ─────────────────────────────────
+
+model RiskProfile {
+  id               Int          @id @default(autoincrement())
+  userId           Int          @unique @map("user_id")
+  riskScore        Decimal      @map("risk_score") @db.Decimal(5, 2)
+  riskAppetite     RiskAppetite @map("risk_appetite")
+  equityPct        Decimal      @default(0) @map("equity_pct") @db.Decimal(5, 2)
+  debtPct          Decimal      @default(0) @map("debt_pct") @db.Decimal(5, 2)
+  alternativesPct  Decimal      @default(0) @map("alternatives_pct") @db.Decimal(5, 2)
+  investmentHorizon String?     @map("investment_horizon") @db.VarChar(50)
+  questionnaire    Json?
+  calculatedAt     DateTime     @default(now()) @map("calculated_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("risk_profiles")
+}
+
+// ─── 12) AI Chat ─────────────────────────────────────────
+
+model AiChatSession {
+  id          Int             @id @default(autoincrement())
+  uuid        String          @unique @default(uuid())
+  userId      Int             @map("user_id")
+  contextType ChatContextType @default(general) @map("context_type")
+  title       String?         @db.VarChar(200)
+  metadata    Json?
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AiChatMessage[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@map("ai_chat_sessions")
+}
+
+model AiChatMessage {
+  id              Int      @id @default(autoincrement())
+  sessionId       Int      @map("session_id")
+  role            String   @db.VarChar(20)
+  content         String
+  confidenceScore Decimal? @map("confidence_score") @db.Decimal(5, 2)
+  tokenCount      Int?     @map("token_count")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  session AiChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("ai_chat_messages")
+}
+
+// ─── 13) Watchlists & Price Alerts ──────────────────────
+
+model Watchlist {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  name      String   @default("Default") @db.VarChar(120)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items WatchlistItem[]
+
+  @@index([userId])
+  @@map("watchlists")
+}
+
+model WatchlistItem {
+  id          Int       @id @default(autoincrement())
+  watchlistId Int       @map("watchlist_id")
+  symbol      String    @db.VarChar(50)
+  assetType   AssetType @default(equity) @map("asset_type")
+  notes       String?
+  addedAt     DateTime  @default(now()) @map("added_at")
+
+  watchlist Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+
+  @@unique([watchlistId, symbol])
+  @@index([symbol])
+  @@map("watchlist_items")
+}
+
+model PriceAlert {
+  id          Int            @id @default(autoincrement())
+  userId      Int            @map("user_id")
+  symbol      String         @db.VarChar(50)
+  assetType   AssetType      @default(equity) @map("asset_type")
+  targetPrice Decimal        @map("target_price") @db.Decimal(18, 4)
+  direction   AlertDirection
+  isTriggered Boolean        @default(false) @map("is_triggered")
+  triggeredAt DateTime?      @map("triggered_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isTriggered])
+  @@index([symbol, direction])
+  @@map("price_alerts")
+}
+
+// ─── 14) Community Reactions & Tags ─────────────────────
+
+model CommunityReaction {
+  id        Int          @id @default(autoincrement())
+  postId    Int          @map("post_id")
+  userId    Int          @map("user_id")
+  type      ReactionType @default(like)
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId, type])
+  @@index([postId])
+  @@map("community_reactions")
+}
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(100)
+  category  String   @default("general") @db.VarChar(50)
+  postCount Int      @default(0) @map("post_count")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  marketPostTags    MarketPostTag[]
+  communityPostTags CommunityPostTag[]
+
+  @@index([category])
+  @@map("tags")
+}
+
+model MarketPostTag {
+  postId    Int      @map("post_id")
+  tagId     Int      @map("tag_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post MarketPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@index([tagId])
+  @@map("market_post_tags")
+}
+
+model CommunityPostTag {
+  postId    Int      @map("post_id")
+  tagId     Int      @map("tag_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  Tag           @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@index([tagId])
+  @@map("community_post_tags")
+}
+
+// ─── 15) Advisor Plans ──────────────────────────────────
+
+model AdvisorPlan {
+  id            Int      @id @default(autoincrement())
+  advisorUserId Int      @map("advisor_user_id")
+  name          String   @db.VarChar(150)
+  description   String?
+  price         Decimal  @db.Decimal(12, 2)
+  currency      String   @default("INR") @db.VarChar(10)
+  durationDays  Int      @map("duration_days")
+  features      Json?
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  advisor User @relation(fields: [advisorUserId], references: [id], onDelete: Cascade)
+
+  @@index([advisorUserId, isActive])
+  @@map("advisor_plans")
+}
+
+// ─── 16) Course Progress & Reviews ──────────────────────
+
+model CourseLessonProgress {
+  id          Int      @id @default(autoincrement())
+  lessonId    Int      @map("lesson_id")
+  userId      Int      @map("user_id")
+  completedAt DateTime @default(now()) @map("completed_at")
+
+  lesson CourseLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, userId])
+  @@index([userId])
+  @@map("course_lesson_progress")
+}
+
+model CourseReview {
+  id         Int      @id @default(autoincrement())
+  courseId   Int      @map("course_id")
+  userId     Int      @map("user_id")
+  rating     Int
+  reviewText String?  @map("review_text")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, userId])
+  @@index([courseId])
+  @@map("course_reviews")
+}
+
+// ─── 17) User Devices & Preferences ─────────────────────
+
+model UserDevice {
+  id        Int            @id @default(autoincrement())
+  userId    Int            @map("user_id")
+  deviceId  String         @map("device_id") @db.VarChar(255)
+  platform  DevicePlatform
+  fcmToken  String?        @map("fcm_token")
+  isActive  Boolean        @default(true) @map("is_active")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId])
+  @@index([userId, isActive])
+  @@map("user_devices")
+}
+
+model NotificationPreference {
+  id              Int     @id @default(autoincrement())
+  userId          Int     @unique @map("user_id")
+  inAppEnabled    Boolean @default(true) @map("in_app_enabled")
+  pushEnabled     Boolean @default(true) @map("push_enabled")
+  emailEnabled    Boolean @default(true) @map("email_enabled")
+  marketAlerts    Boolean @default(true) @map("market_alerts")
+  portfolioAlerts Boolean @default(true) @map("portfolio_alerts")
+  budgetAlerts    Boolean @default(true) @map("budget_alerts")
+  socialAlerts    Boolean @default(true) @map("social_alerts")
+  advisorAlerts   Boolean @default(true) @map("advisor_alerts")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model UserPreference {
+  id               Int      @id @default(autoincrement())
+  userId           Int      @unique @map("user_id")
+  theme            String   @default("light") @db.VarChar(20)
+  language         String   @default("en") @db.VarChar(10)
+  defaultCurrency  String   @default("INR") @map("default_currency") @db.VarChar(10)
+  biometricEnabled Boolean  @default(false) @map("biometric_enabled")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+// ─── 18) Savings Goal Contributions ─────────────────────
+
+model SavingsGoalContribution {
+  id        Int      @id @default(autoincrement())
+  goalId    Int      @map("goal_id")
+  amount    Decimal  @db.Decimal(18, 2)
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  goal SavingsGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId, createdAt(sort: Desc)])
+  @@map("savings_goal_contributions")
+}
+
+// ─── 19) Virtual Lab Strategy & Backtesting ─────────────
+
+model StrategyTemplate {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  name        String   @db.VarChar(150)
+  description String?
+  rules       Json
+  isPublic    Boolean  @default(false) @map("is_public")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  backtests BacktestResult[]
+
+  @@index([userId])
+  @@map("strategy_templates")
+}
+
+model BacktestResult {
+  id           Int      @id @default(autoincrement())
+  strategyId   Int      @map("strategy_id")
+  startDate    DateTime @map("start_date") @db.Date
+  endDate      DateTime @map("end_date") @db.Date
+  initialValue Decimal  @map("initial_value") @db.Decimal(18, 2)
+  finalValue   Decimal  @map("final_value") @db.Decimal(18, 2)
+  roiPct       Decimal  @map("roi_pct") @db.Decimal(9, 4)
+  maxDrawdown  Decimal  @map("max_drawdown") @db.Decimal(9, 4)
+  sharpeRatio  Decimal? @map("sharpe_ratio") @db.Decimal(7, 4)
+  resultData   Json?    @map("result_data")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  strategy StrategyTemplate @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  @@index([strategyId])
+  @@map("backtest_results")
+}
+
+// ─── 20) Invoices ───────────────────────────────────────
+
+model Invoice {
+  id            Int           @id @default(autoincrement())
+  paymentId     Int           @unique @map("payment_id")
+  userId        Int           @map("user_id")
+  invoiceNumber String        @unique @map("invoice_number") @db.VarChar(50)
+  subtotal      Decimal       @db.Decimal(12, 2)
+  tax           Decimal       @default(0) @db.Decimal(12, 2)
+  totalAmount   Decimal       @map("total_amount") @db.Decimal(12, 2)
+  status        InvoiceStatus @default(draft)
+  issuedAt      DateTime?     @map("issued_at")
+  paidAt        DateTime?     @map("paid_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("invoices")
 }
