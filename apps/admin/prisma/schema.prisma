@@ -1,0 +1,1057 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum UserRole {
+  user
+  advisor
+  admin
+
+  @@map("user_role")
+}
+
+enum AccountStatus {
+  active
+  suspended
+  pending
+
+  @@map("account_status")
+}
+
+enum VerificationStatus {
+  pending
+  approved
+  rejected
+
+  @@map("verification_status")
+}
+
+enum KycDocumentType {
+  pan
+  aadhaar
+  sebi_cert
+  other
+
+  @@map("kyc_document_type")
+}
+
+enum SentimentType {
+  bullish
+  bearish
+  neutral
+
+  @@map("sentiment_type")
+}
+
+enum AssetType {
+  equity
+  crypto
+  mf
+  commodity
+  other
+
+  @@map("asset_type")
+}
+
+enum RiskLevel {
+  low
+  medium
+  high
+
+  @@map("risk_level")
+}
+
+enum ComplianceStatus {
+  pending
+  approved
+  flagged
+  rejected
+  under_review
+
+  @@map("compliance_status")
+}
+
+enum PostVisibility {
+  public
+  followers
+  group
+
+  @@map("post_visibility")
+}
+
+enum ReactionType {
+  like
+
+  @@map("reaction_type")
+}
+
+enum TxnType {
+  debit
+  credit
+
+  @@map("txn_type")
+}
+
+enum TradeSide {
+  buy
+  sell
+
+  @@map("trade_side")
+}
+
+enum SubscriptionStatus {
+  active
+  expired
+  cancelled
+  pending
+  past_due
+
+  @@map("subscription_status")
+}
+
+enum PaymentStatus {
+  created
+  success
+  failed
+  refunded
+
+  @@map("payment_status")
+}
+
+enum PayoutStatus {
+  requested
+  processing
+  paid
+  rejected
+
+  @@map("payout_status")
+}
+
+enum NotificationChannel {
+  in_app
+  push
+  email
+
+  @@map("notification_channel")
+}
+
+// ─── 1) Identity & Access ────────────────────────────────
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        UserRole @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("roles")
+}
+
+model User {
+  id              Int           @id @default(autoincrement())
+  uuid            String        @unique @default(uuid())
+  fullName        String        @map("full_name") @db.VarChar(150)
+  email           String        @unique
+  phone           String        @unique @db.VarChar(20)
+  passwordHash    String        @map("password_hash") @db.VarChar(255)
+  role            UserRole      @default(user)
+  status          AccountStatus @default(active)
+  emailVerifiedAt DateTime?     @map("email_verified_at")
+  lastLoginAt     DateTime?     @map("last_login_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  deletedAt       DateTime?     @map("deleted_at")
+
+  sessions             UserSession[]
+  kycDocuments         KycDocument[]         @relation("kycOwner")
+  kycVerifications     KycDocument[]         @relation("kycVerifier")
+  consentLogs          ConsentLog[]
+  advisorProfile       AdvisorProfile?       @relation("advisorOwner")
+  advisorVerifications AdvisorProfile[]      @relation("advisorVerifier")
+  advisorMetrics       AdvisorMetricDaily[]
+  marketPosts          MarketPost[]
+  marketComments       MarketComment[]
+  marketReactions      MarketReaction[]
+  reportsFiled         ContentReport[]       @relation("reporter")
+  reportsResolved      ContentReport[]       @relation("resolver")
+  communityPosts       CommunityPost[]
+  communityComments    CommunityComment[]
+  communitySaves       CommunityPostSave[]
+  followers            UserFollow[]          @relation("following")
+  following            UserFollow[]          @relation("follower")
+  createdGroups        Group[]
+  groupMemberships     GroupMember[]
+  reputationLogs       ReputationLog[]
+  dmParticipations     DmThreadParticipant[]
+  dmMessages           DmMessage[]
+  brokerAccounts       BrokerAccount[]
+  portfolios           Portfolio[]
+  virtualWallet        VirtualWallet?
+  leaderboardEntries   LeaderboardEntry[]
+  bankAccounts         BankAccount[]
+  transactions         Transaction[]
+  budgets              Budget[]
+  savingsGoals         SavingsGoal[]
+  financialScores      FinancialScore[]
+  aiLogs               AiLog[]
+  aiDecisionLogs       AiDecisionLog[]
+  coursesAsAdvisor     Course[]              @relation("courseAdvisor")
+  courseEnrollments     CourseEnrollment[]
+  subscriptionsAsUser  Subscription[]        @relation("subscriber")
+  subscriptionsAsAdv   Subscription[]        @relation("advisorSub")
+  payments             Payment[]
+  advisorWallet        AdvisorWallet?
+  payoutRequests       PayoutRequest[]       @relation("payoutOwner")
+  payoutReviews        PayoutRequest[]       @relation("payoutReviewer")
+  notifications        Notification[]
+  auditLogs            AuditLog[]
+
+  @@map("users")
+}
+
+model UserSession {
+  id               Int       @id @default(autoincrement())
+  userId           Int       @map("user_id")
+  deviceId         String?   @map("device_id") @db.VarChar(128)
+  userAgent        String?   @map("user_agent")
+  ipAddress        String?   @map("ip_address")
+  refreshTokenHash String    @map("refresh_token_hash")
+  expiresAt        DateTime  @map("expires_at")
+  revokedAt        DateTime? @map("revoked_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("user_sessions")
+}
+
+model KycDocument {
+  id                 Int                @id @default(autoincrement())
+  userId             Int                @map("user_id")
+  documentType       KycDocumentType    @map("document_type")
+  documentNumberEnc  String?            @map("document_number_enc")
+  documentFileUrl    String?            @map("document_file_url")
+  verificationStatus VerificationStatus @default(pending) @map("verification_status")
+  verifiedByAdminId  Int?               @map("verified_by_admin_id")
+  verifiedAt         DateTime?          @map("verified_at")
+  rejectionReason    String?            @map("rejection_reason")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  user      User  @relation("kycOwner", fields: [userId], references: [id], onDelete: Cascade)
+  verifiedBy User? @relation("kycVerifier", fields: [verifiedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([verificationStatus])
+  @@map("kyc_documents")
+}
+
+model ConsentLog {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  consentType String    @map("consent_type") @db.VarChar(100)
+  grantedAt   DateTime  @default(now()) @map("granted_at")
+  revokedAt   DateTime? @map("revoked_at")
+  metadata    Json?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([consentType])
+  @@map("consent_logs")
+}
+
+// ─── 2) Advisor Module ───────────────────────────────────
+
+model AdvisorProfile {
+  id                 Int                @id @default(autoincrement())
+  userId             Int                @unique @map("user_id")
+  sebiRegistrationNo String             @unique @map("sebi_registration_no") @db.VarChar(100)
+  experienceYears    Int?               @map("experience_years")
+  bio                String?
+  expertiseTags      String[]           @default([]) @map("expertise_tags")
+  profileImageUrl    String?            @map("profile_image_url")
+  verificationStatus VerificationStatus @default(pending) @map("verification_status")
+  verifiedByAdminId  Int?               @map("verified_by_admin_id")
+  verifiedAt         DateTime?          @map("verified_at")
+  rejectionReason    String?            @map("rejection_reason")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  user       User  @relation("advisorOwner", fields: [userId], references: [id], onDelete: Cascade)
+  verifiedBy User? @relation("advisorVerifier", fields: [verifiedByAdminId], references: [id], onDelete: SetNull)
+
+  @@map("advisor_profiles")
+}
+
+model AdvisorMetricDaily {
+  id              Int      @id @default(autoincrement())
+  advisorUserId   Int      @map("advisor_user_id")
+  day             DateTime @db.Date
+  followersCount  Int      @default(0) @map("followers_count")
+  subscribersCount Int     @default(0) @map("subscribers_count")
+  postsCount      Int      @default(0) @map("posts_count")
+  accuracyPct     Decimal  @default(0) @map("accuracy_pct") @db.Decimal(5, 2)
+  roiPct          Decimal  @default(0) @map("roi_pct") @db.Decimal(7, 2)
+  earningsAmount  Decimal  @default(0) @map("earnings_amount") @db.Decimal(14, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  advisor User @relation(fields: [advisorUserId], references: [id], onDelete: Cascade)
+
+  @@unique([advisorUserId, day])
+  @@index([day])
+  @@map("advisor_metrics_daily")
+}
+
+// ─── 3) Market Sentiment ─────────────────────────────────
+
+model MarketPost {
+  id                  Int              @id @default(autoincrement())
+  uuid                String           @unique @default(uuid())
+  advisorUserId       Int              @map("advisor_user_id")
+  title               String           @db.VarChar(200)
+  content             String
+  assetType           AssetType        @map("asset_type")
+  marketSymbol        String?          @map("market_symbol") @db.VarChar(50)
+  sentiment           SentimentType
+  riskLevel           RiskLevel        @map("risk_level")
+  timeframe           String?          @db.VarChar(50)
+  targetPrice         Decimal?         @map("target_price") @db.Decimal(18, 4)
+  stopLossPrice       Decimal?         @map("stop_loss_price") @db.Decimal(18, 4)
+  disclaimer          String
+  complianceStatus    ComplianceStatus @default(pending) @map("compliance_status")
+  complianceRiskScore Decimal?         @map("compliance_risk_score") @db.Decimal(5, 2)
+  publishedAt         DateTime?        @map("published_at")
+  editedAt            DateTime?        @map("edited_at")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  deletedAt           DateTime?        @map("deleted_at")
+
+  advisor   User              @relation(fields: [advisorUserId], references: [id], onDelete: Cascade)
+  comments  MarketComment[]
+  reactions MarketReaction[]
+
+  @@index([advisorUserId])
+  @@index([marketSymbol])
+  @@index([createdAt(sort: Desc)])
+  @@index([complianceStatus])
+  @@map("market_posts")
+}
+
+model MarketComment {
+  id            Int       @id @default(autoincrement())
+  postId        Int       @map("post_id")
+  userId        Int       @map("user_id")
+  parentId      Int?      @map("parent_id")
+  content       String
+  toxicityScore Decimal?  @map("toxicity_score") @db.Decimal(5, 2)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  post    MarketPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  MarketComment? @relation("commentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies MarketComment[] @relation("commentThread")
+
+  @@index([postId, createdAt])
+  @@index([userId])
+  @@map("market_comments")
+}
+
+model MarketReaction {
+  id        Int          @id @default(autoincrement())
+  postId    Int          @map("post_id")
+  userId    Int          @map("user_id")
+  type      ReactionType @default(like)
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  post MarketPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId, type])
+  @@index([postId])
+  @@map("market_reactions")
+}
+
+model ContentReport {
+  id                 Int       @id @default(autoincrement())
+  reporterUserId     Int       @map("reporter_user_id")
+  contentKind        String    @map("content_kind") @db.VarChar(50)
+  contentId          Int       @map("content_id")
+  reason             String
+  status             String    @default("open") @db.VarChar(30)
+  resolvedByAdminId  Int?      @map("resolved_by_admin_id")
+  resolutionNote     String?   @map("resolution_note")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  resolvedAt         DateTime? @map("resolved_at")
+
+  reporter   User  @relation("reporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+  resolvedBy User? @relation("resolver", fields: [resolvedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([contentKind, contentId])
+  @@map("content_reports")
+}
+
+model SentimentAggregate {
+  id              Int      @id @default(autoincrement())
+  marketSymbol    String   @map("market_symbol") @db.VarChar(50)
+  windowStart     DateTime @map("window_start")
+  windowEnd       DateTime @map("window_end")
+  bullishCount    Int      @default(0) @map("bullish_count")
+  bearishCount    Int      @default(0) @map("bearish_count")
+  neutralCount    Int      @default(0) @map("neutral_count")
+  aggregatedScore Decimal  @default(0) @map("aggregated_score") @db.Decimal(6, 3)
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([marketSymbol, windowStart, windowEnd])
+  @@index([marketSymbol])
+  @@map("sentiment_aggregates")
+}
+
+// ─── 4) Community Social ─────────────────────────────────
+
+model CommunityPost {
+  id         Int            @id @default(autoincrement())
+  uuid       String         @unique @default(uuid())
+  userId     Int            @map("user_id")
+  content    String
+  mediaUrl   String?        @map("media_url")
+  category   String         @default("general") @db.VarChar(50)
+  visibility PostVisibility @default(public)
+  groupId    Int?           @map("group_id")
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+  deletedAt  DateTime?      @map("deleted_at")
+
+  user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments CommunityComment[]
+  saves    CommunityPostSave[]
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@map("community_posts")
+}
+
+model CommunityComment {
+  id            Int       @id @default(autoincrement())
+  postId        Int       @map("post_id")
+  userId        Int       @map("user_id")
+  parentId      Int?      @map("parent_id")
+  content       String
+  toxicityScore Decimal?  @map("toxicity_score") @db.Decimal(5, 2)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  post    CommunityPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  CommunityComment?  @relation("communityThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies CommunityComment[] @relation("communityThread")
+
+  @@index([postId, createdAt])
+  @@map("community_comments")
+}
+
+model CommunityPostSave {
+  id        Int      @id @default(autoincrement())
+  postId    Int      @map("post_id")
+  userId    Int      @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("community_post_saves")
+}
+
+model UserFollow {
+  followerUserId  Int      @map("follower_user_id")
+  followingUserId Int      @map("following_user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  follower  User @relation("follower", fields: [followerUserId], references: [id], onDelete: Cascade)
+  following User @relation("following", fields: [followingUserId], references: [id], onDelete: Cascade)
+
+  @@id([followerUserId, followingUserId])
+  @@index([followingUserId])
+  @@map("user_follows")
+}
+
+model Group {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(150)
+  description String?
+  createdBy   Int      @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  creator User          @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  members GroupMember[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  groupId  Int      @map("group_id")
+  userId   Int      @map("user_id")
+  role     String   @default("member") @db.VarChar(20)
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId])
+  @@index([userId])
+  @@map("group_members")
+}
+
+model ReputationLog {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  points        Int
+  activityType  String   @map("activity_type") @db.VarChar(100)
+  referenceKind String?  @map("reference_kind") @db.VarChar(50)
+  referenceId   Int?     @map("reference_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("reputation_logs")
+}
+
+model DmThread {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  participants DmThreadParticipant[]
+  messages     DmMessage[]
+
+  @@map("dm_threads")
+}
+
+model DmThreadParticipant {
+  threadId Int      @map("thread_id")
+  userId   Int      @map("user_id")
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  thread DmThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([threadId, userId])
+  @@map("dm_thread_participants")
+}
+
+model DmMessage {
+  id           Int       @id @default(autoincrement())
+  threadId     Int       @map("thread_id")
+  senderUserId Int       @map("sender_user_id")
+  contentEnc   String    @map("content_enc")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  thread DmThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender User     @relation(fields: [senderUserId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@map("dm_messages")
+}
+
+// ─── 5) Portfolio & Analytics ────────────────────────────
+
+model BrokerAccount {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @map("user_id")
+  brokerName      String    @map("broker_name") @db.VarChar(100)
+  oauthTokenEnc   String?   @map("oauth_token_enc")
+  refreshTokenEnc String?   @map("refresh_token_enc")
+  tokenExpiresAt  DateTime? @map("token_expires_at")
+  lastSyncedAt    DateTime? @map("last_synced_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, brokerName])
+  @@map("broker_accounts")
+}
+
+model Portfolio {
+  id                  Int       @id @default(autoincrement())
+  userId              Int       @map("user_id")
+  source              String    @default("broker") @db.VarChar(20)
+  name                String    @default("Default") @db.VarChar(120)
+  currency            String    @default("INR") @db.VarChar(10)
+  totalValue          Decimal   @default(0) @map("total_value") @db.Decimal(18, 2)
+  dayChange           Decimal   @default(0) @map("day_change") @db.Decimal(18, 2)
+  riskScore           Decimal   @default(0) @map("risk_score") @db.Decimal(5, 2)
+  diversificationScore Decimal  @default(0) @map("diversification_score") @db.Decimal(6, 2)
+  lastSyncedAt        DateTime? @map("last_synced_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  deletedAt           DateTime? @map("deleted_at")
+
+  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets     PortfolioAsset[]
+  tradesReal TradeReal[]
+  snapshots  PortfolioSnapshotDaily[]
+  analyses   PortfolioAiAnalysis[]
+
+  @@index([userId])
+  @@map("portfolios")
+}
+
+model PortfolioAsset {
+  id           Int      @id @default(autoincrement())
+  portfolioId  Int      @map("portfolio_id")
+  symbol       String   @db.VarChar(50)
+  name         String?  @db.VarChar(200)
+  assetType    AssetType @default(equity) @map("asset_type")
+  sector       String?  @db.VarChar(100)
+  quantity     Decimal  @default(0) @db.Decimal(20, 6)
+  avgPrice     Decimal  @default(0) @map("avg_price") @db.Decimal(18, 4)
+  currentPrice Decimal  @default(0) @map("current_price") @db.Decimal(18, 4)
+  costValue    Decimal  @default(0) @map("cost_value") @db.Decimal(18, 2)
+  marketValue  Decimal  @default(0) @map("market_value") @db.Decimal(18, 2)
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, symbol])
+  @@index([portfolioId])
+  @@index([symbol])
+  @@map("portfolio_assets")
+}
+
+model TradeReal {
+  id          Int       @id @default(autoincrement())
+  portfolioId Int       @map("portfolio_id")
+  symbol      String    @db.VarChar(50)
+  side        TradeSide
+  quantity    Decimal   @db.Decimal(20, 6)
+  price       Decimal   @db.Decimal(18, 4)
+  fees        Decimal   @default(0) @db.Decimal(18, 2)
+  tradedAt    DateTime  @default(now()) @map("traded_at")
+  source      String    @default("broker") @db.VarChar(30)
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, tradedAt(sort: Desc)])
+  @@index([symbol])
+  @@map("trades_real")
+}
+
+model PortfolioSnapshotDaily {
+  id                  Int      @id @default(autoincrement())
+  portfolioId         Int      @map("portfolio_id")
+  day                 DateTime @db.Date
+  totalValue          Decimal  @map("total_value") @db.Decimal(18, 2)
+  riskScore           Decimal  @map("risk_score") @db.Decimal(5, 2)
+  diversificationScore Decimal @map("diversification_score") @db.Decimal(6, 2)
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, day])
+  @@index([day])
+  @@map("portfolio_snapshots_daily")
+}
+
+model PortfolioAiAnalysis {
+  id              Int       @id @default(autoincrement())
+  portfolioId     Int       @map("portfolio_id")
+  analysisKind    String    @map("analysis_kind") @db.VarChar(50)
+  inputSnapshot   Json      @map("input_snapshot")
+  outputResult    Json      @map("output_result")
+  riskLevel       RiskLevel? @map("risk_level")
+  confidenceScore Decimal?  @map("confidence_score") @db.Decimal(5, 2)
+  modelVersion    String?   @map("model_version") @db.VarChar(80)
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, createdAt(sort: Desc)])
+  @@map("portfolio_ai_analysis")
+}
+
+// ─── 6) Virtual Investment Lab ───────────────────────────
+
+model VirtualWallet {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique @map("user_id")
+  currency  String   @default("INR") @db.VarChar(10)
+  balance   Decimal  @default(0) @db.Decimal(18, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trades TradeVirtual[]
+
+  @@map("virtual_wallets")
+}
+
+model TradeVirtual {
+  id       Int       @id @default(autoincrement())
+  walletId Int       @map("wallet_id")
+  symbol   String    @db.VarChar(50)
+  side     TradeSide
+  quantity Decimal   @db.Decimal(20, 6)
+  price    Decimal   @db.Decimal(18, 4)
+  tradedAt DateTime  @default(now()) @map("traded_at")
+
+  wallet VirtualWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, tradedAt(sort: Desc)])
+  @@map("trades_virtual")
+}
+
+model LeaderboardPeriod {
+  id        Int       @id @default(autoincrement())
+  key       String    @unique @db.VarChar(50)
+  startsAt  DateTime? @map("starts_at")
+  endsAt    DateTime? @map("ends_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  entries LeaderboardEntry[]
+
+  @@map("leaderboard_periods")
+}
+
+model LeaderboardEntry {
+  periodId  Int      @map("period_id")
+  userId    Int      @map("user_id")
+  roiPct    Decimal  @default(0) @map("roi_pct") @db.Decimal(9, 4)
+  rankPos   Int      @map("rank_pos")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  period LeaderboardPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  user   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([periodId, userId])
+  @@unique([periodId, rankPos])
+  @@index([periodId, rankPos])
+  @@map("leaderboard_entries")
+}
+
+// ─── 7) Personal Finance / UPI ───────────────────────────
+
+model BankAccount {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @map("user_id")
+  bankName      String    @map("bank_name") @db.VarChar(150)
+  accountMasked String?   @map("account_masked") @db.VarChar(50)
+  aaTokenEnc    String?   @map("aa_token_enc")
+  provider      String?   @db.VarChar(100)
+  lastSyncedAt  DateTime? @map("last_synced_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+  @@map("bank_accounts")
+}
+
+model ExpenseCategory {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique @db.VarChar(100)
+  parentName String?  @map("parent_name") @db.VarChar(100)
+  isSystem   Boolean  @default(true) @map("is_system")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@map("expense_categories")
+}
+
+model Transaction {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  bankAccountId Int?     @map("bank_account_id")
+  externalRef   String?  @map("external_ref") @db.VarChar(120)
+  amount        Decimal  @db.Decimal(18, 2)
+  txnType       TxnType  @map("txn_type")
+  merchantName  String?  @map("merchant_name") @db.VarChar(150)
+  description   String?
+  categoryId    Int?     @map("category_id")
+  categorizedBy String   @default("ai") @map("categorized_by") @db.VarChar(20)
+  occurredAt    DateTime @map("occurred_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankAccount BankAccount?     @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  category    ExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, externalRef])
+  @@index([userId, occurredAt(sort: Desc)])
+  @@index([categoryId, occurredAt(sort: Desc)])
+  @@map("transactions")
+}
+
+model Budget {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  categoryId   Int?     @map("category_id")
+  monthKey     String   @map("month_key") @db.VarChar(7)
+  monthlyLimit Decimal  @map("monthly_limit") @db.Decimal(18, 2)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category ExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, categoryId, monthKey])
+  @@index([userId, monthKey])
+  @@map("budgets")
+}
+
+model SavingsGoal {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @map("user_id")
+  name          String    @db.VarChar(120)
+  targetAmount  Decimal   @map("target_amount") @db.Decimal(18, 2)
+  currentAmount Decimal   @default(0) @map("current_amount") @db.Decimal(18, 2)
+  targetDate    DateTime? @map("target_date") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("savings_goals")
+}
+
+model FinancialScore {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @map("user_id")
+  score           Int
+  calculationDate DateTime @map("calculation_date") @db.Date
+  inputSnapshot   Json     @map("input_snapshot")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, calculationDate])
+  @@map("financial_scores")
+}
+
+// ─── 8) AI & Compliance Logging ──────────────────────────
+
+model AiLog {
+  id              Int      @id @default(autoincrement())
+  userId          Int?     @map("user_id")
+  module          String   @db.VarChar(100)
+  inputData       Json?    @map("input_data")
+  outputData      Json?    @map("output_data")
+  confidenceScore Decimal? @map("confidence_score") @db.Decimal(5, 2)
+  modelVersion    String?  @map("model_version") @db.VarChar(80)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([module, createdAt(sort: Desc)])
+  @@map("ai_logs")
+}
+
+model AiDecisionLog {
+  id              Int      @id @default(autoincrement())
+  userId          Int?     @map("user_id")
+  agentType       String   @map("agent_type") @db.VarChar(80)
+  inputDataHash   String?  @map("input_data_hash")
+  outputSummary   String?  @map("output_summary")
+  riskFlag        Boolean  @default(false) @map("risk_flag")
+  confidenceScore Decimal? @map("confidence_score") @db.Decimal(5, 2)
+  modelVersion    String?  @map("model_version") @db.VarChar(80)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([agentType, createdAt(sort: Desc)])
+  @@map("ai_decision_logs")
+}
+
+model ComplianceLog {
+  id          Int              @id @default(autoincrement())
+  module      String           @db.VarChar(100)
+  referenceId Int?             @map("reference_id")
+  status      ComplianceStatus
+  riskScore   Decimal?         @map("risk_score") @db.Decimal(5, 2)
+  notes       String?
+  createdBy   String           @default("ai") @map("created_by") @db.VarChar(30)
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  @@index([module, referenceId])
+  @@map("compliance_logs")
+}
+
+// ─── 9) Courses, Subscriptions, Payments ─────────────────
+
+model Course {
+  id               Int              @id @default(autoincrement())
+  advisorUserId    Int              @map("advisor_user_id")
+  title            String           @db.VarChar(200)
+  description      String?
+  price            Decimal          @default(0) @db.Decimal(12, 2)
+  currency         String           @default("INR") @db.VarChar(10)
+  coverImageUrl    String?          @map("cover_image_url")
+  isPublished      Boolean          @default(false) @map("is_published")
+  complianceStatus ComplianceStatus @default(pending) @map("compliance_status")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  deletedAt        DateTime?        @map("deleted_at")
+
+  advisor     User               @relation("courseAdvisor", fields: [advisorUserId], references: [id], onDelete: Cascade)
+  lessons     CourseLesson[]
+  enrollments CourseEnrollment[]
+
+  @@index([advisorUserId])
+  @@map("courses")
+}
+
+model CourseLesson {
+  id              Int      @id @default(autoincrement())
+  courseId         Int      @map("course_id")
+  title           String   @db.VarChar(200)
+  position        Int
+  videoUrl        String?  @map("video_url")
+  durationSeconds Int?     @map("duration_seconds")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, position])
+  @@index([courseId, position])
+  @@map("course_lessons")
+}
+
+model CourseEnrollment {
+  id         Int      @id @default(autoincrement())
+  courseId    Int      @map("course_id")
+  userId     Int      @map("user_id")
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, userId])
+  @@index([userId])
+  @@map("course_enrollments")
+}
+
+model Subscription {
+  id                     Int                @id @default(autoincrement())
+  userId                 Int                @map("user_id")
+  advisorUserId          Int                @map("advisor_user_id")
+  amount                 Decimal            @db.Decimal(12, 2)
+  currency               String             @default("INR") @db.VarChar(10)
+  status                 SubscriptionStatus @default(pending)
+  startDate              DateTime           @default(now()) @map("start_date")
+  endDate                DateTime?          @map("end_date")
+  provider               String?            @db.VarChar(50)
+  providerSubscriptionId String?            @map("provider_subscription_id") @db.VarChar(120)
+  createdAt              DateTime           @default(now()) @map("created_at")
+  updatedAt              DateTime           @updatedAt @map("updated_at")
+
+  user    User @relation("subscriber", fields: [userId], references: [id], onDelete: Cascade)
+  advisor User @relation("advisorSub", fields: [advisorUserId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, advisorUserId])
+  @@index([advisorUserId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id                Int           @id @default(autoincrement())
+  userId            Int?          @map("user_id")
+  kind              String        @db.VarChar(40)
+  amount            Decimal       @db.Decimal(12, 2)
+  currency          String        @default("INR") @db.VarChar(10)
+  status            PaymentStatus @default(created)
+  provider          String?       @db.VarChar(50)
+  providerPaymentId String?       @map("provider_payment_id") @db.VarChar(120)
+  referenceKind     String?       @map("reference_kind") @db.VarChar(40)
+  referenceId       Int?          @map("reference_id")
+  metadata          Json?
+  createdAt         DateTime      @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([referenceKind, referenceId])
+  @@map("payments")
+}
+
+model AdvisorWallet {
+  advisorUserId Int      @id @map("advisor_user_id")
+  balance       Decimal  @default(0) @db.Decimal(14, 2)
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  advisor User @relation(fields: [advisorUserId], references: [id], onDelete: Cascade)
+
+  @@map("advisor_wallets")
+}
+
+model PayoutRequest {
+  id               Int          @id @default(autoincrement())
+  advisorUserId    Int          @map("advisor_user_id")
+  amount           Decimal      @db.Decimal(14, 2)
+  status           PayoutStatus @default(requested)
+  destination      Json?
+  reviewedByAdminId Int?        @map("reviewed_by_admin_id")
+  reviewNote       String?      @map("review_note")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  advisor    User  @relation("payoutOwner", fields: [advisorUserId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("payoutReviewer", fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@map("payout_requests")
+}
+
+// ─── 10) Notifications & Audit Logs ─────────────────────
+
+model Notification {
+  id        Int                 @id @default(autoincrement())
+  userId    Int                 @map("user_id")
+  channel   NotificationChannel @default(in_app)
+  title     String              @db.VarChar(200)
+  message   String
+  data      Json?
+  readAt    DateTime?           @map("read_at")
+  createdAt DateTime            @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  actorUserId Int?     @map("actor_user_id")
+  action      String   @db.VarChar(120)
+  module      String   @db.VarChar(80)
+  targetKind  String?  @map("target_kind") @db.VarChar(50)
+  targetId    Int?     @map("target_id")
+  payload     Json?
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([module, createdAt(sort: Desc)])
+  @@index([targetKind, targetId])
+  @@map("audit_logs")
+}
