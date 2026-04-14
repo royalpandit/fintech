@@ -1,10 +1,14 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { ok } from "@/lib/api-helpers";
+import { ok, err } from "@/lib/api-helpers";
+import { requireRole } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  const auth = await requireRole(req, ["admin"]);
+  if (!auth) return err("Forbidden", 403);
+
   const { searchParams } = new URL(req.url);
   const module = searchParams.get("module");
   const page = Math.max(1, Number(searchParams.get("page")) || 1);

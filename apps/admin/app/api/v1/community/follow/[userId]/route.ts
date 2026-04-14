@@ -1,13 +1,15 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err } from "@/lib/api-helpers";
+import { requireAuth, requireRole } from "@/lib/auth";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: { userId: string } },
 ) {
-  const currentUserId = Number(req.headers.get("x-user-id"));
-  if (!currentUserId) return err("Unauthorized", 401);
+  const auth = await requireAuth(req);
+  if (!auth) return err("Unauthorized", 401);
+  const currentUserId = auth.userId;
 
   const targetUserId = Number(params.userId);
   if (currentUserId === targetUserId) return err("Cannot follow yourself");

@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
+import { createSession, signAccessToken } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   const body = await parseBody<{
@@ -35,11 +35,8 @@ export async function POST(req: NextRequest) {
     select: { id: true, uuid: true, fullName: true, email: true, role: true },
   });
 
-  const token = jwt.sign(
-    { sub: user.id, role: user.role },
-    process.env.JWT_SECRET || "fallback-secret",
-    { expiresIn: "7d" },
-  );
+  const session = await createSession(user.id, req);
+  const token = signAccessToken({ sub: user.id, role: user.role, sid: session.id });
 
   return ok({ token, user });
 }

@@ -1,13 +1,16 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
+import { requireRole } from "@/lib/auth";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const adminId = Number(req.headers.get("x-user-id"));
-  if (!adminId) return err("Unauthorized", 401);
+  const auth = await requireRole(req, ["admin"]);
+  if (!auth) return err("Forbidden", 403);
+
+  const adminId = auth.userId;
 
   const postId = Number(params.id);
   const body = await parseBody<{
