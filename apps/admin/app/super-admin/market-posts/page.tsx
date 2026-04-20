@@ -1,26 +1,66 @@
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 
-const summary = [
-  { label: "Total Posts", value: "865", color: "#2563eb" },
-  { label: "Published", value: "720", color: "#10b981" },
-  { label: "Flagged", value: "45", color: "#ef4444" },
-  { label: "Pending", value: "100", color: "#f59e0b" },
-] as const;
+async function getMarketPostsData() {
+  const [totalPosts, publishedPosts, flaggedPostsCount, pendingPosts, flaggedPosts, reports, recentApproved] = await Promise.all([
+    prisma.marketPost.count(),
+    prisma.marketPost.count({ where: { publishedAt: { not: null }, complianceStatus: "approved" } }),
+    prisma.marketPost.count({ where: { complianceStatus: "flagged" } }),
+    prisma.marketPost.count({ where: { complianceStatus: "pending" } }),
+    prisma.marketPost.findMany({
+      where: { complianceStatus: "flagged" },
+      orderBy: { updatedAt: "desc" },
+      take: 5,
+      include: { advisor: { select: { fullName: true } } },
+    }),
+    prisma.contentReport.findMany({
+      select: { reason: true },
+    }),
+    prisma.marketPost.findMany({
+      where: { complianceStatus: "approved" },
+      orderBy: { updatedAt: "desc" },
+      take: 3,
+      include: { advisor: { select: { fullName: true } } },
+    }),
+  ]);
 
-const flaggedPosts = [
-  { id: "82910", title: "Huge Surge in Tech Stocks?", author: "Mukesh Banna", time: "2 hours ago" },
-  { id: "82911", title: "OTE: Buy or Sell?", author: "Anjali Desai", time: "5 hours ago" },
-  { id: "82912", title: "Crypto Bull Run Incoming?", author: "Nikhil Sharma", time: "1 day" },
-  { id: "82913", title: "Housing Market Collapse?", author: "Kamal Khanna", time: "2 days ago" },
-] as const;
+  const reasonMap = new Map<string, number>();
+  for (const report of reports) {
+    reasonMap.set(report.reason, (reasonMap.get(report.reason) || 0) + 1);
+  }
+  const aiReasons = Array.from(reasonMap.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([reason, count]) => ({ reason, _count: { _all: count } }));
 
-const aiReasons = [
-  { reason: "Investment Advice without Disclaimer", time: "2 hours ago" },
-  { reason: "Possible Pump-and-Dump Scheme", time: "4 hours ago" },
-  { reason: "Use of Offensive Language", time: "1 day ago" },
-] as const;
+  return {
+    summary: [
+      { label: "Total Posts", value: totalPosts.toLocaleString(), color: "#2563eb" },
+      { label: "Published", value: publishedPosts.toLocaleString(), color: "#10b981" },
+      { label: "Flagged", value: flaggedPostsCount.toLocaleString(), color: "#ef4444" },
+      { label: "Pending", value: pendingPosts.toLocaleString(), color: "#f59e0b" },
+    ] as const,
+    flaggedPosts: flaggedPosts.map((post) => ({
+      id: post.id,
+      title: post.title,
+      author: post.advisor.fullName,
+      time: post.updatedAt.toLocaleDateString(),
+    })),
+    aiReasons: aiReasons.map((reason) => ({
+      reason: reason.reason,
+      time: `${reason._count._all} reports`,
+    })),
+    recentApproved: recentApproved.map((post) => ({
+      id: post.id,
+      title: post.title,
+      author: post.advisor.fullName,
+      date: post.updatedAt.toLocaleDateString(),
+    })),
+  };
+}
 
-export default function MarketPostsPage() {
+export default async function MarketPostsPage() {
+  const { summary, flaggedPosts, aiReasons, recentApproved } = await getMarketPostsData();
   return (
     <section>
       <h1 className="page-title">MARKET POSTS</h1>
@@ -180,21 +220,13 @@ export default function MarketPostsPage() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>Weekly Market Analysis</td>
-                <td>Rahul Verma</td>
-                <td>Today</td>
-              </tr>
-              <tr>
-                <td>ABC Corp Earnings Report</td>
-                <td>Vikram Suri</td>
-                <td>1 day ago</td>
-              </tr>
-              <tr>
-                <td>AI Stocks Outlook</td>
-                <td>Minal Joshi</td>
-                <td>2 days ago</td>
-              </tr>
+              {recentApproved.map((post) => (
+                <tr key={`approved-${post.id}`}>
+                  <td>{post.title}</td>
+                  <td>{post.author}</td>
+                  <td>{post.date}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

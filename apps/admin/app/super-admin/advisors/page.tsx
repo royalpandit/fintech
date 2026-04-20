@@ -1,34 +1,69 @@
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 
-const summary = [
-  { label: "Pending Verification", value: "20", color: "#f59e0b" },
-  { label: "Approved Advisors", value: "320", color: "#10b981" },
-  { label: "Rejected Applications", value: "15", color: "#ef4444" },
-  { label: "Monthly Revenue", value: "INR 7,40,000", color: "#2563eb" },
-] as const;
+async function getAdvisorData() {
+  const monthAgo = new Date();
+  monthAgo.setDate(monthAgo.getDate() - 30);
 
-const topAdvisors = [
-  { id: "ina000012345", name: "FinancialGuru", followers: "12,000", accuracy: "78%", revenue: "INR 80,000" },
-  { id: "ina000088219", name: "MarketExpert", followers: "9,750", accuracy: "92%", revenue: "INR 1,00,000" },
-  { id: "ina000077211", name: "StockStar", followers: "8,430", accuracy: "85%", revenue: "INR 60,000" },
-  { id: "ina000022334", name: "InvestMentor", followers: "7,890", accuracy: "87%", revenue: "INR 60,000" },
-] as const;
+  const [pendingCount, approvedCount, rejectedCount, monthlyRevenue, topAdvisors, pendingVerification, recentApprovals] = await Promise.all([
+    prisma.advisorProfile.count({ where: { verificationStatus: "pending" } }),
+    prisma.advisorProfile.count({ where: { verificationStatus: "approved" } }),
+    prisma.advisorProfile.count({ where: { verificationStatus: "rejected" } }),
+    prisma.payment.aggregate({
+      where: { status: "success", createdAt: { gte: monthAgo } },
+      _sum: { amount: true },
+    }),
+    prisma.advisorProfile.findMany({
+      where: { verificationStatus: "approved" },
+      take: 4,
+      orderBy: { updatedAt: "desc" },
+      include: { user: { select: { fullName: true } } },
+    }),
+    prisma.advisorProfile.findMany({
+      where: { verificationStatus: "pending" },
+      take: 4,
+      orderBy: { createdAt: "desc" },
+      include: { user: { select: { fullName: true } } },
+    }),
+    prisma.advisorProfile.findMany({
+      where: { verificationStatus: "approved" },
+      take: 4,
+      orderBy: { createdAt: "desc" },
+      include: { user: { select: { fullName: true } } },
+    }),
+  ]);
 
-const pendingVerification = [
-  { id: "ina000012345", name: "Rohit Sharma", sebiId: "AG12345", date: "Today" },
-  { id: "ina000088219", name: "Amit Kapoor", sebiId: "AZ99765", date: "2 days ago" },
-  { id: "ina000077211", name: "Neha Verma", sebiId: "BH34567", date: "3 days ago" },
-  { id: "ina000022334", name: "Anil Mehta", sebiId: "MH65432", date: "5 days ago" },
-] as const;
+  return {
+    summary: [
+      { label: "Pending Verification", value: pendingCount.toString(), color: "#f59e0b" },
+      { label: "Approved Advisors", value: approvedCount.toString(), color: "#10b981" },
+      { label: "Rejected Applications", value: rejectedCount.toString(), color: "#ef4444" },
+      { label: "Monthly Revenue", value: `INR ${monthlyRevenue._sum.amount?.toFixed(2) ?? "0.00"}`, color: "#2563eb" },
+    ] as const,
+    topAdvisors: topAdvisors.map((advisor) => ({
+      advisorId: advisor.id,
+      name: advisor.user?.fullName ?? "Advisor",
+      experience: advisor.experienceYears ?? 0,
+      verificationStatus: advisor.verificationStatus,
+    })),
+    pendingVerification: pendingVerification.map((advisor) => ({
+      advisorId: advisor.id,
+      name: advisor.user?.fullName ?? "Advisor",
+      sebiId: advisor.sebiRegistrationNo,
+      date: advisor.createdAt.toLocaleDateString(),
+    })),
+    recentApprovals: recentApprovals.map((advisor) => ({
+      advisorId: advisor.id,
+      name: advisor.user?.fullName ?? "Advisor",
+      sebiId: advisor.sebiRegistrationNo,
+      date: advisor.updatedAt.toLocaleDateString(),
+    })),
+  };
+}
 
-const recentApprovals = [
-  { id: "ina000012345", name: "Ajay Malhotra", sebiId: "DL76645", date: "Today" },
-  { id: "ina000088219", name: "Shweta Singg", sebiId: "WR67890", date: "1 day ago" },
-  { id: "ina000077211", name: "Deepak Rao", sebiId: "HR54321", date: "4 days ago" },
-  { id: "ina000022334", name: "Priya Saini", sebiId: "PB98765", date: "5 days ago" },
-] as const;
+export default async function AdvisorsPage() {
+  const { summary, topAdvisors, pendingVerification, recentApprovals } = await getAdvisorData();
 
-export default function AdvisorsPage() {
   return (
     <section>
       <h1 className="page-title">ADVISOR OVERVIEW</h1>
@@ -82,26 +117,25 @@ export default function AdvisorsPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
             <h3 style={{ marginTop: 0, marginBottom: 0 }}>Top Advisors</h3>
             <div style={{ display: "flex", gap: 8 }}>
-              <span className="tag">Followers</span>
-              <span className="tag">Accuracy</span>
-              <span className="tag">Revenue</span>
+              <span className="tag">Experience</span>
+              <span className="tag">Status</span>
             </div>
           </div>
           <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
             {topAdvisors.map((advisor) => (
-              <div key={advisor.id} style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", alignItems: "center", gap: 10, borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
+              <div key={advisor.advisorId} style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", alignItems: "center", gap: 10, borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
                 <div>
                   <p style={{ margin: 0, fontWeight: 800 }}>
-                    <Link href={`/super-admin/advisors/${advisor.id}`} style={{ color: "var(--text)" }}>
+                    <Link href={`/super-admin/advisors/${advisor.advisorId}`} style={{ color: "var(--text)" }}>
                       {advisor.name}
                     </Link>
                   </p>
-                  <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>Followers {advisor.followers}</p>
+                  <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>Top performing advisor</p>
                 </div>
-                <strong>{advisor.accuracy}</strong>
-                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{advisor.revenue}</span>
-                <Link href={`/super-admin/advisors/${advisor.id}`} className="btn-primary" style={{ padding: "6px 10px", borderRadius: 8, display: "inline-block" }}>
-                  Verify
+                <strong>{advisor.experience} yrs</strong>
+                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{advisor.verificationStatus}</span>
+                <Link href={`/super-admin/advisors/${advisor.advisorId}`} className="btn-primary" style={{ padding: "6px 10px", borderRadius: 8, display: "inline-block" }}>
+                  View
                 </Link>
               </div>
             ))}

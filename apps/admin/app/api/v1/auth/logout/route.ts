@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { ok, err } from "@/lib/api-helpers";
+import { NextRequest, NextResponse } from "next/server";
+import { err } from "@/lib/api-helpers";
 import { requireAuth, revokeSession } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
@@ -7,5 +7,15 @@ export async function POST(req: NextRequest) {
   if (!auth) return err("Unauthorized", 401);
 
   await revokeSession(auth.sessionId);
-  return ok({ message: "Logged out" });
+
+  const response = NextResponse.json({ status: true, message: "Logged out" });
+  response.cookies.set("access_token", "", {
+    path: "/",
+    expires: new Date(0),
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+
+  return response;
 }
