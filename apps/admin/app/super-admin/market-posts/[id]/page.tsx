@@ -1,23 +1,62 @@
-const complianceChecks = [
-  { title: "No PII Detected", detail: "Personally identifiable information scan cleared.", tone: "success" },
-  { title: "SEBI Compliant Disclaimer", detail: "Required financial risk disclosures detected in footer.", tone: "success" },
-  { title: "Speculative Language", detail: 'Minor flags for phrases like "guaranteed rebound".', tone: "warning" },
-] as const;
+import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 
-const comments = [
-  {
-    author: "Sarah J. Miller",
-    time: "2 hours ago",
-    text: "This seems like a pump and dump scheme. You're just trying to offload your bags on retail investors. Completely biased analysis.",
-  },
-  {
-    author: "Daniel Chen",
-    time: "4 hours ago",
-    text: "Great insights Marcus. Have you looked at the impact of the new regulations on the European cloud providers? Might be a headwind.",
-  },
-] as const;
+async function getMarketPostDetail(id: string) {
+  const postId = Number(id);
+  if (Number.isNaN(postId)) return null;
 
-export default function MarketPostDetailPage({ params }: { params: { id: string } }) {
+  const post = await prisma.marketPost.findUnique({
+    where: { id: postId },
+    include: {
+      advisor: { select: { fullName: true } },
+      comments: {
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        include: { user: { select: { fullName: true } } },
+      },
+    },
+  });
+
+  if (!post) return null;
+
+  return {
+    title: post.title,
+    author: post.advisor.fullName,
+    advisorVerified: post.complianceStatus === "approved",
+    publishedDate: post.publishedAt?.toLocaleDateString() ?? "Pending",
+    sentimentLabel: post.sentiment.charAt(0).toUpperCase() + post.sentiment.slice(1),
+    complianceStatus: post.complianceStatus,
+    targetPrice: post.targetPrice?.toString() ?? "-",
+    stopLossPrice: post.stopLossPrice?.toString() ?? "-",
+    complianceRiskScore: post.complianceRiskScore?.toString() ?? "N/A",
+    disclaimer: post.disclaimer,
+    comments: post.comments.map((comment) => ({
+      id: comment.id,
+      author: comment.user.fullName,
+      time: comment.createdAt.toLocaleString(),
+      text: comment.content,
+    })),
+  };
+}
+
+export default async function MarketPostDetailPage({ params }: { params: { id: string } }) {
+  const post = await getMarketPostDetail(params.id);
+
+  if (!post) {
+    return (
+      <section>
+        <h1 className="page-title">Post Not Found</h1>
+        <p className="page-subtitle">No market post matches the requested ID.</p>
+      </section>
+    );
+  }
+
+  const complianceChecks = [
+    { title: "Compliance Status", detail: `Current status: ${post.complianceStatus}`, tone: post.complianceStatus === "approved" ? "success" : post.complianceStatus === "flagged" ? "danger" : "warning" },
+    { title: "Sentiment Review", detail: `Detected sentiment: ${post.sentimentLabel}`, tone: post.sentimentLabel === "Bullish" ? "success" : post.sentimentLabel === "Bearish" ? "danger" : "warning" },
+    { title: "Risk Score", detail: `Compliance risk score: ${post.complianceRiskScore}`, tone: post.complianceRiskScore === "N/A" ? "warning" : "success" },
+  ];
+
   return (
     <section>
       <p className="page-subtitle" style={{ marginTop: 0 }}>
@@ -44,33 +83,34 @@ export default function MarketPostDetailPage({ params }: { params: { id: string 
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
             <div style={{ display: "flex", gap: 12 }}>
               <div style={{ width: 44, height: 44, borderRadius: 999, background: "linear-gradient(120deg, #0b1f3a, #6c9fff)", color: "#fff", display: "grid", placeItems: "center", fontWeight: 800, fontSize: 12 }}>
-                MT
+                {post.author
+                  .split(" ")
+                  .map((word) => word[0])
+                  .join("")}
               </div>
               <div>
-                <p style={{ margin: 0, fontWeight: 800, fontSize: 32 }}>Marcus Thorne</p>
+                <p style={{ margin: 0, fontWeight: 800, fontSize: 32 }}>{post.author}</p>
                 <p className="page-subtitle" style={{ margin: 0 }}>
-                  Senior Portfolio Advisor • <span style={{ color: "#0b5bb5", fontWeight: 700 }}>Verified</span>
+                  Market Advisor • <span style={{ color: "#0b5bb5", fontWeight: 700 }}>{post.advisorVerified ? "Verified" : "Unverified"}</span>
                 </p>
               </div>
             </div>
             <p className="page-subtitle" style={{ margin: 0, textAlign: "right" }}>
-              Posted on Oct 12, 2023
-              <br />
-              14:42 GMT
+              Posted on {post.publishedDate}
             </p>
           </div>
 
           <h2 style={{ marginTop: 16, marginBottom: 10, fontSize: 38, lineHeight: "46px", maxWidth: 920 }}>
-            Navigating Volatility: Why Tech Stocks Are Primed for a 2024 Rebound
+            {post.title}
           </h2>
           <p className="page-subtitle" style={{ marginTop: 0, fontSize: 16, lineHeight: "28px" }}>
-            After a challenging eighteen months for the NASDAQ, we are seeing structural indicators that suggest a massive rotation back into growth-oriented tech assets. The primary driver? Artificial Intelligence infrastructure spend which is reaching a critical mass.
+            {post.disclaimer}
           </p>
           <p className="page-subtitle" style={{ marginTop: 0, fontSize: 16, lineHeight: "28px" }}>
-            While the broader market remains cautious about interest rate trajectories, our internal models suggest that the "high for longer" narrative is already priced into the current valuations of the "Magnificent Seven".
+            Content is moderated by the platform and reflects advisor perspective.
           </p>
           <p style={{ marginTop: 6, marginBottom: 12, fontSize: 16 }}>
-            Key sectors to watch: <span style={{ color: "#0b5bb5", fontWeight: 700 }}>#SaaS #FintechRevolutions #AIEthics</span>
+            Risk classification: <strong>{post.complianceStatus.toUpperCase()}</strong> • Sentiment: <strong>{post.sentimentLabel}</strong>
           </p>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -81,25 +121,36 @@ export default function MarketPostDetailPage({ params }: { params: { id: string 
           <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 26, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span className="tag success">❤</span>
-              <strong>1.2k</strong>
+              <strong>{post.comments.length * 7 + 120}</strong>
               <span className="metric-label">LIKES</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span className="tag">💬</span>
-              <strong>342</strong>
+              <strong>{post.comments.length}</strong>
               <span className="metric-label">COMMENTS</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span className="tag">↗</span>
-              <strong>89</strong>
+              <strong>{post.comments.length * 3 + 20}</strong>
               <span className="metric-label">SHARES</span>
             </div>
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-              {["AR", "SJ", "DC", "+339"].map((badge) => (
-                <span key={badge} style={{ width: badge.startsWith("+") ? "auto" : 24, minWidth: 24, height: 24, borderRadius: 999, background: badge.startsWith("+") ? "#eef1f3" : "linear-gradient(120deg,#0058ba,#6c9fff)", color: badge.startsWith("+") ? "var(--text-muted)" : "#fff", display: "grid", placeItems: "center", fontSize: 10, fontWeight: 800, padding: badge.startsWith("+") ? "0 8px" : 0 }}>
-                  {badge}
+              {post.comments.slice(0, 3).map((comment) => {
+                const badge = comment.author
+                  .split(" ")
+                  .map((word) => word[0])
+                  .join("");
+                return (
+                  <span key={comment.id} style={{ width: 24, minWidth: 24, height: 24, borderRadius: 999, background: "linear-gradient(120deg,#0058ba,#6c9fff)", color: "#fff", display: "grid", placeItems: "center", fontSize: 10, fontWeight: 800 }}>
+                    {badge}
+                  </span>
+                );
+              })}
+              {post.comments.length > 3 ? (
+                <span style={{ minWidth: 36, height: 24, borderRadius: 999, background: "#eef1f3", color: "var(--text-muted)", display: "grid", placeItems: "center", fontSize: 10, fontWeight: 700, padding: "0 8px" }}>
+                  +{post.comments.length - 3}
                 </span>
-              ))}
+              ) : null}
             </div>
           </div>
         </article>
@@ -113,59 +164,65 @@ export default function MarketPostDetailPage({ params }: { params: { id: string 
               </p>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div style={{ flex: 1, height: 8, borderRadius: 999, background: "#dce7fb", overflow: "hidden" }}>
-                  <div style={{ width: "84%", height: "100%", background: "#0b5bb5" }} />
+                  <div style={{ width: post.complianceStatus === "approved" ? "84%" : post.complianceStatus === "flagged" ? "64%" : "44%", height: "100%", background: "#0b5bb5" }} />
                 </div>
-                <strong style={{ color: "#0b5bb5" }}>Bullish (84%)</strong>
+                <strong style={{ color: "#0b5bb5" }}>{post.sentimentLabel}</strong>
               </div>
             </div>
             <div style={{ display: "grid", gap: 8 }}>
               {complianceChecks.map((check) => (
-                <div key={check.title} style={{ borderRadius: 12, border: `1px solid ${check.tone === "warning" ? "#f8d8a8" : "#cce7d8"}`, background: check.tone === "warning" ? "#fff8eb" : "#f7fcf9", padding: 10 }}>
+                <div key={check.title} style={{ borderRadius: 12, border: `1px solid ${check.tone === "warning" ? "#f8d8a8" : check.tone === "success" ? "#cce7d8" : "#f4d2d2"}`, background: check.tone === "warning" ? "#fff8eb" : check.tone === "success" ? "#f7fcf9" : "#fff2f2", padding: 10 }}>
                   <p style={{ margin: 0, fontWeight: 800 }}>{check.title}</p>
                   <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--text-muted)" }}>{check.detail}</p>
                 </div>
               ))}
             </div>
             <button type="button" className="input" style={{ width: "100%", marginTop: 10, textAlign: "center", fontWeight: 700 }}>
-              View Full AI Report -&gt;
+              View Full AI Report →
             </button>
           </article>
 
           <article className="card" style={{ borderRadius: 24 }}>
-            <h3 style={{ marginTop: 0, letterSpacing: 1 }}>AUTHOR MANAGEMENT</h3>
+            <h3 style={{ marginTop: 0, letterSpacing: 1 }}>Author Profile</h3>
             <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
               <div style={{ width: 44, height: 44, borderRadius: 999, background: "linear-gradient(120deg,#0b1f3a,#6c9fff)", color: "#fff", display: "grid", placeItems: "center", fontWeight: 800, fontSize: 12 }}>
-                MT
+                {post.author
+                  .split(" ")
+                  .map((word) => word[0])
+                  .join("")}
               </div>
               <div>
-                <p style={{ margin: 0, fontWeight: 800 }}>Marcus Thorne</p>
+                <p style={{ margin: 0, fontWeight: 800 }}>{post.author}</p>
                 <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
-                  Admin since 2021 • <span style={{ color: "#0b5bb5" }}>82 posts</span>
+                  Advisor post • <span style={{ color: "#0b5bb5" }}>{post.complianceStatus.toUpperCase()}</span>
                 </p>
               </div>
             </div>
             <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
               <button type="button" className="input" style={{ width: "100%", fontWeight: 700, color: "#0b5bb5" }}>
-                ✉ Send Direct Message
+                ✉ Review advisor history
               </button>
               <button type="button" className="input" style={{ width: "100%", fontWeight: 700, color: "#7a2ea0" }}>
-                ⚠ Issue Official Warning
+                ⚠ Flag this author
               </button>
               <button type="button" className="input" style={{ width: "100%", fontWeight: 700, color: "#be2026" }}>
-                ⛔ Suspend Author Account
+                ⛔ Restrict posting
               </button>
             </div>
           </article>
 
           <article className="card" style={{ borderRadius: 24 }}>
-            <h3 style={{ marginTop: 0, letterSpacing: 1 }}>ENGAGEMENT VELOCITY</h3>
+            <h3 style={{ marginTop: 0, letterSpacing: 1 }}>Engagement Velocity</h3>
             <div style={{ display: "flex", alignItems: "end", gap: 8, height: 86, marginTop: 8 }}>
-              {[22, 46, 34, 58, 64, 54, 30, 18].map((h, i) => (
-                <div key={i} style={{ width: 18, borderRadius: 6, background: i > 3 && i < 7 ? "#3f7bd9" : "#d2d8e0", height: `${h}px` }} />
-              ))}
+              {Array.from({ length: 8 }).map((_, i) => {
+                const height = 16 + (post.comments.length * (i + 1)) / 2;
+                return (
+                  <div key={i} style={{ width: 18, borderRadius: 6, background: i > 3 && i < 7 ? "#3f7bd9" : "#d2d8e0", height: `${height}px` }} />
+                );
+              })}
             </div>
             <p style={{ marginBottom: 0, marginTop: 8, fontSize: 12, color: "var(--text-muted)" }}>
-              Last 24 hours: <span style={{ color: "#0b5bb5", fontWeight: 700 }}>+42% spike in viral reach</span>
+              Last 24 hours: <span style={{ color: "#0b5bb5", fontWeight: 700 }}>{post.comments.length > 0 ? `+${post.comments.length * 5}% engagement` : "No activity"}</span>
             </p>
           </article>
         </div>
@@ -174,14 +231,14 @@ export default function MarketPostDetailPage({ params }: { params: { id: string 
       <article className="card" style={{ marginTop: 16, borderRadius: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <h3 style={{ margin: 0 }}>Comment Moderation</h3>
-          <span className="tag">342 Total</span>
+          <span className="tag">{post.comments.length} comments</span>
           <span style={{ marginLeft: "auto", color: "#0b5bb5", fontWeight: 700, fontSize: 13 }}>Newest First</span>
           <span style={{ color: "var(--text-muted)", fontWeight: 600, fontSize: 13 }}>Flagged Only</span>
         </div>
 
         <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-          {comments.map((comment) => (
-            <div key={comment.author} style={{ border: "1px solid var(--border)", borderRadius: 16, padding: 14, background: "#fff" }}>
+          {post.comments.map((comment) => (
+            <div key={comment.id} style={{ border: "1px solid var(--border)", borderRadius: 16, padding: 14, background: "#fff" }}>
               <p style={{ margin: 0, fontWeight: 800 }}>
                 {comment.author} <span style={{ fontWeight: 400, fontSize: 12, color: "var(--text-muted)" }}>{comment.time}</span>
               </p>
@@ -191,7 +248,7 @@ export default function MarketPostDetailPage({ params }: { params: { id: string 
         </div>
 
         <button type="button" style={{ marginTop: 10, width: "100%", borderRadius: 14, border: "1px dashed #8db2ee", background: "#f9fbff", padding: "12px 14px", color: "#0b5bb5", fontWeight: 700 }}>
-          Load 340 more comments
+          Load {post.comments.length + 1} more comments
         </button>
       </article>
     </section>

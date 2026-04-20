@@ -1,18 +1,24 @@
-const users = [
-  { name: "Sophia Bennett", email: "sophia.b@flexi.io", role: "super_admin", status: "active" },
-  { name: "Liam Carter", email: "liam.c@flexi.io", role: "moderator", status: "pending" },
-  { name: "Olivia Harper", email: "olivia.h@flexi.io", role: "compliance", status: "inactive" },
-  { name: "Noah Evans", email: "noah.e@flexi.io", role: "support", status: "active" },
-  { name: "Emma Foster", email: "emma.f@flexi.io", role: "analyst", status: "active" },
-];
+import { prisma } from "@/lib/prisma";
 
 function statusTag(status: string) {
   if (status === "active") return <span className="tag success">Active</span>;
   if (status === "pending") return <span className="tag">Pending</span>;
-  return <span className="tag danger">Inactive</span>;
+  return <span className="tag danger">Suspended</span>;
 }
 
-export default function UsersPage() {
+export default async function UsersPage() {
+  const [users, totalUsers, pendingUsers, suspendedUsers, verifiedEmails] = await Promise.all([
+    prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: { id: true, fullName: true, email: true, role: true, status: true, emailVerifiedAt: true },
+    }),
+    prisma.user.count(),
+    prisma.user.count({ where: { status: "pending" } }),
+    prisma.user.count({ where: { status: "suspended" } }),
+    prisma.user.count({ where: { emailVerifiedAt: { not: null } } }),
+  ]);
+
   return (
     <section>
       <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 12 }}>
@@ -30,15 +36,15 @@ export default function UsersPage() {
           <input className="input" placeholder="Filter by name or email..." />
           <select className="input">
             <option>All Roles</option>
-            <option>super_admin</option>
-            <option>moderator</option>
-            <option>compliance</option>
+            <option>admin</option>
+            <option>advisor</option>
+            <option>user</option>
           </select>
           <select className="input">
             <option>Any Status</option>
             <option>active</option>
             <option>pending</option>
-            <option>inactive</option>
+            <option>suspended</option>
           </select>
           <button className="btn-primary" type="button">
             Refresh
@@ -60,10 +66,10 @@ export default function UsersPage() {
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.email}>
-                  <td>{user.name}</td>
+                <tr key={user.id}>
+                  <td>{user.fullName}</td>
                   <td>{user.email}</td>
-                  <td style={{ textTransform: "capitalize" }}>{user.role.replace("_", " ")}</td>
+                  <td style={{ textTransform: "capitalize" }}>{user.role}</td>
                   <td>{statusTag(user.status)}</td>
                   <td>
                     <button type="button" style={{ marginRight: 8 }}>
@@ -84,19 +90,19 @@ export default function UsersPage() {
       <div className="grid grid-4" style={{ marginTop: 16 }}>
         <article className="card">
           <p className="metric-label">Total Users</p>
-          <p className="metric-value">1,248</p>
+          <p className="metric-value">{totalUsers.toLocaleString()}</p>
         </article>
         <article className="card">
           <p className="metric-label">Pending Approvals</p>
-          <p className="metric-value">942</p>
+          <p className="metric-value">{pendingUsers.toLocaleString()}</p>
         </article>
         <article className="card">
-          <p className="metric-label">Locked Accounts</p>
-          <p className="metric-value">12</p>
+          <p className="metric-label">Suspended Accounts</p>
+          <p className="metric-value">{suspendedUsers.toLocaleString()}</p>
         </article>
         <article className="card">
-          <p className="metric-label">2FA Enabled</p>
-          <p className="metric-value">28</p>
+          <p className="metric-label">Verified Emails</p>
+          <p className="metric-value">{verifiedEmails.toLocaleString()}</p>
         </article>
       </div>
     </section>

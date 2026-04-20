@@ -22,13 +22,19 @@ if (!JWT_SECRET) {
 
 export function parseBearerToken(req: NextRequest): string | null {
   const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
-  if (!authHeader) return null;
+  if (authHeader) {
+    const [scheme, token] = authHeader.split(" ", 2);
+    if (scheme && token && scheme.toLowerCase() === "bearer") {
+      return token.trim();
+    }
+  }
 
-  const [scheme, token] = authHeader.split(" ", 2);
-  if (!scheme || !token) return null;
-  if (scheme.toLowerCase() !== "bearer") return null;
+  const cookieToken = req.cookies.get("access_token")?.value;
+  if (cookieToken) {
+    return cookieToken;
+  }
 
-  return token.trim();
+  return null;
 }
 
 export function signAccessToken(payload: { sub: number; role: UserRole; sid: number }) {
@@ -72,8 +78,7 @@ export async function revokeSession(sessionId: number) {
   });
 }
 
-export async function requireAuth(req: NextRequest) {
-  const token = parseBearerToken(req);
+export async function requireAuthToken(token: string | null) {
   if (!token) return null;
 
   let payload: AuthPayload;
@@ -102,6 +107,11 @@ export async function requireAuth(req: NextRequest) {
     role: payload.role,
     sessionId: payload.sid,
   };
+}
+
+export async function requireAuth(req: NextRequest) {
+  const token = parseBearerToken(req);
+  return requireAuthToken(token);
 }
 
 export async function requireRole(req: NextRequest, allowedRoles: UserRole[]) {

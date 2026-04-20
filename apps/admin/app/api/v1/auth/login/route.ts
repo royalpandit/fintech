@@ -1,13 +1,8 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { ok, err, parseBody } from "@/lib/api-helpers";
+import { err, parseBody } from "@/lib/api-helpers";
 import { createSession, signAccessToken } from "@/lib/auth";
-
-const HARDCODED_ADMIN_EMAIL = "admin@example.com";
-const HARDCODED_ADMIN_PASSWORD = "Admin123!";
-const HARDCODED_ADMIN_FULL_NAME = "Administrator";
-const HARDCODED_ADMIN_PHONE = "0000000000";
 
 export async function POST(req: NextRequest) {
   const body = await parseBody<{
@@ -20,49 +15,16 @@ export async function POST(req: NextRequest) {
     return err("email/phone and password are required");
   }
 
-  const isHardcodedAdmin =
-    body.email?.toLowerCase() === HARDCODED_ADMIN_EMAIL &&
-    body.password === HARDCODED_ADMIN_PASSWORD;
+  const user = await prisma.user.findFirst({
+    where: body.email
+      ? { email: body.email.toLowerCase() }
+      : { phone: body.phone },
+  });
 
-  let user = null;
+  if (!user) return err("Invalid credentials", 401);
 
-  if (isHardcodedAdmin) {
-    const hashedPassword = await bcrypt.hash(HARDCODED_ADMIN_PASSWORD, 12);
-    user = await prisma.user.upsert({
-      where: { email: HARDCODED_ADMIN_EMAIL },
-      update: {
-        fullName: HARDCODED_ADMIN_FULL_NAME,
-        phone: HARDCODED_ADMIN_PHONE,
-        passwordHash: hashedPassword,
-        role: "admin",
-      },
-      create: {
-        fullName: HARDCODED_ADMIN_FULL_NAME,
-        email: HARDCODED_ADMIN_EMAIL,
-        phone: HARDCODED_ADMIN_PHONE,
-        passwordHash: hashedPassword,
-        role: "admin",
-      },
-      select: {
-        id: true,
-        uuid: true,
-        fullName: true,
-        email: true,
-        role: true,
-      },
-    });
-  } else {
-    user = await prisma.user.findFirst({
-      where: body.email
-        ? { email: body.email.toLowerCase() }
-        : { phone: body.phone },
-    });
-
-    if (!user) return err("Invalid credentials", 401);
-
-    const valid = await bcrypt.compare(body.password, user.passwordHash);
-    if (!valid) return err("Invalid credentials", 401);
-  }
+  const valid = await bcrypt.compare(body.password, user.passwordHash);
+  if (!valid) return err("Invalid credentials", 401);
 
   await prisma.user.update({
     where: { id: user.id },
@@ -72,8 +34,8 @@ export async function POST(req: NextRequest) {
   const session = await createSession(user.id, req);
   const token = signAccessToken({ sub: user.id, role: user.role, sid: session.id });
 
-  return ok({
-    token,
+  const response = NextResponse.json({
+    status: true,
     user: {
       id: user.id,
       uuid: user.uuid,
@@ -82,4 +44,14 @@ export async function POST(req: NextRequest) {
       role: user.role,
     },
   });
+
+  response.cookies.set("access_token", token, {
+    httpOnly: true,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 7 * 24 * 60 * 60,
+  });
+
+  return response;
 }
