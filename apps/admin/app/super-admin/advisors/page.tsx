@@ -17,19 +17,19 @@ async function getAdvisorData() {
       where: { verificationStatus: "approved" },
       take: 4,
       orderBy: { updatedAt: "desc" },
-      include: { user: { select: { fullName: true } } },
+      include: { user: { select: { id: true, fullName: true } } },
     }),
     prisma.advisorProfile.findMany({
       where: { verificationStatus: "pending" },
       take: 4,
       orderBy: { createdAt: "desc" },
-      include: { user: { select: { fullName: true } } },
+      include: { user: { select: { id: true, fullName: true } } },
     }),
     prisma.advisorProfile.findMany({
       where: { verificationStatus: "approved" },
       take: 4,
       orderBy: { createdAt: "desc" },
-      include: { user: { select: { fullName: true } } },
+      include: { user: { select: { id: true, fullName: true } } },
     }),
   ]);
 
@@ -41,19 +41,19 @@ async function getAdvisorData() {
       { label: "Monthly Revenue", value: `INR ${monthlyRevenue._sum.amount?.toFixed(2) ?? "0.00"}`, color: "#2563eb" },
     ] as const,
     topAdvisors: topAdvisors.map((advisor) => ({
-      advisorId: advisor.id,
+      advisorId: advisor.userId,
       name: advisor.user?.fullName ?? "Advisor",
       experience: advisor.experienceYears ?? 0,
       verificationStatus: advisor.verificationStatus,
     })),
     pendingVerification: pendingVerification.map((advisor) => ({
-      advisorId: advisor.id,
+      advisorId: advisor.userId,
       name: advisor.user?.fullName ?? "Advisor",
       sebiId: advisor.sebiRegistrationNo,
       date: advisor.createdAt.toLocaleDateString(),
     })),
     recentApprovals: recentApprovals.map((advisor) => ({
-      advisorId: advisor.id,
+      advisorId: advisor.userId,
       name: advisor.user?.fullName ?? "Advisor",
       sebiId: advisor.sebiRegistrationNo,
       date: advisor.updatedAt.toLocaleDateString(),
@@ -158,16 +158,16 @@ export default async function AdvisorsPage() {
               </thead>
               <tbody>
                 {pendingVerification.map((advisor) => (
-                  <tr key={advisor.id}>
+                  <tr key={advisor.advisorId}>
                     <td>
-                      <Link href={`/super-admin/advisors/${advisor.id}`} style={{ color: "var(--primary)", fontWeight: 700 }}>
+                      <Link href={`/super-admin/advisors/${advisor.advisorId}`} style={{ color: "var(--primary)", fontWeight: 700 }}>
                         {advisor.name}
                       </Link>
                     </td>
                     <td>{advisor.sebiId}</td>
                     <td>{advisor.date}</td>
                     <td>
-                      <Link href={`/super-admin/advisors/${advisor.id}`} className="btn-primary" style={{ padding: "6px 10px", borderRadius: 8, display: "inline-block" }}>
+                      <Link href={`/super-admin/advisors/${advisor.advisorId}`} className="btn-primary" style={{ padding: "6px 10px", borderRadius: 8, display: "inline-block" }}>
                         Verify
                       </Link>
                     </td>
@@ -191,9 +191,9 @@ export default async function AdvisorsPage() {
               </thead>
               <tbody>
                 {recentApprovals.map((advisor) => (
-                  <tr key={`approved-${advisor.id}`}>
+                  <tr key={`approved-${advisor.advisorId}`}>
                     <td>
-                      <Link href={`/super-admin/advisors/${advisor.id}`} style={{ color: "var(--text)", fontWeight: 700 }}>
+                      <Link href={`/super-admin/advisors/${advisor.advisorId}`} style={{ color: "var(--text)", fontWeight: 700 }}>
                         {advisor.name}
                       </Link>
                     </td>
