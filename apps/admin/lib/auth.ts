@@ -3,7 +3,7 @@ import { randomBytes } from "crypto";
 import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
 
-export type UserRole = "user" | "advisor" | "admin";
+export type UserRole = "user" | "advisor" | "admin" | "super_admin";
 
 export type AuthPayload = {
   sub: number;

@@ -7,7 +7,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const auth = await requireRole(req, ["admin"]);
+  const auth = await requireRole(req, ["admin", "super_admin"]);
   if (!auth) return err("Forbidden", 403);
 
   const adminId = auth.userId;

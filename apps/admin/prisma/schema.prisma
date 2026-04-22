@@ -12,6 +12,7 @@ enum UserRole {
   user
   advisor
   admin
+  super_admin
 
   @@map("user_role")
 }

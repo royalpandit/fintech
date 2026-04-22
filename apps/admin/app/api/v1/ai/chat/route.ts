@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
   await prisma.aiLog.create({
     data: {
-      userId: userId || null,
+      userId: auth.userId,
       module: "chat",
       inputData: { message: body.message, context: body.context },
       outputData: { answer: "Informational response generated." },
