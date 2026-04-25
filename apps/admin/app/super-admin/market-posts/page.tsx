@@ -1,237 +1,347 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
-async function getMarketPostsData() {
-  const [totalPosts, publishedPosts, flaggedPostsCount, pendingPosts, flaggedPosts, reports, recentApproved] = await Promise.all([
-    prisma.marketPost.count(),
-    prisma.marketPost.count({ where: { publishedAt: { not: null }, complianceStatus: "approved" } }),
-    prisma.marketPost.count({ where: { complianceStatus: "flagged" } }),
-    prisma.marketPost.count({ where: { complianceStatus: "pending" } }),
-    prisma.marketPost.findMany({
-      where: { complianceStatus: "flagged" },
-      orderBy: { updatedAt: "desc" },
-      take: 5,
-      include: { advisor: { select: { fullName: true } } },
-    }),
-    prisma.contentReport.findMany({
-      select: { reason: true },
-    }),
-    prisma.marketPost.findMany({
-      where: { complianceStatus: "approved" },
-      orderBy: { updatedAt: "desc" },
-      take: 3,
-      include: { advisor: { select: { fullName: true } } },
-    }),
-  ]);
+export const dynamic = "force-dynamic";
 
-  const reasonMap = new Map<string, number>();
-  for (const report of reports) {
-    reasonMap.set(report.reason, (reasonMap.get(report.reason) || 0) + 1);
-  }
-  const aiReasons = Array.from(reasonMap.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([reason, count]) => ({ reason, _count: { _all: count } }));
+type SearchParams = { status?: string };
 
-  return {
-    summary: [
-      { label: "Total Posts", value: totalPosts.toLocaleString(), color: "#2563eb" },
-      { label: "Published", value: publishedPosts.toLocaleString(), color: "#10b981" },
-      { label: "Flagged", value: flaggedPostsCount.toLocaleString(), color: "#ef4444" },
-      { label: "Pending", value: pendingPosts.toLocaleString(), color: "#f59e0b" },
-    ] as const,
-    flaggedPosts: flaggedPosts.map((post) => ({
-      id: post.id,
-      title: post.title,
-      author: post.advisor.fullName,
-      time: post.updatedAt.toLocaleDateString(),
-    })),
-    aiReasons: aiReasons.map((reason) => ({
-      reason: reason.reason,
-      time: `${reason._count._all} reports`,
-    })),
-    recentApproved: recentApproved.map((post) => ({
-      id: post.id,
-      title: post.title,
-      author: post.advisor.fullName,
-      date: post.updatedAt.toLocaleDateString(),
-    })),
-  };
+const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
+  approved: { bg: "#d1fae5", fg: "#047857" },
+  pending: { bg: "#fef3c7", fg: "#92400e" },
+  under_review: { bg: "#fef3c7", fg: "#92400e" },
+  flagged: { bg: "#fee2e2", fg: "#991b1b" },
+  rejected: { bg: "#fee2e2", fg: "#7f1d1d" },
+};
+
+const SENTIMENT_COLORS: Record<string, string> = {
+  bullish: "#16a34a",
+  bearish: "#dc2626",
+  neutral: "#64748b",
+};
+
+function relTime(date: Date): string {
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return date.toLocaleDateString();
 }
 
-export default async function MarketPostsPage() {
-  const { summary, flaggedPosts, aiReasons, recentApproved } = await getMarketPostsData();
+export default async function SuperAdminMarketPostsPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const status = searchParams.status ?? "all";
+
+  const baseWhere = { deletedAt: null };
+  let listWhere: Record<string, unknown> = { ...baseWhere };
+  if (status === "pending")
+    listWhere = { ...baseWhere, complianceStatus: { in: ["pending", "under_review"] } };
+  else if (["approved", "flagged", "rejected"].includes(status))
+    listWhere = { ...baseWhere, complianceStatus: status };
+
+  const [posts, totalC, pendingC, approvedC, flaggedC, rejectedC, reportsCount] = await Promise.all(
+    [
+      prisma.marketPost.findMany({
+        where: listWhere,
+        orderBy: { createdAt: "desc" },
+        take: 100,
+        include: {
+          advisor: {
+            select: {
+              id: true,
+              fullName: true,
+              advisorProfile: { select: { sebiRegistrationNo: true } },
+            },
+          },
+          _count: { select: { reactions: true, comments: true } },
+        },
+      }),
+      prisma.marketPost.count({ where: { deletedAt: null } }),
+      prisma.marketPost.count({
+        where: { complianceStatus: { in: ["pending", "under_review"] }, deletedAt: null },
+      }),
+      prisma.marketPost.count({ where: { complianceStatus: "approved", deletedAt: null } }),
+      prisma.marketPost.count({ where: { complianceStatus: "flagged", deletedAt: null } }),
+      prisma.marketPost.count({ where: { complianceStatus: "rejected", deletedAt: null } }),
+      prisma.contentReport.count({ where: { contentKind: "market_post", status: "open" } }),
+    ],
+  );
+
+  const tabs = [
+    { key: "all", label: `All (${totalC})`, color: "#7c3aed" },
+    { key: "pending", label: `Pending (${pendingC})`, color: "#f59e0b" },
+    { key: "approved", label: `Approved (${approvedC})`, color: "#10b981" },
+    { key: "flagged", label: `Flagged (${flaggedC})`, color: "#ef4444" },
+    { key: "rejected", label: `Rejected (${rejectedC})`, color: "#7f1d1d" },
+  ];
+
   return (
-    <section>
-      <h1 className="page-title">MARKET POSTS</h1>
-      <p className="page-subtitle">Moderation overview for published, flagged, and pending market content.</p>
-
-      <div className="grid grid-4" style={{ marginTop: 16 }}>
-        {summary.map((item) => (
-          <article key={item.label} className="card" style={{ borderRadius: 14, padding: 16 }}>
-            <p className="metric-label" style={{ marginTop: 0 }}>
-              {item.label}
-            </p>
-            <p className="metric-value" style={{ fontSize: 42, margin: "8px 0 0" }}>
-              {item.value}
-            </p>
-            <div style={{ marginTop: 8, height: 6, borderRadius: 999, background: "#eef2f7", overflow: "hidden" }}>
-              <div style={{ width: "72%", height: "100%", background: item.color }} />
-            </div>
-          </article>
-        ))}
-      </div>
-
-      <div className="grid" style={{ marginTop: 16, gridTemplateColumns: "2fr 1fr" }}>
-        <article className="card" style={{ borderRadius: 14 }}>
-          <h3 style={{ marginTop: 0 }}>Post Trends</h3>
-          <div style={{ height: 300, border: "1px solid var(--border)", borderRadius: 12, background: "#fbfdff", overflow: "hidden", position: "relative" }}>
-            <svg viewBox="0 0 900 300" style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}>
-              <polyline points="35,230 130,196 220,156 310,136 400,152 490,124 580,108 670,96 760,84 850,68" fill="none" stroke="#3b82f6" strokeWidth="4" strokeLinecap="round" />
-              <polyline points="35,246 130,228 220,196 310,190 400,162 490,184 580,162 670,170 760,154 850,180" fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />
-            </svg>
-            <div style={{ position: "absolute", left: 18, right: 18, bottom: 10, display: "flex", justifyContent: "space-between", color: "var(--text-muted)", fontSize: 11, fontWeight: 700 }}>
-              {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"].map((m) => (
-                <span key={m}>{m}</span>
-              ))}
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: 12 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 9, height: 9, borderRadius: 999, background: "#3b82f6" }} /> Published
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 9, height: 9, borderRadius: 999, background: "#f59e0b" }} /> Flagged
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 9, height: 9, borderRadius: 999, background: "#10b981" }} /> Pending
-            </span>
-          </div>
-        </article>
-
-        <div style={{ display: "grid", gap: 16 }}>
-          <article className="card" style={{ borderRadius: 14 }}>
-            <h3 style={{ marginTop: 0 }}>Content Moderation</h3>
-            <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 10 }}>
-                <p className="metric-label" style={{ margin: 0 }}>
-                  Pending Review
-                </p>
-                <p style={{ margin: "6px 0 0", fontSize: 30, fontWeight: 800 }}>18</p>
-              </div>
-              <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 10 }}>
-                <p className="metric-label" style={{ margin: 0 }}>
-                  Approved Posts
-                </p>
-                <p style={{ margin: "6px 0 0", fontSize: 30, fontWeight: 800 }}>56</p>
-              </div>
-            </div>
-            <button type="button" className="btn-primary" style={{ width: "100%", marginTop: 10 }}>
-              Review All
-            </button>
-          </article>
-
-          <article className="card" style={{ borderRadius: 14 }}>
-            <h3 style={{ marginTop: 0 }}>Recent Flagged Posts</h3>
-            <div style={{ display: "grid", gap: 8 }}>
-              {flaggedPosts.map((post) => (
-                <div key={post.title} style={{ display: "grid", gridTemplateColumns: "1fr auto", alignItems: "center", borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 700 }}>
-                      <Link href={`/super-admin/market-posts/${post.id}`} style={{ color: "var(--text)" }}>
-                        {post.title}
-                      </Link>
-                    </p>
-                    <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>{post.author}</p>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>{post.time}</p>
-                    <Link href={`/super-admin/market-posts/${post.id}`} className="btn-primary" style={{ marginTop: 4, borderRadius: 8, padding: "6px 10px", display: "inline-block" }}>
-                      Open
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </article>
+    <section className="advisor-scope" style={{ ["--advisor-primary" as any]: "#7c3aed" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          marginBottom: 18,
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 26,
+              fontWeight: 800,
+              color: "#0f172a",
+              letterSpacing: -0.6,
+            }}
+          >
+            Market Posts
+          </h1>
+          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+            Platform-wide moderation of advisor sentiment posts
+          </p>
         </div>
       </div>
 
-      <div className="grid" style={{ marginTop: 16, gridTemplateColumns: "2fr 1fr" }}>
-        <article className="card" style={{ borderRadius: 14 }}>
-          <h3 style={{ marginTop: 0 }}>Recent Flagged Posts</h3>
-          <div className="table-wrap">
-            <table>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(5, 1fr)",
+          gap: 14,
+          marginBottom: 18,
+        }}
+      >
+        {tabs.map((t) => {
+          const value =
+            t.key === "all"
+              ? totalC
+              : t.key === "pending"
+                ? pendingC
+                : t.key === "approved"
+                  ? approvedC
+                  : t.key === "flagged"
+                    ? flaggedC
+                    : rejectedC;
+          return (
+            <Link
+              key={t.key}
+              href={t.key === "all" ? "/super-admin/market-posts" : `/super-admin/market-posts?status=${t.key}`}
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <article
+                className="stat-card"
+                style={{
+                  cursor: "pointer",
+                  borderColor: status === t.key ? t.color : "#eef0f4",
+                }}
+              >
+                <p className="stat-card-label">{t.label.split(" (")[0]}</p>
+                <p className="stat-card-value" style={{ color: t.color }}>
+                  {value.toLocaleString()}
+                </p>
+              </article>
+            </Link>
+          );
+        })}
+      </div>
+
+      <article className="widget" style={{ marginBottom: 14 }}>
+        <div className="widget-title">
+          <h3>Open Reports on Posts</h3>
+          <Link href="/super-admin/market-posts">View flagged</Link>
+        </div>
+        <p style={{ margin: 0, fontSize: 13, color: "#64748b" }}>
+          {reportsCount > 0 ? (
+            <>
+              <strong style={{ color: "#dc2626" }}>{reportsCount}</strong> active community
+              reports against market posts
+            </>
+          ) : (
+            "✓ No open reports against market posts."
+          )}
+        </p>
+      </article>
+
+      <article className="widget" style={{ padding: 0, overflow: "hidden" }}>
+        {posts.length === 0 ? (
+          <p
+            style={{ margin: 0, padding: 48, textAlign: "center", color: "#94a3b8", fontSize: 13 }}
+          >
+            No posts match this filter.
+          </p>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
               <thead>
-                <tr>
-                  <th>Post</th>
-                  <th>Author</th>
-                  <th>Reported</th>
-                  <th>Action</th>
+                <tr style={{ background: "#f8fafc" }}>
+                  {["Post", "Advisor", "Sentiment", "Risk", "Engagement", "Status", ""].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        textAlign: h === "" ? "right" : "left",
+                        padding: "12px 18px",
+                        fontWeight: 600,
+                        fontSize: 11,
+                        color: "#64748b",
+                        textTransform: "uppercase",
+                        letterSpacing: 0.6,
+                        borderBottom: "1px solid #eef0f4",
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {flaggedPosts.map((post) => (
-                  <tr key={`table-${post.title}`}>
-                    <td>
-                      <Link href={`/super-admin/market-posts/${post.id}`} style={{ color: "var(--primary)", fontWeight: 700 }}>
-                        {post.title}
-                      </Link>
-                    </td>
-                    <td>{post.author}</td>
-                    <td>{post.time}</td>
-                    <td>
-                      <Link href={`/super-admin/market-posts/${post.id}`} className="btn-primary" style={{ marginRight: 8, borderRadius: 8, padding: "6px 10px", display: "inline-block" }}>
-                        Review
-                      </Link>
-                      <button type="button" style={{ border: 0, borderRadius: 8, background: "#fee2e2", color: "#b91c1c", padding: "6px 10px", fontWeight: 700 }}>
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {posts.map((post) => {
+                  const sc = STATUS_COLORS[post.complianceStatus] ?? STATUS_COLORS.pending;
+                  const score = post.complianceRiskScore
+                    ? Number(post.complianceRiskScore)
+                    : null;
+                  return (
+                    <tr key={post.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "14px 18px" }}>
+                        <Link
+                          href={`/super-admin/market-posts/${post.id}`}
+                          style={{
+                            display: "flex",
+                            gap: 10,
+                            alignItems: "center",
+                            color: "#0f172a",
+                            textDecoration: "none",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: 9,
+                              background: `${SENTIMENT_COLORS[post.sentiment]}1a`,
+                              color: SENTIMENT_COLORS[post.sentiment],
+                              display: "grid",
+                              placeItems: "center",
+                              fontSize: 10,
+                              fontWeight: 800,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {post.marketSymbol?.slice(0, 4) ?? "—"}
+                          </div>
+                          <div style={{ minWidth: 0, maxWidth: 360 }}>
+                            <div
+                              style={{
+                                fontSize: 13,
+                                fontWeight: 700,
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {post.title}
+                            </div>
+                            <div style={{ fontSize: 11, color: "#64748b" }}>
+                              {post.assetType.toUpperCase()} · {relTime(post.createdAt)}
+                            </div>
+                          </div>
+                        </Link>
+                      </td>
+                      <td style={{ padding: "14px 18px" }}>
+                        <Link
+                          href={`/super-admin/advisors/${post.advisor?.id}`}
+                          style={{ color: "#0f172a", textDecoration: "none" }}
+                        >
+                          <div style={{ fontSize: 12, fontWeight: 600 }}>
+                            {post.advisor?.fullName ?? "—"}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: "#64748b",
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            {post.advisor?.advisorProfile?.sebiRegistrationNo ?? "—"}
+                          </div>
+                        </Link>
+                      </td>
+                      <td
+                        style={{
+                          padding: "14px 18px",
+                          color: SENTIMENT_COLORS[post.sentiment],
+                          fontWeight: 700,
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {post.sentiment}
+                      </td>
+                      <td style={{ padding: "14px 18px" }}>
+                        {score !== null ? (
+                          <span
+                            style={{
+                              padding: "2px 10px",
+                              borderRadius: 999,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              background:
+                                score >= 7 ? "#fee2e2" : score >= 4 ? "#fef3c7" : "#d1fae5",
+                              color: score >= 7 ? "#991b1b" : score >= 4 ? "#92400e" : "#047857",
+                            }}
+                          >
+                            {score.toFixed(1)}
+                          </span>
+                        ) : (
+                          <span style={{ color: "#94a3b8" }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ padding: "14px 18px", fontSize: 11, color: "#475569" }}>
+                        {post._count.reactions} ❤ · {post._count.comments} 💬
+                      </td>
+                      <td style={{ padding: "14px 18px" }}>
+                        <span
+                          style={{
+                            padding: "2px 10px",
+                            borderRadius: 999,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            background: sc.bg,
+                            color: sc.fg,
+                            textTransform: "capitalize",
+                          }}
+                        >
+                          {post.complianceStatus.replace("_", " ")}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px 18px", textAlign: "right" }}>
+                        <Link
+                          href={`/super-admin/market-posts/${post.id}`}
+                          style={{
+                            padding: "6px 14px",
+                            borderRadius: 8,
+                            background: "#7c3aed",
+                            color: "#fff",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            textDecoration: "none",
+                          }}
+                        >
+                          Review
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        </article>
-
-        <article className="card" style={{ borderRadius: 14 }}>
-          <h3 style={{ marginTop: 0 }}>AI Flagging Reasons</h3>
-          <div style={{ display: "grid", gap: 10 }}>
-            {aiReasons.map((row) => (
-              <div key={row.reason} style={{ borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
-                <p style={{ margin: 0, fontWeight: 700 }}>⚠ {row.reason}</p>
-                <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--text-muted)" }}>{row.time}</p>
-              </div>
-            ))}
-          </div>
-        </article>
-      </div>
-
-      <article className="card" style={{ marginTop: 16, borderRadius: 14 }}>
-        <h3 style={{ marginTop: 0 }}>Recent Approved Posts</h3>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Author</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentApproved.map((post) => (
-                <tr key={`approved-${post.id}`}>
-                  <td>{post.title}</td>
-                  <td>{post.author}</td>
-                  <td>{post.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        )}
       </article>
     </section>
   );
 }
-

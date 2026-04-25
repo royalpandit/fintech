@@ -1,11 +1,36 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import Sparkline from "@/components/advisor-ui/sparkline";
 
-async function getAdvisorData() {
+export const dynamic = "force-dynamic";
+
+function formatINR(n: number, compact = false) {
+  if (!n && n !== 0) return "₹0";
+  if (compact && Math.abs(n) >= 10000000) return `₹${(n / 10000000).toFixed(2)}Cr`;
+  if (compact && Math.abs(n) >= 100000) return `₹${(n / 100000).toFixed(2)}L`;
+  if (compact && Math.abs(n) >= 1000) return `₹${(n / 1000).toFixed(1)}k`;
+  return `₹${Number(n).toLocaleString("en-IN")}`;
+}
+
+const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
+  approved: { bg: "#d1fae5", fg: "#047857" },
+  pending: { bg: "#fef3c7", fg: "#92400e" },
+  rejected: { bg: "#fee2e2", fg: "#991b1b" },
+};
+
+export default async function SuperAdminAdvisorsPage() {
   const monthAgo = new Date();
   monthAgo.setDate(monthAgo.getDate() - 30);
 
-  const [pendingCount, approvedCount, rejectedCount, monthlyRevenue, topAdvisors, pendingVerification, recentApprovals] = await Promise.all([
+  const [
+    pendingCount,
+    approvedCount,
+    rejectedCount,
+    monthlyRevenue,
+    topAdvisorMetrics,
+    pendingVerification,
+    recentApprovals,
+  ] = await Promise.all([
     prisma.advisorProfile.count({ where: { verificationStatus: "pending" } }),
     prisma.advisorProfile.count({ where: { verificationStatus: "approved" } }),
     prisma.advisorProfile.count({ where: { verificationStatus: "rejected" } }),
@@ -13,200 +38,440 @@ async function getAdvisorData() {
       where: { status: "success", createdAt: { gte: monthAgo } },
       _sum: { amount: true },
     }),
-    prisma.advisorProfile.findMany({
-      where: { verificationStatus: "approved" },
-      take: 4,
-      orderBy: { updatedAt: "desc" },
-      include: { user: { select: { id: true, fullName: true } } },
+    prisma.advisorMetricDaily.groupBy({
+      by: ["advisorUserId"],
+      where: { day: { gte: monthAgo } },
+      _sum: { earningsAmount: true, subscribersCount: true },
+      orderBy: { _sum: { earningsAmount: "desc" } },
+      take: 5,
     }),
     prisma.advisorProfile.findMany({
       where: { verificationStatus: "pending" },
-      take: 4,
-      orderBy: { createdAt: "desc" },
-      include: { user: { select: { id: true, fullName: true } } },
+      take: 8,
+      orderBy: { createdAt: "asc" },
+      include: { user: { select: { id: true, fullName: true, email: true } } },
     }),
     prisma.advisorProfile.findMany({
       where: { verificationStatus: "approved" },
-      take: 4,
-      orderBy: { createdAt: "desc" },
-      include: { user: { select: { id: true, fullName: true } } },
+      take: 6,
+      orderBy: { verifiedAt: "desc" },
+      include: {
+        user: { select: { id: true, fullName: true } },
+        verifiedBy: { select: { fullName: true } },
+      },
     }),
   ]);
 
-  return {
-    summary: [
-      { label: "Pending Verification", value: pendingCount.toString(), color: "#f59e0b" },
-      { label: "Approved Advisors", value: approvedCount.toString(), color: "#10b981" },
-      { label: "Rejected Applications", value: rejectedCount.toString(), color: "#ef4444" },
-      { label: "Monthly Revenue", value: `INR ${monthlyRevenue._sum.amount?.toFixed(2) ?? "0.00"}`, color: "#2563eb" },
-    ] as const,
-    topAdvisors: topAdvisors.map((advisor) => ({
-      advisorId: advisor.userId,
-      name: advisor.user?.fullName ?? "Advisor",
-      experience: advisor.experienceYears ?? 0,
-      verificationStatus: advisor.verificationStatus,
-    })),
-    pendingVerification: pendingVerification.map((advisor) => ({
-      advisorId: advisor.userId,
-      name: advisor.user?.fullName ?? "Advisor",
-      sebiId: advisor.sebiRegistrationNo,
-      date: advisor.createdAt.toLocaleDateString(),
-    })),
-    recentApprovals: recentApprovals.map((advisor) => ({
-      advisorId: advisor.userId,
-      name: advisor.user?.fullName ?? "Advisor",
-      sebiId: advisor.sebiRegistrationNo,
-      date: advisor.updatedAt.toLocaleDateString(),
-    })),
-  };
-}
+  // Hydrate top advisor users
+  const topIds = topAdvisorMetrics.map((m) => m.advisorUserId);
+  const topUsers = await prisma.user.findMany({
+    where: { id: { in: topIds } },
+    select: {
+      id: true,
+      fullName: true,
+      advisorProfile: { select: { sebiRegistrationNo: true, expertiseTags: true } },
+    },
+  });
+  const userById = new Map(topUsers.map((u) => [u.id, u]));
 
-export default async function AdvisorsPage() {
-  const { summary, topAdvisors, pendingVerification, recentApprovals } = await getAdvisorData();
+  const summary = [
+    {
+      label: "Pending Verification",
+      value: pendingCount.toLocaleString(),
+      color: "#f59e0b",
+    },
+    {
+      label: "Approved Advisors",
+      value: approvedCount.toLocaleString(),
+      color: "#10b981",
+    },
+    {
+      label: "Rejected Applications",
+      value: rejectedCount.toLocaleString(),
+      color: "#ef4444",
+    },
+    {
+      label: "Monthly Revenue",
+      value: formatINR(Number(monthlyRevenue._sum.amount ?? 0), true),
+      color: "#7c3aed",
+    },
+  ];
 
   return (
-    <section>
-      <h1 className="page-title">ADVISOR OVERVIEW</h1>
-      <p className="page-subtitle">Approval monitoring, verification queue, and advisor quality analytics.</p>
+    <section className="advisor-scope" style={{ ["--advisor-primary" as any]: "#7c3aed" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          marginBottom: 18,
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 26,
+              fontWeight: 800,
+              color: "#0f172a",
+              letterSpacing: -0.6,
+            }}
+          >
+            Advisor Overview
+          </h1>
+          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+            Approval monitoring, verification queue, and advisor quality analytics
+          </p>
+        </div>
+      </div>
 
-      <div className="grid grid-4" style={{ marginTop: 16 }}>
-        {summary.map((item) => (
-          <article key={item.label} className="card" style={{ borderRadius: 14, padding: 16 }}>
-            <p className="metric-label" style={{ marginTop: 0 }}>
-              {item.label}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: 14,
+          marginBottom: 18,
+        }}
+      >
+        {summary.map((s) => (
+          <article key={s.label} className="stat-card">
+            <p className="stat-card-label">{s.label}</p>
+            <p className="stat-card-value" style={{ color: s.color }}>
+              {s.value}
             </p>
-            <p className="metric-value" style={{ margin: "8px 0 0", fontSize: item.label === "Monthly Revenue" ? 38 : 42 }}>
-              {item.value}
-            </p>
-            <div style={{ marginTop: 8, height: 6, borderRadius: 999, background: "#eef2f7", overflow: "hidden" }}>
-              <div style={{ width: "74%", height: "100%", background: item.color }} />
-            </div>
           </article>
         ))}
       </div>
 
-      <div className="grid" style={{ marginTop: 16, gridTemplateColumns: "2fr 1fr", alignItems: "start" }}>
-        <article className="card" style={{ borderRadius: 14 }}>
-          <h3 style={{ marginTop: 0 }}>Advisor Approval Trends</h3>
-          <div style={{ height: 290, border: "1px solid var(--border)", borderRadius: 12, background: "#fbfdff", overflow: "hidden", position: "relative" }}>
-            <svg viewBox="0 0 900 290" style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}>
-              <polyline points="35,250 120,206 210,176 300,148 390,154 480,136 570,122 660,110 750,90 850,72" fill="none" stroke="#facc15" strokeWidth="3" strokeLinecap="round" />
-              <polyline points="35,262 120,242 210,218 300,176 390,150 480,154 570,108 660,96 750,82 850,70" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" />
-              <polyline points="35,264 120,248 210,232 300,214 390,202 480,182 570,176 660,146 750,124 850,110" fill="none" stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
-            </svg>
-            <div style={{ position: "absolute", left: 18, right: 18, bottom: 10, display: "flex", justifyContent: "space-between", color: "var(--text-muted)", fontSize: 11, fontWeight: 700 }}>
-              {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"].map((m) => (
-                <span key={m}>{m}</span>
-              ))}
+      <div
+        style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 14, marginBottom: 14 }}
+      >
+        <article className="widget" style={{ padding: 0, overflow: "hidden" }}>
+          <div
+            style={{
+              padding: "16px 18px",
+              borderBottom: "1px solid #eef0f4",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Top Earning Advisors</h3>
+            <Link
+              href="/super-admin/users?role=advisor"
+              style={{ fontSize: 11, color: "#7c3aed", fontWeight: 600 }}
+            >
+              View all
+            </Link>
+          </div>
+
+          {topAdvisorMetrics.length === 0 ? (
+            <p
+              style={{ margin: 0, padding: 32, textAlign: "center", color: "#94a3b8", fontSize: 13 }}
+            >
+              No advisor earnings yet.
+            </p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "#f8fafc" }}>
+                    {["#", "Advisor", "SEBI ID", "Subscribers", "30d Earnings", ""].map((h) => (
+                      <th
+                        key={h}
+                        style={{
+                          textAlign:
+                            h === "Subscribers" || h === "30d Earnings" ? "right" : "left",
+                          padding: "12px 16px",
+                          fontWeight: 600,
+                          fontSize: 11,
+                          color: "#64748b",
+                          textTransform: "uppercase",
+                          letterSpacing: 0.6,
+                          borderBottom: "1px solid #eef0f4",
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {topAdvisorMetrics.map((row, i) => {
+                    const u = userById.get(row.advisorUserId);
+                    return (
+                      <tr key={row.advisorUserId} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <td
+                          style={{
+                            padding: "12px 16px",
+                            fontWeight: 700,
+                            color: i < 3 ? "#7c3aed" : "#94a3b8",
+                          }}
+                        >
+                          {i + 1}
+                        </td>
+                        <td style={{ padding: "12px 16px" }}>
+                          <Link
+                            href={`/super-admin/advisors/${row.advisorUserId}`}
+                            style={{
+                              color: "#0f172a",
+                              fontWeight: 700,
+                              textDecoration: "none",
+                            }}
+                          >
+                            {u?.fullName ?? "—"}
+                          </Link>
+                        </td>
+                        <td
+                          style={{
+                            padding: "12px 16px",
+                            fontFamily: "monospace",
+                            fontSize: 11,
+                            color: "#475569",
+                          }}
+                        >
+                          {u?.advisorProfile?.sebiRegistrationNo ?? "—"}
+                        </td>
+                        <td style={{ padding: "12px 16px", textAlign: "right", fontWeight: 600 }}>
+                          {row._sum.subscribersCount?.toLocaleString() ?? 0}
+                        </td>
+                        <td
+                          style={{
+                            padding: "12px 16px",
+                            textAlign: "right",
+                            fontWeight: 700,
+                            color: "#16a34a",
+                          }}
+                        >
+                          {formatINR(Number(row._sum.earningsAmount ?? 0), true)}
+                        </td>
+                        <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                          <Link
+                            href={`/super-admin/advisors/${row.advisorUserId}`}
+                            style={{
+                              fontSize: 11,
+                              color: "#7c3aed",
+                              fontWeight: 700,
+                              textDecoration: "none",
+                            }}
+                          >
+                            View →
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          </div>
-          <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: 12 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 9, height: 9, borderRadius: 999, background: "#facc15" }} /> Pending
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 9, height: 9, borderRadius: 999, background: "#22c55e" }} /> Approved
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 9, height: 9, borderRadius: 999, background: "#f97316" }} /> Rejected
-            </span>
-          </div>
+          )}
         </article>
 
-        <article className="card" style={{ borderRadius: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-            <h3 style={{ marginTop: 0, marginBottom: 0 }}>Top Advisors</h3>
-            <div style={{ display: "flex", gap: 8 }}>
-              <span className="tag">Experience</span>
-              <span className="tag">Status</span>
-            </div>
+        <article className="widget">
+          <div className="widget-title">
+            <h3>Recent Approvals</h3>
+            <Link href="/super-admin/users?role=advisor">View all</Link>
           </div>
-          <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-            {topAdvisors.map((advisor) => (
-              <div key={advisor.advisorId} style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", alignItems: "center", gap: 10, borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
-                <div>
-                  <p style={{ margin: 0, fontWeight: 800 }}>
-                    <Link href={`/super-admin/advisors/${advisor.advisorId}`} style={{ color: "var(--text)" }}>
-                      {advisor.name}
-                    </Link>
-                  </p>
-                  <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>Top performing advisor</p>
+          {recentApprovals.length === 0 ? (
+            <p
+              style={{ margin: 0, padding: 24, textAlign: "center", color: "#94a3b8", fontSize: 12 }}
+            >
+              No recent approvals.
+            </p>
+          ) : (
+            recentApprovals.map((adv) => (
+              <Link
+                key={adv.id}
+                href={`/super-admin/advisors/${adv.user?.id}`}
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  padding: "10px 0",
+                  borderBottom: "1px solid #f1f5f9",
+                  textDecoration: "none",
+                  color: "inherit",
+                }}
+              >
+                <div
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 8,
+                    background: "rgba(16, 185, 129, 0.15)",
+                    color: "#10b981",
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: 11,
+                    fontWeight: 800,
+                    flexShrink: 0,
+                  }}
+                >
+                  ✓
                 </div>
-                <strong>{advisor.experience} yrs</strong>
-                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{advisor.verificationStatus}</span>
-                <Link href={`/super-admin/advisors/${advisor.advisorId}`} className="btn-primary" style={{ padding: "6px 10px", borderRadius: 8, display: "inline-block" }}>
-                  View
-                </Link>
-              </div>
-            ))}
-          </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
+                    {adv.user?.fullName ?? "Advisor"}
+                  </div>
+                  <div style={{ fontSize: 10, color: "#64748b" }}>
+                    {adv.sebiRegistrationNo} ·{" "}
+                    {adv.verifiedAt?.toLocaleDateString() ?? ""}
+                  </div>
+                </div>
+              </Link>
+            ))
+          )}
         </article>
       </div>
 
-      <div className="grid" style={{ marginTop: 16, gridTemplateColumns: "2fr 1fr", alignItems: "start" }}>
-        <article className="card" style={{ borderRadius: 14 }}>
-          <h3 style={{ marginTop: 0 }}>Pending Verification</h3>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Advisor</th>
-                  <th>SEBI ID</th>
-                  <th>Verification Date</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingVerification.map((advisor) => (
-                  <tr key={advisor.advisorId}>
-                    <td>
-                      <Link href={`/super-admin/advisors/${advisor.advisorId}`} style={{ color: "var(--primary)", fontWeight: 700 }}>
-                        {advisor.name}
-                      </Link>
-                    </td>
-                    <td>{advisor.sebiId}</td>
-                    <td>{advisor.date}</td>
-                    <td>
-                      <Link href={`/super-admin/advisors/${advisor.advisorId}`} className="btn-primary" style={{ padding: "6px 10px", borderRadius: 8, display: "inline-block" }}>
-                        Verify
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </article>
+      <article className="widget" style={{ padding: 0, overflow: "hidden" }}>
+        <div
+          style={{
+            padding: "16px 18px",
+            borderBottom: "1px solid #eef0f4",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>
+            Pending Verification ({pendingCount})
+          </h3>
+          <Link
+            href="/super-admin/users?role=advisor&status=pending"
+            style={{ fontSize: 11, color: "#7c3aed", fontWeight: 600 }}
+          >
+            Open queue
+          </Link>
+        </div>
 
-        <article className="card" style={{ borderRadius: 14 }}>
-          <h3 style={{ marginTop: 0 }}>Recent Approvals</h3>
-          <div className="table-wrap">
-            <table>
+        {pendingVerification.length === 0 ? (
+          <p
+            style={{ margin: 0, padding: 32, textAlign: "center", color: "#94a3b8", fontSize: 13 }}
+          >
+            ✓ No advisors awaiting verification.
+          </p>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
               <thead>
-                <tr>
-                  <th>Advisor</th>
-                  <th>SEBI ID</th>
-                  <th>Approval Date</th>
+                <tr style={{ background: "#f8fafc" }}>
+                  {["Advisor", "SEBI ID", "Submitted", "Status", ""].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        textAlign: h === "" ? "right" : "left",
+                        padding: "12px 18px",
+                        fontWeight: 600,
+                        fontSize: 11,
+                        color: "#64748b",
+                        textTransform: "uppercase",
+                        letterSpacing: 0.6,
+                        borderBottom: "1px solid #eef0f4",
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {recentApprovals.map((advisor) => (
-                  <tr key={`approved-${advisor.advisorId}`}>
-                    <td>
-                      <Link href={`/super-admin/advisors/${advisor.advisorId}`} style={{ color: "var(--text)", fontWeight: 700 }}>
-                        {advisor.name}
-                      </Link>
-                    </td>
-                    <td>{advisor.sebiId}</td>
-                    <td>{advisor.date}</td>
-                  </tr>
-                ))}
+                {pendingVerification.map((adv) => {
+                  const sc = STATUS_COLORS[adv.verificationStatus] ?? STATUS_COLORS.pending;
+                  const initials = (adv.user?.fullName ?? "??")
+                    .split(" ")
+                    .map((p) => p[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase();
+                  return (
+                    <tr key={adv.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "12px 18px" }}>
+                        <Link
+                          href={`/super-admin/advisors/${adv.user?.id}`}
+                          style={{
+                            display: "flex",
+                            gap: 10,
+                            alignItems: "center",
+                            color: "#0f172a",
+                            textDecoration: "none",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 8,
+                              background: "rgba(124, 58, 237, 0.13)",
+                              color: "#7c3aed",
+                              display: "grid",
+                              placeItems: "center",
+                              fontSize: 11,
+                              fontWeight: 800,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {initials}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>
+                              {adv.user?.fullName}
+                            </div>
+                            <div style={{ fontSize: 11, color: "#64748b" }}>{adv.user?.email}</div>
+                          </div>
+                        </Link>
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 18px",
+                          fontFamily: "monospace",
+                          fontSize: 11,
+                          color: "#475569",
+                        }}
+                      >
+                        {adv.sebiRegistrationNo}
+                      </td>
+                      <td style={{ padding: "12px 18px", color: "#64748b", fontSize: 12 }}>
+                        {adv.createdAt.toLocaleDateString()}
+                      </td>
+                      <td style={{ padding: "12px 18px" }}>
+                        <span
+                          style={{
+                            padding: "2px 10px",
+                            borderRadius: 999,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            background: sc.bg,
+                            color: sc.fg,
+                            textTransform: "capitalize",
+                          }}
+                        >
+                          {adv.verificationStatus}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                        <Link
+                          href={`/super-admin/advisors/${adv.user?.id}`}
+                          style={{
+                            padding: "6px 14px",
+                            borderRadius: 8,
+                            background: "#7c3aed",
+                            color: "#fff",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            textDecoration: "none",
+                          }}
+                        >
+                          Review
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        </article>
-      </div>
+        )}
+      </article>
     </section>
   );
 }
-

@@ -13,7 +13,12 @@ export default async function AdvisorShellLayout({
   const auth = await requireAuthToken(token);
   if (!auth || auth.role !== "advisor") redirect("/login");
 
-  const [user, unreadNotifications, pendingToxicComments] = await Promise.all([
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const [user, unreadNotifications, pendingToxicComments, wallet, todayMetric, yesterdayMetric] = await Promise.all([
     prisma.user.findUnique({
       where: { id: auth.userId },
       select: {
@@ -33,6 +38,15 @@ export default async function AdvisorShellLayout({
         toxicityScore: { gte: 5 },
       },
     }),
+    prisma.advisorWallet.findUnique({ where: { advisorUserId: auth.userId } }),
+    prisma.advisorMetricDaily.findFirst({
+      where: { advisorUserId: auth.userId, day: { gte: today } },
+      orderBy: { day: "desc" },
+    }),
+    prisma.advisorMetricDaily.findFirst({
+      where: { advisorUserId: auth.userId, day: { gte: yesterday, lt: today } },
+      orderBy: { day: "desc" },
+    }),
   ]);
 
   if (!user || user.status === "suspended") redirect("/login");
@@ -50,6 +64,11 @@ export default async function AdvisorShellLayout({
       badges={{
         Notifications: unreadNotifications,
         Comments: pendingToxicComments,
+      }}
+      walletBalance={wallet?.balance ? Number(wallet.balance) : 0}
+      todayDelta={{
+        current: todayMetric?.earningsAmount ? Number(todayMetric.earningsAmount) : 0,
+        previous: yesterdayMetric?.earningsAmount ? Number(yesterdayMetric.earningsAmount) : 0,
       }}
     >
       {children}

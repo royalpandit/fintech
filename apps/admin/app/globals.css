@@ -214,16 +214,238 @@ th {
 
 /* ─── Advisor console premium theme ─── */
 .advisor-scope {
-  --advisor-primary: #059669;
-  --advisor-primary-deep: #047857;
+  --advisor-primary: #2563eb;
+  --advisor-primary-deep: #1d4ed8;
   --advisor-accent: #10b981;
+  --advisor-up: #16a34a;
+  --advisor-down: #dc2626;
   --advisor-gold: #f59e0b;
-  --advisor-red: #dc2626;
   --advisor-ink: #0f172a;
   --advisor-ink-2: #334155;
   --advisor-mute: #64748b;
-  --advisor-soft: #f1f5f9;
-  --advisor-border: #e2e8f0;
+  --advisor-soft: #f8fafc;
+  --advisor-border: #eef0f4;
+  --advisor-card: #ffffff;
+}
+
+.advisor-scope a { color: inherit; }
+
+/* Profile card — sits at top of the sidebar */
+.profile-card {
+  background: #fff;
+  border: 1px solid var(--advisor-border);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.profile-card-stat {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--advisor-ink);
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+}
+
+.profile-card-label {
+  font-size: 11px;
+  color: var(--advisor-mute);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Tab switcher (Overview / Performance / Analytics) */
+.tab-switcher {
+  display: inline-flex;
+  background: var(--advisor-soft);
+  border-radius: 10px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.tab-switcher-item {
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--advisor-mute);
+  text-decoration: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tab-switcher-item.active {
+  background: #fff;
+  color: var(--advisor-ink);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+/* Time-range pills (1D / 1W / 1M / 3M / 1Y / All) */
+.time-range {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--advisor-soft);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.time-range-item {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--advisor-mute);
+  text-decoration: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.time-range-item.active {
+  background: var(--advisor-primary);
+  color: #fff;
+}
+
+/* Stat card (the 4-card row at the top) */
+.stat-card {
+  background: #fff;
+  border: 1px solid var(--advisor-border);
+  border-radius: 14px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card-label {
+  font-size: 12px;
+  color: var(--advisor-mute);
+  font-weight: 500;
+  margin: 0 0 10px;
+}
+
+.stat-card-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--advisor-ink);
+  letter-spacing: -0.5px;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.stat-card-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.stat-card-delta.up { color: var(--advisor-up); }
+.stat-card-delta.down { color: var(--advisor-down); }
+
+.stat-card-spark {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  pointer-events: none;
+}
+
+/* Right sidebar widget styling */
+.widget {
+  background: #fff;
+  border: 1px solid var(--advisor-border);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.widget-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.widget-title h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--advisor-ink);
+}
+
+.widget-title a {
+  font-size: 11px;
+  color: var(--advisor-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.row-divider {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--advisor-border);
+}
+
+.row-divider:last-child { border-bottom: 0; }
+
+/* Buy/Sell toggle */
+.bs-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--advisor-soft);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.bs-toggle-item {
+  padding: 8px 0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: var(--advisor-mute);
+  text-align: center;
+}
+
+.bs-toggle-item.active.buy {
+  background: var(--advisor-up);
+  color: #fff;
+}
+
+.bs-toggle-item.active.sell {
+  background: var(--advisor-down);
+  color: #fff;
+}
+
+/* Standalone "Place Order" CTA, full-width green */
+.cta-place {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--advisor-up);
+  color: #fff;
+  font-weight: 700;
+  text-align: center;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.cta-place:hover {
+  background: #15803d;
 }
 
 .advisor-hero {
