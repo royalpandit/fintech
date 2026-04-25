@@ -22,12 +22,27 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/user/home");
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: auth.userId },
-    select: { fullName: true, email: true, role: true, status: true },
-  });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [user, pendingAdvisors, pendingPosts, openReports, todayActions] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: auth.userId },
+      select: { fullName: true, email: true, role: true, status: true },
+    }),
+    prisma.advisorProfile.count({ where: { verificationStatus: "pending" } }),
+    prisma.marketPost.count({
+      where: { complianceStatus: { in: ["pending", "under_review"] }, deletedAt: null },
+    }),
+    prisma.contentReport.count({ where: { status: "open" } }),
+    prisma.auditLog.count({
+      where: { actorUserId: auth.userId, createdAt: { gte: today } },
+    }),
+  ]);
 
   if (!user || user.status === "suspended") redirect("/login");
+
+  const pendingQueueCount = pendingAdvisors + pendingPosts + openReports;
 
   return (
     <ModeratorShell
@@ -36,6 +51,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         email: user.email,
         role: user.role,
       }}
+      pendingQueueCount={pendingQueueCount}
+      todayActionsCount={todayActions}
     >
       {children}
     </ModeratorShell>

@@ -1,27 +1,72 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 type SearchParams = { status?: string };
 
-export default async function AdminAdvisorsPage({ searchParams }: { searchParams: SearchParams }) {
-  const statusFilter = searchParams.status;
-  const where = statusFilter && ["pending", "approved", "rejected"].includes(statusFilter)
-    ? { verificationStatus: statusFilter as "pending" | "approved" | "rejected" }
-    : { verificationStatus: "pending" as const };
+function relTime(date: Date): string {
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return date.toLocaleDateString();
+}
 
-  const [pendingCount, approvedCount, rejectedCount, rows] = await Promise.all([
-    prisma.advisorProfile.count({ where: { verificationStatus: "pending" } }),
-    prisma.advisorProfile.count({ where: { verificationStatus: "approved" } }),
-    prisma.advisorProfile.count({ where: { verificationStatus: "rejected" } }),
+function statusPill(status: string) {
+  const map: Record<string, { bg: string; fg: string }> = {
+    approved: { bg: "#d1fae5", fg: "#047857" },
+    pending: { bg: "#fef3c7", fg: "#92400e" },
+    rejected: { bg: "#fee2e2", fg: "#991b1b" },
+  };
+  const s = map[status] ?? map.pending;
+  return (
+    <span
+      style={{
+        padding: "2px 10px",
+        borderRadius: 999,
+        fontSize: 11,
+        fontWeight: 700,
+        background: s.bg,
+        color: s.fg,
+        textTransform: "capitalize",
+      }}
+    >
+      {status}
+    </span>
+  );
+}
+
+export default async function AdminAdvisorsPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const status = searchParams.status ?? "pending";
+
+  const where: Record<string, unknown> = {};
+  if (["pending", "approved", "rejected"].includes(status)) {
+    where.verificationStatus = status;
+  }
+
+  const [advisors, pendingCount, approvedCount, rejectedCount] = await Promise.all([
     prisma.advisorProfile.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      take: 50,
-      include: { user: { select: { id: true, fullName: true, email: true, createdAt: true } } },
+      take: 100,
+      include: {
+        user: { select: { id: true, fullName: true, email: true, phone: true } },
+        verifiedBy: { select: { fullName: true } },
+      },
     }),
+    prisma.advisorProfile.count({ where: { verificationStatus: "pending" } }),
+    prisma.advisorProfile.count({ where: { verificationStatus: "approved" } }),
+    prisma.advisorProfile.count({ where: { verificationStatus: "rejected" } }),
   ]);
-
-  const current = statusFilter || "pending";
 
   const tabs = [
     { key: "pending", label: `Pending (${pendingCount})`, color: "#f59e0b" },
@@ -30,74 +75,221 @@ export default async function AdminAdvisorsPage({ searchParams }: { searchParams
   ];
 
   return (
-    <section>
-      <h1 className="page-title">Verification Queue</h1>
-      <p className="page-subtitle">Review SEBI-registered advisor applications. Approve, reject, or request changes.</p>
-
-      <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-        {tabs.map((tab) => (
-          <Link
-            key={tab.key}
-            href={`/admin/advisors?status=${tab.key}`}
+    <section className="advisor-scope" style={{ ["--advisor-primary" as any]: "#2563eb" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          marginBottom: 18,
+        }}
+      >
+        <div>
+          <h1
             style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid var(--border)",
-              background: current === tab.key ? "var(--primary)" : "#fff",
-              color: current === tab.key ? "#fff" : "var(--text)",
-              textDecoration: "none",
-              fontWeight: 600,
-              fontSize: 14,
+              margin: 0,
+              fontSize: 26,
+              fontWeight: 800,
+              color: "#0f172a",
+              letterSpacing: -0.6,
             }}
           >
-            {tab.label}
+            Verification Queue
+          </h1>
+          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+            Review and act on advisor SEBI verifications
+          </p>
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 14,
+          marginBottom: 18,
+        }}
+      >
+        {tabs.map((t) => {
+          const value =
+            t.key === "pending" ? pendingCount : t.key === "approved" ? approvedCount : rejectedCount;
+          return (
+            <Link
+              key={t.key}
+              href={`/admin/advisors?status=${t.key}`}
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <article
+                className="stat-card"
+                style={{
+                  cursor: "pointer",
+                  borderColor: status === t.key ? t.color : "#eef0f4",
+                }}
+              >
+                <p className="stat-card-label">{t.label.split(" (")[0]}</p>
+                <p className="stat-card-value" style={{ color: t.color }}>
+                  {value.toLocaleString()}
+                </p>
+                <span
+                  className="stat-card-delta"
+                  style={{ color: status === t.key ? t.color : "#94a3b8" }}
+                >
+                  {status === t.key ? "● Active filter" : "Click to filter"}
+                </span>
+              </article>
+            </Link>
+          );
+        })}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        {tabs.map((t) => (
+          <Link
+            key={t.key}
+            href={`/admin/advisors?status=${t.key}`}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              color: status === t.key ? "#fff" : "#64748b",
+              background: status === t.key ? "#2563eb" : "#fff",
+              border: "1px solid #eef0f4",
+              textDecoration: "none",
+            }}
+          >
+            {t.label}
           </Link>
         ))}
       </div>
 
-      <article className="card" style={{ marginTop: 16 }}>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Advisor</th>
-                <th>Email</th>
-                <th>SEBI ID</th>
-                <th>Experience</th>
-                <th>Submitted</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ color: "#61708b", padding: "20px 12px" }}>
-                    No advisors in this bucket.
-                  </td>
-                </tr>
-              ) : (
-                rows.map((advisor) => (
-                  <tr key={advisor.id}>
-                    <td style={{ fontWeight: 600 }}>{advisor.user?.fullName ?? "—"}</td>
-                    <td>{advisor.user?.email ?? "—"}</td>
-                    <td>{advisor.sebiRegistrationNo}</td>
-                    <td>{advisor.experienceYears ? `${advisor.experienceYears} yrs` : "—"}</td>
-                    <td>{advisor.createdAt.toLocaleDateString()}</td>
-                    <td>
-                      <Link
-                        href={`/admin/advisors/${advisor.user?.id}`}
-                        className="btn-primary"
-                        style={{ padding: "6px 12px", borderRadius: 8, display: "inline-block" }}
+      <article className="widget" style={{ padding: 0, overflow: "hidden" }}>
+        {advisors.length === 0 ? (
+          <p
+            style={{
+              margin: 0,
+              padding: 48,
+              textAlign: "center",
+              color: "#94a3b8",
+              fontSize: 13,
+            }}
+          >
+            No advisors in this bucket.
+          </p>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ background: "#f8fafc" }}>
+                  {["Advisor", "SEBI ID", "Experience", "Submitted", "Status", "Reviewed By", ""].map(
+                    (h) => (
+                      <th
+                        key={h}
+                        style={{
+                          textAlign: h === "" ? "right" : "left",
+                          padding: "12px 18px",
+                          fontWeight: 600,
+                          fontSize: 11,
+                          color: "#64748b",
+                          textTransform: "uppercase",
+                          letterSpacing: 0.6,
+                          borderBottom: "1px solid #eef0f4",
+                        }}
                       >
-                        Review
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                        {h}
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {advisors.map((adv) => {
+                  const initials = (adv.user?.fullName ?? "??")
+                    .split(" ")
+                    .map((p) => p[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase();
+                  return (
+                    <tr key={adv.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "14px 18px" }}>
+                        <Link
+                          href={`/admin/advisors/${adv.user?.id}`}
+                          style={{
+                            display: "flex",
+                            gap: 10,
+                            alignItems: "center",
+                            color: "#0f172a",
+                            textDecoration: "none",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: 9,
+                              background: "linear-gradient(135deg, rgba(37,99,235,0.13), rgba(99,102,241,0.13))",
+                              color: "#2563eb",
+                              display: "grid",
+                              placeItems: "center",
+                              fontSize: 11,
+                              fontWeight: 800,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {initials}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>
+                              {adv.user?.fullName ?? "Advisor"}
+                            </div>
+                            <div style={{ fontSize: 11, color: "#64748b" }}>{adv.user?.email}</div>
+                          </div>
+                        </Link>
+                      </td>
+                      <td
+                        style={{
+                          padding: "14px 18px",
+                          fontFamily: "monospace",
+                          fontSize: 11,
+                          color: "#475569",
+                        }}
+                      >
+                        {adv.sebiRegistrationNo}
+                      </td>
+                      <td style={{ padding: "14px 18px" }}>
+                        {adv.experienceYears ? `${adv.experienceYears}y` : "—"}
+                      </td>
+                      <td style={{ padding: "14px 18px", color: "#64748b", fontSize: 12 }}>
+                        {relTime(adv.createdAt)}
+                      </td>
+                      <td style={{ padding: "14px 18px" }}>{statusPill(adv.verificationStatus)}</td>
+                      <td style={{ padding: "14px 18px", color: "#64748b", fontSize: 12 }}>
+                        {adv.verifiedBy?.fullName ?? "—"}
+                      </td>
+                      <td style={{ padding: "14px 18px", textAlign: "right" }}>
+                        <Link
+                          href={`/admin/advisors/${adv.user?.id}`}
+                          style={{
+                            padding: "6px 14px",
+                            borderRadius: 8,
+                            background: "#2563eb",
+                            color: "#fff",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            textDecoration: "none",
+                          }}
+                        >
+                          {status === "pending" ? "Review" : "Open"}
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </article>
     </section>
   );

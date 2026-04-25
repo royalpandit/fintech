@@ -1,201 +1,520 @@
 import { prisma } from "@/lib/prisma";
+import AreaChart from "@/components/advisor-ui/area-chart";
+import DonutChart from "@/components/advisor-ui/donut-chart";
+import Sparkline from "@/components/advisor-ui/sparkline";
+import TimeRange from "@/components/advisor-ui/time-range";
 
-async function getAnalyticsData() {
-  const [totalUsers, activeAdvisors, totalPosts, totalReports, activeSubscriptions, userRoleGroups, providerSummary] = await Promise.all([
-    prisma.user.count(),
-    prisma.user.count({ where: { role: "advisor" } }),
-    prisma.marketPost.count(),
-    prisma.contentReport.count(),
-    prisma.subscription.count({ where: { status: "active" } }),
-    prisma.user.groupBy({ by: ["role"], _count: { _all: true } }),
-    prisma.payment.groupBy({ by: ["provider", "status"], _count: { _all: true }, where: { provider: { not: null } } }),
-  ]);
+export const dynamic = "force-dynamic";
 
-  const segments = userRoleGroups.map((group) => ({
-    name: group.role.charAt(0).toUpperCase() + group.role.slice(1),
-    users: group._count._all.toLocaleString(),
-    growth: "+1.9%",
-  }));
+type SearchParams = { range?: string };
 
-  const campaigns = providerSummary.map((item) => ({
-    name: item.provider ?? "Unknown Provider",
-    ctr: `${Math.min(16, item._count._all * 2)}%`,
-    conv: `${Math.min(6, Math.round(item._count._all * 0.9))}%`,
-    status: item.status === "failed" ? "Paused" : "Live",
-  }));
-
-  return {
-    kpis: [
-      { label: "Total Users", value: totalUsers.toLocaleString(), delta: "+4.2%", tone: "success" },
-      { label: "Active Advisors", value: activeAdvisors.toLocaleString(), delta: "+2.1%", tone: "success" },
-      { label: "Total Posts", value: totalPosts.toLocaleString(), delta: totalPosts > 0 ? "+0.8%" : "-", tone: totalPosts > 0 ? "success" : "danger" },
-      { label: "Open Reports", value: totalReports.toLocaleString(), delta: totalReports > 0 ? "-1.1%" : "+0.4%", tone: totalReports > 0 ? "danger" : "success" },
-    ] as const,
-    funnel: [
-      { stage: "Registered", value: "100%", width: "100%" },
-      { stage: "Advisor Interested", value: `${Math.round((activeAdvisors / Math.max(1, totalUsers)) * 100)}%`, width: `${Math.round((activeAdvisors / Math.max(1, totalUsers)) * 100)}%` },
-      { stage: "Subscribed", value: `${Math.round((activeSubscriptions / Math.max(1, totalUsers)) * 100)}%`, width: `${Math.round((activeSubscriptions / Math.max(1, totalUsers)) * 100)}%` },
-      { stage: "Posts Created", value: `${Math.round((totalPosts / Math.max(1, totalUsers)) * 100)}%`, width: `${Math.min(100, Math.round((totalPosts / Math.max(1, totalUsers)) * 100))}%` },
-      { stage: "Paid Advisors", value: `${activeAdvisors > 0 ? Math.round((activeSubscriptions / activeAdvisors) * 100) : 0}%`, width: `${activeAdvisors > 0 ? Math.min(100, Math.round((activeSubscriptions / activeAdvisors) * 100)) : 0}%` },
-    ] as const,
-    segments,
-    campaigns,
-  };
+function rangeToDays(range: string): number {
+  switch (range) {
+    case "1w":
+      return 7;
+    case "3m":
+      return 90;
+    case "1y":
+      return 365;
+    case "all":
+      return 3650;
+    case "1m":
+    default:
+      return 30;
+  }
 }
 
-export default async function AnalyticsPage() {
-  const { kpis, funnel, segments, campaigns } = await getAnalyticsData();
+function dayLabel(d: Date): string {
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function formatINR(n: number, compact = false) {
+  if (!n && n !== 0) return "₹0";
+  if (compact && Math.abs(n) >= 10000000) return `₹${(n / 10000000).toFixed(2)}Cr`;
+  if (compact && Math.abs(n) >= 100000) return `₹${(n / 100000).toFixed(2)}L`;
+  if (compact && Math.abs(n) >= 1000) return `₹${(n / 1000).toFixed(1)}k`;
+  return `₹${Number(n).toLocaleString("en-IN")}`;
+}
+
+const ROLE_COLORS: Record<string, string> = {
+  user: "#2563eb",
+  advisor: "#10b981",
+  admin: "#f59e0b",
+  super_admin: "#7c3aed",
+};
+const ROLE_LABELS: Record<string, string> = {
+  user: "Users",
+  advisor: "Advisors",
+  admin: "Admins",
+  super_admin: "Super Admin",
+};
+
+export default async function SuperAdminAnalyticsPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const range = searchParams.range ?? "1m";
+  const days = rangeToDays(range);
+  const fromDate = new Date();
+  fromDate.setDate(fromDate.getDate() - days);
+
+  const thirty = new Date();
+  thirty.setDate(thirty.getDate() - 30);
+  const sixty = new Date();
+  sixty.setDate(sixty.getDate() - 60);
+
+  const [
+    totalUsers,
+    totalAdvisors,
+    activeSubs,
+    rolesGroup,
+    paymentsRange,
+    paymentsPrev30,
+    paymentsCurr30,
+    providers,
+    registrationsRange,
+    sentimentMix,
+    complianceMix,
+  ] = await Promise.all([
+    prisma.user.count({ where: { deletedAt: null } }),
+    prisma.user.count({ where: { role: "advisor", deletedAt: null } }),
+    prisma.subscription.count({ where: { status: "active" } }),
+    prisma.user.groupBy({
+      by: ["role"],
+      where: { deletedAt: null },
+      _count: { _all: true },
+    }),
+    prisma.payment.findMany({
+      where: { status: "success", createdAt: { gte: fromDate } },
+      orderBy: { createdAt: "asc" },
+      select: { amount: true, createdAt: true, kind: true },
+    }),
+    prisma.payment.aggregate({
+      where: { status: "success", createdAt: { gte: sixty, lt: thirty } },
+      _sum: { amount: true },
+    }),
+    prisma.payment.aggregate({
+      where: { status: "success", createdAt: { gte: thirty } },
+      _sum: { amount: true },
+    }),
+    prisma.payment.groupBy({
+      by: ["provider"],
+      where: { status: "success", createdAt: { gte: thirty } },
+      _count: { _all: true },
+      _sum: { amount: true },
+    }),
+    prisma.user.findMany({
+      where: { createdAt: { gte: fromDate } },
+      orderBy: { createdAt: "asc" },
+      select: { createdAt: true, role: true },
+    }),
+    prisma.marketPost.groupBy({
+      by: ["sentiment"],
+      where: { deletedAt: null, complianceStatus: "approved" },
+      _count: { _all: true },
+    }),
+    prisma.marketPost.groupBy({
+      by: ["complianceStatus"],
+      where: { deletedAt: null },
+      _count: { _all: true },
+    }),
+  ]);
+
+  // Bucket payments by day
+  const revenueByDay = new Map<string, number>();
+  for (const p of paymentsRange) {
+    const k = p.createdAt.toISOString().slice(0, 10);
+    revenueByDay.set(k, (revenueByDay.get(k) ?? 0) + Number(p.amount));
+  }
+
+  // Bucket registrations by day
+  const usersByDay = new Map<string, number>();
+  for (const u of registrationsRange) {
+    const k = u.createdAt.toISOString().slice(0, 10);
+    usersByDay.set(k, (usersByDay.get(k) ?? 0) + 1);
+  }
+
+  const revenueChart: Array<{ label: string; value: number }> = [];
+  const usersChart: Array<{ label: string; value: number }> = [];
+  for (let i = 0; i <= days; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - (days - i));
+    const k = d.toISOString().slice(0, 10);
+    const lbl = dayLabel(d);
+    revenueChart.push({ label: lbl, value: revenueByDay.get(k) ?? 0 });
+    usersChart.push({ label: lbl, value: usersByDay.get(k) ?? 0 });
+  }
+
+  const totalRevenue = paymentsRange.reduce((s, p) => s + Number(p.amount), 0);
+  const currRevenue30 = Number(paymentsCurr30._sum.amount ?? 0);
+  const prevRevenue30 = Number(paymentsPrev30._sum.amount ?? 0);
+  const revenueDelta =
+    prevRevenue30 > 0 ? ((currRevenue30 - prevRevenue30) / prevRevenue30) * 100 : 0;
+
+  const userDistribution = rolesGroup.map((r) => ({
+    label: ROLE_LABELS[r.role] ?? r.role,
+    value: r._count._all,
+    color: ROLE_COLORS[r.role] ?? "#94a3b8",
+    detail: `${r._count._all} accounts`,
+  }));
+
+  const sentimentSlices = [
+    {
+      label: "Bullish",
+      value: sentimentMix.find((s) => s.sentiment === "bullish")?._count._all ?? 0,
+      color: "#16a34a",
+    },
+    {
+      label: "Bearish",
+      value: sentimentMix.find((s) => s.sentiment === "bearish")?._count._all ?? 0,
+      color: "#dc2626",
+    },
+    {
+      label: "Neutral",
+      value: sentimentMix.find((s) => s.sentiment === "neutral")?._count._all ?? 0,
+      color: "#94a3b8",
+    },
+  ];
+  const sentimentTotal = sentimentSlices.reduce((s, x) => s + x.value, 0);
+
+  const userTotal = userDistribution.reduce((s, x) => s + x.value, 0);
+
+  // Compliance mix: simple bar chart values
+  const complianceSlices = [
+    {
+      label: "Approved",
+      value: complianceMix.find((c) => c.complianceStatus === "approved")?._count._all ?? 0,
+      color: "#16a34a",
+    },
+    {
+      label: "Pending",
+      value:
+        (complianceMix.find((c) => c.complianceStatus === "pending")?._count._all ?? 0) +
+        (complianceMix.find((c) => c.complianceStatus === "under_review")?._count._all ?? 0),
+      color: "#f59e0b",
+    },
+    {
+      label: "Flagged",
+      value: complianceMix.find((c) => c.complianceStatus === "flagged")?._count._all ?? 0,
+      color: "#ef4444",
+    },
+    {
+      label: "Rejected",
+      value: complianceMix.find((c) => c.complianceStatus === "rejected")?._count._all ?? 0,
+      color: "#7f1d1d",
+    },
+  ];
+  const complianceTotal = complianceSlices.reduce((s, x) => s + x.value, 0);
 
   return (
-    <section>
-      <h1 className="page-title">Analytics Command Center</h1>
-      <p className="page-subtitle">Acquisition, engagement, and conversion intelligence for growth decisions.</p>
-
-      <div className="grid grid-4" style={{ marginTop: 16 }}>
-        {kpis.map((kpi) => (
-          <article key={kpi.label} className="card">
-            <p className="metric-label">{kpi.label}</p>
-            <p className="metric-value">{kpi.value}</p>
-            <div style={{ marginTop: 8 }}>
-              <span className={`tag ${kpi.tone === "danger" ? "danger" : "success"}`}>{kpi.delta}</span>
-            </div>
-          </article>
-        ))}
-      </div>
-
-      <div className="grid" style={{ marginTop: 16, gridTemplateColumns: "2fr 1fr" }}>
-        <article className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <h3 style={{ margin: 0 }}>Traffic & Engagement Trend</h3>
-              <p className="page-subtitle" style={{ margin: "6px 0 0" }}>
-                Last 12 months performance by sessions and engaged users
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <span className="tag">Weekly</span>
-              <span className="tag success">Monthly</span>
-              <span className="tag">Quarterly</span>
-            </div>
-          </div>
-
-          <div
+    <section className="advisor-scope" style={{ ["--advisor-primary" as any]: "#7c3aed" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          marginBottom: 18,
+        }}
+      >
+        <div>
+          <h1
             style={{
-              marginTop: 16,
-              border: "1px solid var(--border)",
-              borderRadius: 18,
-              height: 300,
-              background:
-                "linear-gradient(180deg, rgba(0,88,186,0.08) 0%, rgba(0,88,186,0.02) 55%, rgba(0,88,186,0) 100%)",
-              position: "relative",
-              overflow: "hidden",
+              margin: 0,
+              fontSize: 26,
+              fontWeight: 800,
+              color: "#0f172a",
+              letterSpacing: -0.6,
             }}
           >
-            <svg viewBox="0 0 900 290" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
-              <polyline
-                points="10,230 95,214 180,205 265,184 350,173 435,168 520,149 605,136 690,124 775,112 860,101"
-                fill="none"
-                stroke="#0058ba"
-                strokeWidth="4"
-                strokeLinecap="round"
-              />
-              <polyline
-                points="10,246 95,237 180,228 265,219 350,210 435,201 520,197 605,186 690,179 775,171 860,163"
-                fill="none"
-                stroke="#1f9d63"
-                strokeWidth="3"
-                strokeLinecap="round"
-                opacity="0.8"
-              />
-            </svg>
-            <div style={{ position: "absolute", left: 18, right: 18, bottom: 10, display: "flex", justifyContent: "space-between", color: "var(--text-muted)", fontWeight: 700, fontSize: 11 }}>
-              {["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"].map((m) => (
-                <span key={m}>{m}</span>
-              ))}
-            </div>
-          </div>
-        </article>
-
-        <article className="card">
-          <h3 style={{ marginTop: 0 }}>Conversion Funnel</h3>
-          <p className="page-subtitle" style={{ marginTop: 6 }}>
-            User journey from visit to paid
+            Platform Analytics
+          </h1>
+          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+            Strategic insights across users, revenue, and compliance
           </p>
-          <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-            {funnel.map((step) => (
-              <div key={step.stage}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, fontSize: 12, fontWeight: 700 }}>
-                  <span>{step.stage}</span>
-                  <span>{step.value}</span>
-                </div>
-                <div style={{ width: "100%", background: "#eef2f7", borderRadius: 999, height: 9, overflow: "hidden" }}>
-                  <div style={{ width: step.width, height: "100%", background: "linear-gradient(90deg, var(--primary), var(--primary-2))" }} />
-                </div>
-              </div>
-            ))}
-          </div>
+        </div>
+        <TimeRange baseHref="/super-admin/analytics" activeKey={range} />
+      </div>
+
+      {/* KPI strip */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: 14,
+          marginBottom: 18,
+        }}
+      >
+        <article className="stat-card">
+          <p className="stat-card-label">Total Users</p>
+          <p className="stat-card-value">{totalUsers.toLocaleString()}</p>
+          <span className="stat-card-delta up">↗ Active network</span>
+        </article>
+        <article className="stat-card">
+          <p className="stat-card-label">Active Advisors</p>
+          <p className="stat-card-value" style={{ color: "#10b981" }}>
+            {totalAdvisors.toLocaleString()}
+          </p>
+        </article>
+        <article className="stat-card">
+          <p className="stat-card-label">Active Subscriptions</p>
+          <p className="stat-card-value">{activeSubs.toLocaleString()}</p>
+        </article>
+        <article className="stat-card">
+          <p className="stat-card-label">Revenue (30d)</p>
+          <p className="stat-card-value">{formatINR(currRevenue30, true)}</p>
+          <span className={`stat-card-delta ${revenueDelta >= 0 ? "up" : "down"}`}>
+            {revenueDelta >= 0 ? "↗" : "↘"} {revenueDelta >= 0 ? "+" : ""}
+            {revenueDelta.toFixed(2)}%
+          </span>
         </article>
       </div>
 
-      <div className="grid" style={{ marginTop: 16, gridTemplateColumns: "1fr 1fr" }}>
-        <article className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h3 style={{ margin: 0 }}>Top User Segments</h3>
-            <span className="tag">Behavioral</span>
+      {/* Revenue + User distribution */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1.55fr 1fr",
+          gap: 14,
+          marginBottom: 18,
+        }}
+      >
+        <article className="widget">
+          <div className="widget-title">
+            <h3>Platform Revenue</h3>
+            <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+              Total {formatINR(totalRevenue, true)}
+            </span>
           </div>
-          <div className="table-wrap" style={{ marginTop: 12 }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Segment</th>
-                  <th>Users</th>
-                  <th>Growth</th>
-                </tr>
-              </thead>
-              <tbody>
-                {segments.map((segment) => (
-                  <tr key={segment.name}>
-                    <td>{segment.name}</td>
-                    <td>{segment.users}</td>
-                    <td>
-                      <span className="tag success">{segment.growth}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <AreaChart
+            data={revenueChart}
+            color="#7c3aed"
+            height={240}
+            valueFormatter={(n) => formatINR(n, true)}
+          />
+        </article>
+
+        <article className="widget">
+          <div className="widget-title">
+            <h3>User Distribution</h3>
+          </div>
+          {userTotal === 0 ? (
+            <div
+              style={{
+                height: 220,
+                display: "grid",
+                placeItems: "center",
+                color: "#94a3b8",
+                fontSize: 13,
+              }}
+            >
+              No users yet.
+            </div>
+          ) : (
+            <DonutChart
+              slices={userDistribution}
+              centerLabel="Total"
+              centerValue={`${userTotal}`}
+              size={170}
+              thickness={26}
+            />
+          )}
+        </article>
+      </div>
+
+      {/* User growth chart + Sentiment donut */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1.55fr 1fr",
+          gap: 14,
+          marginBottom: 18,
+        }}
+      >
+        <article className="widget">
+          <div className="widget-title">
+            <h3>User Registrations</h3>
+            <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+              {registrationsRange.length} new in window
+            </span>
+          </div>
+          <AreaChart data={usersChart} color="#2563eb" height={240} />
+        </article>
+
+        <article className="widget">
+          <div className="widget-title">
+            <h3>Sentiment Mix</h3>
+            <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+              Approved posts
+            </span>
+          </div>
+          {sentimentTotal === 0 ? (
+            <div
+              style={{
+                height: 220,
+                display: "grid",
+                placeItems: "center",
+                color: "#94a3b8",
+                fontSize: 13,
+              }}
+            >
+              No approved posts yet.
+            </div>
+          ) : (
+            <DonutChart
+              slices={sentimentSlices.map((s) => ({ ...s, detail: `${s.value} posts` }))}
+              centerLabel="Total"
+              centerValue={`${sentimentTotal}`}
+              size={170}
+              thickness={26}
+            />
+          )}
+        </article>
+      </div>
+
+      {/* Compliance mix bar + Payment providers */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 14,
+        }}
+      >
+        <article className="widget">
+          <div className="widget-title">
+            <h3>Compliance Mix</h3>
+            <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+              {complianceTotal} posts
+            </span>
+          </div>
+          <div className="segmented-bar" style={{ marginTop: 8, height: 12 }}>
+            {complianceSlices.map((s, i) => {
+              const pct = complianceTotal > 0 ? (s.value / complianceTotal) * 100 : 0;
+              return (
+                <div
+                  key={i}
+                  className="segmented-bar-fill"
+                  style={{ width: `${pct}%`, background: s.color }}
+                />
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 14, display: "grid", gap: 8 }}>
+            {complianceSlices.map((s) => {
+              const pct = complianceTotal > 0 ? (s.value / complianceTotal) * 100 : 0;
+              return (
+                <div
+                  key={s.label}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: 999,
+                        background: s.color,
+                      }}
+                    />
+                    <span style={{ fontSize: 13, color: "#334155", fontWeight: 600 }}>
+                      {s.label}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <span style={{ fontSize: 12, color: "#64748b" }}>{pct.toFixed(0)}%</span>
+                    <span
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color: "#0f172a",
+                        minWidth: 30,
+                        textAlign: "right",
+                      }}
+                    >
+                      {s.value}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </article>
 
-        <article className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h3 style={{ margin: 0 }}>Campaign Attribution</h3>
-            <span className="tag">Marketing</span>
+        <article className="widget">
+          <div className="widget-title">
+            <h3>Payment Providers (30d)</h3>
+            <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+              {providers.length} providers
+            </span>
           </div>
-          <div className="table-wrap" style={{ marginTop: 12 }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Campaign</th>
-                  <th>CTR</th>
-                  <th>Conv</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {campaigns.map((campaign) => (
-                  <tr key={campaign.name}>
-                    <td>{campaign.name}</td>
-                    <td>{campaign.ctr}</td>
-                    <td>{campaign.conv}</td>
-                    <td>
-                      <span className={`tag ${campaign.status === "Paused" ? "danger" : "success"}`}>{campaign.status}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {providers.length === 0 ? (
+            <div
+              style={{
+                padding: 32,
+                textAlign: "center",
+                color: "#94a3b8",
+                fontSize: 13,
+              }}
+            >
+              No successful payments in the last 30 days.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
+              {providers
+                .sort(
+                  (a, b) =>
+                    Number(b._sum.amount ?? 0) - Number(a._sum.amount ?? 0),
+                )
+                .map((p) => {
+                  const amt = Number(p._sum.amount ?? 0);
+                  const totalAmt = providers.reduce(
+                    (s, x) => s + Number(x._sum.amount ?? 0),
+                    0,
+                  );
+                  const pct = totalAmt > 0 ? (amt / totalAmt) * 100 : 0;
+                  return (
+                    <div key={p.provider ?? "unknown"}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: 12,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <span style={{ fontWeight: 600, textTransform: "capitalize" }}>
+                          {p.provider ?? "Direct"}
+                        </span>
+                        <span style={{ fontWeight: 700 }}>{formatINR(amt, true)}</span>
+                      </div>
+                      <div
+                        style={{
+                          height: 8,
+                          borderRadius: 999,
+                          background: "#eef0f4",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${pct}%`,
+                            height: "100%",
+                            background: "#7c3aed",
+                          }}
+                        />
+                      </div>
+                      <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>
+                        {p._count._all} transactions · {pct.toFixed(0)}% of revenue
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
         </article>
       </div>
     </section>
