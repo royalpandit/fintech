@@ -6,7 +6,9 @@ import { prisma } from "@/lib/prisma";
 export default async function HomePage() {
   const token = cookies().get("access_token")?.value ?? null;
   const auth = await requireAuthToken(token);
-  if (!auth) redirect("/login");
+
+  // Guests can browse the public user home — no forced login.
+  if (!auth) redirect("/user/home");
 
   if (auth.role === "super_admin") redirect("/super-admin/dashboard");
   if (auth.role === "admin") redirect("/admin/dashboard");

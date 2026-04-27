@@ -94,6 +94,13 @@ export default function LoginPage() {
             Create one
           </Link>
         </p>
+
+        <p style={{ marginTop: 12, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+          or{" "}
+          <Link href="/user/home" style={{ color: "#0ea5e9", fontWeight: 600 }}>
+            browse without an account →
+          </Link>
+        </p>
       </div>
     </main>
   );
