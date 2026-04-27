@@ -9,14 +9,26 @@ type UserShellProps = {
   children: React.ReactNode;
   currentUser: { fullName: string; email: string } | null;
   unreadNotifications: number;
+  walletBalance: number;
+  todayPnL: number;
+  todayPnLPct: number;
 };
 
-const TOP_NAV = [
-  { label: "Home", href: "/user/home" },
-  { label: "Markets", href: "/user/markets" },
-  { label: "Advisors", href: "/user/advisors" },
-  { label: "Lab", href: "/user/lab" },
-  { label: "Learn", href: "/user/learn" },
+const MAIN_NAV = [
+  { label: "Feed", href: "/user/home", icon: "📰" },
+  { label: "Advisors", href: "/user/advisors", icon: "👥" },
+  { label: "Markets", href: "/user/markets", icon: "📈" },
+  { label: "Groups", href: "/user/community", icon: "💬" },
+  { label: "Notifications", href: "/user/notifications", icon: "🔔" },
+  { label: "Settings", href: "/user/settings", icon: "⚙" },
+];
+
+const INVESTING_NAV = [
+  { label: "Dashboard", href: "/user/home", icon: "📊" },
+  { label: "Watchlist", href: "/user/watchlist", icon: "⭐" },
+  { label: "Portfolio", href: "/user/portfolio", icon: "💼" },
+  { label: "Virtual Lab", href: "/user/lab", icon: "🧪", badge: "New" },
+  { label: "Trade History", href: "/user/history", icon: "🕒" },
 ];
 
 function getInitials(name: string): string {
@@ -26,17 +38,32 @@ function getInitials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+function formatINR(n: number) {
+  return `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+}
+
+function formatINRCompact(n: number) {
+  if (Math.abs(n) >= 100000) return `₹${(n / 100000).toFixed(2)}L`;
+  if (Math.abs(n) >= 1000) return `₹${(n / 1000).toFixed(1)}k`;
+  return `₹${n.toFixed(0)}`;
+}
+
 export default function UserShell({
   children,
   currentUser,
   unreadNotifications,
+  walletBalance,
+  todayPnL,
+  todayPnLPct,
 }: UserShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const initials = currentUser ? getInitials(currentUser.fullName) : "";
+  const initials = currentUser ? getInitials(currentUser.fullName) : "G";
+  const pnlColor = todayPnL >= 0 ? "#16a34a" : "#dc2626";
+  const pnlSign = todayPnL >= 0 ? "+" : "";
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -49,6 +76,9 @@ export default function UserShell({
     }
   };
 
+  const isInvestingActive = (href: string) =>
+    pathname === href || pathname.startsWith(href + "/");
+
   return (
     <div
       className="advisor-scope"
@@ -58,28 +88,25 @@ export default function UserShell({
         ["--advisor-primary" as any]: "#0ea5e9",
       }}
     >
-      {/* Top navigation */}
+      {/* Top bar */}
       <header
         style={{
           position: "sticky",
           top: 0,
           zIndex: 40,
-          background: "rgba(255, 255, 255, 0.92)",
+          background: "rgba(255, 255, 255, 0.94)",
           borderBottom: "1px solid #eef0f4",
           backdropFilter: "saturate(160%) blur(10px)",
         }}
       >
         <div
           style={{
-            maxWidth: 1280,
-            margin: "0 auto",
             padding: "12px 24px",
             display: "flex",
             alignItems: "center",
             gap: 24,
           }}
         >
-          {/* Logo */}
           <Link
             href="/user/home"
             style={{
@@ -117,8 +144,7 @@ export default function UserShell({
             </span>
           </Link>
 
-          {/* Search bar */}
-          <div style={{ position: "relative", flex: 1, maxWidth: 380 }}>
+          <div style={{ position: "relative", flex: 1, maxWidth: 420 }}>
             <svg
               width="14"
               height="14"
@@ -133,7 +159,12 @@ export default function UserShell({
               }}
             >
               <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-              <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path
+                d="m20 20-3.5-3.5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
             </svg>
             <input
               placeholder="Search advisors, symbols, courses..."
@@ -142,7 +173,7 @@ export default function UserShell({
                 height: 40,
                 paddingLeft: 38,
                 paddingRight: 14,
-                borderRadius: 10,
+                borderRadius: 999,
                 border: "1px solid #eef0f4",
                 background: "#f8fafc",
                 color: "#334155",
@@ -152,13 +183,17 @@ export default function UserShell({
             />
           </div>
 
-          {/* Top nav */}
-          <nav style={{ display: "flex", gap: 4, alignItems: "center" }}>
-            {TOP_NAV.map((nav) => {
-              const active = pathname === nav.href || pathname.startsWith(nav.href + "/");
+          <nav style={{ display: "flex", gap: 4, alignItems: "center", marginLeft: "auto" }}>
+            {[
+              { label: "Demo", href: "#" },
+              { label: "Markets", href: "/user/markets" },
+              { label: "Advisors", href: "/user/advisors" },
+              { label: "Account", href: "/user/profile" },
+            ].map((nav) => {
+              const active = nav.href !== "#" && (pathname === nav.href || pathname.startsWith(nav.href + "/"));
               return (
                 <Link
-                  key={nav.href}
+                  key={nav.label}
                   href={nav.href}
                   style={{
                     padding: "8px 14px",
@@ -176,7 +211,6 @@ export default function UserShell({
             })}
           </nav>
 
-          {/* Right side: auth-aware */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, position: "relative" }}>
             {currentUser ? (
               <>
@@ -282,21 +316,7 @@ export default function UserShell({
                         fontSize: 13,
                       }}
                     >
-                      My Portfolio
-                    </Link>
-                    <Link
-                      href="/user/lab"
-                      onClick={() => setMenuOpen(false)}
-                      style={{
-                        display: "block",
-                        padding: "10px",
-                        borderRadius: 8,
-                        color: "#0f172a",
-                        textDecoration: "none",
-                        fontSize: 13,
-                      }}
-                    >
-                      Virtual Lab
+                      Portfolio
                     </Link>
                     <button
                       type="button"
@@ -356,52 +376,233 @@ export default function UserShell({
         </div>
       </header>
 
-      <main
+      {/* 3-pane layout */}
+      <div
         style={{
-          maxWidth: 1280,
+          display: "grid",
+          gridTemplateColumns: "260px 1fr",
+          gap: 0,
+          maxWidth: 1440,
           margin: "0 auto",
-          padding: "20px 24px 60px",
+          padding: "20px 20px 60px",
         }}
       >
-        {children}
-      </main>
-
-      <footer
-        style={{
-          borderTop: "1px solid #eef0f4",
-          background: "#fff",
-          padding: "20px 24px",
-          marginTop: 40,
-        }}
-      >
-        <div
+        {/* Left sidebar */}
+        <aside
           style={{
-            maxWidth: 1280,
-            margin: "0 auto",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            fontSize: 12,
-            color: "#64748b",
+            paddingRight: 16,
+            borderRight: "1px solid #eef0f4",
           }}
         >
-          <span>© 2026 Corescent — Regulated AI-Powered Financial Network</span>
-          <div style={{ display: "flex", gap: 16 }}>
-            <a href="#" style={{ color: "inherit" }}>
-              Privacy
-            </a>
-            <a href="#" style={{ color: "inherit" }}>
-              Terms
-            </a>
-            <a href="#" style={{ color: "inherit" }}>
-              Compliance
-            </a>
-            <a href="#" style={{ color: "inherit" }}>
-              Help
-            </a>
+          {/* Profile card */}
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #eef0f4",
+              borderRadius: 14,
+              padding: 14,
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
+              <div
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 999,
+                  background: currentUser
+                    ? "linear-gradient(135deg, #0ea5e9, #10b981)"
+                    : "linear-gradient(135deg, #94a3b8, #64748b)",
+                  color: "#fff",
+                  display: "grid",
+                  placeItems: "center",
+                  fontWeight: 800,
+                  fontSize: 14,
+                  flexShrink: 0,
+                }}
+              >
+                {initials}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 800,
+                    color: "#0f172a",
+                    letterSpacing: -0.2,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {currentUser?.fullName ?? "Guest Visitor"}
+                </div>
+                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>
+                  {currentUser ? "Investor" : "Sign in to personalize"}
+                </div>
+              </div>
+            </div>
+
+            {currentUser ? (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    paddingTop: 10,
+                    borderTop: "1px solid #eef0f4",
+                  }}
+                >
+                  <span style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>
+                    Virtual Balance ⓘ
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: "#0f172a",
+                      letterSpacing: -0.3,
+                    }}
+                  >
+                    {formatINR(walletBalance)}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    paddingTop: 6,
+                  }}
+                >
+                  <span style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>
+                    Today&apos;s P&amp;L
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: pnlColor,
+                      letterSpacing: -0.3,
+                    }}
+                  >
+                    {pnlSign}
+                    {formatINRCompact(Math.abs(todayPnL))} ({pnlSign}
+                    {todayPnLPct.toFixed(2)}%)
+                  </span>
+                </div>
+              </>
+            ) : (
+              <Link
+                href="/register"
+                style={{
+                  display: "block",
+                  textAlign: "center",
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  background: "linear-gradient(135deg, #0ea5e9, #10b981)",
+                  color: "#fff",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  marginTop: 4,
+                }}
+              >
+                Create free account
+              </Link>
+            )}
           </div>
-        </div>
-      </footer>
+
+          {/* Main nav */}
+          <nav style={{ display: "grid", gap: 2, marginBottom: 16 }}>
+            {MAIN_NAV.map((item) => {
+              const active = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    color: active ? "#0ea5e9" : "#475569",
+                    background: active ? "rgba(14, 165, 233, 0.08)" : "transparent",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
+                >
+                  <span style={{ fontSize: 14 }}>{item.icon}</span>
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Investing section */}
+          <div
+            style={{
+              padding: "0 12px 8px",
+              fontSize: 10,
+              fontWeight: 700,
+              color: "#94a3b8",
+              letterSpacing: 1,
+              textTransform: "uppercase",
+            }}
+          >
+            Investing
+          </div>
+          <nav style={{ display: "grid", gap: 2 }}>
+            {INVESTING_NAV.map((item) => {
+              const active = isInvestingActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    color: active ? "#fff" : "#475569",
+                    background: active
+                      ? "linear-gradient(90deg, #0ea5e9, #10b981)"
+                      : "transparent",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    textDecoration: "none",
+                    boxShadow: active ? "0 6px 16px rgba(14, 165, 233, 0.2)" : "none",
+                  }}
+                >
+                  <span style={{ fontSize: 14 }}>{item.icon}</span>
+                  <span style={{ flex: 1 }}>{item.label}</span>
+                  {item.badge && (
+                    <span
+                      style={{
+                        padding: "1px 8px",
+                        borderRadius: 999,
+                        background: active ? "rgba(255,255,255,0.25)" : "#10b981",
+                        color: "#fff",
+                        fontSize: 10,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+        </aside>
+
+        {/* Main content */}
+        <main style={{ paddingLeft: 20, minWidth: 0 }}>{children}</main>
+      </div>
     </div>
   );
 }
