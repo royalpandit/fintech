@@ -3,6 +3,20 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import type { ComponentType } from "react";
+import {
+  FiHome,
+  FiUsers,
+  FiTrendingUp,
+  FiMessageSquare,
+  FiBell,
+  FiSettings,
+  FiPieChart,
+  FiStar,
+  FiBriefcase,
+  FiClock,
+} from "react-icons/fi";
+import { TbFlask } from "react-icons/tb";
 import { Bell } from "./advisor-ui/icons";
 
 type UserShellProps = {
@@ -14,21 +28,28 @@ type UserShellProps = {
   todayPnLPct: number;
 };
 
-const MAIN_NAV = [
-  { label: "Feed", href: "/user/home", icon: "📰" },
-  { label: "Advisors", href: "/user/advisors", icon: "👥" },
-  { label: "Markets", href: "/user/markets", icon: "📈" },
-  { label: "Groups", href: "/user/community", icon: "💬" },
-  { label: "Notifications", href: "/user/notifications", icon: "🔔" },
-  { label: "Settings", href: "/user/settings", icon: "⚙" },
+type NavItem = {
+  label: string;
+  href: string;
+  Icon: ComponentType<{ size?: number }>;
+  badge?: string;
+};
+
+const MAIN_NAV: NavItem[] = [
+  { label: "Feed", href: "/user/home", Icon: FiHome },
+  { label: "Advisors", href: "/user/advisors", Icon: FiUsers },
+  { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
+  { label: "Groups", href: "/user/community", Icon: FiMessageSquare },
+  { label: "Notifications", href: "/user/notifications", Icon: FiBell },
+  { label: "Settings", href: "/user/settings", Icon: FiSettings },
 ];
 
-const INVESTING_NAV = [
-  { label: "Dashboard", href: "/user/home", icon: "📊" },
-  { label: "Watchlist", href: "/user/watchlist", icon: "⭐" },
-  { label: "Portfolio", href: "/user/portfolio", icon: "💼" },
-  { label: "Virtual Lab", href: "/user/lab", icon: "🧪", badge: "New" },
-  { label: "Trade History", href: "/user/history", icon: "🕒" },
+const INVESTING_NAV: NavItem[] = [
+  { label: "Dashboard", href: "/user/home", Icon: FiPieChart },
+  { label: "Watchlist", href: "/user/watchlist", Icon: FiStar },
+  { label: "Portfolio", href: "/user/portfolio", Icon: FiBriefcase },
+  { label: "Virtual Lab", href: "/user/lab", Icon: TbFlask, badge: "New" },
+  { label: "Trade History", href: "/user/history", Icon: FiClock },
 ];
 
 function getInitials(name: string): string {
@@ -518,6 +539,7 @@ export default function UserShell({
           <nav style={{ display: "grid", gap: 2, marginBottom: 16 }}>
             {MAIN_NAV.map((item) => {
               const active = pathname === item.href;
+              const Icon = item.Icon;
               return (
                 <Link
                   key={item.href}
@@ -535,7 +557,7 @@ export default function UserShell({
                     textDecoration: "none",
                   }}
                 >
-                  <span style={{ fontSize: 14 }}>{item.icon}</span>
+                  <Icon size={16} />
                   {item.label}
                 </Link>
               );
@@ -558,6 +580,7 @@ export default function UserShell({
           <nav style={{ display: "grid", gap: 2 }}>
             {INVESTING_NAV.map((item) => {
               const active = isInvestingActive(item.href);
+              const Icon = item.Icon;
               return (
                 <Link
                   key={item.href}
@@ -578,7 +601,7 @@ export default function UserShell({
                     boxShadow: active ? "0 6px 16px rgba(14, 165, 233, 0.2)" : "none",
                   }}
                 >
-                  <span style={{ fontSize: 14 }}>{item.icon}</span>
+                  <Icon size={16} />
                   <span style={{ flex: 1 }}>{item.label}</span>
                   {item.badge && (
                     <span

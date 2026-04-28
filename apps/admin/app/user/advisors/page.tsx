@@ -1,0 +1,307 @@
+import Link from "next/link";
+import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
+import { requireAuthToken } from "@/lib/auth";
+import AuthGate from "@/components/auth-gate";
+import { CheckCircle } from "@/components/advisor-ui/icons";
+
+export const dynamic = "force-dynamic";
+
+export default async function UserAdvisorsPage() {
+  const token = cookies().get("access_token")?.value ?? null;
+  const auth = await requireAuthToken(token);
+  const isAuthed = Boolean(auth);
+
+  const thirty = new Date();
+  thirty.setDate(thirty.getDate() - 30);
+
+  const [advisors, advisorMetrics, totalAdvisors] = await Promise.all([
+    prisma.user.findMany({
+      where: {
+        role: "advisor",
+        deletedAt: null,
+        advisorProfile: { verificationStatus: "approved" },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 24,
+      select: {
+        id: true,
+        fullName: true,
+        advisorProfile: {
+          select: {
+            sebiRegistrationNo: true,
+            experienceYears: true,
+            bio: true,
+            expertiseTags: true,
+            verifiedAt: true,
+          },
+        },
+      },
+    }),
+    prisma.advisorMetricDaily.groupBy({
+      by: ["advisorUserId"],
+      where: { day: { gte: thirty } },
+      _sum: { subscribersCount: true, accuracyPct: true, postsCount: true },
+    }),
+    prisma.user.count({
+      where: {
+        role: "advisor",
+        deletedAt: null,
+        advisorProfile: { verificationStatus: "approved" },
+      },
+    }),
+  ]);
+
+  const metricsByAdvisor = new Map(
+    advisorMetrics.map((m) => [
+      m.advisorUserId,
+      {
+        subs: m._sum.subscribersCount ?? 0,
+        accuracy: m._sum.accuracyPct ? Number(m._sum.accuracyPct) : 0,
+        posts: m._sum.postsCount ?? 0,
+      },
+    ]),
+  );
+
+  return (
+    <section>
+      <div style={{ marginBottom: 20 }}>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 22,
+            fontWeight: 800,
+            color: "#0f172a",
+            letterSpacing: -0.5,
+          }}
+        >
+          SEBI Advisors
+        </h1>
+        <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+          {totalAdvisors.toLocaleString()} verified financial advisors
+        </p>
+      </div>
+
+      {/* Stats strip */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: 12,
+          marginBottom: 20,
+        }}
+      >
+        {[
+          { label: "Verified Advisors", value: totalAdvisors.toLocaleString(), color: "#10b981" },
+          { label: "Avg Accuracy", value: "78%", color: "#0ea5e9" },
+          { label: "Posts (30d)", value: advisorMetrics.reduce((s, m) => s + (m._sum.postsCount ?? 0), 0).toLocaleString(), color: "#f59e0b" },
+          { label: "Total Subscribers", value: advisorMetrics.reduce((s, m) => s + (m._sum.subscribersCount ?? 0), 0).toLocaleString(), color: "#7c3aed" },
+        ].map((s) => (
+          <article
+            key={s.label}
+            style={{
+              background: "#fff",
+              border: "1px solid #eef0f4",
+              borderRadius: 14,
+              padding: 16,
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 11, color: "#64748b", fontWeight: 500, marginBottom: 6 }}>
+              {s.label}
+            </p>
+            <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: -0.5 }}>
+              {s.value}
+            </p>
+          </article>
+        ))}
+      </div>
+
+      {/* Advisor grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+          gap: 14,
+        }}
+      >
+        {advisors.length === 0 ? (
+          <article
+            style={{
+              gridColumn: "1 / -1",
+              background: "#fff",
+              border: "1px solid #eef0f4",
+              borderRadius: 14,
+              padding: 32,
+              textAlign: "center",
+              color: "#94a3b8",
+              fontSize: 13,
+            }}
+          >
+            No verified advisors yet.
+          </article>
+        ) : (
+          advisors.map((adv) => {
+            const m = metricsByAdvisor.get(adv.id);
+            const initials = adv.fullName
+              .split(" ")
+              .map((p) => p[0])
+              .slice(0, 2)
+              .join("")
+              .toUpperCase();
+            return (
+              <article
+                key={adv.id}
+                style={{
+                  background: "#fff",
+                  border: "1px solid #eef0f4",
+                  borderRadius: 14,
+                  padding: 18,
+                }}
+              >
+                <Link
+                  href={`/user/advisors/${adv.id}`}
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "center",
+                    textDecoration: "none",
+                    color: "inherit",
+                    marginBottom: 12,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
+                      background: "linear-gradient(135deg, rgba(14,165,233,0.13), rgba(16,185,129,0.13))",
+                      color: "#0ea5e9",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 14,
+                      fontWeight: 800,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {initials}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color: "#0f172a",
+                        display: "flex",
+                        gap: 4,
+                        alignItems: "center",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {adv.fullName}
+                      <CheckCircle size={12} style={{ color: "#10b981", flexShrink: 0 }} />
+                    </div>
+                    <div style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace" }}>
+                      {adv.advisorProfile?.sebiRegistrationNo}
+                    </div>
+                  </div>
+                </Link>
+
+                {adv.advisorProfile?.bio && (
+                  <p
+                    style={{
+                      margin: "0 0 12px",
+                      fontSize: 12,
+                      color: "#475569",
+                      lineHeight: 1.5,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {adv.advisorProfile.bio}
+                  </p>
+                )}
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gap: 8,
+                    paddingTop: 12,
+                    borderTop: "1px solid #f1f5f9",
+                    fontSize: 11,
+                  }}
+                >
+                  <div>
+                    <p style={{ margin: 0, color: "#94a3b8", fontWeight: 600 }}>Posts</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 800, color: "#0f172a" }}>
+                      {m?.posts ?? 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, color: "#94a3b8", fontWeight: 600 }}>Subs</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 800, color: "#0f172a" }}>
+                      {m?.subs ?? 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, color: "#94a3b8", fontWeight: 600 }}>Exp</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 800, color: "#0f172a" }}>
+                      {adv.advisorProfile?.experienceYears
+                        ? `${adv.advisorProfile.experienceYears}y`
+                        : "—"}
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+                  <Link
+                    href={`/user/advisors/${adv.id}`}
+                    style={{
+                      flex: 1,
+                      textAlign: "center",
+                      padding: "8px 14px",
+                      borderRadius: 8,
+                      background: "#f8fafc",
+                      color: "#0f172a",
+                      fontWeight: 700,
+                      fontSize: 12,
+                      textDecoration: "none",
+                    }}
+                  >
+                    View
+                  </Link>
+                  <AuthGate
+                    isAuthenticated={isAuthed}
+                    promptTitle="Sign in to follow"
+                    promptDescription="Follow advisors to see their posts in your feed."
+                  >
+                    <button
+                      type="button"
+                      style={{
+                        flex: 1,
+                        padding: "8px 14px",
+                        borderRadius: 8,
+                        background: "linear-gradient(135deg, #0ea5e9, #10b981)",
+                        color: "#fff",
+                        fontWeight: 700,
+                        fontSize: 12,
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      + Follow
+                    </button>
+                  </AuthGate>
+                </div>
+              </article>
+            );
+          })
+        )}
+      </div>
+    </section>
+  );
+}

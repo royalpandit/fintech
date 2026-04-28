@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FiHeart, FiMessageSquare, FiAlertTriangle } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import PostModerationActions from "@/components/views/market-post-moderation-actions";
 
@@ -206,12 +207,16 @@ export default async function MarketPostDetailView({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span className="tag success">❤</span>
+              <span className="tag success" style={{ display: "inline-flex", alignItems: "center" }}>
+                <FiHeart size={12} />
+              </span>
               <strong>{likeCount}</strong>
               <span className="metric-label">LIKES</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span className="tag">💬</span>
+              <span className="tag" style={{ display: "inline-flex", alignItems: "center" }}>
+                <FiMessageSquare size={12} />
+              </span>
               <strong>{totalCommentCount}</strong>
               <span className="metric-label">COMMENTS</span>
             </div>
@@ -337,11 +342,14 @@ export default async function MarketPostDetailView({
                   }}
                 >
                   <strong>{comment.user.fullName}</strong>
-                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                  <span style={{ fontSize: 12, color: "var(--text-muted)", display: "inline-flex", alignItems: "center", gap: 4 }}>
                     {comment.createdAt.toLocaleString()}
-                    {comment.toxicityScore !== null && Number(comment.toxicityScore) > 5
-                      ? ` · ⚠ toxicity ${Number(comment.toxicityScore).toFixed(1)}`
-                      : ""}
+                    {comment.toxicityScore !== null && Number(comment.toxicityScore) > 5 ? (
+                      <>
+                        {" · "}
+                        <FiAlertTriangle size={11} /> toxicity {Number(comment.toxicityScore).toFixed(1)}
+                      </>
+                    ) : null}
                   </span>
                 </div>
                 <p style={{ margin: 0, fontSize: 14, lineHeight: "22px" }}>{comment.content}</p>

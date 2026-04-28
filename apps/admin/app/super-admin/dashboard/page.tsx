@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { FiArrowUpRight, FiArrowDownRight } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import Sparkline from "@/components/advisor-ui/sparkline";
@@ -320,8 +321,8 @@ export default async function SuperAdminDashboardPage({
             <article className="stat-card">
               <p className="stat-card-label">Total Network Users</p>
               <p className="stat-card-value">{totalUsers.toLocaleString()}</p>
-              <span className={`stat-card-delta ${userDelta >= 0 ? "up" : "down"}`}>
-                {userDelta >= 0 ? "↗" : "↘"} {userDelta >= 0 ? "+" : ""}
+              <span className={`stat-card-delta ${userDelta >= 0 ? "up" : "down"}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                {userDelta >= 0 ? <FiArrowUpRight size={12} /> : <FiArrowDownRight size={12} />} {userDelta >= 0 ? "+" : ""}
                 {userDelta.toFixed(2)}%
               </span>
               <div className="stat-card-spark">
@@ -332,8 +333,8 @@ export default async function SuperAdminDashboardPage({
             <article className="stat-card">
               <p className="stat-card-label">Active Advisors</p>
               <p className="stat-card-value">{totalAdvisors.toLocaleString()}</p>
-              <span className={`stat-card-delta ${advisorDelta >= 0 ? "up" : "down"}`}>
-                {advisorDelta >= 0 ? "↗" : "↘"} {advisorDelta >= 0 ? "+" : ""}
+              <span className={`stat-card-delta ${advisorDelta >= 0 ? "up" : "down"}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                {advisorDelta >= 0 ? <FiArrowUpRight size={12} /> : <FiArrowDownRight size={12} />} {advisorDelta >= 0 ? "+" : ""}
                 {advisorDelta.toFixed(2)}%
               </span>
               <div className="stat-card-spark">
@@ -344,8 +345,8 @@ export default async function SuperAdminDashboardPage({
             <article className="stat-card">
               <p className="stat-card-label">Platform Revenue (30d)</p>
               <p className="stat-card-value">{formatINR(currentRevenue, true)}</p>
-              <span className={`stat-card-delta ${revenueDelta >= 0 ? "up" : "down"}`}>
-                {revenueDelta >= 0 ? "↗" : "↘"} {revenueDelta >= 0 ? "+" : ""}
+              <span className={`stat-card-delta ${revenueDelta >= 0 ? "up" : "down"}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                {revenueDelta >= 0 ? <FiArrowUpRight size={12} /> : <FiArrowDownRight size={12} />} {revenueDelta >= 0 ? "+" : ""}
                 {revenueDelta.toFixed(2)}%
               </span>
               <div className="stat-card-spark">

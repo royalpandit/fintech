@@ -8,6 +8,7 @@ import AreaChart from "@/components/advisor-ui/area-chart";
 import DonutChart from "@/components/advisor-ui/donut-chart";
 import TabSwitcher from "@/components/advisor-ui/tab-switcher";
 import TimeRange from "@/components/advisor-ui/time-range";
+import { FiArrowUpRight, FiArrowDownRight } from "react-icons/fi";
 import { ArrowUpRight, Bell, Plus } from "@/components/advisor-ui/icons";
 import QuickPost from "./quick-post";
 
@@ -316,8 +317,9 @@ export default async function AdvisorDashboardPage({
               <p className="stat-card-value">{formatINR(portfolioCurrent, true)}</p>
               <span
                 className={`stat-card-delta ${portfolioCurrent >= portfolioPrev ? "up" : "down"}`}
+                style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
               >
-                {portfolioCurrent >= portfolioPrev ? "↗" : "↘"}{" "}
+                {portfolioCurrent >= portfolioPrev ? <FiArrowUpRight size={12} /> : <FiArrowDownRight size={12} />}{" "}
                 {portfolioPrev > 0
                   ? `${(((portfolioCurrent - portfolioPrev) / portfolioPrev) * 100).toFixed(2)}%`
                   : "new"}
@@ -330,8 +332,8 @@ export default async function AdvisorDashboardPage({
             <article className="stat-card">
               <p className="stat-card-label">Total Posts Published</p>
               <p className="stat-card-value">{totalApproved.toLocaleString()}</p>
-              <span className="stat-card-delta up">
-                ↗ {totalPosts > 0 ? `${((totalApproved / totalPosts) * 100).toFixed(0)}% approval` : "—"}
+              <span className="stat-card-delta up" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <FiArrowUpRight size={12} /> {totalPosts > 0 ? `${((totalApproved / totalPosts) * 100).toFixed(0)}% approval` : "—"}
               </span>
               <div className="stat-card-spark">
                 <Sparkline values={sparkAccuracy} color="#2563eb" height={36} width={300} />
@@ -347,8 +349,8 @@ export default async function AdvisorDashboardPage({
                 {todayPnL >= 0 ? "+" : ""}
                 {formatINR(todayPnL, true)}
               </p>
-              <span className={`stat-card-delta ${todayPnL >= 0 ? "up" : "down"}`}>
-                {todayPnL >= 0 ? "↗" : "↘"} {todayPnLPct >= 0 ? "+" : ""}
+              <span className={`stat-card-delta ${todayPnL >= 0 ? "up" : "down"}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                {todayPnL >= 0 ? <FiArrowUpRight size={12} /> : <FiArrowDownRight size={12} />} {todayPnLPct >= 0 ? "+" : ""}
                 {todayPnLPct.toFixed(2)}%
               </span>
               <div className="stat-card-spark">
@@ -359,8 +361,8 @@ export default async function AdvisorDashboardPage({
             <article className="stat-card">
               <p className="stat-card-label">Buying Power</p>
               <p className="stat-card-value">{formatINR(buyingPower, true)}</p>
-              <span className="stat-card-delta up">
-                ↗ Wallet + 80% projected
+              <span className="stat-card-delta up" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <FiArrowUpRight size={12} /> Wallet + 80% projected
               </span>
               <div className="stat-card-spark">
                 <Sparkline values={sparkSubs.length ? sparkSubs : [0]} color="#f59e0b" height={36} width={300} />

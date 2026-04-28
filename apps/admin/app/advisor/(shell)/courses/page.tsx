@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { FiGlobe, FiEdit3 } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 
@@ -170,8 +171,16 @@ export default async function AdvisorCoursesPage() {
                     {course._count.lessons} lessons · {course._count.enrollments} enrolled
                   </span>
                 </div>
-                <div style={{ marginTop: 6, fontSize: 11, color: "#64748b" }}>
-                  {course.isPublished ? "🌐 Live" : "📝 Draft"}
+                <div style={{ marginTop: 6, fontSize: 11, color: "#64748b", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  {course.isPublished ? (
+                    <>
+                      <FiGlobe size={11} /> Live
+                    </>
+                  ) : (
+                    <>
+                      <FiEdit3 size={11} /> Draft
+                    </>
+                  )}
                 </div>
               </article>
             </Link>

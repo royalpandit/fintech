@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { FiStar } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import CourseEditor from "./course-editor";
@@ -85,8 +86,14 @@ export default async function AdvisorCourseDetailPage({ params }: { params: { id
         </article>
         <article className="card">
           <p className="metric-label">Avg Rating</p>
-          <p className="metric-value" style={{ fontSize: 32 }}>
-            {avgRating ? `${avgRating.toFixed(1)} ★` : "—"}
+          <p className="metric-value" style={{ fontSize: 32, display: "inline-flex", alignItems: "center", gap: 8 }}>
+            {avgRating ? (
+              <>
+                {avgRating.toFixed(1)} <FiStar size={24} />
+              </>
+            ) : (
+              "—"
+            )}
           </p>
           <p style={{ margin: 0, fontSize: 12, color: "#61708b" }}>
             {course._count.reviews} reviews
