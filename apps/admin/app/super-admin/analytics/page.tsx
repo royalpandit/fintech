@@ -1,3 +1,4 @@
+import { FiArrowUpRight, FiArrowDownRight } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import AreaChart from "@/components/advisor-ui/area-chart";
 import DonutChart from "@/components/advisor-ui/donut-chart";
@@ -248,7 +249,9 @@ export default async function SuperAdminAnalyticsPage({
         <article className="stat-card">
           <p className="stat-card-label">Total Users</p>
           <p className="stat-card-value">{totalUsers.toLocaleString()}</p>
-          <span className="stat-card-delta up">↗ Active network</span>
+          <span className="stat-card-delta up" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <FiArrowUpRight size={12} /> Active network
+          </span>
         </article>
         <article className="stat-card">
           <p className="stat-card-label">Active Advisors</p>
@@ -263,8 +266,8 @@ export default async function SuperAdminAnalyticsPage({
         <article className="stat-card">
           <p className="stat-card-label">Revenue (30d)</p>
           <p className="stat-card-value">{formatINR(currRevenue30, true)}</p>
-          <span className={`stat-card-delta ${revenueDelta >= 0 ? "up" : "down"}`}>
-            {revenueDelta >= 0 ? "↗" : "↘"} {revenueDelta >= 0 ? "+" : ""}
+          <span className={`stat-card-delta ${revenueDelta >= 0 ? "up" : "down"}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            {revenueDelta >= 0 ? <FiArrowUpRight size={12} /> : <FiArrowDownRight size={12} />} {revenueDelta >= 0 ? "+" : ""}
             {revenueDelta.toFixed(2)}%
           </span>
         </article>

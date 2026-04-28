@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FiHeart, FiMessageSquare } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -303,7 +304,13 @@ export default async function AdminMarketPostsPage({
                         )}
                       </td>
                       <td style={{ padding: "14px 18px", fontSize: 11, color: "#475569" }}>
-                        {post._count.reactions} ❤ · {post._count.comments} 💬
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          {post._count.reactions} <FiHeart size={11} />
+                        </span>{" "}
+                        ·{" "}
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          {post._count.comments} <FiMessageSquare size={11} />
+                        </span>
                       </td>
                       <td style={{ padding: "14px 18px" }}>
                         <span

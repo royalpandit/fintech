@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { FiArrowUpRight, FiFlag } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import Sparkline from "@/components/advisor-ui/sparkline";
@@ -245,8 +246,15 @@ export default async function AdminDashboardPage({
                 </p>
                 <span
                   className={`stat-card-delta ${pendingAdvisors > 0 ? "down" : "up"}`}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
                 >
-                  {pendingAdvisors > 0 ? `↗ ${pendingAdvisors} awaiting` : "✓ all clear"}
+                  {pendingAdvisors > 0 ? (
+                    <>
+                      <FiArrowUpRight size={12} /> {pendingAdvisors} awaiting
+                    </>
+                  ) : (
+                    "✓ all clear"
+                  )}
                 </span>
                 <div className="stat-card-spark">
                   <Sparkline values={sparkAudit} color="#f59e0b" height={36} width={300} />
@@ -268,8 +276,15 @@ export default async function AdminDashboardPage({
                 </p>
                 <span
                   className={`stat-card-delta ${pendingPosts > 5 ? "down" : "up"}`}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
                 >
-                  {pendingPosts > 0 ? `↗ ${pendingPosts} pending` : "✓ caught up"}
+                  {pendingPosts > 0 ? (
+                    <>
+                      <FiArrowUpRight size={12} /> {pendingPosts} pending
+                    </>
+                  ) : (
+                    "✓ caught up"
+                  )}
                 </span>
                 <div className="stat-card-spark">
                   <Sparkline values={sparkAudit} color="#2563eb" height={36} width={300} />
@@ -291,8 +306,15 @@ export default async function AdminDashboardPage({
                 </p>
                 <span
                   className={`stat-card-delta ${totalFlagged > 0 ? "down" : "up"}`}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
                 >
-                  {totalFlagged > 0 ? `↗ needs review` : "✓ no flags"}
+                  {totalFlagged > 0 ? (
+                    <>
+                      <FiArrowUpRight size={12} /> needs review
+                    </>
+                  ) : (
+                    "✓ no flags"
+                  )}
                 </span>
                 <div className="stat-card-spark">
                   <Sparkline values={sparkAudit} color="#ef4444" height={36} width={300} />
@@ -600,7 +622,7 @@ export default async function AdminDashboardPage({
                         flexShrink: 0,
                       }}
                     >
-                      🚩
+                      <FiFlag size={14} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div

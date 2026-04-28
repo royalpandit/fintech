@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { FiArrowUpRight, FiArrowDownRight } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
@@ -880,11 +881,15 @@ export default async function UserDashboardPage({
                       fontSize: 11,
                       fontWeight: 700,
                       color: positive ? "#16a34a" : "#dc2626",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      gap: 2,
                     }}
                   >
                     {positive ? "+" : ""}
                     {row.change.toFixed(2)}%{" "}
-                    {positive ? "↗" : "↘"}
+                    {positive ? <FiArrowUpRight size={12} /> : <FiArrowDownRight size={12} />}
                   </span>
                 </div>
               );

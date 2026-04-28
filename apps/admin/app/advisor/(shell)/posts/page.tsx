@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { FiHeart, FiMessageSquare } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 
@@ -150,7 +151,13 @@ export default async function AdvisorPostsPage({ searchParams }: { searchParams:
                       </span>
                     </td>
                     <td style={{ fontSize: 13 }}>
-                      {post._count.reactions} ❤ · {post._count.comments} 💬
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        {post._count.reactions} <FiHeart size={12} />
+                      </span>{" "}
+                      ·{" "}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        {post._count.comments} <FiMessageSquare size={12} />
+                      </span>
                     </td>
                     <td>{post.createdAt.toLocaleDateString()}</td>
                   </tr>

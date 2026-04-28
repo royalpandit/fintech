@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { FiHeart, FiMessageSquare } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import PostActions from "./post-actions";
@@ -157,11 +158,11 @@ export default async function AdvisorPostDetailPage({ params }: { params: { id: 
               fontSize: 14,
             }}
           >
-            <span>
-              <strong>{post._count.reactions}</strong> ❤ likes
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <strong>{post._count.reactions}</strong> <FiHeart size={14} /> likes
             </span>
-            <span>
-              <strong>{post._count.comments}</strong> 💬 comments
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <strong>{post._count.comments}</strong> <FiMessageSquare size={14} /> comments
             </span>
           </div>
         </article>

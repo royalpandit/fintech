@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FiExternalLink } from "react-icons/fi";
 
 type Lesson = {
   id: number;
@@ -294,9 +295,9 @@ export default function LessonsManager({
                           href={lesson.videoUrl}
                           target="_blank"
                           rel="noreferrer"
-                          style={{ color: "#2563eb" }}
+                          style={{ color: "#2563eb", display: "inline-flex", alignItems: "center", gap: 4 }}
                         >
-                          ↗ link
+                          <FiExternalLink size={12} /> link
                         </a>
                       ) : (
                         "—"

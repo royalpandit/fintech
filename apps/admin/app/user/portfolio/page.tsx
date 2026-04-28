@@ -1,0 +1,443 @@
+import Link from "next/link";
+import type { ComponentType } from "react";
+import { cookies } from "next/headers";
+import {
+  FiBriefcase,
+  FiLock,
+  FiBarChart2,
+  FiTarget,
+  FiTrendingUp,
+} from "react-icons/fi";
+import { prisma } from "@/lib/prisma";
+import { requireAuthToken } from "@/lib/auth";
+import AuthGate from "@/components/auth-gate";
+import AreaChart from "@/components/advisor-ui/area-chart";
+import DonutChart from "@/components/advisor-ui/donut-chart";
+
+export const dynamic = "force-dynamic";
+
+function formatINR(n: number, compact = false) {
+  if (!n && n !== 0) return "₹0";
+  if (compact && Math.abs(n) >= 100000) return `₹${(n / 100000).toFixed(2)}L`;
+  if (compact && Math.abs(n) >= 1000) return `₹${(n / 1000).toFixed(1)}k`;
+  return `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+}
+
+function dayLabel(d: Date): string {
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+const SYMBOL_COLORS: Record<string, string> = {
+  AAPL: "#0f172a",
+  RELIANCE: "#0ea5e9",
+  TCS: "#7c3aed",
+  INFY: "#10b981",
+  HDFCBANK: "#dc2626",
+  ICICIBANK: "#f59e0b",
+};
+
+export default async function PortfolioPage() {
+  const token = cookies().get("access_token")?.value ?? null;
+  const auth = await requireAuthToken(token);
+  const isAuthed = Boolean(auth);
+  const userId = auth?.userId ?? null;
+
+  const [portfolios, holdings, snapshots, brokerAccounts] = await Promise.all([
+    userId
+      ? prisma.portfolio.findMany({
+          where: { userId, deletedAt: null },
+          orderBy: { totalValue: "desc" },
+        })
+      : Promise.resolve([]),
+    userId
+      ? prisma.portfolioAsset.findMany({
+          where: { portfolio: { userId, deletedAt: null } },
+          orderBy: { quantity: "desc" },
+        })
+      : Promise.resolve([]),
+    userId
+      ? prisma.portfolioSnapshotDaily.findMany({
+          where: { portfolio: { userId } },
+          orderBy: { day: "asc" },
+          take: 90,
+        })
+      : Promise.resolve([]),
+    userId
+      ? prisma.brokerAccount.findMany({ where: { userId } })
+      : Promise.resolve([]),
+  ]);
+
+  const activePortfolio = portfolios[0];
+  const totalValue = activePortfolio ? Number(activePortfolio.totalValue) : 0;
+  const dayChange = activePortfolio ? Number(activePortfolio.dayChange) : 0;
+  const riskScore = activePortfolio ? Number(activePortfolio.riskScore) : 0;
+  const diversificationScore = activePortfolio
+    ? Number(activePortfolio.diversificationScore)
+    : 0;
+
+  const chartData = snapshots.map((s) => ({
+    label: dayLabel(s.day),
+    value: Number(s.totalValue),
+  }));
+
+  // Sector grouping for donut
+  const sectorTotals = new Map<string, number>();
+  for (const h of holdings) {
+    const sector = h.sector ?? "Others";
+    const value = Number(h.currentPrice ?? h.averagePrice) * Number(h.quantity);
+    sectorTotals.set(sector, (sectorTotals.get(sector) ?? 0) + value);
+  }
+  const sectorSlices = Array.from(sectorTotals.entries())
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 6)
+    .map(([sector, value], i) => ({
+      label: sector,
+      value,
+      color: ["#0ea5e9", "#10b981", "#f59e0b", "#7c3aed", "#dc2626", "#64748b"][i],
+      detail: formatINR(value, true),
+    }));
+  const sectorTotal = sectorSlices.reduce((s, x) => s + x.value, 0);
+
+  return (
+    <section>
+      <div style={{ marginBottom: 20 }}>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 22,
+            fontWeight: 800,
+            color: "#0f172a",
+            letterSpacing: -0.5,
+          }}
+        >
+          Portfolio
+        </h1>
+        <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+          {isAuthed && activePortfolio
+            ? `${holdings.length} holdings · ${brokerAccounts.length} broker connection${brokerAccounts.length !== 1 ? "s" : ""}`
+            : "Connect your broker for AI-powered portfolio insights"}
+        </p>
+      </div>
+
+      {!isAuthed || !activePortfolio ? (
+        <article
+          style={{
+            background: "linear-gradient(135deg, #0f172a, #064e3b)",
+            color: "#fff",
+            borderRadius: 18,
+            padding: 36,
+            display: "grid",
+            gridTemplateColumns: "1.4fr 1fr",
+            gap: 24,
+            alignItems: "center",
+            marginBottom: 18,
+          }}
+        >
+          <div>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "4px 12px",
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.16)",
+                color: "#a7f3d0",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: 0.5,
+                marginBottom: 12,
+              }}
+            >
+              <FiBriefcase size={13} /> PORTFOLIO INTELLIGENCE
+            </span>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 28,
+                fontWeight: 800,
+                letterSpacing: -0.6,
+              }}
+            >
+              Connect once. Get AI insights forever.
+            </h2>
+            <p
+              style={{
+                margin: "10px 0 18px",
+                color: "rgba(255,255,255,0.78)",
+                fontSize: 13,
+                lineHeight: 1.5,
+                maxWidth: 460,
+              }}
+            >
+              We securely sync your holdings via OAuth and analyze diversification,
+              concentration risk, sector exposure, and rebalancing opportunities.
+            </p>
+            <AuthGate
+              isAuthenticated={isAuthed}
+              promptTitle="Sign in to connect"
+              promptDescription="Sign up to securely link your broker account."
+            >
+              <button
+                type="button"
+                style={{
+                  padding: "12px 22px",
+                  borderRadius: 12,
+                  background: "rgba(255,255,255,0.95)",
+                  color: "#064e3b",
+                  fontWeight: 800,
+                  fontSize: 14,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                {isAuthed ? "Connect Broker" : "Get started — free"}
+              </button>
+            </AuthGate>
+          </div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {(
+              [
+                { Icon: FiLock, label: "Bank-grade encryption", detail: "AES-256 token vault" },
+                { Icon: FiBarChart2, label: "Risk scoring", detail: "AI-driven 0-10 scale" },
+                { Icon: FiTarget, label: "Rebalancing suggestions", detail: "Match your risk profile" },
+                { Icon: FiTrendingUp, label: "Real-time tracking", detail: "Updates daily" },
+              ] as { Icon: ComponentType<{ size?: number }>; label: string; detail: string }[]
+            ).map((item) => (
+              <div
+                key={item.label}
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  padding: 12,
+                  borderRadius: 10,
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.14)",
+                }}
+              >
+                <span style={{ display: "flex", alignItems: "center", color: "#a7f3d0" }}>
+                  <item.Icon size={20} />
+                </span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{item.label}</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>{item.detail}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+      ) : (
+        <>
+          {/* Stats strip */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: 12,
+              marginBottom: 18,
+            }}
+          >
+            {[
+              { label: "Total Value", value: formatINR(totalValue, true), color: "#0f172a" },
+              {
+                label: "Day Change",
+                value: `${dayChange >= 0 ? "+" : ""}${formatINR(dayChange, true)}`,
+                color: dayChange >= 0 ? "#16a34a" : "#dc2626",
+              },
+              {
+                label: "Risk Score",
+                value: `${riskScore.toFixed(1)} / 10`,
+                color: riskScore < 4 ? "#16a34a" : riskScore < 7 ? "#f59e0b" : "#dc2626",
+              },
+              {
+                label: "Diversification",
+                value: `${diversificationScore.toFixed(0)}%`,
+                color: "#0ea5e9",
+              },
+            ].map((s) => (
+              <article
+                key={s.label}
+                style={{
+                  background: "#fff",
+                  border: "1px solid #eef0f4",
+                  borderRadius: 14,
+                  padding: 16,
+                }}
+              >
+                <p style={{ margin: 0, fontSize: 11, color: "#64748b", fontWeight: 500, marginBottom: 6 }}>
+                  {s.label}
+                </p>
+                <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: -0.5 }}>
+                  {s.value}
+                </p>
+              </article>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1.55fr 1fr", gap: 14, marginBottom: 18 }}>
+            <article style={{ background: "#fff", border: "1px solid #eef0f4", borderRadius: 14, padding: 18 }}>
+              <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                Portfolio Value — 90 days
+              </h3>
+              <AreaChart
+                data={chartData}
+                color="#0ea5e9"
+                height={240}
+                valueFormatter={(n) => formatINR(n, true)}
+              />
+            </article>
+
+            <article style={{ background: "#fff", border: "1px solid #eef0f4", borderRadius: 14, padding: 18 }}>
+              <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                Sector Allocation
+              </h3>
+              {sectorTotal === 0 ? (
+                <p
+                  style={{
+                    margin: 0,
+                    height: 220,
+                    display: "grid",
+                    placeItems: "center",
+                    color: "#94a3b8",
+                    fontSize: 12,
+                  }}
+                >
+                  No sectors tagged.
+                </p>
+              ) : (
+                <DonutChart
+                  slices={sectorSlices}
+                  centerLabel="Total"
+                  centerValue={formatINR(sectorTotal, true)}
+                  size={170}
+                  thickness={26}
+                />
+              )}
+            </article>
+          </div>
+
+          {/* Holdings table */}
+          <article
+            style={{
+              background: "#fff",
+              border: "1px solid #eef0f4",
+              borderRadius: 14,
+              padding: 0,
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ padding: "16px 18px", borderBottom: "1px solid #eef0f4" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                Holdings ({holdings.length})
+              </h3>
+            </div>
+            {holdings.length === 0 ? (
+              <p style={{ margin: 0, padding: 32, textAlign: "center", color: "#94a3b8" }}>
+                No holdings synced yet.
+              </p>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "#f8fafc" }}>
+                      {["Symbol", "Sector", "Qty", "Avg Price", "Current", "Value", "P&L", "P&L %"].map(
+                        (h) => (
+                          <th
+                            key={h}
+                            style={{
+                              textAlign: h === "Symbol" || h === "Sector" ? "left" : "right",
+                              padding: "10px 18px",
+                              fontWeight: 600,
+                              fontSize: 10,
+                              color: "#64748b",
+                              textTransform: "uppercase",
+                              letterSpacing: 0.6,
+                              borderBottom: "1px solid #eef0f4",
+                            }}
+                          >
+                            {h}
+                          </th>
+                        ),
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {holdings.map((h) => {
+                      const ap = Number(h.averagePrice);
+                      const cp = Number(h.currentPrice ?? h.averagePrice);
+                      const qty = Number(h.quantity);
+                      const value = cp * qty;
+                      const pnl = (cp - ap) * qty;
+                      const pnlPct = ap > 0 ? ((cp - ap) / ap) * 100 : 0;
+                      const positive = pnl >= 0;
+                      const color = SYMBOL_COLORS[h.symbol] ?? "#64748b";
+                      return (
+                        <tr key={h.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: "12px 18px" }}>
+                            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                              <div
+                                style={{
+                                  width: 28,
+                                  height: 28,
+                                  borderRadius: 7,
+                                  background: color + "1a",
+                                  color,
+                                  display: "grid",
+                                  placeItems: "center",
+                                  fontSize: 10,
+                                  fontWeight: 800,
+                                }}
+                              >
+                                {h.symbol.slice(0, 1)}
+                              </div>
+                              <strong>{h.symbol}</strong>
+                            </div>
+                          </td>
+                          <td style={{ padding: "12px 18px", color: "#64748b" }}>
+                            {h.sector ?? "—"}
+                          </td>
+                          <td style={{ padding: "12px 18px", textAlign: "right" }}>{qty}</td>
+                          <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                            {formatINR(ap)}
+                          </td>
+                          <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                            {formatINR(cp)}
+                          </td>
+                          <td style={{ padding: "12px 18px", textAlign: "right", fontWeight: 600 }}>
+                            {formatINR(value, true)}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 18px",
+                              textAlign: "right",
+                              fontWeight: 700,
+                              color: positive ? "#16a34a" : "#dc2626",
+                            }}
+                          >
+                            {positive ? "+" : "−"}
+                            {formatINR(Math.abs(pnl), true)}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 18px",
+                              textAlign: "right",
+                              fontWeight: 700,
+                              color: positive ? "#16a34a" : "#dc2626",
+                            }}
+                          >
+                            {positive ? "+" : ""}
+                            {pnlPct.toFixed(2)}%
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </article>
+        </>
+      )}
+    </section>
+  );
+}

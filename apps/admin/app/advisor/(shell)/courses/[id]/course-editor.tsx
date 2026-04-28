@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FiGlobe, FiEdit3 } from "react-icons/fi";
 
 type Initial = {
   title: string;
@@ -124,9 +125,13 @@ export default function CourseEditor({ courseId, initial }: { courseId: number; 
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {statusTag(initial.complianceStatus)}
             {isPublished ? (
-              <span style={{ fontSize: 12, color: "#047857", fontWeight: 600 }}>🌐 Live</span>
+              <span style={{ fontSize: 12, color: "#047857", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <FiGlobe size={12} /> Live
+              </span>
             ) : (
-              <span style={{ fontSize: 12, color: "#61708b" }}>📝 Draft</span>
+              <span style={{ fontSize: 12, color: "#61708b", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <FiEdit3 size={12} /> Draft
+              </span>
             )}
           </div>
         </div>
