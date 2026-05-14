@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev -p 3001",
     "build": "prisma generate && next build",
     "start": "next start -p 3000",
     "prisma:generate": "prisma generate",
@@ -11,7 +11,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed:admin": "tsx scripts/seed-admin.ts",
-    "seed:all": "tsx scripts/seed-all.ts"
+    "seed:all": "tsx scripts/seed-all.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",

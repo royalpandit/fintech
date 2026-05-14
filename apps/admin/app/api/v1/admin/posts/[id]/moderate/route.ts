@@ -25,9 +25,20 @@ export async function POST(
   };
   const newStatus = statusMap[body.action || "approve"] || "approved";
 
+  const existing = await prisma.marketPost.findUnique({
+    where: { id: postId },
+    select: { publishedAt: true },
+  });
+
   await prisma.marketPost.update({
     where: { id: postId },
-    data: { complianceStatus: newStatus as any },
+    data: {
+      complianceStatus: newStatus as any,
+      // Stamp publishedAt the first time a post becomes approved so the user
+      // feed (ordered by publishedAt desc) shows it in the right slot.
+      publishedAt:
+        newStatus === "approved" && !existing?.publishedAt ? new Date() : undefined,
+    },
   });
 
   await prisma.complianceLog.create({

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { FiHeart, FiMessageSquare } from "react-icons/fi";
+import { FiHeart, FiMessageSquare, FiMessageCircle } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
 import { CheckCircle } from "@/components/advisor-ui/icons";
+import FollowToggle from "@/components/FollowToggle";
+import MessageAdvisorButton from "./MessageAdvisorButton";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +66,20 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
   });
 
   if (!advisor || !advisor.advisorProfile) notFound();
+
+  // Current user's follow state for this advisor
+  const isFollowing = auth
+    ? Boolean(
+        await prisma.userFollow.findUnique({
+          where: {
+            followerUserId_followingUserId: {
+              followerUserId: auth.userId,
+              followingUserId: advisorUserId,
+            },
+          },
+        }),
+      )
+    : false;
 
   const thirty = new Date();
   thirty.setDate(thirty.getDate() - 30);
@@ -186,27 +202,58 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
               </p>
             )}
           </div>
-          <AuthGate
-            isAuthenticated={isAuthed}
-            promptTitle="Sign in to subscribe"
-            promptDescription="Subscribe to access this advisor's premium sentiment + insights."
-          >
-            <button
-              type="button"
-              style={{
-                padding: "12px 22px",
-                borderRadius: 12,
-                background: "rgba(255,255,255,0.95)",
-                color: "#064e3b",
-                fontWeight: 800,
-                fontSize: 14,
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              + Subscribe
-            </button>
-          </AuthGate>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {isAuthed ? (
+              <>
+                <FollowToggle
+                  advisorId={advisorUserId}
+                  initialFollowing={isFollowing}
+                  size="lg"
+                />
+                <MessageAdvisorButton
+                  advisorId={advisorUserId}
+                  isFollowing={isFollowing}
+                />
+                <button
+                  type="button"
+                  style={{
+                    padding: "12px 22px",
+                    borderRadius: 12,
+                    background: "rgba(255,255,255,0.95)",
+                    color: "#064e3b",
+                    fontWeight: 800,
+                    fontSize: 14,
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  + Subscribe
+                </button>
+              </>
+            ) : (
+              <AuthGate
+                isAuthenticated={false}
+                promptTitle="Sign in to follow"
+                promptDescription="Follow this advisor to get their latest sentiment in your feed."
+              >
+                <button
+                  type="button"
+                  style={{
+                    padding: "12px 22px",
+                    borderRadius: 12,
+                    background: "rgba(255,255,255,0.95)",
+                    color: "#064e3b",
+                    fontWeight: 800,
+                    fontSize: 14,
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  Follow + Subscribe
+                </button>
+              </AuthGate>
+            )}
+          </div>
         </div>
 
         {(advisor.advisorProfile.expertiseTags?.length ?? 0) > 0 && (
