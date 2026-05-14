@@ -9,12 +9,14 @@ import {
   FiUsers,
   FiTrendingUp,
   FiMessageSquare,
+  FiMessageCircle,
   FiBell,
   FiSettings,
   FiPieChart,
   FiStar,
   FiBriefcase,
   FiClock,
+  FiBookOpen,
 } from "react-icons/fi";
 import { TbFlask } from "react-icons/tb";
 import { Bell } from "./advisor-ui/icons";
@@ -36,9 +38,10 @@ type NavItem = {
 };
 
 const MAIN_NAV: NavItem[] = [
-  { label: "Feed", href: "/user/home", Icon: FiHome },
+  { label: "Feed", href: "/user/feed", Icon: FiHome },
   { label: "Advisors", href: "/user/advisors", Icon: FiUsers },
   { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
+  { label: "Messages", href: "/user/messages", Icon: FiMessageCircle },
   { label: "Groups", href: "/user/community", Icon: FiMessageSquare },
   { label: "Notifications", href: "/user/notifications", Icon: FiBell },
   { label: "Settings", href: "/user/settings", Icon: FiSettings },
@@ -48,6 +51,7 @@ const INVESTING_NAV: NavItem[] = [
   { label: "Dashboard", href: "/user/home", Icon: FiPieChart },
   { label: "Watchlist", href: "/user/watchlist", Icon: FiStar },
   { label: "Portfolio", href: "/user/portfolio", Icon: FiBriefcase },
+  { label: "Courses", href: "/user/courses", Icon: FiBookOpen },
   { label: "Virtual Lab", href: "/user/lab", Icon: TbFlask, badge: "New" },
   { label: "Trade History", href: "/user/history", Icon: FiClock },
 ];

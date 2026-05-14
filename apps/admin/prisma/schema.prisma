@@ -265,6 +265,10 @@ model User {
   priceAlerts          PriceAlert[]
   strategies           StrategyTemplate[]
   invoices             Invoice[]
+  blocksGiven          UserBlock[]           @relation("blocker")
+  blocksReceived       UserBlock[]           @relation("blocked")
+  sentFriendRequests   FriendRequest[]       @relation("reqFrom")
+  receivedFriendRequests FriendRequest[]     @relation("reqTo")
 
   @@map("users")
 }
@@ -541,6 +545,36 @@ model UserFollow {
   @@id([followerUserId, followingUserId])
   @@index([followingUserId])
   @@map("user_follows")
+}
+
+model FriendRequest {
+  id         Int      @id @default(autoincrement())
+  fromUserId Int      @map("from_user_id")
+  toUserId   Int      @map("to_user_id")
+  status     String   @default("pending") @db.VarChar(20)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  from User @relation("reqFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  to   User @relation("reqTo", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId])
+  @@index([toUserId, status])
+  @@map("friend_requests")
+}
+
+model UserBlock {
+  blockerId  Int      @map("blocker_id")
+  blockedId  Int      @map("blocked_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  blocker User @relation("blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("user_blocks")
 }
 
 model Group {

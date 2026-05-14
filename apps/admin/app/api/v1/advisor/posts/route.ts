@@ -97,7 +97,10 @@ export async function POST(req: NextRequest) {
   ];
   const matchedPhrase = forbiddenPhrases.find((p) => lowerContent.includes(p));
 
-  const complianceStatus = matchedPhrase ? "flagged" : "pending";
+  // Verified advisors with clean rule-pass content are auto-approved and published
+  // immediately. Flagged content goes to the admin queue. Admins can demote any
+  // approved post later via the moderation route.
+  const complianceStatus = matchedPhrase ? "flagged" : "approved";
   const complianceRiskScore = matchedPhrase ? 8.5 : 2.0;
 
   const post = await prisma.marketPost.create({
@@ -115,7 +118,7 @@ export async function POST(req: NextRequest) {
       disclaimer,
       complianceStatus: complianceStatus as any,
       complianceRiskScore,
-      publishedAt: null,
+      publishedAt: matchedPhrase ? null : new Date(),
     },
   });
 
@@ -127,7 +130,7 @@ export async function POST(req: NextRequest) {
       riskScore: complianceRiskScore,
       notes: matchedPhrase
         ? `Rule-based flag: contains forbidden phrase "${matchedPhrase}"`
-        : "Rule-based pre-check passed; awaiting admin review",
+        : "Rule-based pre-check passed; auto-approved",
       createdBy: "ai",
     },
   });
@@ -135,7 +138,7 @@ export async function POST(req: NextRequest) {
   await prisma.auditLog.create({
     data: {
       actorUserId: auth.userId,
-      action: matchedPhrase ? "post_submitted_flagged" : "post_submitted",
+      action: matchedPhrase ? "post_submitted_flagged" : "post_published",
       module: "market_posts",
       targetKind: "market_post",
       targetId: post.id,
