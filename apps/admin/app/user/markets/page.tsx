@@ -6,6 +6,8 @@ import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
 import DonutChart from "@/components/advisor-ui/donut-chart";
 import { CheckCircle } from "@/components/advisor-ui/icons";
+import LiveMarketTicker from "@/components/live-market-ticker";
+import LiveCandleChart from "@/components/live-candle-chart";
 
 export const dynamic = "force-dynamic";
 
@@ -127,6 +129,45 @@ export default async function UserMarketsPage({
 
   return (
     <section>
+      {/* ── Live Indices Strip ── */}
+      <article
+        style={{
+          background: "#fff",
+          border: "1px solid #eef0f4",
+          borderRadius: 14,
+          padding: "14px 18px",
+          marginBottom: 18,
+        }}
+      >
+        <h3
+          style={{
+            margin: "0 0 10px",
+            fontSize: 13,
+            fontWeight: 700,
+            color: "#0f172a",
+          }}
+        >
+          Live Market Prices
+        </h3>
+        <LiveMarketTicker />
+      </article>
+
+      {/* ── Interactive Candlestick Chart ── */}
+      <article
+        style={{
+          background: "#fff",
+          border: "1px solid #eef0f4",
+          borderRadius: 14,
+          padding: 18,
+          marginBottom: 18,
+        }}
+      >
+        <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+          Chart — Historical OHLCV
+        </h3>
+        <LiveCandleChart defaultSymbol="NIFTY 50" />
+      </article>
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 18, alignItems: "start" }}>
         <div>
           <div style={{ marginBottom: 16 }}>
@@ -139,7 +180,7 @@ export default async function UserMarketsPage({
                 letterSpacing: -0.5,
               }}
             >
-              Markets
+              Advisor Sentiment Feed
             </h1>
             <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
               SEBI-verified sentiment posts from regulated advisors

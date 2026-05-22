@@ -13,6 +13,8 @@ import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
 import AreaChart from "@/components/advisor-ui/area-chart";
 import DonutChart from "@/components/advisor-ui/donut-chart";
+import LiveCandleChart from "@/components/live-candle-chart";
+import { getHoldings } from "@/lib/angelone";
 
 export const dynamic = "force-dynamic";
 
@@ -42,30 +44,33 @@ export default async function PortfolioPage() {
   const isAuthed = Boolean(auth);
   const userId = auth?.userId ?? null;
 
-  const [portfolios, holdings, snapshots, brokerAccounts] = await Promise.all([
-    userId
-      ? prisma.portfolio.findMany({
-          where: { userId, deletedAt: null },
-          orderBy: { totalValue: "desc" },
-        })
-      : Promise.resolve([]),
-    userId
-      ? prisma.portfolioAsset.findMany({
-          where: { portfolio: { userId, deletedAt: null } },
-          orderBy: { quantity: "desc" },
-        })
-      : Promise.resolve([]),
-    userId
-      ? prisma.portfolioSnapshotDaily.findMany({
-          where: { portfolio: { userId } },
-          orderBy: { day: "asc" },
-          take: 90,
-        })
-      : Promise.resolve([]),
-    userId
-      ? prisma.brokerAccount.findMany({ where: { userId } })
-      : Promise.resolve([]),
-  ]);
+  const [portfolios, holdings, snapshots, brokerAccounts, liveHoldings] =
+    await Promise.all([
+      userId
+        ? prisma.portfolio.findMany({
+            where: { userId, deletedAt: null },
+            orderBy: { totalValue: "desc" },
+          })
+        : Promise.resolve([]),
+      userId
+        ? prisma.portfolioAsset.findMany({
+            where: { portfolio: { userId, deletedAt: null } },
+            orderBy: { quantity: "desc" },
+          })
+        : Promise.resolve([]),
+      userId
+        ? prisma.portfolioSnapshotDaily.findMany({
+            where: { portfolio: { userId } },
+            orderBy: { day: "asc" },
+            take: 90,
+          })
+        : Promise.resolve([]),
+      userId
+        ? prisma.brokerAccount.findMany({ where: { userId } })
+        : Promise.resolve([]),
+      // Always try to fetch live Angel One holdings
+      getHoldings().catch(() => [] as Awaited<ReturnType<typeof getHoldings>>),
+    ]);
 
   const activePortfolio = portfolios[0];
   const totalValue = activePortfolio ? Number(activePortfolio.totalValue) : 0;
@@ -436,6 +441,133 @@ export default async function PortfolioPage() {
               </div>
             )}
           </article>
+
+          {/* ── Live Market Chart ── */}
+          <article
+            style={{
+              background: "#fff",
+              border: "1px solid #eef0f4",
+              borderRadius: 14,
+              padding: 18,
+              marginTop: 14,
+            }}
+          >
+            <h3
+              style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}
+            >
+              Live Chart — OHLCV
+            </h3>
+            <LiveCandleChart defaultSymbol="NIFTY 50" />
+          </article>
+
+          {/* ── Angel One Live Holdings ── */}
+          {liveHoldings.length > 0 && (
+            <article
+              style={{
+                background: "#fff",
+                border: "1px solid #eef0f4",
+                borderRadius: 14,
+                padding: 0,
+                overflow: "hidden",
+                marginTop: 14,
+              }}
+            >
+              <div
+                style={{
+                  padding: "16px 18px",
+                  borderBottom: "1px solid #eef0f4",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                  Angel One Holdings — Live ({liveHoldings.length})
+                </h3>
+                <span
+                  style={{
+                    padding: "3px 9px",
+                    borderRadius: 999,
+                    background: "#dcfce7",
+                    color: "#16a34a",
+                    fontSize: 10,
+                    fontWeight: 700,
+                  }}
+                >
+                  LIVE
+                </span>
+              </div>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "#f8fafc" }}>
+                      {["Symbol", "Qty", "Avg Price", "LTP", "P&L", "P&L %"].map((h) => (
+                        <th
+                          key={h}
+                          style={{
+                            textAlign: h === "Symbol" ? "left" : "right",
+                            padding: "10px 18px",
+                            fontWeight: 600,
+                            fontSize: 10,
+                            color: "#64748b",
+                            textTransform: "uppercase",
+                            letterSpacing: 0.6,
+                            borderBottom: "1px solid #eef0f4",
+                          }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {liveHoldings.map((h) => {
+                      const positive = h.profitandloss >= 0;
+                      return (
+                        <tr key={h.isin} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: "12px 18px" }}>
+                            <strong>{h.symbolname || h.tradingsymbol}</strong>
+                            <div style={{ fontSize: 10, color: "#94a3b8" }}>{h.exchange}</div>
+                          </td>
+                          <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                            {h.quantity}
+                          </td>
+                          <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                            {formatINR(h.averageprice)}
+                          </td>
+                          <td style={{ padding: "12px 18px", textAlign: "right", fontWeight: 600 }}>
+                            {formatINR(h.ltp)}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 18px",
+                              textAlign: "right",
+                              fontWeight: 700,
+                              color: positive ? "#16a34a" : "#dc2626",
+                            }}
+                          >
+                            {positive ? "+" : ""}
+                            {formatINR(h.profitandloss, true)}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 18px",
+                              textAlign: "right",
+                              fontWeight: 700,
+                              color: positive ? "#16a34a" : "#dc2626",
+                            }}
+                          >
+                            {positive ? "+" : ""}
+                            {h.pnlpercentage.toFixed(2)}%
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          )}
         </>
       )}
     </section>
