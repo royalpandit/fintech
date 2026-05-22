@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ComponentType } from "react";
 import {
   FiHome,
   FiUsers,
   FiTrendingUp,
-  FiMessageSquare,
   FiMessageCircle,
   FiBell,
   FiSettings,
@@ -17,9 +16,13 @@ import {
   FiBriefcase,
   FiClock,
   FiBookOpen,
+  FiMessageSquare,
+  FiMenu,
+  FiX,
+  FiSearch,
+  FiChevronRight,
 } from "react-icons/fi";
 import { TbFlask } from "react-icons/tb";
-import { Bell } from "./advisor-ui/icons";
 
 type UserShellProps = {
   children: React.ReactNode;
@@ -33,27 +36,35 @@ type UserShellProps = {
 type NavItem = {
   label: string;
   href: string;
-  Icon: ComponentType<{ size?: number }>;
+  Icon: ComponentType<{ size?: number; className?: string }>;
   badge?: string;
 };
 
 const MAIN_NAV: NavItem[] = [
-  { label: "Feed", href: "/user/feed", Icon: FiHome },
-  { label: "Advisors", href: "/user/advisors", Icon: FiUsers },
-  { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
-  { label: "Messages", href: "/user/messages", Icon: FiMessageCircle },
-  { label: "Groups", href: "/user/community", Icon: FiMessageSquare },
+  { label: "Feed",          href: "/user/feed",          Icon: FiHome },
+  { label: "Advisors",      href: "/user/advisors",      Icon: FiUsers },
+  { label: "Markets",       href: "/user/markets",       Icon: FiTrendingUp },
+  { label: "Messages",      href: "/user/messages",      Icon: FiMessageCircle },
+  { label: "Community",     href: "/user/community",     Icon: FiMessageSquare },
   { label: "Notifications", href: "/user/notifications", Icon: FiBell },
-  { label: "Settings", href: "/user/settings", Icon: FiSettings },
+  { label: "Settings",      href: "/user/settings",      Icon: FiSettings },
 ];
 
 const INVESTING_NAV: NavItem[] = [
-  { label: "Dashboard", href: "/user/home", Icon: FiPieChart },
-  { label: "Watchlist", href: "/user/watchlist", Icon: FiStar },
-  { label: "Portfolio", href: "/user/portfolio", Icon: FiBriefcase },
-  { label: "Courses", href: "/user/courses", Icon: FiBookOpen },
-  { label: "Virtual Lab", href: "/user/lab", Icon: TbFlask, badge: "New" },
-  { label: "Trade History", href: "/user/history", Icon: FiClock },
+  { label: "Dashboard",    href: "/user/home",      Icon: FiPieChart },
+  { label: "Watchlist",    href: "/user/watchlist", Icon: FiStar },
+  { label: "Portfolio",    href: "/user/portfolio", Icon: FiBriefcase },
+  { label: "Courses",      href: "/user/courses",   Icon: FiBookOpen },
+  { label: "Virtual Lab",  href: "/user/lab",       Icon: TbFlask, badge: "New" },
+  { label: "Trade History",href: "/user/history",   Icon: FiClock },
+];
+
+const BOTTOM_NAV: NavItem[] = [
+  { label: "Feed",      href: "/user/feed",          Icon: FiHome },
+  { label: "Advisors",  href: "/user/advisors",      Icon: FiUsers },
+  { label: "Markets",   href: "/user/markets",       Icon: FiTrendingUp },
+  { label: "Messages",  href: "/user/messages",      Icon: FiMessageCircle },
+  { label: "Alerts",    href: "/user/notifications", Icon: FiBell },
 ];
 
 function getInitials(name: string): string {
@@ -84,11 +95,37 @@ export default function UserShell({
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const initials = currentUser ? getInitials(currentUser.fullName) : "G";
   const pnlColor = todayPnL >= 0 ? "#16a34a" : "#dc2626";
   const pnlSign = todayPnL >= 0 ? "+" : "";
+
+  // Close menu on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Close sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+    setMenuOpen(false);
+  }, [pathname]);
+
+  // Prevent body scroll when sidebar open on mobile
+  useEffect(() => {
+    document.body.style.overflow = sidebarOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [sidebarOpen]);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -101,535 +138,301 @@ export default function UserShell({
     }
   };
 
-  const isInvestingActive = (href: string) =>
+  const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <div
-      className="advisor-scope"
-      style={{
-        minHeight: "100vh",
-        background: "#f8fafc",
-        ["--advisor-primary" as any]: "#0ea5e9",
-      }}
-    >
-      {/* Top bar */}
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 40,
-          background: "rgba(255, 255, 255, 0.94)",
-          borderBottom: "1px solid #eef0f4",
-          backdropFilter: "saturate(160%) blur(10px)",
-        }}
-      >
-        <div
-          style={{
-            padding: "12px 24px",
-            display: "flex",
-            alignItems: "center",
-            gap: 24,
-          }}
-        >
-          <Link
-            href="/user/home"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              textDecoration: "none",
-              color: "inherit",
-            }}
-          >
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 9,
-                background: "linear-gradient(135deg, #0ea5e9, #10b981)",
-                display: "grid",
-                placeItems: "center",
-                color: "#fff",
-                fontWeight: 800,
-                fontSize: 14,
-              }}
-            >
-              C
-            </div>
-            <span
-              style={{
-                fontSize: 17,
-                fontWeight: 800,
-                color: "#0f172a",
-                letterSpacing: -0.4,
-              }}
-            >
-              Corescent
-            </span>
-          </Link>
+    <div className="us-root advisor-scope">
+      {/* ── Header ── */}
+      <header className="us-header">
+        <div className="us-header-inner">
 
-          <div style={{ position: "relative", flex: 1, maxWidth: 420 }}>
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              style={{
-                position: "absolute",
-                left: 14,
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "#94a3b8",
-              }}
+          {/* Left zone — logo + hamburger */}
+          <div className="us-header-left">
+            <button
+              className="us-hamburger"
+              type="button"
+              aria-label="Toggle menu"
+              onClick={() => setSidebarOpen((v) => !v)}
             >
-              <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-              <path
-                d="m20 20-3.5-3.5"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-            <input
-              placeholder="Search advisors, symbols, courses..."
-              style={{
-                width: "100%",
-                height: 40,
-                paddingLeft: 38,
-                paddingRight: 14,
-                borderRadius: 999,
-                border: "1px solid #eef0f4",
-                background: "#f8fafc",
-                color: "#334155",
-                fontSize: 13,
-                outline: "none",
-              }}
-            />
+              {sidebarOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+            </button>
+
+            <Link href="/user/home" className="us-brand">
+              <div className="us-brand-icon">C</div>
+              <span className="us-brand-name">Corescent</span>
+            </Link>
           </div>
 
-          <nav style={{ display: "flex", gap: 4, alignItems: "center", marginLeft: "auto" }}>
-            {[
-              { label: "Demo", href: "#" },
-              { label: "Markets", href: "/user/markets" },
-              { label: "Advisors", href: "/user/advisors" },
-              { label: "Account", href: "/user/profile" },
-            ].map((nav) => {
-              const active = nav.href !== "#" && (pathname === nav.href || pathname.startsWith(nav.href + "/"));
-              return (
-                <Link
-                  key={nav.label}
-                  href={nav.href}
-                  style={{
-                    padding: "8px 14px",
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: active ? "#0ea5e9" : "#475569",
-                    background: active ? "rgba(14, 165, 233, 0.08)" : "transparent",
-                    textDecoration: "none",
-                  }}
-                >
-                  {nav.label}
-                </Link>
-              );
-            })}
-          </nav>
+          {/* Center zone — search */}
+          <div className={`us-search-wrap ${searchOpen ? "us-search-open" : ""}`}>
+            <div className="us-search-inner">
+              <FiSearch size={14} className="us-search-icon" />
+              <input
+                className="us-search-input"
+                placeholder="Search advisors, symbols, courses…"
+              />
+            </div>
+          </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10, position: "relative" }}>
+          {/* Right zone — actions */}
+          <div className="us-header-right">
+            {/* Mobile search toggle */}
+            <button
+              className="us-icon-btn us-search-toggle"
+              type="button"
+              aria-label="Search"
+              onClick={() => setSearchOpen((v) => !v)}
+            >
+              <FiSearch size={18} />
+            </button>
+
             {currentUser ? (
               <>
                 <Link
-                  href="/user/notifications"
-                  aria-label="Notifications"
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 10,
-                    background: "#f8fafc",
-                    color: "#475569",
-                    display: "grid",
-                    placeItems: "center",
-                    position: "relative",
-                  }}
+                  href="/user/messages"
+                  className="us-icon-btn"
+                  aria-label="Messages"
                 >
-                  <Bell size={18} />
+                  <FiMessageCircle size={18} />
+                </Link>
+
+                <Link
+                  href="/user/notifications"
+                  className="us-icon-btn"
+                  aria-label="Notifications"
+                  style={{ position: "relative" }}
+                >
+                  <FiBell size={18} />
                   {unreadNotifications > 0 && (
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: 6,
-                        right: 6,
-                        width: 8,
-                        height: 8,
-                        borderRadius: 999,
-                        background: "#dc2626",
-                        border: "2px solid #fff",
-                      }}
-                    />
+                    <span className="us-notif-dot" />
                   )}
                 </Link>
 
-                <button
-                  type="button"
-                  onClick={() => setMenuOpen((v) => !v)}
-                  aria-label="Account menu"
-                  title={currentUser.fullName}
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 999,
-                    background: "linear-gradient(135deg, #0ea5e9, #10b981)",
-                    color: "#fff",
-                    display: "grid",
-                    placeItems: "center",
-                    fontWeight: 700,
-                    fontSize: 12,
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  {initials}
-                </button>
-
-                {menuOpen && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: 48,
-                      right: 0,
-                      minWidth: 240,
-                      background: "#fff",
-                      border: "1px solid #eef0f4",
-                      borderRadius: 12,
-                      boxShadow: "0 12px 40px rgba(15, 23, 42, 0.12)",
-                      padding: 8,
-                      zIndex: 50,
-                    }}
+                <div className="us-avatar-wrap" ref={menuRef}>
+                  <button
+                    type="button"
+                    className="us-avatar-btn"
+                    onClick={() => setMenuOpen((v) => !v)}
+                    aria-label="Account menu"
+                    title={currentUser.fullName}
                   >
-                    <div style={{ padding: "8px 10px 10px", borderBottom: "1px solid #eef0f4" }}>
-                      <p style={{ margin: 0, fontWeight: 700, fontSize: 13 }}>
-                        {currentUser.fullName}
-                      </p>
-                      <p style={{ margin: 0, fontSize: 11, color: "#64748b" }}>
-                        {currentUser.email}
-                      </p>
+                    {initials}
+                  </button>
+
+                  {menuOpen && (
+                    <div className="us-dropdown">
+                      <div className="us-dropdown-head">
+                        <div className="us-dropdown-avatar">{initials}</div>
+                        <div>
+                          <div className="us-dropdown-name">{currentUser.fullName}</div>
+                          <div className="us-dropdown-email">{currentUser.email}</div>
+                        </div>
+                      </div>
+                      <div className="us-dropdown-divider" />
+                      {[
+                        { label: "Profile", href: "/user/profile" },
+                        { label: "Portfolio", href: "/user/portfolio" },
+                        { label: "Watchlist", href: "/user/watchlist" },
+                        { label: "Settings", href: "/user/settings" },
+                      ].map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="us-dropdown-link"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                      <div className="us-dropdown-divider" />
+                      <button
+                        type="button"
+                        className="us-dropdown-logout"
+                        onClick={handleLogout}
+                        disabled={loggingOut}
+                      >
+                        {loggingOut ? "Signing out…" : "Sign out"}
+                      </button>
                     </div>
-                    <Link
-                      href="/user/profile"
-                      onClick={() => setMenuOpen(false)}
-                      style={{
-                        display: "block",
-                        padding: "10px",
-                        borderRadius: 8,
-                        color: "#0f172a",
-                        textDecoration: "none",
-                        fontSize: 13,
-                      }}
-                    >
-                      Profile
-                    </Link>
-                    <Link
-                      href="/user/portfolio"
-                      onClick={() => setMenuOpen(false)}
-                      style={{
-                        display: "block",
-                        padding: "10px",
-                        borderRadius: 8,
-                        color: "#0f172a",
-                        textDecoration: "none",
-                        fontSize: 13,
-                      }}
-                    >
-                      Portfolio
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      disabled={loggingOut}
-                      style={{
-                        display: "block",
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "10px",
-                        borderRadius: 8,
-                        border: "none",
-                        background: "transparent",
-                        color: "#dc2626",
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: loggingOut ? "not-allowed" : "pointer",
-                      }}
-                    >
-                      {loggingOut ? "Signing out..." : "Sign out"}
-                    </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: 10,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: "#0f172a",
-                    textDecoration: "none",
-                  }}
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/register"
-                  style={{
-                    padding: "9px 18px",
-                    borderRadius: 10,
-                    background: "linear-gradient(135deg, #0ea5e9, #10b981)",
-                    color: "#fff",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    textDecoration: "none",
-                  }}
-                >
-                  Get started
-                </Link>
+                <Link href="/login" className="us-header-signin">Sign in</Link>
+                <Link href="/register" className="us-header-cta">Get started</Link>
               </>
             )}
           </div>
         </div>
+
+        {/* Mobile search bar (expands below header) */}
+        {searchOpen && (
+          <div className="us-mobile-search">
+            <div className="us-search-inner">
+              <FiSearch size={14} className="us-search-icon" />
+              <input
+                className="us-search-input"
+                placeholder="Search advisors, symbols, courses…"
+                autoFocus
+              />
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* 3-pane layout */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "260px 1fr",
-          gap: 0,
-          maxWidth: 1440,
-          margin: "0 auto",
-          padding: "20px 20px 60px",
-        }}
-      >
-        {/* Left sidebar */}
-        <aside
-          style={{
-            paddingRight: 16,
-            borderRight: "1px solid #eef0f4",
-          }}
-        >
-          {/* Profile card */}
+      {/* ── Body ── */}
+      <div className="us-body">
+
+        {/* Overlay backdrop (mobile) */}
+        {sidebarOpen && (
           <div
-            style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
-              borderRadius: 14,
-              padding: 14,
-              marginBottom: 16,
-            }}
-          >
-            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
-              <div
-                style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 999,
-                  background: currentUser
-                    ? "linear-gradient(135deg, #0ea5e9, #10b981)"
-                    : "linear-gradient(135deg, #94a3b8, #64748b)",
-                  color: "#fff",
-                  display: "grid",
-                  placeItems: "center",
-                  fontWeight: 800,
-                  fontSize: 14,
-                  flexShrink: 0,
-                }}
-              >
-                {initials}
-              </div>
-              <div style={{ minWidth: 0 }}>
+            className="us-overlay"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* ── Left Sidebar ── */}
+        <aside className={`us-sidebar ${sidebarOpen ? "us-sidebar-open" : ""}`}>
+          <div className="us-sidebar-inner">
+
+            {/* Profile card */}
+            <div className="us-profile-card">
+              <div className="us-profile-row">
                 <div
+                  className="us-profile-avatar"
                   style={{
-                    fontSize: 13,
-                    fontWeight: 800,
-                    color: "#0f172a",
-                    letterSpacing: -0.2,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
+                    background: currentUser
+                      ? "linear-gradient(135deg,#0ea5e9,#10b981)"
+                      : "linear-gradient(135deg,#94a3b8,#64748b)",
                   }}
                 >
-                  {currentUser?.fullName ?? "Guest Visitor"}
+                  {initials}
                 </div>
-                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>
-                  {currentUser ? "Investor" : "Sign in to personalize"}
+                <div className="us-profile-info">
+                  <div className="us-profile-name">
+                    {currentUser?.fullName ?? "Guest Visitor"}
+                  </div>
+                  <div className="us-profile-role">
+                    {currentUser ? "Investor" : "Sign in to personalise"}
+                  </div>
                 </div>
               </div>
+
+              {currentUser ? (
+                <div className="us-profile-stats">
+                  <div className="us-profile-stat">
+                    <span className="us-profile-stat-label">Virtual Balance</span>
+                    <span className="us-profile-stat-val">{formatINR(walletBalance)}</span>
+                  </div>
+                  <div className="us-profile-stat">
+                    <span className="us-profile-stat-label">Today&rsquo;s P&amp;L</span>
+                    <span className="us-profile-stat-val" style={{ color: pnlColor }}>
+                      {pnlSign}{formatINRCompact(Math.abs(todayPnL))}
+                      <span style={{ fontSize: 10, marginLeft: 3 }}>
+                        ({pnlSign}{todayPnLPct.toFixed(2)}%)
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <Link href="/register" className="us-profile-cta">
+                  Create free account
+                </Link>
+              )}
             </div>
 
-            {currentUser ? (
-              <>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    paddingTop: 10,
-                    borderTop: "1px solid #eef0f4",
-                  }}
-                >
-                  <span style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>
-                    Virtual Balance ⓘ
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 800,
-                      color: "#0f172a",
-                      letterSpacing: -0.3,
-                    }}
+            {/* Main nav */}
+            <nav className="us-nav">
+              {MAIN_NAV.map((item) => {
+                const active = isActive(item.href);
+                const Icon = item.Icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`us-nav-link ${active ? "us-nav-link-active" : ""}`}
                   >
-                    {formatINR(walletBalance)}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    paddingTop: 6,
-                  }}
-                >
-                  <span style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>
-                    Today&apos;s P&amp;L
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 800,
-                      color: pnlColor,
-                      letterSpacing: -0.3,
-                    }}
+                    <span className="us-nav-icon"><Icon size={18} /></span>
+                    <span className="us-nav-label">{item.label}</span>
+                    {item.href === "/user/notifications" && unreadNotifications > 0 && (
+                      <span className="us-nav-badge">{unreadNotifications}</span>
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* Divider */}
+            <div className="us-nav-divider" />
+
+            {/* Investing section */}
+            <div className="us-nav-section-title">
+              <span className="us-nav-label">Investing</span>
+              <FiChevronRight size={12} />
+            </div>
+            <nav className="us-nav">
+              {INVESTING_NAV.map((item) => {
+                const active = isActive(item.href);
+                const Icon = item.Icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`us-nav-link ${active ? "us-nav-link-active us-nav-link-invest" : ""}`}
                   >
-                    {pnlSign}
-                    {formatINRCompact(Math.abs(todayPnL))} ({pnlSign}
-                    {todayPnLPct.toFixed(2)}%)
-                  </span>
-                </div>
-              </>
-            ) : (
-              <Link
-                href="/register"
-                style={{
-                  display: "block",
-                  textAlign: "center",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  background: "linear-gradient(135deg, #0ea5e9, #10b981)",
-                  color: "#fff",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  textDecoration: "none",
-                  marginTop: 4,
-                }}
-              >
-                Create free account
-              </Link>
-            )}
-          </div>
+                    <span className="us-nav-icon"><Icon size={18} /></span>
+                    <span className="us-nav-label">{item.label}</span>
+                    {item.badge && (
+                      <span className="us-nav-pill">{item.badge}</span>
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
 
-          {/* Main nav */}
-          <nav style={{ display: "grid", gap: 2, marginBottom: 16 }}>
-            {MAIN_NAV.map((item) => {
-              const active = pathname === item.href;
-              const Icon = item.Icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    color: active ? "#0ea5e9" : "#475569",
-                    background: active ? "rgba(14, 165, 233, 0.08)" : "transparent",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    textDecoration: "none",
-                  }}
-                >
-                  <Icon size={16} />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Investing section */}
-          <div
-            style={{
-              padding: "0 12px 8px",
-              fontSize: 10,
-              fontWeight: 700,
-              color: "#94a3b8",
-              letterSpacing: 1,
-              textTransform: "uppercase",
-            }}
-          >
-            Investing
+            {/* Footer links */}
+            <div className="us-sidebar-footer">
+              <Link href="/user/settings" className="us-sidebar-footer-link">Settings</Link>
+              <span className="us-sidebar-footer-dot">·</span>
+              <Link href="#" className="us-sidebar-footer-link">Privacy</Link>
+              <span className="us-sidebar-footer-dot">·</span>
+              <span className="us-sidebar-footer-link">© Corescent 2025</span>
+            </div>
           </div>
-          <nav style={{ display: "grid", gap: 2 }}>
-            {INVESTING_NAV.map((item) => {
-              const active = isInvestingActive(item.href);
-              const Icon = item.Icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    color: active ? "#fff" : "#475569",
-                    background: active
-                      ? "linear-gradient(90deg, #0ea5e9, #10b981)"
-                      : "transparent",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    textDecoration: "none",
-                    boxShadow: active ? "0 6px 16px rgba(14, 165, 233, 0.2)" : "none",
-                  }}
-                >
-                  <Icon size={16} />
-                  <span style={{ flex: 1 }}>{item.label}</span>
-                  {item.badge && (
-                    <span
-                      style={{
-                        padding: "1px 8px",
-                        borderRadius: 999,
-                        background: active ? "rgba(255,255,255,0.25)" : "#10b981",
-                        color: "#fff",
-                        fontSize: 10,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
         </aside>
 
-        {/* Main content */}
-        <main style={{ paddingLeft: 20, minWidth: 0 }}>{children}</main>
+        {/* ── Main content ── */}
+        <main className="us-main">
+          <div className="us-content">
+            {children}
+          </div>
+        </main>
       </div>
+
+      {/* ── Mobile bottom tab bar ── */}
+      <nav className="us-bottom-bar">
+        {BOTTOM_NAV.map((item) => {
+          const active = isActive(item.href);
+          const Icon = item.Icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`us-bottom-item ${active ? "us-bottom-item-active" : ""}`}
+            >
+              <span style={{ position: "relative", display: "flex" }}>
+                <Icon size={22} />
+                {item.href === "/user/notifications" && unreadNotifications > 0 && (
+                  <span className="us-notif-dot" style={{ top: -2, right: -2 }} />
+                )}
+              </span>
+              <span className="us-bottom-label">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }
