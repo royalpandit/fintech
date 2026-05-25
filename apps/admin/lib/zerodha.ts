@@ -11,11 +11,15 @@ const g = globalThis as unknown as {
   kiteTokenExpiry: number;
   kiteInstruments: KiteInstrument[] | null;
   kiteInstrumentsExpiry: number;
+  kiteAllInstruments: KiteInstrument[] | null;
+  kiteAllInstrumentsExpiry: number;
 };
-if (!g.kiteAccessToken)       g.kiteAccessToken       = null;
-if (!g.kiteTokenExpiry)       g.kiteTokenExpiry       = 0;
-if (!g.kiteInstruments)       g.kiteInstruments       = null;
-if (!g.kiteInstrumentsExpiry) g.kiteInstrumentsExpiry = 0;
+if (!g.kiteAccessToken)          g.kiteAccessToken          = null;
+if (!g.kiteTokenExpiry)          g.kiteTokenExpiry          = 0;
+if (!g.kiteInstruments)          g.kiteInstruments          = null;
+if (!g.kiteInstrumentsExpiry)    g.kiteInstrumentsExpiry    = 0;
+if (!g.kiteAllInstruments)       g.kiteAllInstruments       = null;
+if (!g.kiteAllInstrumentsExpiry) g.kiteAllInstrumentsExpiry = 0;
 
 export function getLoginURL(): string {
   return `https://kite.zerodha.com/connect/login?api_key=${API_KEY()}&v=3`;
@@ -214,7 +218,8 @@ export async function getCandles(params: {
 }
 
 // ── Instrument search ─────────────────────────────────────────────────────────
-// Kite instruments endpoint is public — no auth required
+// Kite instruments endpoints are public — no auth required.
+// Master endpoint returns all exchanges (NSE, BSE, NFO, MCX, CDS, BFO, etc.)
 
 interface KiteInstrument {
   instrument_token: string;
@@ -224,25 +229,58 @@ interface KiteInstrument {
   instrument_type: string;
 }
 
-async function loadInstruments(exchange = "NSE"): Promise<KiteInstrument[]> {
+function parseInstrumentCsv(csv: string, fallbackExchange?: string): KiteInstrument[] {
+  const lines = csv.split("\n").filter(Boolean);
+  return lines.slice(1).flatMap(line => {
+    // CSV cols: instrument_token, exchange_token, tradingsymbol, name, last_price,
+    //           expiry, strike, tick_size, lot_size, instrument_type, segment, exchange
+    // Names can contain commas so we split on first 3 and last few known-fixed cols
+    const comma = line.indexOf(",");
+    if (comma === -1) return [];
+    const token = line.slice(0, comma).trim();
+    const rest  = line.slice(comma + 1);
+
+    // Split all cols — names with commas are rare but we handle gracefully
+    const cols = rest.split(",");
+    if (cols.length < 11) return [];
+
+    // Last col (index from end) is exchange, second-to-last is segment, third is instrument_type
+    const exchange        = (cols[cols.length - 1] ?? "").trim() || fallbackExchange ?? "NSE";
+    const instrument_type = (cols[cols.length - 3] ?? "").trim();
+    // tradingsymbol is cols[1], name spans cols[2] through cols[cols.length-7]
+    const tradingsymbol   = (cols[1] ?? "").trim();
+    const name            = cols.slice(2, cols.length - 6).join(",").trim();
+
+    if (!token || !tradingsymbol) return [];
+    return [{ instrument_token: token, tradingsymbol, name, exchange, instrument_type }];
+  });
+}
+
+async function loadAllInstruments(): Promise<KiteInstrument[]> {
+  const now = Date.now();
+  if (g.kiteAllInstruments && g.kiteAllInstrumentsExpiry > now) return g.kiteAllInstruments;
+  try {
+    // Master CSV — all exchanges: NSE, BSE, NFO, BFO, MCX, CDS, etc. (~500k rows)
+    const res  = await fetch(`${BASE}/instruments`, { headers: { "X-Kite-Version": "3" }, cache: "no-store" });
+    const csv  = await res.text();
+    const parsed = parseInstrumentCsv(csv);
+    console.log("[loadAllInstruments] loaded %d instruments", parsed.length);
+    g.kiteAllInstruments       = parsed;
+    g.kiteAllInstrumentsExpiry = now + 24 * 60 * 60 * 1000;
+    return parsed;
+  } catch (e) {
+    console.error("[loadAllInstruments] failed:", e);
+    return [];
+  }
+}
+
+async function loadExchangeInstruments(exchange: string): Promise<KiteInstrument[]> {
   const now = Date.now();
   if (g.kiteInstruments && g.kiteInstrumentsExpiry > now) return g.kiteInstruments;
   try {
-    const res = await fetch(`${BASE}/instruments/${exchange}`, {
-      headers: { "X-Kite-Version": "3" }, cache: "no-store",
-    });
-    const csv = await res.text();
-    const lines = csv.split("\n").filter(Boolean);
-    const parsed = lines.slice(1).map(line => {
-      const cols = line.split(",");
-      return {
-        instrument_token: cols[0]?.trim(),
-        tradingsymbol:    cols[2]?.trim(),
-        name:             cols[3]?.trim(),
-        exchange:         cols[11]?.trim() || exchange,
-        instrument_type:  cols[9]?.trim(),
-      };
-    }).filter(i => i.instrument_token && i.tradingsymbol);
+    const res    = await fetch(`${BASE}/instruments/${exchange}`, { headers: { "X-Kite-Version": "3" }, cache: "no-store" });
+    const csv    = await res.text();
+    const parsed = parseInstrumentCsv(csv, exchange);
     g.kiteInstruments       = parsed;
     g.kiteInstrumentsExpiry = now + 24 * 60 * 60 * 1000;
     return parsed;
@@ -260,18 +298,25 @@ export interface SearchResult {
 }
 
 export async function searchSymbol(exchange: string, query: string): Promise<SearchResult[]> {
-  const q    = query.toUpperCase();
-  const insts = await loadInstruments(exchange === "ALL" ? "NSE" : exchange);
-  return insts
-    .filter(i => i.tradingsymbol.includes(q) || i.name.toUpperCase().includes(q))
-    .slice(0, 20)
-    .map(i => ({
-      exchange:       i.exchange,
-      tradingSymbol:  i.tradingsymbol,
-      symbolName:     i.name || i.tradingsymbol,
-      instrumentType: i.instrument_type || "EQ",
-      token:          i.instrument_token,
-    }));
+  const q     = query.toUpperCase();
+  const insts = exchange === "ALL"
+    ? await loadAllInstruments()
+    : await loadExchangeInstruments(exchange);
+
+  // Exact prefix match first, then contains — gives better ordering
+  const exact    = insts.filter(i => i.tradingsymbol.startsWith(q) || i.name.toUpperCase().startsWith(q));
+  const contains = insts.filter(i =>
+    !i.tradingsymbol.startsWith(q) && !i.name.toUpperCase().startsWith(q) &&
+    (i.tradingsymbol.includes(q) || i.name.toUpperCase().includes(q))
+  );
+
+  return [...exact, ...contains].slice(0, 30).map(i => ({
+    exchange:       i.exchange,
+    tradingSymbol:  i.tradingsymbol,
+    symbolName:     i.name || i.tradingsymbol,
+    instrumentType: i.instrument_type || "EQ",
+    token:          i.instrument_token,
+  }));
 }
 
 // ── Orders ────────────────────────────────────────────────────────────────────
