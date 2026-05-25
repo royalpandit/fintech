@@ -321,7 +321,7 @@ function SearchBar({ onSelect }: { onSelect: (item: WatchlistItem) => void }) {
         <input value={q}
           onChange={e => { setQ(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 200)}
+          onBlur={() => setOpen(false)}
           placeholder="Search NSE, BSE, MCX, F&O…"
           style={{ border: "none", background: "transparent", outline: "none", fontSize: 12, width: "100%", color: "#0f172a" }} />
         {q && (
@@ -331,9 +331,12 @@ function SearchBar({ onSelect }: { onSelect: (item: WatchlistItem) => void }) {
       </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       {open && results.length > 0 && (
-        <div style={{ position: "absolute", top: "calc(100% - 2px)", left: 10, right: 10, background: "#fff", border: "1px solid #eef0f4", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 50, maxHeight: 300, overflowY: "auto" }}>
+        // onMouseDown preventDefault stops input blur from firing before onClick
+        <div onMouseDown={e => e.preventDefault()}
+          style={{ position: "absolute", top: "calc(100% - 2px)", left: 10, right: 10, background: "#fff", border: "1px solid #eef0f4", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 50, maxHeight: 300, overflowY: "auto" }}>
           {results.map(r => (
             <button key={`${r.exchange}:${r.token}`} type="button"
+              onMouseDown={e => e.preventDefault()}
               onClick={() => { onSelect(r); setQ(""); setResults([]); setOpen(false); }}
               style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", padding: "8px 12px", border: "none", background: "transparent", cursor: "pointer", borderBottom: "1px solid #f8fafc", textAlign: "left", gap: 8 }}>
               <div style={{ minWidth: 0 }}>
@@ -348,7 +351,8 @@ function SearchBar({ onSelect }: { onSelect: (item: WatchlistItem) => void }) {
         </div>
       )}
       {open && q.length > 0 && results.length === 0 && !loading && (
-        <div style={{ position: "absolute", top: "calc(100% - 2px)", left: 10, right: 10, background: "#fff", border: "1px solid #eef0f4", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 50, padding: "14px 12px", fontSize: 12, color: "#94a3b8", textAlign: "center" }}>
+        <div onMouseDown={e => e.preventDefault()}
+          style={{ position: "absolute", top: "calc(100% - 2px)", left: 10, right: 10, background: "#fff", border: "1px solid #eef0f4", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 50, padding: "14px 12px", fontSize: 12, color: "#94a3b8", textAlign: "center" }}>
           No results for &ldquo;{q}&rdquo;
         </div>
       )}
