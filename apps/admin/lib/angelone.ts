@@ -46,6 +46,8 @@ interface TokenCache {
 
 // Module-level cache (lives for the Node.js process lifetime)
 let _cache: TokenCache | null = null;
+// Deduplicate concurrent login calls — prevents TOTP replay rejection
+let _loginPromise: Promise<TokenCache> | null = null;
 
 function commonHeaders(jwt: string, feed: string) {
   return {
@@ -64,6 +66,7 @@ function commonHeaders(jwt: string, feed: string) {
 }
 
 async function login(): Promise<TokenCache> {
+  let lastError = "Authentication failed";
   // Try current window then adjacent windows to handle clock drift
   for (const offset of [0, -1, 1]) {
     const totp = generateTOTP(process.env.ANGELONE_TOTP_SECRET!, offset);
@@ -71,6 +74,7 @@ async function login(): Promise<TokenCache> {
       `${BASE_URL}/rest/auth/angelbroking/user/v1/loginByPassword`,
       {
         method: "POST",
+        cache: "no-store",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
@@ -89,6 +93,7 @@ async function login(): Promise<TokenCache> {
       }
     );
     const data = await res.json();
+    console.log("[AngelOne] login attempt offset=%d status=%s msg=%s", offset, data.status, data.message);
     if (data.status && data.data?.jwtToken) {
       const token: TokenCache = {
         jwtToken: data.data.jwtToken,
@@ -100,13 +105,21 @@ async function login(): Promise<TokenCache> {
       _cache = token;
       return token;
     }
+    lastError = data.message ?? lastError;
   }
-  throw new Error("Angel One authentication failed");
+  throw new Error(`Angel One login failed: ${lastError}`);
 }
 
 export async function getToken(): Promise<TokenCache> {
   if (_cache && _cache.expiresAt > Date.now() + 60_000) return _cache;
-  return login();
+  // If a login is already in flight, wait for it instead of starting another
+  // (avoids sending the same TOTP twice — Angel One rejects replays)
+  if (!_loginPromise) {
+    _loginPromise = login().finally(() => {
+      _loginPromise = null;
+    });
+  }
+  return _loginPromise;
 }
 
 // ── Market Data ──────────────────────────────────────────────────────────────
@@ -285,21 +298,98 @@ export async function getPositions(): Promise<Position[]> {
   return data.data ?? [];
 }
 
+// ── Search ───────────────────────────────────────────────────────────────────
+
+export interface SearchResult {
+  exchange: string;
+  tradingSymbol: string;
+  symbolName: string;
+  instrumentType: string;
+  token: string;
+}
+
+export async function searchSymbol(exchange: string, query: string): Promise<SearchResult[]> {
+  const { jwtToken, feedToken } = await getToken();
+  const res = await fetch(
+    `${BASE_URL}/rest/secure/angelbroking/order/v1/searchscrip`,
+    {
+      method: "POST",
+      headers: commonHeaders(jwtToken, feedToken),
+      body: JSON.stringify({ exchange, searchscrip: query }),
+      cache: "no-store",
+    }
+  );
+  const data = await res.json();
+  return (data.data ?? []).map((d: Record<string, string>) => ({
+    exchange: d.exchange,
+    tradingSymbol: d.trading_symbol ?? d.tradingsymbol ?? "",
+    symbolName: d.symbol_name ?? d.name ?? d.trading_symbol ?? "",
+    instrumentType: d.instrument_type ?? d.instrumenttype ?? "EQ",
+    token: d.token ?? d.symboltoken ?? "",
+  }));
+}
+
+// ── Orders ────────────────────────────────────────────────────────────────────
+
+export interface OrderParams {
+  variety: "NORMAL" | "STOPLOSS" | "AMO";
+  tradingsymbol: string;
+  symboltoken: string;
+  transactiontype: "BUY" | "SELL";
+  exchange: "NSE" | "BSE" | "NFO" | "MCX" | "NCDEX";
+  ordertype: "MARKET" | "LIMIT" | "STOPLOSS_LIMIT" | "STOPLOSS_MARKET";
+  producttype: "DELIVERY" | "CARRYFORWARD" | "MARGIN" | "INTRADAY";
+  duration: "DAY" | "IOC";
+  price: string;
+  squareoff?: string;
+  stoploss?: string;
+  triggerprice?: string;
+  quantity: string;
+}
+
+export async function placeOrder(params: OrderParams) {
+  const { jwtToken, feedToken } = await getToken();
+  const res = await fetch(
+    `${BASE_URL}/rest/secure/angelbroking/order/v1/placeOrder`,
+    {
+      method: "POST",
+      headers: commonHeaders(jwtToken, feedToken),
+      body: JSON.stringify(params),
+      cache: "no-store",
+    }
+  );
+  return res.json();
+}
+
+export async function getOrderBook() {
+  const { jwtToken, feedToken } = await getToken();
+  const res = await fetch(
+    `${BASE_URL}/rest/secure/angelbroking/order/v1/getOrderBook`,
+    {
+      method: "GET",
+      headers: commonHeaders(jwtToken, feedToken),
+      cache: "no-store",
+    }
+  );
+  return res.json();
+}
+
 // ── Instrument Registry ───────────────────────────────────────────────────────
 
 export const MARKET_INSTRUMENTS = [
-  { symbol: "NIFTY 50", token: "99926000", exchange: "NSE" },
-  { symbol: "SENSEX", token: "99919000", exchange: "BSE" },
+  { symbol: "NIFTY 50",   token: "99926000", exchange: "NSE" },
+  { symbol: "SENSEX",     token: "99919000", exchange: "BSE" },
   { symbol: "NIFTY BANK", token: "99926009", exchange: "NSE" },
-  { symbol: "RELIANCE", token: "2885", exchange: "NSE" },
-  { symbol: "TCS", token: "11536", exchange: "NSE" },
-  { symbol: "HDFCBANK", token: "1333", exchange: "NSE" },
-  { symbol: "INFY", token: "1594", exchange: "NSE" },
-  { symbol: "ICICIBANK", token: "4963", exchange: "NSE" },
-  { symbol: "WIPRO", token: "3787", exchange: "NSE" },
-  { symbol: "SBIN", token: "3045", exchange: "NSE" },
-  { symbol: "BAJFINANCE", token: "317", exchange: "NSE" },
-  { symbol: "BHARTIARTL", token: "10604", exchange: "NSE" },
+  { symbol: "RELIANCE",   token: "2885",     exchange: "NSE" },
+  { symbol: "TCS",        token: "11536",    exchange: "NSE" },
+  { symbol: "HDFCBANK",   token: "1333",     exchange: "NSE" },
+  { symbol: "INFY",       token: "1594",     exchange: "NSE" },
+  { symbol: "ICICIBANK",  token: "4963",     exchange: "NSE" },
+  { symbol: "WIPRO",      token: "3787",     exchange: "NSE" },
+  { symbol: "SBIN",       token: "3045",     exchange: "NSE" },
+  { symbol: "BAJFINANCE", token: "317",      exchange: "NSE" },
+  { symbol: "BHARTIARTL", token: "10604",    exchange: "NSE" },
+  { symbol: "LT",         token: "11483",    exchange: "NSE" },
 ] as const;
 
 export type KnownSymbol = (typeof MARKET_INSTRUMENTS)[number]["symbol"];
