@@ -509,6 +509,7 @@ function TradingTerminalInner() {
   const [showIndicators,  setShowIndicators]  = useState(false);
   const [customIndicators,setCustomIndicators]= useState<CustomIndicator[]>([]);
   const [showAddIndicator,setShowAddIndicator]= useState(false);
+  const [candleError,     setCandleError]     = useState<string | null>(null);
 
   const indicatorsRef = useRef<HTMLDivElement>(null);
   // Stable ref for watchlist — avoids restarting the 10s quote poll on every watchlist change
@@ -568,14 +569,18 @@ function TradingTerminalInner() {
   const fetchCandles = useCallback(async () => {
     setCandleLoading(true);
     setCandles([]);
+    setCandleError(null);
     try {
-      const res = await fetch(
+      const res  = await fetch(
         `/api/v1/market/candles?token=${selected.token}&exchange=${selected.exchange}&interval=${interval.interval}&days=${period.days}`,
         { cache: "no-store" }
       );
       const json = await res.json();
-      if (json.ok) setCandles(json.data);
-    } catch { /* ignore */ }
+      if (json.ok) setCandles(json.data ?? []);
+      else setCandleError(json.error ?? "Failed to load chart data");
+    } catch (e) {
+      setCandleError(e instanceof Error ? e.message : "Network error");
+    }
     finally { setCandleLoading(false); }
   }, [selected.token, selected.exchange, interval, period]);
 
@@ -814,6 +819,15 @@ function TradingTerminalInner() {
                 {candleLoading ? (
                   <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "#94a3b8", fontSize: 13 }}>
                     Loading chart data…
+                  </div>
+                ) : candleError ? (
+                  <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 24 }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="#dc2626"/></svg>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#dc2626", textAlign: "center", maxWidth: 360 }}>{candleError}</div>
+                    <button type="button" onClick={fetchCandles}
+                      style={{ marginTop: 4, padding: "7px 16px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "#f8fafc", color: "#0f172a" }}>
+                      Retry
+                    </button>
                   </div>
                 ) : (
                   <ChartWidget
