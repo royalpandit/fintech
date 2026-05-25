@@ -24,7 +24,20 @@ export async function GET(req: NextRequest) {
     const token    = searchParams.get("token");
     const exchange = searchParams.get("exchange") ?? "NSE";
     const interval = (searchParams.get("interval") ?? "ONE_DAY") as CandleInterval;
-    const days     = Math.min(365, Math.max(1, Number(searchParams.get("days") ?? "90")));
+
+    // Zerodha per-interval hard limits (days)
+    const INTERVAL_MAX: Partial<Record<CandleInterval, number>> = {
+      ONE_MINUTE:     60,
+      THREE_MINUTE:   100,
+      FIVE_MINUTE:    100,
+      TEN_MINUTE:     100,
+      FIFTEEN_MINUTE: 200,
+      THIRTY_MINUTE:  200,
+      ONE_HOUR:       400,
+      ONE_DAY:        2000,
+    };
+    const maxDays  = INTERVAL_MAX[interval] ?? 60;
+    const days     = Math.min(maxDays, Math.max(1, Number(searchParams.get("days") ?? "90")));
 
     if (!token) return NextResponse.json({ ok: false, error: "Missing token" }, { status: 400 });
 
