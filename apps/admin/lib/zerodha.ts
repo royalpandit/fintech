@@ -198,12 +198,13 @@ export async function getCandles(params: {
   todate: string;
 }): Promise<Candle[]> {
   const kiteInterval = INTERVAL_MAP[params.interval];
-  const from = params.fromdate.replace(" ", "+");
-  const to   = params.todate.replace(" ", "+");
-  const url  = `${BASE}/instruments/historical/${params.symboltoken}/${kiteInterval}?from=${encodeURIComponent(from + ":00")}&to=${encodeURIComponent(to + ":00")}`;
+  const url = `${BASE}/instruments/historical/${params.symboltoken}/${kiteInterval}?from=${encodeURIComponent(params.fromdate + ":00")}&to=${encodeURIComponent(params.todate + ":00")}`;
 
-  const res = await fetch(url, { headers: authHeaders(), cache: "no-store" });
+  const res  = await fetch(url, { headers: authHeaders(), cache: "no-store" });
   const data = await res.json();
+  if (data.status === "error" || (!data.data && data.message)) {
+    throw new Error(data.message ?? data.error_type ?? "Kite historical API error");
+  }
   const raw: [string, number, number, number, number, number][] = data.data?.candles ?? [];
   return raw.map(([timestamp, open, high, low, close, volume]) => ({
     timestamp, open, high, low, close, volume,
