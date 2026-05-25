@@ -615,7 +615,7 @@ function TradingTerminalInner() {
       const s = selectedRef.current;
       try {
         const res  = await fetch(
-          `/api/v1/market/ltp?token=${s.token}&exchange=${s.exchange}&symbol=${encodeURIComponent(s.tradingSymbol)}`,
+          `/api/v1/market/tick?token=${s.token}&exchange=${s.exchange}&symbol=${encodeURIComponent(s.tradingSymbol)}`,
           { cache: "no-store" }
         );
         const json = await res.json();
