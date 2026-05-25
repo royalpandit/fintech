@@ -23,6 +23,8 @@ type Props = {
   chartType?: ChartType;
   activeTool?: string;
   livePrice?: number;
+  /** Unix seconds — floor of the current candle boundary. Drives new-bar creation. */
+  liveTimestamp?: number;
   screenshotTrigger?: number;
   customIndicators?: CustomIndicator[];
 };
@@ -158,6 +160,7 @@ export default function ChartWidget({
   chartType = "candle",
   activeTool = "cursor",
   livePrice,
+  liveTimestamp,
   screenshotTrigger = 0,
   customIndicators = [],
 }: Props) {
@@ -171,25 +174,29 @@ export default function ChartWidget({
   useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
   useEffect(() => { chartTypeRef.current = chartType;   }, [chartType]);
 
-  // ── Live price: tick-update the last candle ───────────────────────────────
+  // ── Live price: tick-update or create the current candle ─────────────────
   useEffect(() => {
     const series = seriesRef.current;
     if (!series || livePrice == null || candles.length === 0) return;
     const last = candles[candles.length - 1];
-    const t = Math.floor(new Date(last.timestamp).getTime() / 1000);
+    const historicalT = Math.floor(new Date(last.timestamp).getTime() / 1000);
+    // Use liveTimestamp when it's strictly ahead (new candle boundary crossed)
+    const t = liveTimestamp && liveTimestamp > historicalT ? liveTimestamp : historicalT;
+    const isNewCandle = t > historicalT;
     try {
       if (chartTypeRef.current === "line") {
         series.update({ time: t, value: livePrice });
       } else {
         series.update({
-          time: t, open: last.open,
-          high: Math.max(last.high, livePrice),
-          low:  Math.min(last.low,  livePrice),
+          time:  t,
+          open:  isNewCandle ? livePrice : last.open,
+          high:  isNewCandle ? livePrice : Math.max(last.high, livePrice),
+          low:   isNewCandle ? livePrice : Math.min(last.low,  livePrice),
           close: livePrice,
         });
       }
     } catch { /* series not ready */ }
-  }, [livePrice, candles]);
+  }, [livePrice, liveTimestamp, candles]);
 
   // ── Eraser: wipe all drawn price lines ───────────────────────────────────
   useEffect(() => {

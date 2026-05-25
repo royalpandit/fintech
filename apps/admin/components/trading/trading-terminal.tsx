@@ -567,6 +567,7 @@ function TradingTerminalInner() {
   const [customIndicators,setCustomIndicators]= useState<CustomIndicator[]>([]);
   const [showAddIndicator,setShowAddIndicator]= useState(false);
   const [candleError,     setCandleError]     = useState<string | null>(null);
+  const [liveTick,        setLiveTick]        = useState<{ price: number; time: number } | null>(null);
 
   const indicatorsRef = useRef<HTMLDivElement>(null);
   // Stable ref for watchlist — avoids restarting the 10s quote poll on every watchlist change
@@ -589,7 +590,51 @@ function TradingTerminalInner() {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  // ── Live quote poll (10s) ─────────────────────────────────────────────────
+  // ── 1-second live tick for the selected symbol ───────────────────────────
+  const selectedRef = useRef(selected);
+  useEffect(() => { selectedRef.current = selected; }, [selected]);
+
+  useEffect(() => {
+    const INTERVAL_MS: Partial<Record<CandleInterval, number>> = {
+      ONE_MINUTE:     60_000,
+      THREE_MINUTE:   180_000,
+      FIVE_MINUTE:    300_000,
+      TEN_MINUTE:     600_000,
+      FIFTEEN_MINUTE: 900_000,
+      THIRTY_MINUTE:  1_800_000,
+      ONE_HOUR:       3_600_000,
+      ONE_DAY:        86_400_000,
+    };
+
+    function candleFloor(): number {
+      const ms = INTERVAL_MS[interval.interval] ?? 60_000;
+      return Math.floor(Date.now() / ms) * (ms / 1000);
+    }
+
+    async function tick() {
+      const s = selectedRef.current;
+      try {
+        const res  = await fetch(
+          `/api/v1/market/ltp?token=${s.token}&exchange=${s.exchange}&symbol=${encodeURIComponent(s.tradingSymbol)}`,
+          { cache: "no-store" }
+        );
+        const json = await res.json();
+        if (!json.ok) return;
+        setSelected(prev => ({
+          ...prev,
+          ltp: json.ltp, open: json.open, high: json.high, low: json.low,
+          change: json.netChange, changePct: json.pctChange,
+        }));
+        setLiveTick({ price: json.ltp, time: candleFloor() });
+      } catch { /* ignore network blips */ }
+    }
+
+    tick();
+    const id = setInterval(tick, 1_000);
+    return () => clearInterval(id);
+  }, [selected.token, selected.exchange, selected.tradingSymbol, interval.interval]);
+
+  // ── Live quote poll (5s) — keeps watchlist prices fresh ──────────────────
   // Stable callback: reads watchlist via ref — no dependency on watchlist state
   const fetchQuotes = useCallback(async () => {
     try {
@@ -618,9 +663,12 @@ function TradingTerminalInner() {
 
   useEffect(() => {
     fetchQuotes();
-    const id = setInterval(fetchQuotes, 10_000);
+    const id = setInterval(fetchQuotes, 5_000);
     return () => clearInterval(id);
   }, [fetchQuotes]);
+
+  // Reset live tick on symbol / interval change
+  useEffect(() => { setLiveTick(null); }, [selected.token, interval.interval]);
 
   // ── Candle fetch ──────────────────────────────────────────────────────────
   const fetchCandles = useCallback(async () => {
@@ -894,7 +942,8 @@ function TradingTerminalInner() {
                     showMA50={showMA50}
                     chartType={chartType}
                     activeTool={activeTool}
-                    livePrice={selected.ltp}
+                    livePrice={liveTick?.price ?? selected.ltp}
+                    liveTimestamp={liveTick?.time}
                     screenshotTrigger={screenshotCount}
                     customIndicators={customIndicators}
                   />
