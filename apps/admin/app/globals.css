@@ -1500,3 +1500,37 @@ th {
   .us-bottom-item { justify-content: center; }
 }
 
+
+/* ------------------------------
+   TRADING TERMINAL layout� full-bleed
+------------------------------ */
+/* Body gets .terminal-active class when the trading terminal is mounted.
+   This overrides the default shell layout so the terminal fills the exact
+   space between the sidebar and viewport edge — no fixed-position hacks. */
+body.terminal-active .us-body {
+  height: 100vh;
+  overflow: hidden;
+  max-width: none;
+  margin: 0;
+}
+
+body.terminal-active .us-main {
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
+body.terminal-active .us-content {
+  max-width: none;
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.trading-terminal {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+  background: #f8fafc;
+}
