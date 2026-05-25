@@ -200,8 +200,10 @@ export async function getCandles(params: {
   const kiteInterval = INTERVAL_MAP[params.interval];
   const url = `${BASE}/instruments/historical/${params.symboltoken}/${kiteInterval}?from=${encodeURIComponent(params.fromdate + ":00")}&to=${encodeURIComponent(params.todate + ":00")}`;
 
+  console.log("[getCandles] url=%s", url);
   const res  = await fetch(url, { headers: authHeaders(), cache: "no-store" });
   const data = await res.json();
+  console.log("[getCandles] status=%s httpStatus=%d keys=%s", data.status, res.status, Object.keys(data).join(","));
   if (data.status === "error" || (!data.data && data.message)) {
     throw new Error(data.message ?? data.error_type ?? "Kite historical API error");
   }

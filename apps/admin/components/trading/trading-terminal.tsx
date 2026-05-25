@@ -570,15 +570,16 @@ function TradingTerminalInner() {
     setCandleLoading(true);
     setCandles([]);
     setCandleError(null);
+    const url = `/api/v1/market/candles?token=${selected.token}&exchange=${selected.exchange}&interval=${interval.interval}&days=${period.days}`;
+    console.log("[fetchCandles] →", url);
     try {
-      const res  = await fetch(
-        `/api/v1/market/candles?token=${selected.token}&exchange=${selected.exchange}&interval=${interval.interval}&days=${period.days}`,
-        { cache: "no-store" }
-      );
+      const res  = await fetch(url, { cache: "no-store" });
       const json = await res.json();
+      console.log("[fetchCandles] ←", json);
       if (json.ok) setCandles(json.data ?? []);
       else setCandleError(json.error ?? "Failed to load chart data");
     } catch (e) {
+      console.error("[fetchCandles] network error", e);
       setCandleError(e instanceof Error ? e.message : "Network error");
     }
     finally { setCandleLoading(false); }
