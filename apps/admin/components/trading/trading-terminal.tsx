@@ -549,7 +549,7 @@ function TradingTerminalInner() {
   const [interval,        setIntervalCfg]     = useState(INTERVALS[5]); // 1D default
   const [period,          setPeriod]          = useState(PERIODS[5]);   // 1Y default
 
-  const setInterval = useCallback((iv: typeof INTERVALS[number]) => {
+  const changeInterval = useCallback((iv: typeof INTERVALS[number]) => {
     setIntervalCfg(iv);
     const max = INTERVAL_MAX_DAYS[iv.interval] ?? 60;
     setPeriod(prev => prev.days <= max ? prev : PERIODS.slice().reverse().find(p => p.days <= max) ?? PERIODS[0]);
@@ -778,7 +778,7 @@ function TradingTerminalInner() {
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 3 }}>
               {/* Interval pills */}
               {INTERVALS.map(iv => (
-                <button key={iv.label} type="button" onClick={() => setInterval(iv)}
+                <button key={iv.label} type="button" onClick={() => changeInterval(iv)}
                   style={{ padding: "3px 8px", border: "none", borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: "pointer",
                     background: interval.label === iv.label ? "rgba(14,165,233,0.12)" : "transparent",
                     color: interval.label === iv.label ? "#0ea5e9" : "#94a3b8" }}>
