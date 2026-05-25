@@ -42,6 +42,18 @@ const PERIODS = [
   { label: "1Y",  days: 365 },
 ];
 
+// Zerodha max days per interval — mirrors the server-side cap
+const INTERVAL_MAX_DAYS: Partial<Record<CandleInterval, number>> = {
+  ONE_MINUTE:     60,
+  THREE_MINUTE:   100,
+  FIVE_MINUTE:    100,
+  TEN_MINUTE:     100,
+  FIFTEEN_MINUTE: 200,
+  THIRTY_MINUTE:  200,
+  ONE_HOUR:       400,
+  ONE_DAY:        2000,
+};
+
 const DEFAULT_WATCHLIST: WatchlistItem[] = [
   { display: "NIFTY 50",   tradingSymbol: "NIFTY 50",   token: "256265",  exchange: "NSE", type: "INDEX" },
   { display: "BANK NIFTY", tradingSymbol: "NIFTY BANK", token: "260105",  exchange: "NSE", type: "INDEX" },
@@ -536,6 +548,12 @@ function TradingTerminalInner() {
   const [selected,        setSelected]        = useState<WatchlistItem>(DEFAULT_WATCHLIST[0]);
   const [interval,        setIntervalCfg]     = useState(INTERVALS[5]); // 1D default
   const [period,          setPeriod]          = useState(PERIODS[5]);   // 1Y default
+
+  const setInterval = useCallback((iv: typeof INTERVALS[number]) => {
+    setIntervalCfg(iv);
+    const max = INTERVAL_MAX_DAYS[iv.interval] ?? 60;
+    setPeriod(prev => prev.days <= max ? prev : PERIODS.slice().reverse().find(p => p.days <= max) ?? PERIODS[0]);
+  }, []);
   const [candles,         setCandles]         = useState<Candle[]>([]);
   const [candleLoading,   setCandleLoading]   = useState(true);
   const [tab,             setTab]             = useState<"chart" | "orders">("chart");
@@ -760,7 +778,7 @@ function TradingTerminalInner() {
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 3 }}>
               {/* Interval pills */}
               {INTERVALS.map(iv => (
-                <button key={iv.label} type="button" onClick={() => setIntervalCfg(iv)}
+                <button key={iv.label} type="button" onClick={() => setInterval(iv)}
                   style={{ padding: "3px 8px", border: "none", borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: "pointer",
                     background: interval.label === iv.label ? "rgba(14,165,233,0.12)" : "transparent",
                     color: interval.label === iv.label ? "#0ea5e9" : "#94a3b8" }}>
@@ -883,9 +901,9 @@ function TradingTerminalInner() {
                 )}
               </div>
 
-              {/* Period selector */}
+              {/* Period selector — only show periods within the interval's max-day limit */}
               <div style={{ background: "#fff", borderTop: "1px solid #eef0f4", display: "flex", alignItems: "center", padding: "4px 16px", gap: 2, flexShrink: 0 }}>
-                {PERIODS.map(p => (
+                {PERIODS.filter(p => p.days <= (INTERVAL_MAX_DAYS[interval.interval] ?? 2000)).map(p => (
                   <button key={p.label} type="button" onClick={() => setPeriod(p)}
                     style={{ padding: "3px 10px", border: "none", borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: "pointer",
                       background: period.label === p.label ? "rgba(14,165,233,0.12)" : "transparent",
