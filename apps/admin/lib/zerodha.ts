@@ -93,6 +93,18 @@ export const MARKET_INSTRUMENTS = [
 
 export type KnownSymbol = (typeof MARKET_INSTRUMENTS)[number]["symbol"];
 
+// ── Single-symbol fast tick (uses /quote/ltp — lighter than /quote/ohlc) ─────
+
+export async function getTickLTP(exchange: string, tradingsymbol: string): Promise<number | null> {
+  const key = `${exchange}:${tradingsymbol}`;
+  const res  = await fetch(`${BASE}/quote/ltp?i=${encodeURIComponent(key)}`, {
+    headers: authHeaders(), cache: "no-store",
+  });
+  const data = await res.json();
+  const entry = data.data?.[key] ?? (Object.values(data.data ?? {}) as { last_price?: number }[])[0];
+  return typeof entry?.last_price === "number" ? entry.last_price : null;
+}
+
 // ── LTP / OHLC ────────────────────────────────────────────────────────────────
 
 export interface LTPData {
