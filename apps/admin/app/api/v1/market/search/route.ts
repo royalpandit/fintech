@@ -7,8 +7,8 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const query    = searchParams.get("q") ?? "";
-    const exchange = searchParams.get("exchange") ?? "NSE";
-    if (!query || query.length < 2)
+    const exchange = searchParams.get("exchange") ?? "ALL";
+    if (!query || query.length < 1)
       return NextResponse.json({ ok: true, data: [] });
 
     const results = await searchSymbol(exchange, query);

@@ -265,27 +265,45 @@ function AddIndicatorModal({ onAdd, onClose, candles }: {
 
 // ── SearchBar ─────────────────────────────────────────────────────────────────
 
+const EXCHANGE_COLORS: Record<string, string> = {
+  NSE: "#0ea5e9", BSE: "#8b5cf6", NFO: "#f59e0b",
+  MCX: "#ef4444", CDS: "#22c55e", BFO: "#f97316",
+};
+
+function ExchangeBadge({ exchange, type }: { exchange: string; type: string }) {
+  const color = EXCHANGE_COLORS[exchange] ?? "#64748b";
+  return (
+    <span style={{ display: "flex", gap: 4, alignItems: "center", flexShrink: 0 }}>
+      <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: `${color}18`, color }}>{exchange}</span>
+      <span style={{ fontSize: 9, fontWeight: 600, color: "#94a3b8" }}>{type}</span>
+    </span>
+  );
+}
+
 function SearchBar({ onSelect }: { onSelect: (item: WatchlistItem) => void }) {
-  const [q, setQ] = useState("");
+  const [q,       setQ]       = useState("");
   const [results, setResults] = useState<WatchlistItem[]>([]);
-  const [open, setOpen] = useState(false);
+  const [open,    setOpen]    = useState(false);
+  const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const search = useCallback(async (query: string) => {
-    if (query.length < 2) { setResults([]); return; }
+    if (query.length < 1) { setResults([]); return; }
+    setLoading(true);
     try {
-      const res = await fetch(`/api/v1/market/search?q=${encodeURIComponent(query)}&exchange=NSE`);
+      const res  = await fetch(`/api/v1/market/search?q=${encodeURIComponent(query)}&exchange=ALL`);
       const json = await res.json();
       if (json.ok) {
-        setResults(json.data.slice(0, 10).map((d: { symbolName: string; tradingSymbol: string; token: string; exchange: string; instrumentType: string }) => ({
-          display: d.symbolName || d.tradingSymbol,
+        setResults(json.data.map((d: { symbolName: string; tradingSymbol: string; token: string; exchange: string; instrumentType: string }) => ({
+          display:       d.symbolName || d.tradingSymbol,
           tradingSymbol: d.tradingSymbol,
-          token: d.token,
-          exchange: d.exchange,
-          type: d.instrumentType || "EQ",
+          token:         d.token,
+          exchange:      d.exchange,
+          type:          d.instrumentType || "EQ",
         })));
       }
     } catch { /* ignore */ }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => {
@@ -296,25 +314,42 @@ function SearchBar({ onSelect }: { onSelect: (item: WatchlistItem) => void }) {
   return (
     <div style={{ position: "relative", padding: "8px 10px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: "#f8fafc", border: "1px solid #eef0f4", borderRadius: 8 }}>
-        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" strokeWidth="2.5">
-          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-        </svg>
-        <input value={q} onChange={e => { setQ(e.target.value); setOpen(true); }}
+        {loading
+          ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2.5" style={{ animation: "spin 1s linear infinite" }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          : <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        }
+        <input value={q}
+          onChange={e => { setQ(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
-          placeholder="Search symbols…"
+          onBlur={() => setTimeout(() => setOpen(false), 200)}
+          placeholder="Search NSE, BSE, MCX, F&O…"
           style={{ border: "none", background: "transparent", outline: "none", fontSize: 12, width: "100%", color: "#0f172a" }} />
+        {q && (
+          <button type="button" onClick={() => { setQ(""); setResults([]); }}
+            style={{ border: "none", background: "transparent", color: "#94a3b8", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
+        )}
       </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       {open && results.length > 0 && (
-        <div style={{ position: "absolute", top: "calc(100% - 2px)", left: 10, right: 10, background: "#fff", border: "1px solid #eef0f4", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 50, maxHeight: 260, overflowY: "auto" }}>
+        <div style={{ position: "absolute", top: "calc(100% - 2px)", left: 10, right: 10, background: "#fff", border: "1px solid #eef0f4", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 50, maxHeight: 300, overflowY: "auto" }}>
           {results.map(r => (
-            <button key={r.token} type="button"
+            <button key={`${r.exchange}:${r.token}`} type="button"
               onClick={() => { onSelect(r); setQ(""); setResults([]); setOpen(false); }}
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", padding: "9px 12px", border: "none", background: "transparent", cursor: "pointer", borderBottom: "1px solid #f8fafc", textAlign: "left" }}>
-              <span style={{ fontWeight: 700, fontSize: 12, color: "#0f172a" }}>{r.display}</span>
-              <span style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600 }}>{r.exchange} · {r.type}</span>
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", padding: "8px 12px", border: "none", background: "transparent", cursor: "pointer", borderBottom: "1px solid #f8fafc", textAlign: "left", gap: 8 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.tradingSymbol}</div>
+                {r.display !== r.tradingSymbol && (
+                  <div style={{ fontSize: 10, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.display}</div>
+                )}
+              </div>
+              <ExchangeBadge exchange={r.exchange} type={r.type} />
             </button>
           ))}
+        </div>
+      )}
+      {open && q.length > 0 && results.length === 0 && !loading && (
+        <div style={{ position: "absolute", top: "calc(100% - 2px)", left: 10, right: 10, background: "#fff", border: "1px solid #eef0f4", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 50, padding: "14px 12px", fontSize: 12, color: "#94a3b8", textAlign: "center" }}>
+          No results for &ldquo;{q}&rdquo;
         </div>
       )}
     </div>
