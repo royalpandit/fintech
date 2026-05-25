@@ -218,8 +218,7 @@ export async function getCandles(params: {
 }
 
 // ── Instrument search ─────────────────────────────────────────────────────────
-// Kite instruments endpoints are public — no auth required.
-// Master endpoint returns all exchanges (NSE, BSE, NFO, MCX, CDS, BFO, etc.)
+// All Kite instruments endpoints are public — no auth required.
 
 interface KiteInstrument {
   instrument_token: string;
@@ -229,49 +228,48 @@ interface KiteInstrument {
   instrument_type: string;
 }
 
-function parseInstrumentCsv(csv: string, fallbackExchange?: string): KiteInstrument[] {
-  const lines = csv.split("\n").filter(Boolean);
-  return lines.slice(1).flatMap(line => {
-    // CSV cols: instrument_token, exchange_token, tradingsymbol, name, last_price,
-    //           expiry, strike, tick_size, lot_size, instrument_type, segment, exchange
-    // Names can contain commas so we split on first 3 and last few known-fixed cols
-    const comma = line.indexOf(",");
-    if (comma === -1) return [];
-    const token = line.slice(0, comma).trim();
-    const rest  = line.slice(comma + 1);
-
-    // Split all cols — names with commas are rare but we handle gracefully
-    const cols = rest.split(",");
-    if (cols.length < 11) return [];
-
-    // Last col (index from end) is exchange, second-to-last is segment, third is instrument_type
-    const exchange        = (cols[cols.length - 1] ?? "").trim() || fallbackExchange ?? "NSE";
-    const instrument_type = (cols[cols.length - 3] ?? "").trim();
-    // tradingsymbol is cols[1], name spans cols[2] through cols[cols.length-7]
-    const tradingsymbol   = (cols[1] ?? "").trim();
-    const name            = cols.slice(2, cols.length - 6).join(",").trim();
-
-    if (!token || !tradingsymbol) return [];
-    return [{ instrument_token: token, tradingsymbol, name, exchange, instrument_type }];
+// CSV columns (0-based): instrument_token, exchange_token, tradingsymbol, name,
+// last_price, expiry, strike, tick_size, lot_size, instrument_type, segment, exchange
+function parseInstrumentCsv(csv: string, fallbackExchange: string): KiteInstrument[] {
+  return csv.split("\n").slice(1).flatMap(line => {
+    const cols = line.split(",");
+    if (cols.length < 12) return [];
+    const token = cols[0].trim();
+    const tsym  = cols[2].trim();
+    if (!token || !tsym) return [];
+    return [{
+      instrument_token: token,
+      tradingsymbol:    tsym,
+      name:             cols[3].trim(),
+      exchange:         cols[11].trim() || fallbackExchange,
+      instrument_type:  cols[9].trim(),
+    }];
   });
 }
+
+// Load each exchange separately and merge — more reliable than the master dump
+const ALL_EXCHANGES = ["NSE", "BSE", "NFO", "BFO", "MCX", "CDS"];
 
 async function loadAllInstruments(): Promise<KiteInstrument[]> {
   const now = Date.now();
   if (g.kiteAllInstruments && g.kiteAllInstrumentsExpiry > now) return g.kiteAllInstruments;
-  try {
-    // Master CSV — all exchanges: NSE, BSE, NFO, BFO, MCX, CDS, etc. (~500k rows)
-    const res  = await fetch(`${BASE}/instruments`, { headers: { "X-Kite-Version": "3" }, cache: "no-store" });
-    const csv  = await res.text();
-    const parsed = parseInstrumentCsv(csv);
-    console.log("[loadAllInstruments] loaded %d instruments", parsed.length);
-    g.kiteAllInstruments       = parsed;
-    g.kiteAllInstrumentsExpiry = now + 24 * 60 * 60 * 1000;
-    return parsed;
-  } catch (e) {
-    console.error("[loadAllInstruments] failed:", e);
-    return [];
+
+  const results = await Promise.allSettled(
+    ALL_EXCHANGES.map(exch =>
+      fetch(`${BASE}/instruments/${exch}`, { headers: { "X-Kite-Version": "3" }, cache: "no-store" })
+        .then(r => r.text())
+        .then(csv => parseInstrumentCsv(csv, exch))
+    )
+  );
+
+  const all: KiteInstrument[] = [];
+  for (const r of results) {
+    if (r.status === "fulfilled") all.push(...r.value);
   }
+  console.log("[loadAllInstruments] loaded %d instruments across %d exchanges", all.length, ALL_EXCHANGES.length);
+  g.kiteAllInstruments       = all;
+  g.kiteAllInstrumentsExpiry = now + 24 * 60 * 60 * 1000;
+  return all;
 }
 
 async function loadExchangeInstruments(exchange: string): Promise<KiteInstrument[]> {
@@ -303,7 +301,6 @@ export async function searchSymbol(exchange: string, query: string): Promise<Sea
     ? await loadAllInstruments()
     : await loadExchangeInstruments(exchange);
 
-  // Exact prefix match first, then contains — gives better ordering
   const exact    = insts.filter(i => i.tradingsymbol.startsWith(q) || i.name.toUpperCase().startsWith(q));
   const contains = insts.filter(i =>
     !i.tradingsymbol.startsWith(q) && !i.name.toUpperCase().startsWith(q) &&
