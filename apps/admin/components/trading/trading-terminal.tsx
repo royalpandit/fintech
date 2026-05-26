@@ -508,38 +508,6 @@ function OrderPanel({ symbol }: { symbol: WatchlistItem }) {
 // ── Main Terminal ─────────────────────────────────────────────────────────────
 
 export default function TradingTerminal() {
-  const [zerodhaAuth, setZerodhaAuth] = useState<"loading" | "ok" | "none">("loading");
-
-  useEffect(() => {
-    fetch("/api/v1/auth/zerodha/status")
-      .then(r => r.json())
-      .then(j => setZerodhaAuth(j.authenticated ? "ok" : "none"))
-      .catch(() => setZerodhaAuth("none"));
-  }, []);
-
-  if (zerodhaAuth === "loading") {
-    return <div style={{ display: "grid", placeItems: "center", height: "100%", color: "#94a3b8", fontSize: 14 }}>Connecting…</div>;
-  }
-
-  if (zerodhaAuth === "none") {
-    return (
-      <div style={{ display: "grid", placeItems: "center", height: "100%", background: "#fff" }}>
-        <div style={{ textAlign: "center", maxWidth: 360 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 14, background: "linear-gradient(135deg,#387ed1,#1a5fa8)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 24 }}>🔐</div>
-          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>Connect Zerodha</h2>
-          <p style={{ margin: "0 0 24px", fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
-            Log in with your Zerodha account to access live market data, charts, and trading.
-          </p>
-          <a href="/api/v1/auth/zerodha/login"
-            style={{ display: "inline-block", padding: "12px 28px", background: "#387ed1", color: "#fff", borderRadius: 10, fontWeight: 800, fontSize: 14, textDecoration: "none", letterSpacing: 0.3 }}>
-            Login with Zerodha
-          </a>
-          <p style={{ margin: "14px 0 0", fontSize: 11, color: "#94a3b8" }}>You&apos;ll be redirected to Kite for secure login.</p>
-        </div>
-      </div>
-    );
-  }
-
   return <TradingTerminalInner />;
 }
 
