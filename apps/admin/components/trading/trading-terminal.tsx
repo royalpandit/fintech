@@ -607,8 +607,15 @@ function TradingTerminalInner() {
     };
 
     function candleFloor(): number {
-      const ms = INTERVAL_MS[interval.interval] ?? 60_000;
-      return Math.floor(Date.now() / ms) * (ms / 1000);
+      const ms  = INTERVAL_MS[interval.interval] ?? 60_000;
+      const now = Date.now();
+      // For sub-day intervals: floor to interval boundary in UTC
+      if (ms < 86_400_000) return Math.floor(now / ms) * (ms / 1000);
+      // For 1D: Zerodha daily candles open at 09:15 IST (03:45 UTC).
+      // Floor to the most recent 03:45 UTC boundary so the time matches the series.
+      const DAY_OPEN_OFFSET_S = 3 * 3600 + 45 * 60; // 03:45 UTC in seconds
+      const dayStartUTC = Math.floor(now / 86_400_000) * 86_400 + DAY_OPEN_OFFSET_S;
+      return now / 1000 >= dayStartUTC ? dayStartUTC : dayStartUTC - 86_400;
     }
 
     let seq = 0;

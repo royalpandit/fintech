@@ -177,37 +177,37 @@ export default function ChartWidget({
   useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
   useEffect(() => { chartTypeRef.current = chartType;   }, [chartType]);
 
-  // ── Live price: screener-style update using series.data() ────────────────
-  // Uses the live series state (not stale candles prop) so new bars track their
-  // own open/high/low correctly across multiple ticks.
+  // ── Live price: screener-style tick using series.data() ──────────────────
   useEffect(() => {
     const series = seriesRef.current;
     if (!series || livePrice == null || candles.length === 0) return;
-
-    const historicalT = Math.floor(new Date(candles[candles.length - 1].timestamp).getTime() / 1000);
-    const t = (liveTimestamp && liveTimestamp > historicalT ? liveTimestamp : historicalT) as number;
-
     try {
       if (chartTypeRef.current === "line") {
+        const t = Math.floor(new Date(candles[candles.length - 1].timestamp).getTime() / 1000);
         series.update({ time: t, value: livePrice });
         return;
       }
 
-      // Read current live bar directly from series (screener pattern)
-      const bars = series.data() as { time: number; open: number; high: number; low: number; close: number }[];
-      const last  = bars[bars.length - 1];
+      // Use series.data() so we always read the LIVE bar's actual timestamp
+      // (avoids IST vs UTC mismatch — Zerodha daily candles open at 9:15 IST ≠ midnight UTC)
+      const bars = series.data() as { time: number; open: number; high: number; low: number }[];
+      const lastBar = bars[bars.length - 1];
+      if (!lastBar) return;
 
-      if (last && last.time === t) {
+      const barT = lastBar.time as number;
+      // Only open a new bar when the live bucket is genuinely ahead of the last bar
+      const newBar = liveTimestamp != null && liveTimestamp > barT;
+
+      if (newBar) {
+        series.update({ time: liveTimestamp!, open: livePrice, high: livePrice, low: livePrice, close: livePrice });
+      } else {
         series.update({
-          time:  t,
-          open:  last.open,
-          high:  Math.max(last.high, livePrice),
-          low:   Math.min(last.low,  livePrice),
+          time:  barT,
+          open:  lastBar.open,
+          high:  Math.max(lastBar.high, livePrice),
+          low:   Math.min(lastBar.low,  livePrice),
           close: livePrice,
         });
-      } else {
-        // New candle boundary — open fresh bar at current price
-        series.update({ time: t, open: livePrice, high: livePrice, low: livePrice, close: livePrice });
       }
     } catch { /* series not ready */ }
   }, [livePrice, liveTimestamp, liveSeq, candles]);
