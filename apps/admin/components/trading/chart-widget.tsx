@@ -25,6 +25,8 @@ type Props = {
   livePrice?: number;
   /** Unix seconds — floor of the current candle boundary. Drives new-bar creation. */
   liveTimestamp?: number;
+  /** Increments every tick — forces the effect to re-fire even when price is unchanged. */
+  liveSeq?: number;
   screenshotTrigger?: number;
   customIndicators?: CustomIndicator[];
 };
@@ -161,6 +163,7 @@ export default function ChartWidget({
   activeTool = "cursor",
   livePrice,
   liveTimestamp,
+  liveSeq,
   screenshotTrigger = 0,
   customIndicators = [],
 }: Props) {
@@ -177,26 +180,33 @@ export default function ChartWidget({
   // ── Live price: tick-update or create the current candle ─────────────────
   useEffect(() => {
     const series = seriesRef.current;
-    if (!series || livePrice == null || candles.length === 0) return;
+    if (!series) { console.log("[chart] live effect — no series yet, skipping"); return; }
+    if (livePrice == null) { console.log("[chart] live effect — livePrice is null, skipping"); return; }
+    if (candles.length === 0) { console.log("[chart] live effect — no candles loaded yet, skipping"); return; }
     const last = candles[candles.length - 1];
     const historicalT = Math.floor(new Date(last.timestamp).getTime() / 1000);
     // Use liveTimestamp when it's strictly ahead (new candle boundary crossed)
     const t = liveTimestamp && liveTimestamp > historicalT ? liveTimestamp : historicalT;
     const isNewCandle = t > historicalT;
+    console.log(`[chart] live update seq=${liveSeq} price=${livePrice} t=${t} historicalT=${historicalT} isNewCandle=${isNewCandle} chartType=${chartTypeRef.current}`);
     try {
       if (chartTypeRef.current === "line") {
         series.update({ time: t, value: livePrice });
       } else {
-        series.update({
+        const bar = {
           time:  t,
           open:  isNewCandle ? livePrice : last.open,
           high:  isNewCandle ? livePrice : Math.max(last.high, livePrice),
           low:   isNewCandle ? livePrice : Math.min(last.low,  livePrice),
           close: livePrice,
-        });
+        };
+        console.log(`[chart] series.update`, bar);
+        series.update(bar);
       }
-    } catch { /* series not ready */ }
-  }, [livePrice, liveTimestamp, candles]);
+    } catch (err) {
+      console.error("[chart] series.update threw:", err);
+    }
+  }, [livePrice, liveTimestamp, liveSeq, candles]);
 
   // ── Eraser: wipe all drawn price lines ───────────────────────────────────
   useEffect(() => {
