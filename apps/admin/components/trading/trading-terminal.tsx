@@ -567,7 +567,7 @@ function TradingTerminalInner() {
   const [customIndicators,setCustomIndicators]= useState<CustomIndicator[]>([]);
   const [showAddIndicator,setShowAddIndicator]= useState(false);
   const [candleError,     setCandleError]     = useState<string | null>(null);
-  const [liveTick,        setLiveTick]        = useState<{ price: number; time: number } | null>(null);
+  const [liveTick,        setLiveTick]        = useState<{ price: number; time: number; seq: number } | null>(null);
 
   const indicatorsRef = useRef<HTMLDivElement>(null);
   // Stable ref for watchlist — avoids restarting the 10s quote poll on every watchlist change
@@ -611,22 +611,39 @@ function TradingTerminalInner() {
       return Math.floor(Date.now() / ms) * (ms / 1000);
     }
 
+    let seq = 0;
+
     async function tick() {
       const s = selectedRef.current;
+      seq += 1;
+      const currentSeq = seq;
+      console.log(`[tick#${currentSeq}] token=${s.token} symbol=${s.tradingSymbol}`);
       try {
-        const res  = await fetch(
-          `/api/v1/market/tick?token=${s.token}&exchange=${s.exchange}&symbol=${encodeURIComponent(s.tradingSymbol)}`,
-          { cache: "no-store" }
-        );
+        // Use the proven live endpoint — handles both preset and non-preset tokens
+        const isPreset = PRESET_TOKENS.has(s.token);
+        const url = isPreset
+          ? `/api/v1/market/live`
+          : `/api/v1/market/live?extra=${s.token}:${s.exchange}:${encodeURIComponent(s.tradingSymbol)}`;
+        console.log(`[tick#${currentSeq}] GET ${url}`);
+        const res  = await fetch(url, { cache: "no-store" });
         const json = await res.json();
+        console.log(`[tick#${currentSeq}] ok=${json.ok} dataLen=${json.data?.length ?? 0}`, json.ok ? "" : json.error);
         if (!json.ok) return;
+        const quote = (json.data as Array<{ symbolToken: string; ltp: number; open: number; high: number; low: number; percentChange: number; netChange: number; displaySymbol?: string }>)
+          .find(q => q.symbolToken === s.token);
+        console.log(`[tick#${currentSeq}] quote found=${!!quote} ltp=${quote?.ltp}`);
+        if (!quote) return;
         setSelected(prev => ({
           ...prev,
-          ltp: json.ltp, open: json.open, high: json.high, low: json.low,
-          change: json.netChange, changePct: json.pctChange,
+          ltp: quote.ltp, open: quote.open, high: quote.high, low: quote.low,
+          change: quote.netChange, changePct: quote.percentChange,
         }));
-        setLiveTick({ price: json.ltp, time: candleFloor() });
-      } catch { /* ignore network blips */ }
+        const t = candleFloor();
+        console.log(`[tick#${currentSeq}] setLiveTick price=${quote.ltp} time=${t} seq=${currentSeq}`);
+        setLiveTick({ price: quote.ltp, time: t, seq: currentSeq });
+      } catch (err) {
+        console.error(`[tick#${currentSeq}] error:`, err);
+      }
     }
 
     tick();
@@ -930,10 +947,17 @@ function TradingTerminalInner() {
                   <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 24 }}>
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="#dc2626"/></svg>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#dc2626", textAlign: "center", maxWidth: 360 }}>{candleError}</div>
-                    <button type="button" onClick={fetchCandles}
-                      style={{ marginTop: 4, padding: "7px 16px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "#f8fafc", color: "#0f172a" }}>
-                      Retry
-                    </button>
+                    {/api_key|access_token|token|auth|authenticate/i.test(candleError) ? (
+                      <a href="/api/v1/auth/zerodha/login"
+                        style={{ marginTop: 4, padding: "9px 20px", background: "#387ed1", color: "#fff", borderRadius: 8, fontWeight: 800, fontSize: 13, textDecoration: "none" }}>
+                        Re-login with Zerodha
+                      </a>
+                    ) : (
+                      <button type="button" onClick={fetchCandles}
+                        style={{ marginTop: 4, padding: "7px 16px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "#f8fafc", color: "#0f172a" }}>
+                        Retry
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <ChartWidget
@@ -944,6 +968,7 @@ function TradingTerminalInner() {
                     activeTool={activeTool}
                     livePrice={liveTick?.price ?? selected.ltp}
                     liveTimestamp={liveTick?.time}
+                    liveSeq={liveTick?.seq}
                     screenshotTrigger={screenshotCount}
                     customIndicators={customIndicators}
                   />
