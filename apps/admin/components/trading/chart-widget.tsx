@@ -34,7 +34,7 @@ type Props = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFn = (...args: any[]) => any;
 type ChartObj  = { remove: AnyFn; applyOptions: AnyFn; addSeries: AnyFn; timeScale: AnyFn; subscribeClick: AnyFn; takeScreenshot?: AnyFn };
-type SeriesObj = { setData: AnyFn; update: AnyFn; createPriceLine: AnyFn; removePriceLine: AnyFn; coordinateToPrice: AnyFn };
+type SeriesObj = { setData: AnyFn; update: AnyFn; data: AnyFn; createPriceLine: AnyFn; removePriceLine: AnyFn; coordinateToPrice: AnyFn };
 
 function builtinSMA(candles: Candle[], period: number) {
   return candles
@@ -177,35 +177,39 @@ export default function ChartWidget({
   useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
   useEffect(() => { chartTypeRef.current = chartType;   }, [chartType]);
 
-  // ── Live price: tick-update or create the current candle ─────────────────
+  // ── Live price: screener-style update using series.data() ────────────────
+  // Uses the live series state (not stale candles prop) so new bars track their
+  // own open/high/low correctly across multiple ticks.
   useEffect(() => {
     const series = seriesRef.current;
-    if (!series) { console.log("[chart] live effect — no series yet, skipping"); return; }
-    if (livePrice == null) { console.log("[chart] live effect — livePrice is null, skipping"); return; }
-    if (candles.length === 0) { console.log("[chart] live effect — no candles loaded yet, skipping"); return; }
-    const last = candles[candles.length - 1];
-    const historicalT = Math.floor(new Date(last.timestamp).getTime() / 1000);
-    // Use liveTimestamp when it's strictly ahead (new candle boundary crossed)
-    const t = liveTimestamp && liveTimestamp > historicalT ? liveTimestamp : historicalT;
-    const isNewCandle = t > historicalT;
-    console.log(`[chart] live update seq=${liveSeq} price=${livePrice} t=${t} historicalT=${historicalT} isNewCandle=${isNewCandle} chartType=${chartTypeRef.current}`);
+    if (!series || livePrice == null || candles.length === 0) return;
+
+    const historicalT = Math.floor(new Date(candles[candles.length - 1].timestamp).getTime() / 1000);
+    const t = (liveTimestamp && liveTimestamp > historicalT ? liveTimestamp : historicalT) as number;
+
     try {
       if (chartTypeRef.current === "line") {
         series.update({ time: t, value: livePrice });
-      } else {
-        const bar = {
-          time:  t,
-          open:  isNewCandle ? livePrice : last.open,
-          high:  isNewCandle ? livePrice : Math.max(last.high, livePrice),
-          low:   isNewCandle ? livePrice : Math.min(last.low,  livePrice),
-          close: livePrice,
-        };
-        console.log(`[chart] series.update`, bar);
-        series.update(bar);
+        return;
       }
-    } catch (err) {
-      console.error("[chart] series.update threw:", err);
-    }
+
+      // Read current live bar directly from series (screener pattern)
+      const bars = series.data() as { time: number; open: number; high: number; low: number; close: number }[];
+      const last  = bars[bars.length - 1];
+
+      if (last && last.time === t) {
+        series.update({
+          time:  t,
+          open:  last.open,
+          high:  Math.max(last.high, livePrice),
+          low:   Math.min(last.low,  livePrice),
+          close: livePrice,
+        });
+      } else {
+        // New candle boundary — open fresh bar at current price
+        series.update({ time: t, open: livePrice, high: livePrice, low: livePrice, close: livePrice });
+      }
+    } catch { /* series not ready */ }
   }, [livePrice, liveTimestamp, liveSeq, candles]);
 
   // ── Eraser: wipe all drawn price lines ───────────────────────────────────
