@@ -617,37 +617,28 @@ function TradingTerminalInner() {
       const s = selectedRef.current;
       seq += 1;
       const currentSeq = seq;
-      console.log(`[tick#${currentSeq}] token=${s.token} symbol=${s.tradingSymbol}`);
       try {
-        // Use the proven live endpoint — handles both preset and non-preset tokens
         const isPreset = PRESET_TOKENS.has(s.token);
         const url = isPreset
           ? `/api/v1/market/live`
           : `/api/v1/market/live?extra=${s.token}:${s.exchange}:${encodeURIComponent(s.tradingSymbol)}`;
-        console.log(`[tick#${currentSeq}] GET ${url}`);
         const res  = await fetch(url, { cache: "no-store" });
         const json = await res.json();
-        console.log(`[tick#${currentSeq}] ok=${json.ok} dataLen=${json.data?.length ?? 0}`, json.ok ? "" : json.error);
         if (!json.ok) return;
-        const quote = (json.data as Array<{ symbolToken: string; ltp: number; open: number; high: number; low: number; percentChange: number; netChange: number; displaySymbol?: string }>)
+        const quote = (json.data as Array<{ symbolToken: string; ltp: number; open: number; high: number; low: number; percentChange: number; netChange: number }>)
           .find(q => q.symbolToken === s.token);
-        console.log(`[tick#${currentSeq}] quote found=${!!quote} ltp=${quote?.ltp}`);
         if (!quote) return;
         setSelected(prev => ({
           ...prev,
           ltp: quote.ltp, open: quote.open, high: quote.high, low: quote.low,
           change: quote.netChange, changePct: quote.percentChange,
         }));
-        const t = candleFloor();
-        console.log(`[tick#${currentSeq}] setLiveTick price=${quote.ltp} time=${t} seq=${currentSeq}`);
-        setLiveTick({ price: quote.ltp, time: t, seq: currentSeq });
-      } catch (err) {
-        console.error(`[tick#${currentSeq}] error:`, err);
-      }
+        setLiveTick({ price: quote.ltp, time: candleFloor(), seq: currentSeq });
+      } catch { /* ignore network blips */ }
     }
 
     tick();
-    const id = setInterval(tick, 1_000);
+    const id = setInterval(tick, 2_000); // 2s — live feel without hammering the API
     return () => clearInterval(id);
   }, [selected.token, selected.exchange, selected.tradingSymbol, interval.interval]);
 
