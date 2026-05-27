@@ -3,5 +3,5 @@
   "buildCommand": "cd apps/admin && npm install && npm run build",
   "installCommand": "echo 'Skip — handled in buildCommand'",
   "outputDirectory": "apps/admin/.next",
-  "framework": "nextjs"
+  "framework": null
 }
