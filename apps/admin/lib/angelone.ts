@@ -310,23 +310,40 @@ export interface SearchResult {
 
 export async function searchSymbol(exchange: string, query: string): Promise<SearchResult[]> {
   const { jwtToken, feedToken } = await getToken();
-  const res = await fetch(
-    `${BASE_URL}/rest/secure/angelbroking/order/v1/searchscrip`,
-    {
-      method: "POST",
-      headers: commonHeaders(jwtToken, feedToken),
-      body: JSON.stringify({ exchange, searchscrip: query }),
-      cache: "no-store",
+
+  const searchOne = async (exch: string): Promise<SearchResult[]> => {
+    try {
+      const res = await fetch(
+        `${BASE_URL}/rest/secure/angelbroking/order/v1/searchscrip`,
+        {
+          method: "POST",
+          headers: commonHeaders(jwtToken, feedToken),
+          body: JSON.stringify({ exchange: exch, searchscrip: query }),
+          cache: "no-store",
+        }
+      );
+      const data = await res.json();
+      return (data.data ?? []).map((d: Record<string, string>) => ({
+        exchange: d.exchange ?? exch,
+        tradingSymbol: d.trading_symbol ?? d.tradingsymbol ?? "",
+        symbolName: d.symbol_name ?? d.name ?? d.trading_symbol ?? "",
+        instrumentType: d.instrument_type ?? d.instrumenttype ?? "EQ",
+        token: d.token ?? d.symboltoken ?? "",
+      }));
+    } catch { return []; }
+  };
+
+  const exchanges = exchange === "ALL" ? ["NSE", "BSE", "NFO", "MCX"] : [exchange];
+  const batches = await Promise.all(exchanges.map(searchOne));
+  const seen = new Set<string>();
+  const merged: SearchResult[] = [];
+  for (const batch of batches) {
+    for (const r of batch) {
+      const key = `${r.exchange}:${r.tradingSymbol}`;
+      if (r.tradingSymbol && !seen.has(key)) { seen.add(key); merged.push(r); }
     }
-  );
-  const data = await res.json();
-  return (data.data ?? []).map((d: Record<string, string>) => ({
-    exchange: d.exchange,
-    tradingSymbol: d.trading_symbol ?? d.tradingsymbol ?? "",
-    symbolName: d.symbol_name ?? d.name ?? d.trading_symbol ?? "",
-    instrumentType: d.instrument_type ?? d.instrumenttype ?? "EQ",
-    token: d.token ?? d.symboltoken ?? "",
-  }));
+  }
+  return merged.slice(0, 50);
 }
 
 // ── Orders ────────────────────────────────────────────────────────────────────

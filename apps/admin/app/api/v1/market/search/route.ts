@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { searchSymbol } from "@/lib/zerodha";
+import { searchSymbol } from "@/lib/angelone";
 
 export const dynamic = "force-dynamic";
 
