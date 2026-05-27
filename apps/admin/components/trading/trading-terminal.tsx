@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import ChartWidget, { evalCustom } from "./chart-widget";
 import type { ChartType, CustomIndicator } from "./chart-widget";
-import type { Candle, CandleInterval } from "@/lib/zerodha";
-import { MARKET_INSTRUMENTS } from "@/lib/zerodha";
+import type { Candle, CandleInterval } from "@/lib/angelone";
+import { MARKET_INSTRUMENTS } from "@/lib/angelone";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,10 +42,9 @@ const PERIODS = [
   { label: "1Y",  days: 365 },
 ];
 
-// Zerodha max days per interval — mirrors the server-side cap
 const INTERVAL_MAX_DAYS: Partial<Record<CandleInterval, number>> = {
-  ONE_MINUTE:     60,
-  THREE_MINUTE:   100,
+  ONE_MINUTE:     30,
+  THREE_MINUTE:   60,
   FIVE_MINUTE:    100,
   TEN_MINUTE:     100,
   FIFTEEN_MINUTE: 200,
@@ -55,18 +54,18 @@ const INTERVAL_MAX_DAYS: Partial<Record<CandleInterval, number>> = {
 };
 
 const DEFAULT_WATCHLIST: WatchlistItem[] = [
-  { display: "NIFTY 50",   tradingSymbol: "NIFTY 50",   token: "256265",  exchange: "NSE", type: "INDEX" },
-  { display: "BANK NIFTY", tradingSymbol: "NIFTY BANK", token: "260105",  exchange: "NSE", type: "INDEX" },
-  { display: "SENSEX",     tradingSymbol: "SENSEX",      token: "265",     exchange: "BSE", type: "INDEX" },
-  { display: "RELIANCE",   tradingSymbol: "RELIANCE",    token: "738561",  exchange: "NSE", type: "EQ"    },
-  { display: "TCS",        tradingSymbol: "TCS",         token: "2374913", exchange: "NSE", type: "EQ"    },
-  { display: "HDFCBANK",   tradingSymbol: "HDFCBANK",    token: "341249",  exchange: "NSE", type: "EQ"    },
-  { display: "INFY",       tradingSymbol: "INFY",        token: "408065",  exchange: "NSE", type: "EQ"    },
-  { display: "ICICIBANK",  tradingSymbol: "ICICIBANK",   token: "1270529", exchange: "NSE", type: "EQ"    },
-  { display: "WIPRO",      tradingSymbol: "WIPRO",       token: "3787265", exchange: "NSE", type: "EQ"    },
-  { display: "SBIN",       tradingSymbol: "SBIN",        token: "779521",  exchange: "NSE", type: "EQ"    },
-  { display: "BHARTIARTL", tradingSymbol: "BHARTIARTL",  token: "2714625", exchange: "NSE", type: "EQ"    },
-  { display: "LT",         tradingSymbol: "LT",          token: "2939649", exchange: "NSE", type: "EQ"    },
+  { display: "NIFTY 50",   tradingSymbol: "NIFTY 50",   token: "99926000", exchange: "NSE", type: "INDEX" },
+  { display: "BANK NIFTY", tradingSymbol: "NIFTY BANK", token: "99926009", exchange: "NSE", type: "INDEX" },
+  { display: "SENSEX",     tradingSymbol: "SENSEX",      token: "99919000", exchange: "BSE", type: "INDEX" },
+  { display: "RELIANCE",   tradingSymbol: "RELIANCE",    token: "2885",     exchange: "NSE", type: "EQ"    },
+  { display: "TCS",        tradingSymbol: "TCS",         token: "11536",    exchange: "NSE", type: "EQ"    },
+  { display: "HDFCBANK",   tradingSymbol: "HDFCBANK",    token: "1333",     exchange: "NSE", type: "EQ"    },
+  { display: "INFY",       tradingSymbol: "INFY",        token: "1594",     exchange: "NSE", type: "EQ"    },
+  { display: "ICICIBANK",  tradingSymbol: "ICICIBANK",   token: "4963",     exchange: "NSE", type: "EQ"    },
+  { display: "WIPRO",      tradingSymbol: "WIPRO",       token: "3787",     exchange: "NSE", type: "EQ"    },
+  { display: "SBIN",       tradingSymbol: "SBIN",        token: "3045",     exchange: "NSE", type: "EQ"    },
+  { display: "BHARTIARTL", tradingSymbol: "BHARTIARTL",  token: "10604",    exchange: "NSE", type: "EQ"    },
+  { display: "LT",         tradingSymbol: "LT",          token: "11483",    exchange: "NSE", type: "EQ"    },
 ];
 
 // ── Drawing tools ─────────────────────────────────────────────────────────────
@@ -579,7 +578,7 @@ function TradingTerminalInner() {
       const now = Date.now();
       // For sub-day intervals: floor to interval boundary in UTC
       if (ms < 86_400_000) return Math.floor(now / ms) * (ms / 1000);
-      // For 1D: Zerodha daily candles open at 09:15 IST (03:45 UTC).
+      // For 1D: market opens at 09:15 IST (03:45 UTC).
       // Floor to the most recent 03:45 UTC boundary so the time matches the series.
       const DAY_OPEN_OFFSET_S = 3 * 3600 + 45 * 60; // 03:45 UTC in seconds
       const dayStartUTC = Math.floor(now / 86_400_000) * 86_400 + DAY_OPEN_OFFSET_S;
@@ -913,17 +912,10 @@ function TradingTerminalInner() {
                   <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 24 }}>
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="#dc2626"/></svg>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#dc2626", textAlign: "center", maxWidth: 360 }}>{candleError}</div>
-                    {/api_key|access_token|token|auth|authenticate/i.test(candleError) ? (
-                      <a href="/api/v1/auth/zerodha/login"
-                        style={{ marginTop: 4, padding: "9px 20px", background: "#387ed1", color: "#fff", borderRadius: 8, fontWeight: 800, fontSize: 13, textDecoration: "none" }}>
-                        Re-login with Zerodha
-                      </a>
-                    ) : (
-                      <button type="button" onClick={fetchCandles}
-                        style={{ marginTop: 4, padding: "7px 16px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "#f8fafc", color: "#0f172a" }}>
-                        Retry
-                      </button>
-                    )}
+                    <button type="button" onClick={fetchCandles}
+                      style={{ marginTop: 4, padding: "7px 16px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "#f8fafc", color: "#0f172a" }}>
+                      Retry
+                    </button>
                   </div>
                 ) : (
                   <ChartWidget

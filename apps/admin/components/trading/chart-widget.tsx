@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { Candle } from "@/lib/zerodha";
+import type { Candle } from "@/lib/angelone";
 
 export type ChartType = "candle" | "bar" | "line";
 

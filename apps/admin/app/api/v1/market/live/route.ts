@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getLTP, MARKET_INSTRUMENTS, setAccessToken, isAuthenticated } from "@/lib/zerodha";
+import { getLTP, MARKET_INSTRUMENTS } from "@/lib/angelone";
 
 export const dynamic = "force-dynamic";
 
@@ -9,11 +9,6 @@ export const dynamic = "force-dynamic";
  * ?extra=TOKEN:EXCHANGE:SYMBOL,...  — for symbols added via search
  */
 export async function GET(req: NextRequest) {
-  if (!isAuthenticated()) {
-    const cookie = req.cookies.get("zerodha_token")?.value;
-    if (cookie) setAccessToken(cookie);
-  }
-
   try {
     const { searchParams } = new URL(req.url);
     const extraParam = searchParams.get("extra") ?? "";
@@ -26,7 +21,7 @@ export async function GET(req: NextRequest) {
       : [];
 
     const seen = new Set<string>(MARKET_INSTRUMENTS.map(m => m.token));
-    const all: { exchange: string; symboltoken: string; tradingsymbol?: string }[] = [
+    const all: { exchange: string; symboltoken: string }[] = [
       ...MARKET_INSTRUMENTS.map(m => ({ exchange: m.exchange, symboltoken: m.token })),
       ...extraInstruments.filter(e => !seen.has(e.symboltoken)),
     ];
