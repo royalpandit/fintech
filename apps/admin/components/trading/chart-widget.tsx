@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { Candle } from "@/lib/angelone";
+import { toHeikinAshi, toRenko } from "./chart-transforms";
 
-export type ChartType = "candle" | "bar" | "line";
+export type ChartType =
+  | "candle" | "hollow" | "bar" | "line" | "line-markers" | "step"
+  | "area" | "baseline" | "columns" | "highlow" | "heikin" | "renko";
 
 export interface CustomIndicator {
   id: string;
@@ -14,6 +17,7 @@ export interface CustomIndicator {
   color: string;
   lineWidth: number; // 1–4
   lineStyle: number; // 0=solid 2=dashed 3=large_dashed 4=sparse_dotted
+  kind?: "overlay" | "oscillator";
 }
 
 type Props = {
@@ -155,8 +159,54 @@ export function evalCustom(formula: string, candles: Candle[]): { time: number; 
   return out;
 }
 
+function prepareCandles(raw: Candle[], chartType: ChartType): Candle[] {
+  if (chartType === "heikin") return toHeikinAshi(raw);
+  if (chartType === "renko") return toRenko(raw);
+  return raw;
+}
+
+function candleTime(c: Candle) {
+  return Math.floor(new Date(c.timestamp).getTime() / 1000);
+}
+
+function chartStructureKey(
+  chartType: ChartType,
+  showMA20: boolean,
+  showMA50: boolean,
+  overlayIndicators: CustomIndicator[],
+  oscillatorIndicators: CustomIndicator[],
+) {
+  return `${chartType}|${showMA20}|${showMA50}|${overlayIndicators.map(i => i.id).join()}|${oscillatorIndicators.map(i => i.id).join()}`;
+}
+
+function isLineChartType(chartType: ChartType) {
+  return ["line", "line-markers", "step", "area", "baseline", "columns"].includes(chartType);
+}
+
+function mainSeriesPoints(candles: Candle[], chartType: ChartType) {
+  if (isLineChartType(chartType)) {
+    return candles.map(c => ({ time: candleTime(c), value: c.close }));
+  }
+  if (chartType === "highlow") {
+    return candles.map(c => ({
+      time: candleTime(c), open: c.low, high: c.high, low: c.low, close: c.high,
+    }));
+  }
+  return candles.map(c => ({
+    time: candleTime(c), open: c.open, high: c.high, low: c.low, close: c.close,
+  }));
+}
+
+function volumePoints(candles: Candle[]) {
+  return candles.map(c => ({
+    time: candleTime(c),
+    value: c.volume,
+    color: c.close >= c.open ? "rgba(22,163,74,0.3)" : "rgba(220,38,38,0.3)",
+  }));
+}
+
 export default function ChartWidget({
-  candles,
+  candles: rawCandles,
   showMA20 = true,
   showMA50 = true,
   chartType = "candle",
@@ -167,35 +217,53 @@ export default function ChartWidget({
   screenshotTrigger = 0,
   customIndicators = [],
 }: Props) {
+  const candles = useMemo(() => prepareCandles(rawCandles, chartType), [rawCandles, chartType]);
+  const overlayIndicators = useMemo(
+    () => customIndicators.filter(ci => ci.kind !== "oscillator"),
+    [customIndicators],
+  );
+  const oscillatorIndicators = useMemo(
+    () => customIndicators.filter(ci => ci.kind === "oscillator"),
+    [customIndicators],
+  );
+
   const containerRef  = useRef<HTMLDivElement>(null);
+  const mainPaneRef   = useRef<HTMLDivElement>(null);
+  const oscPaneRef    = useRef<HTMLDivElement>(null);
   const chartRef      = useRef<ChartObj | null>(null);
+  const oscChartRef   = useRef<ChartObj | null>(null);
   const seriesRef     = useRef<SeriesObj | null>(null);
+  const volumeSeriesRef = useRef<SeriesObj | null>(null);
+  const ma20SeriesRef   = useRef<SeriesObj | null>(null);
+  const ma50SeriesRef   = useRef<SeriesObj | null>(null);
+  const structureKeyRef = useRef("");
+  const candlesRef      = useRef(candles);
   const priceLinesRef = useRef<unknown[]>([]);
   const activeToolRef = useRef(activeTool);
   const chartTypeRef  = useRef(chartType);
 
+  candlesRef.current = candles;
+
   useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
   useEffect(() => { chartTypeRef.current = chartType;   }, [chartType]);
 
-  // ── Live price: screener-style tick using series.data() ──────────────────
+  // ── Live price tick on the last bar (no full chart rebuild) ───────────────
   useEffect(() => {
     const series = seriesRef.current;
-    if (!series || livePrice == null || candles.length === 0) return;
+    const cList = candlesRef.current;
+    if (!series || livePrice == null || cList.length === 0) return;
     try {
-      if (chartTypeRef.current === "line") {
-        const t = Math.floor(new Date(candles[candles.length - 1].timestamp).getTime() / 1000);
+      if (isLineChartType(chartTypeRef.current)) {
+        const t = candleTime(cList[cList.length - 1]);
         series.update({ time: t, value: livePrice });
         return;
       }
 
-      // Use series.data() so we always read the LIVE bar's actual timestamp
-      // (avoids IST vs UTC mismatch — Zerodha daily candles open at 9:15 IST ≠ midnight UTC)
       const bars = series.data() as { time: number; open: number; high: number; low: number }[];
       const lastBar = bars[bars.length - 1];
       if (!lastBar) return;
 
       const barT = lastBar.time as number;
-      // Only open a new bar when the live bucket is genuinely ahead of the last bar
       const newBar = liveTimestamp != null && liveTimestamp > barT;
 
       if (newBar) {
@@ -210,7 +278,7 @@ export default function ChartWidget({
         });
       }
     } catch { /* series not ready */ }
-  }, [livePrice, liveTimestamp, liveSeq, candles]);
+  }, [livePrice, liveTimestamp, liveSeq]);
 
   // ── Eraser: wipe all drawn price lines ───────────────────────────────────
   useEffect(() => {
@@ -233,26 +301,45 @@ export default function ChartWidget({
     } catch { /**/ }
   }, [screenshotTrigger]);
 
-  // ── Main chart build ──────────────────────────────────────────────────────
+  // ── Main chart build / silent data refresh ─────────────────────────────────
   useEffect(() => {
+    const mainEl = mainPaneRef.current;
+    if (!mainEl || candles.length === 0) return;
+
+    const key = chartStructureKey(chartType, showMA20, showMA50, overlayIndicators, oscillatorIndicators);
+    const dataOnly = key === structureKeyRef.current && chartRef.current && seriesRef.current;
+
+    if (dataOnly) {
+      seriesRef.current!.setData(mainSeriesPoints(candles, chartType));
+      volumeSeriesRef.current?.setData(volumePoints(candles));
+      if (ma20SeriesRef.current && candles.length >= 20) ma20SeriesRef.current.setData(builtinSMA(candles, 20));
+      if (ma50SeriesRef.current && candles.length >= 50) ma50SeriesRef.current.setData(builtinSMA(candles, 50));
+      return;
+    }
+
+    structureKeyRef.current = key;
     chartRef.current?.remove();
+    oscChartRef.current?.remove();
     chartRef.current = null;
+    oscChartRef.current = null;
     seriesRef.current = null;
+    volumeSeriesRef.current = null;
+    ma20SeriesRef.current = null;
+    ma50SeriesRef.current = null;
     priceLinesRef.current = [];
 
-    const el = containerRef.current;
-    if (!el || candles.length === 0) return;
-
     let observer: ResizeObserver | null = null;
+    const hasOsc = oscillatorIndicators.length > 0;
 
     import("lightweight-charts").then((lc) => {
-      if (!containerRef.current) return;
-      const el2 = containerRef.current;
+      if (!mainPaneRef.current) return;
+      const el2 = mainPaneRef.current;
       const w = el2.clientWidth  || 800;
-      const h = el2.clientHeight || 400;
+      const totalH = containerRef.current?.clientHeight || 400;
+      const oscH = hasOsc ? Math.min(140, Math.floor(totalH * 0.28)) : 0;
+      const mainH = Math.max(200, totalH - oscH);
 
-      const chart = lc.createChart(el2, {
-        width: w, height: h,
+      const chartOpts = {
         layout: {
           background: { type: lc.ColorType.Solid, color: "#ffffff" },
           textColor: "#64748b", fontSize: 11,
@@ -264,22 +351,69 @@ export default function ChartWidget({
         timeScale: { borderColor: "#eef0f4", timeVisible: true, secondsVisible: false, rightOffset: 8 },
         handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
         handleScale: { mouseWheel: true, pinch: true },
-      }) as unknown as ChartObj;
+      };
 
+      const chart = lc.createChart(el2, { width: w, height: mainH, ...chartOpts }) as unknown as ChartObj;
       chartRef.current = chart;
+
+      const ohlcTypes: ChartType[] = ["candle", "hollow", "heikin"];
+      const lineTypes: ChartType[] = ["line", "line-markers", "step"];
 
       // ── Main series ──────────────────────────────────────────────────────
       let mainSeries: SeriesObj;
-      if (chartType === "bar") {
+      if (chartType === "bar" || chartType === "renko") {
         mainSeries = chart.addSeries(lc.BarSeries, { upColor: "#16a34a", downColor: "#dc2626" }) as unknown as SeriesObj;
         mainSeries.setData(candles.map(c => ({
-          time: Math.floor(new Date(c.timestamp).getTime() / 1000),
-          open: c.open, high: c.high, low: c.low, close: c.close,
+          time: candleTime(c), open: c.open, high: c.high, low: c.low, close: c.close,
         })));
-      } else if (chartType === "line") {
-        mainSeries = chart.addSeries(lc.LineSeries, { color: "#0ea5e9", lineWidth: 2, priceLineVisible: true }) as unknown as SeriesObj;
+      } else if (lineTypes.includes(chartType)) {
+        mainSeries = chart.addSeries(lc.LineSeries, {
+          color: "#0ea5e9", lineWidth: 2, priceLineVisible: true,
+          ...(chartType === "line-markers" ? { pointMarkersVisible: true } : {}),
+          ...(chartType === "step" ? { lineType: 1 } : {}),
+        }) as unknown as SeriesObj;
+        mainSeries.setData(candles.map(c => ({ time: candleTime(c), value: c.close })));
+      } else if (chartType === "area") {
+        mainSeries = chart.addSeries(lc.AreaSeries, {
+          lineColor: "#0ea5e9", topColor: "rgba(14,165,233,0.35)", bottomColor: "rgba(14,165,233,0.02)",
+          lineWidth: 2,
+        }) as unknown as SeriesObj;
+        mainSeries.setData(candles.map(c => ({ time: candleTime(c), value: c.close })));
+      } else if (chartType === "baseline") {
+        const base = candles.reduce((s, c) => s + c.close, 0) / candles.length;
+        mainSeries = chart.addSeries(lc.BaselineSeries, {
+          baseValue: { type: "price", price: base },
+          topLineColor: "#16a34a", bottomLineColor: "#dc2626",
+          topFillColor1: "rgba(22,163,74,0.2)", topFillColor2: "rgba(22,163,74,0.05)",
+          bottomFillColor1: "rgba(220,38,38,0.05)", bottomFillColor2: "rgba(220,38,38,0.2)",
+        }) as unknown as SeriesObj;
+        mainSeries.setData(candles.map(c => ({ time: candleTime(c), value: c.close })));
+      } else if (chartType === "columns") {
+        mainSeries = chart.addSeries(lc.HistogramSeries, {
+          priceFormat: { type: "price" }, priceScaleId: "right",
+        }) as unknown as SeriesObj;
         mainSeries.setData(candles.map(c => ({
-          time: Math.floor(new Date(c.timestamp).getTime() / 1000), value: c.close,
+          time: candleTime(c), value: c.close,
+          color: c.close >= c.open ? "#16a34a" : "#dc2626",
+        })));
+      } else if (chartType === "highlow") {
+        mainSeries = chart.addSeries(lc.BarSeries, {
+          thinBars: true, upColor: "#16a34a", downColor: "#dc2626",
+        }) as unknown as SeriesObj;
+        mainSeries.setData(candles.map(c => ({
+          time: candleTime(c), open: c.low, high: c.high, low: c.low, close: c.high,
+        })));
+      } else if (ohlcTypes.includes(chartType)) {
+        const hollow = chartType === "hollow";
+        mainSeries = chart.addSeries(lc.CandlestickSeries, {
+          upColor: hollow ? "#ffffff" : "#16a34a",
+          downColor: "#dc2626",
+          borderUpColor: "#16a34a", borderDownColor: "#dc2626",
+          wickUpColor: "#16a34a", wickDownColor: "#dc2626",
+          borderVisible: true,
+        }) as unknown as SeriesObj;
+        mainSeries.setData(candles.map(c => ({
+          time: candleTime(c), open: c.open, high: c.high, low: c.low, close: c.close,
         })));
       } else {
         mainSeries = chart.addSeries(lc.CandlestickSeries, {
@@ -289,8 +423,7 @@ export default function ChartWidget({
           borderVisible: false,
         }) as unknown as SeriesObj;
         mainSeries.setData(candles.map(c => ({
-          time: Math.floor(new Date(c.timestamp).getTime() / 1000),
-          open: c.open, high: c.high, low: c.low, close: c.close,
+          time: candleTime(c), open: c.open, high: c.high, low: c.low, close: c.close,
         })));
       }
       seriesRef.current = mainSeries;
@@ -299,13 +432,10 @@ export default function ChartWidget({
       const vs = chart.addSeries(lc.HistogramSeries, {
         priceFormat: { type: "volume" }, priceScaleId: "vol",
       }) as unknown as SeriesObj;
+      volumeSeriesRef.current = vs;
       (chart as unknown as { priceScale: (id: string) => { applyOptions: (o: object) => void } })
         .priceScale("vol").applyOptions({ scaleMargins: { top: 0.85, bottom: 0 }, visible: false });
-      vs.setData(candles.map(c => ({
-        time: Math.floor(new Date(c.timestamp).getTime() / 1000),
-        value: c.volume,
-        color: c.close >= c.open ? "rgba(22,163,74,0.3)" : "rgba(220,38,38,0.3)",
-      })));
+      vs.setData(volumePoints(candles));
 
       // ── Built-in MAs ──────────────────────────────────────────────────────
       if (showMA20 && candles.length >= 20) {
@@ -313,6 +443,7 @@ export default function ChartWidget({
           color: "#f59e0b", lineWidth: 1.5, priceLineVisible: false,
           lastValueVisible: true, title: "MA20", crosshairMarkerVisible: false,
         }) as unknown as SeriesObj;
+        ma20SeriesRef.current = ma20;
         ma20.setData(builtinSMA(candles, 20));
       }
       if (showMA50 && candles.length >= 50) {
@@ -320,11 +451,12 @@ export default function ChartWidget({
           color: "#8b5cf6", lineWidth: 1.5, priceLineVisible: false,
           lastValueVisible: true, title: "MA50", crosshairMarkerVisible: false,
         }) as unknown as SeriesObj;
+        ma50SeriesRef.current = ma50;
         ma50.setData(builtinSMA(candles, 50));
       }
 
-      // ── Custom indicators ─────────────────────────────────────────────────
-      for (const ci of customIndicators) {
+      // ── Overlay custom indicators ─────────────────────────────────────────
+      for (const ci of overlayIndicators) {
         try {
           const data = evalCustom(ci.formula, candles);
           if (data.length === 0) continue;
@@ -338,7 +470,31 @@ export default function ChartWidget({
             crosshairMarkerVisible: false,
           }) as unknown as SeriesObj;
           cs.setData(data);
-        } catch { /* bad formula — skip silently */ }
+        } catch { /* skip */ }
+      }
+
+      // ── Oscillator pane ───────────────────────────────────────────────────
+      if (hasOsc && oscPaneRef.current) {
+        const oscChart = lc.createChart(oscPaneRef.current, {
+          width: w, height: oscH, ...chartOpts,
+          timeScale: { ...chartOpts.timeScale, visible: false },
+        }) as unknown as ChartObj;
+        oscChartRef.current = oscChart;
+        for (const ci of oscillatorIndicators) {
+          try {
+            const data = evalCustom(ci.formula, candles);
+            if (data.length === 0) continue;
+            const cs = oscChart.addSeries(lc.LineSeries, {
+              color: ci.color,
+              lineWidth: Math.min(4, Math.max(1, ci.lineWidth)) as 1,
+              title: ci.name,
+              priceLineVisible: false,
+              lastValueVisible: true,
+            }) as unknown as SeriesObj;
+            cs.setData(data);
+          } catch { /* skip */ }
+        }
+        oscChart.timeScale().fitContent();
       }
 
       chart.timeScale().fitContent();
@@ -362,19 +518,30 @@ export default function ChartWidget({
 
       // ── Resize observer ───────────────────────────────────────────────────
       observer = new ResizeObserver(() => {
-        if (!el2 || !chartRef.current) return;
-        chartRef.current.applyOptions({ width: el2.clientWidth, height: el2.clientHeight || h });
+        if (!el2 || !chartRef.current || !containerRef.current) return;
+        const tw = el2.clientWidth;
+        const totalH = containerRef.current.clientHeight || mainH;
+        const oH = hasOsc ? Math.min(140, Math.floor(totalH * 0.28)) : 0;
+        const mH = Math.max(200, totalH - oH);
+        chartRef.current.applyOptions({ width: tw, height: mH });
+        oscChartRef.current?.applyOptions({ width: tw, height: oH });
       });
-      observer.observe(el2);
+      observer.observe(containerRef.current ?? el2);
     });
 
     return () => {
       observer?.disconnect();
       chartRef.current?.remove();
+      oscChartRef.current?.remove();
       chartRef.current = null;
+      oscChartRef.current = null;
       seriesRef.current = null;
+      volumeSeriesRef.current = null;
+      ma20SeriesRef.current = null;
+      ma50SeriesRef.current = null;
+      structureKeyRef.current = "";
     };
-  }, [candles, showMA20, showMA50, chartType, customIndicators]);
+  }, [candles, showMA20, showMA50, chartType, overlayIndicators, oscillatorIndicators]);
 
   // ── Cursor style ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -387,7 +554,7 @@ export default function ChartWidget({
     canvas.style.cursor = map[activeTool] ?? "default";
   }, [activeTool]);
 
-  if (candles.length === 0) {
+  if (rawCandles.length === 0) {
     return (
       <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "#94a3b8", fontSize: 13, background: "#fafafa" }}>
         Loading chart…
@@ -395,5 +562,22 @@ export default function ChartWidget({
     );
   }
 
-  return <div ref={containerRef} style={{ position: "absolute", inset: 0 }} />;
+  const hasOsc = oscillatorIndicators.length > 0;
+
+  return (
+    <div ref={containerRef} style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column" }}>
+      <div ref={mainPaneRef} style={{ flex: hasOsc ? "1 1 auto" : "1 1 100%", minHeight: 0 }} />
+      {hasOsc && (
+        <div
+          ref={oscPaneRef}
+          style={{
+            flex: "0 0 auto",
+            height: 120,
+            borderTop: "1px solid #eef0f4",
+            background: "#fafafa",
+          }}
+        />
+      )}
+    </div>
+  );
 }

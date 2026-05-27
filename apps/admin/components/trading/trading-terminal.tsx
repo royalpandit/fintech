@@ -1,37 +1,33 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import ChartWidget, { evalCustom } from "./chart-widget";
 import type { ChartType, CustomIndicator } from "./chart-widget";
 import type { Candle, CandleInterval } from "@/lib/angelone";
-import { MARKET_INSTRUMENTS } from "@/lib/angelone";
+import { MARKET_INSTRUMENTS, resolveMarketExchange } from "@/lib/angelone";
+import OptionChainPanel from "./option-chain-panel";
+import type { WatchlistItem } from "./trading-terminal-types";
+import {
+  DEFAULT_TIMEFRAME,
+  maxDaysForTimeframe,
+  type IndicatorDefinition,
+  type TimeframeOption,
+} from "./chart-config";
+import { applyTimeframePipeline } from "./chart-transforms";
+import {
+  ChartTypeMenu,
+  IndicatorsModal,
+  TimeframeMenu,
+  chartTypeLabel,
+  indicatorToCustom,
+  timeframeLabel,
+} from "./chart-menus";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+export type { WatchlistItem };
 
-interface WatchlistItem {
-  display: string;
-  tradingSymbol: string;
-  token: string;
-  exchange: string;
-  type: "INDEX" | "EQ" | "FO" | string;
-  ltp?: number;
-  change?: number;
-  changePct?: number;
-  open?: number;
-  high?: number;
-  low?: number;
-}
+type CenterTab = "chart" | "overview" | "option-chain";
 
 const PRESET_TOKENS = new Set<string>(MARKET_INSTRUMENTS.map(m => m.token));
-
-const INTERVALS: { label: string; interval: CandleInterval }[] = [
-  { label: "1m",  interval: "ONE_MINUTE"     },
-  { label: "5m",  interval: "FIVE_MINUTE"    },
-  { label: "15m", interval: "FIFTEEN_MINUTE" },
-  { label: "30m", interval: "THIRTY_MINUTE"  },
-  { label: "1h",  interval: "ONE_HOUR"       },
-  { label: "1D",  interval: "ONE_DAY"        },
-];
 
 const PERIODS = [
   { label: "1D",  days: 1   },
@@ -40,18 +36,8 @@ const PERIODS = [
   { label: "3M",  days: 90  },
   { label: "6M",  days: 180 },
   { label: "1Y",  days: 365 },
+  { label: "All", days: 2000 },
 ];
-
-const INTERVAL_MAX_DAYS: Partial<Record<CandleInterval, number>> = {
-  ONE_MINUTE:     30,
-  THREE_MINUTE:   60,
-  FIVE_MINUTE:    100,
-  TEN_MINUTE:     100,
-  FIFTEEN_MINUTE: 200,
-  THIRTY_MINUTE:  200,
-  ONE_HOUR:       400,
-  ONE_DAY:        2000,
-};
 
 const DEFAULT_WATCHLIST: WatchlistItem[] = [
   { display: "NIFTY 50",   tradingSymbol: "NIFTY 50",   token: "99926000", exchange: "NSE", type: "INDEX" },
@@ -292,28 +278,49 @@ function ExchangeBadge({ exchange, type }: { exchange: string; type: string }) {
 }
 
 function SearchBar({ onSelect }: { onSelect: (item: WatchlistItem) => void }) {
-  const [q,       setQ]       = useState("");
-  const [results, setResults] = useState<WatchlistItem[]>([]);
-  const [open,    setOpen]    = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [q,           setQ]           = useState("");
+  const [results,     setResults]     = useState<WatchlistItem[]>([]);
+  const [open,        setOpen]        = useState(false);
+  const [loading,     setLoading]     = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const search = useCallback(async (query: string) => {
-    if (query.length < 1) { setResults([]); return; }
+    if (query.length < 1) { setResults([]); setSearchError(null); return; }
     setLoading(true);
+    setSearchError(null);
     try {
-      const res  = await fetch(`/api/v1/market/search?q=${encodeURIComponent(query)}&exchange=ALL`);
+      const res  = await fetch(`/api/v1/market/search?q=${encodeURIComponent(query)}&exchange=ALL`, { cache: "no-store" });
       const json = await res.json();
       if (json.ok) {
-        setResults(json.data.map((d: { symbolName: string; tradingSymbol: string; token: string; exchange: string; instrumentType: string }) => ({
-          display:       d.symbolName || d.tradingSymbol,
-          tradingSymbol: d.tradingSymbol,
-          token:         d.token,
-          exchange:      d.exchange,
-          type:          d.instrumentType || "EQ",
-        })));
+        const mapped: WatchlistItem[] = (json.data ?? []).map((d: {
+          symbolName: string; tradingSymbol: string; token: string; exchange: string; instrumentType: string;
+        }) => {
+          const type = d.instrumentType || "EQ";
+          const exchange = resolveMarketExchange({
+            exchange: d.exchange,
+            symboltoken: d.token,
+            tradingSymbol: d.tradingSymbol,
+            instrumentType: type,
+          });
+          return {
+            display:       (d.symbolName || d.tradingSymbol).replace(/-EQ$/i, ""),
+            tradingSymbol: d.tradingSymbol,
+            token:         d.token,
+            exchange,
+            type,
+          };
+        });
+        setResults(mapped);
+        setSearchError(mapped.length ? null : (json.message ?? `No results for "${query}"`));
+      } else {
+        setResults([]);
+        setSearchError(json.error ?? "Search failed");
       }
-    } catch { /* ignore */ }
+    } catch {
+      setResults([]);
+      setSearchError("Search request failed");
+    }
     finally { setLoading(false); }
   }, []);
 
@@ -363,10 +370,75 @@ function SearchBar({ onSelect }: { onSelect: (item: WatchlistItem) => void }) {
       )}
       {open && q.length > 0 && results.length === 0 && !loading && (
         <div onMouseDown={e => e.preventDefault()}
-          style={{ position: "absolute", top: "calc(100% - 2px)", left: 10, right: 10, background: "#fff", border: "1px solid #eef0f4", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 50, padding: "14px 12px", fontSize: 12, color: "#94a3b8", textAlign: "center" }}>
-          No results for &ldquo;{q}&rdquo;
+          style={{ position: "absolute", top: "calc(100% - 2px)", left: 10, right: 10, background: "#fff", border: "1px solid #eef0f4", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 50, padding: "14px 12px", fontSize: 12, color: searchError ? "#dc2626" : "#94a3b8", textAlign: "center" }}>
+          {searchError ?? `No results for "${q}"`}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Overview / Option chain panels ────────────────────────────────────────────
+
+function OverviewPanel({
+  symbol,
+  candles,
+  loading,
+}: {
+  symbol: WatchlistItem;
+  candles: Candle[];
+  loading: boolean;
+}) {
+  const last = candles[candles.length - 1];
+  const first = candles[0];
+  const dayChange =
+    first && last ? ((last.close - first.open) / first.open) * 100 : null;
+  const up = (symbol.changePct ?? dayChange ?? 0) >= 0;
+
+  const stats = [
+    { label: "LTP", value: symbol.ltp !== undefined ? fmtP(symbol.ltp) : "—" },
+    { label: "Open", value: symbol.open !== undefined ? fmtP(symbol.open) : last ? fmtP(last.open) : "—" },
+    { label: "High", value: symbol.high !== undefined ? fmtP(symbol.high) : last ? fmtP(last.high) : "—" },
+    { label: "Low", value: symbol.low !== undefined ? fmtP(symbol.low) : last ? fmtP(last.low) : "—" },
+    { label: "Prev. Close", value: last ? fmtP(last.close) : "—" },
+    { label: "Volume", value: last ? Number(last.volume).toLocaleString("en-IN") : "—" },
+    { label: "Change", value: symbol.change !== undefined ? fmtP(symbol.change) : "—" },
+    { label: "Change %", value: symbol.changePct !== undefined ? fmtPct(symbol.changePct) : dayChange !== null ? fmtPct(dayChange) : "—" },
+  ];
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
+      <div style={{ marginBottom: 20 }}>
+        <h3 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>{symbol.display}</h3>
+        <div style={{ fontSize: 12, color: "#64748b" }}>
+          {symbol.exchange} · {symbol.type} · Token {symbol.token}
+        </div>
+        {symbol.ltp !== undefined && (
+          <div style={{ marginTop: 12, display: "flex", alignItems: "baseline", gap: 10 }}>
+            <span style={{ fontSize: 28, fontWeight: 800, color: "#0f172a" }}>{fmtP(symbol.ltp)}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: up ? "#16a34a" : "#dc2626" }}>
+              {up ? "▲" : "▼"} {fmtPct(symbol.changePct ?? dayChange ?? undefined)}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {loading ? (
+        <p style={{ color: "#94a3b8", fontSize: 13 }}>Loading overview…</p>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12 }}>
+          {stats.map(s => (
+            <div key={s.label} style={{ background: "#f8fafc", border: "1px solid #eef0f4", borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>{s.label}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p style={{ marginTop: 24, fontSize: 11, color: "#94a3b8", lineHeight: 1.6 }}>
+        Live quote via Angel One SmartAPI. Select a symbol from search to update chart, overview, and option chain together.
+      </p>
     </div>
   );
 }
@@ -513,30 +585,33 @@ export default function TradingTerminal() {
 function TradingTerminalInner() {
   const [watchlist,       setWatchlist]       = useState<WatchlistItem[]>(DEFAULT_WATCHLIST);
   const [selected,        setSelected]        = useState<WatchlistItem>(DEFAULT_WATCHLIST[0]);
-  const [interval,        setIntervalCfg]     = useState(INTERVALS[5]); // 1D default
-  const [period,          setPeriod]          = useState(PERIODS[5]);   // 1Y default
+  const [timeframe,       setTimeframe]       = useState<TimeframeOption>(DEFAULT_TIMEFRAME);
+  const [period,          setPeriod]          = useState(PERIODS[4]); // 6M default
+  const [showTfMenu,      setShowTfMenu]      = useState(false);
+  const [showChartMenu,   setShowChartMenu]   = useState(false);
+  const [showIndModal,    setShowIndModal]    = useState(false);
+  const [activeIndicatorIds, setActiveIndicatorIds] = useState<Set<string>>(new Set());
 
-  const changeInterval = useCallback((iv: typeof INTERVALS[number]) => {
-    setIntervalCfg(iv);
-    const max = INTERVAL_MAX_DAYS[iv.interval] ?? 60;
+  const changeTimeframe = useCallback((tf: TimeframeOption) => {
+    setTimeframe(tf);
+    const max = maxDaysForTimeframe(tf);
     setPeriod(prev => prev.days <= max ? prev : PERIODS.slice().reverse().find(p => p.days <= max) ?? PERIODS[0]);
   }, []);
   const [candles,         setCandles]         = useState<Candle[]>([]);
   const [candleLoading,   setCandleLoading]   = useState(true);
-  const [tab,             setTab]             = useState<"chart" | "orders">("chart");
+  const [centerTab,       setCenterTab]       = useState<CenterTab>("chart");
   const [showMA20,        setShowMA20]        = useState(true);
   const [showMA50,        setShowMA50]        = useState(true);
   const [orders,          setOrders]          = useState<Record<string, unknown>[]>([]);
   const [activeTool,      setActiveTool]      = useState("cursor");
   const [chartType,       setChartType]       = useState<ChartType>("candle");
   const [screenshotCount, setScreenshotCount] = useState(0);
-  const [showIndicators,  setShowIndicators]  = useState(false);
   const [customIndicators,setCustomIndicators]= useState<CustomIndicator[]>([]);
   const [showAddIndicator,setShowAddIndicator]= useState(false);
   const [candleError,     setCandleError]     = useState<string | null>(null);
   const [liveTick,        setLiveTick]        = useState<{ price: number; time: number; seq: number } | null>(null);
 
-  const indicatorsRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
   // Stable ref for watchlist — avoids restarting the 10s quote poll on every watchlist change
   const watchlistRef  = useRef(watchlist);
   useEffect(() => { watchlistRef.current = watchlist; }, [watchlist]);
@@ -547,144 +622,182 @@ function TradingTerminalInner() {
     return () => document.body.classList.remove("terminal-active");
   }, []);
 
-  // Close indicators dropdown on outside click
+  // Close toolbar menus on outside click
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (indicatorsRef.current && !indicatorsRef.current.contains(e.target as Node))
-        setShowIndicators(false);
+      if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
+        setShowTfMenu(false);
+        setShowChartMenu(false);
+      }
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  // ── 1-second live tick for the selected symbol ───────────────────────────
+  const toggleCatalogIndicator = useCallback((def: IndicatorDefinition) => {
+    setActiveIndicatorIds(prev => {
+      const next = new Set(prev);
+      if (next.has(def.id)) {
+        next.delete(def.id);
+        setCustomIndicators(ci => ci.filter(c => c.id !== def.id));
+      } else {
+        next.add(def.id);
+        setCustomIndicators(ci => [...ci.filter(c => c.id !== def.id), indicatorToCustom(def)]);
+      }
+      return next;
+    });
+  }, []);
+
+  // ── Single live quote poll (watchlist + chart tick) — avoids rate limits ──
   const selectedRef = useRef(selected);
+  const centerTabRef = useRef(centerTab);
+  const liveSeqRef = useRef(0);
   useEffect(() => { selectedRef.current = selected; }, [selected]);
+  useEffect(() => { centerTabRef.current = centerTab; }, [centerTab]);
 
-  useEffect(() => {
+  const candleFloor = useCallback(() => {
     const INTERVAL_MS: Partial<Record<CandleInterval, number>> = {
-      ONE_MINUTE:     60_000,
-      THREE_MINUTE:   180_000,
-      FIVE_MINUTE:    300_000,
-      TEN_MINUTE:     600_000,
-      FIFTEEN_MINUTE: 900_000,
-      THIRTY_MINUTE:  1_800_000,
-      ONE_HOUR:       3_600_000,
-      ONE_DAY:        86_400_000,
+      ONE_MINUTE: 60_000, THREE_MINUTE: 180_000, FIVE_MINUTE: 300_000,
+      TEN_MINUTE: 600_000, FIFTEEN_MINUTE: 900_000, THIRTY_MINUTE: 1_800_000,
+      ONE_HOUR: 3_600_000, ONE_DAY: 86_400_000,
     };
+    const ms = INTERVAL_MS[timeframe.fetchInterval] ?? 60_000;
+    const bucketMs = ms * (timeframe.aggregate ?? 1);
+    const now = Date.now();
+    if (bucketMs < 86_400_000) return Math.floor(now / bucketMs) * (bucketMs / 1000);
+    const DAY_OPEN_OFFSET_S = 3 * 3600 + 45 * 60;
+    const dayStartUTC = Math.floor(now / 86_400_000) * 86_400 + DAY_OPEN_OFFSET_S;
+    return now / 1000 >= dayStartUTC ? dayStartUTC : dayStartUTC - 86_400;
+  }, [timeframe.fetchInterval, timeframe.aggregate]);
 
-    function candleFloor(): number {
-      const ms  = INTERVAL_MS[interval.interval] ?? 60_000;
-      const now = Date.now();
-      // For sub-day intervals: floor to interval boundary in UTC
-      if (ms < 86_400_000) return Math.floor(now / ms) * (ms / 1000);
-      // For 1D: market opens at 09:15 IST (03:45 UTC).
-      // Floor to the most recent 03:45 UTC boundary so the time matches the series.
-      const DAY_OPEN_OFFSET_S = 3 * 3600 + 45 * 60; // 03:45 UTC in seconds
-      const dayStartUTC = Math.floor(now / 86_400_000) * 86_400 + DAY_OPEN_OFFSET_S;
-      return now / 1000 >= dayStartUTC ? dayStartUTC : dayStartUTC - 86_400;
-    }
-
-    let seq = 0;
-
-    async function tick() {
-      const s = selectedRef.current;
-      seq += 1;
-      const currentSeq = seq;
-      try {
-        const isPreset = PRESET_TOKENS.has(s.token);
-        const url = isPreset
-          ? `/api/v1/market/live`
-          : `/api/v1/market/live?extra=${s.token}:${s.exchange}:${encodeURIComponent(s.tradingSymbol)}`;
-        const res  = await fetch(url, { cache: "no-store" });
-        const json = await res.json();
-        if (!json.ok) return;
-        const quote = (json.data as Array<{ symbolToken: string; ltp: number; open: number; high: number; low: number; percentChange: number; netChange: number }>)
-          .find(q => q.symbolToken === s.token);
-        if (!quote) return;
-        setSelected(prev => ({
-          ...prev,
-          ltp: quote.ltp, open: quote.open, high: quote.high, low: quote.low,
-          change: quote.netChange, changePct: quote.percentChange,
-        }));
-        setLiveTick({ price: quote.ltp, time: candleFloor(), seq: currentSeq });
-      } catch { /* ignore network blips */ }
-    }
-
-    tick();
-    const id = setInterval(tick, 2_000); // 2s — live feel without hammering the API
-    return () => clearInterval(id);
-  }, [selected.token, selected.exchange, selected.tradingSymbol, interval.interval]);
-
-  // ── Live quote poll (5s) — keeps watchlist prices fresh ──────────────────
-  // Stable callback: reads watchlist via ref — no dependency on watchlist state
   const fetchQuotes = useCallback(async () => {
     try {
       const extras = watchlistRef.current
         .filter(w => !PRESET_TOKENS.has(w.token))
-        .map(w => `${w.token}:${w.exchange}:${encodeURIComponent(w.tradingSymbol)}`);
+        .map(w =>
+          `${w.token}:${w.exchange}:${encodeURIComponent(w.tradingSymbol)}:${encodeURIComponent(w.type)}`
+        );
       const url = extras.length
         ? `/api/v1/market/live?extra=${extras.join(",")}`
         : "/api/v1/market/live";
       const res  = await fetch(url, { cache: "no-store" });
       const json = await res.json();
+      if (json.rateLimited) {
+        setCandleError(prev =>
+          prev?.includes("rate limit") ? prev : "Angel One rate limit — live updates paused briefly."
+        );
+        return;
+      }
       if (!json.ok) return;
-      const quoteMap = new Map<string, { ltp: number; open: number; high: number; low: number; percentChange: number; netChange: number }>(
-        json.data.map((q: { symbolToken: string; ltp: number; open: number; high: number; low: number; percentChange: number; netChange: number }) => [q.symbolToken, q])
+
+      const quoteMap = new Map<string, {
+        ltp: number; open: number; high: number; low: number;
+        percentChange: number; netChange: number;
+      }>(
+        json.data.map((q: {
+          symbolToken: string; ltp: number; open: number; high: number; low: number;
+          percentChange: number; netChange: number;
+        }) => [q.symbolToken, q])
       );
+
       setWatchlist(prev => prev.map(item => {
         const q = quoteMap.get(item.token);
         return q ? { ...item, ltp: q.ltp, open: q.open, high: q.high, low: q.low, change: q.netChange, changePct: q.percentChange } : item;
       }));
-      setSelected(prev => {
-        const q = quoteMap.get(prev.token);
-        return q ? { ...prev, ltp: q.ltp, open: q.open, high: q.high, low: q.low, change: q.netChange, changePct: q.percentChange } : prev;
-      });
+
+      const sel = selectedRef.current;
+      const q = quoteMap.get(sel.token);
+      if (q) {
+        liveSeqRef.current += 1;
+        setSelected(prev => ({
+          ...prev,
+          ltp: q.ltp, open: q.open, high: q.high, low: q.low,
+          change: q.netChange, changePct: q.percentChange,
+        }));
+        setLiveTick({ price: q.ltp, time: candleFloor(), seq: liveSeqRef.current });
+        setCandleError(prev =>
+          prev?.includes("rate limit") ? null : prev
+        );
+
+        if (centerTabRef.current === "chart") {
+          setCandles(prev => {
+            if (!prev.length) return prev;
+            const last = prev[prev.length - 1];
+            const close = q.ltp;
+            return [
+              ...prev.slice(0, -1),
+              {
+                ...last,
+                close,
+                high: Math.max(last.high, close),
+                low: Math.min(last.low, close),
+              },
+            ];
+          });
+        }
+      }
     } catch { /* ignore */ }
-  }, []); // stable — reads watchlist via ref
+  }, [candleFloor]);
 
   useEffect(() => {
     fetchQuotes();
-    const id = setInterval(fetchQuotes, 5_000);
+    const ms = centerTab === "chart" ? 4_000 : 8_000;
+    const id = setInterval(fetchQuotes, ms);
     return () => clearInterval(id);
-  }, [fetchQuotes]);
+  }, [fetchQuotes, centerTab]);
 
   // Reset live tick on symbol / interval change
-  useEffect(() => { setLiveTick(null); }, [selected.token, interval.interval]);
+  useEffect(() => { setLiveTick(null); }, [selected.token, timeframe.id]);
 
-  // ── Candle fetch ──────────────────────────────────────────────────────────
-  const fetchCandles = useCallback(async () => {
-    setCandleLoading(true);
-    setCandles([]);
-    setCandleError(null);
-    const url = `/api/v1/market/candles?token=${selected.token}&exchange=${selected.exchange}&interval=${interval.interval}&days=${period.days}`;
-    console.log("[fetchCandles] →", url);
+  // ── Candle fetch (silent refresh keeps chart visible) ─────────────────────
+  const fetchCandles = useCallback(async (silent = false) => {
+    if (!silent) {
+      setCandleLoading(true);
+      setCandles([]);
+      setCandleError(null);
+    }
+    const url =
+      `/api/v1/market/candles?token=${selected.token}` +
+      `&exchange=${encodeURIComponent(selected.exchange)}` +
+      `&tradingSymbol=${encodeURIComponent(selected.tradingSymbol)}` +
+      `&instrumentType=${encodeURIComponent(selected.type)}` +
+      `&interval=${timeframe.fetchInterval}&days=${period.days}`;
     try {
       const res  = await fetch(url, { cache: "no-store" });
       const json = await res.json();
-      console.log("[fetchCandles] ←", json);
-      if (json.ok) setCandles(json.data ?? []);
-      else setCandleError(json.error ?? "Failed to load chart data");
+      if (json.ok && Array.isArray(json.data)) {
+        setCandles(json.data);
+        if (!silent) setCandleError(null);
+      } else if (!silent) {
+        setCandleError(json.error ?? "Failed to load chart data");
+      }
     } catch (e) {
-      console.error("[fetchCandles] network error", e);
-      setCandleError(e instanceof Error ? e.message : "Network error");
+      if (!silent) {
+        setCandleError(e instanceof Error ? e.message : "Network error");
+      }
+    } finally {
+      if (!silent) setCandleLoading(false);
     }
-    finally { setCandleLoading(false); }
-  }, [selected.token, selected.exchange, interval, period]);
+  }, [selected.token, selected.exchange, selected.tradingSymbol, selected.type, timeframe.fetchInterval, period]);
 
-  useEffect(() => { fetchCandles(); }, [fetchCandles]);
+  const displayCandles = useMemo(
+    () => applyTimeframePipeline(candles, timeframe.aggregate),
+    [candles, timeframe.aggregate],
+  );
 
-  // ── Intraday candle refetch: new candles form during the session ──────────
+  useEffect(() => { fetchCandles(false); }, [selected.token, selected.exchange, selected.tradingSymbol, selected.type, timeframe.fetchInterval, period.days]);
+
+  // ── Intraday silent candle refresh (no loading flash) ─────────────────────
   useEffect(() => {
-    const intraday = ["ONE_MINUTE","FIVE_MINUTE","FIFTEEN_MINUTE","THIRTY_MINUTE","ONE_HOUR"];
-    if (!intraday.includes(interval.interval)) return;
+    const intraday: CandleInterval[] = ["ONE_MINUTE","THREE_MINUTE","FIVE_MINUTE","TEN_MINUTE","FIFTEEN_MINUTE","THIRTY_MINUTE","ONE_HOUR"];
+    if (!intraday.includes(timeframe.fetchInterval)) return;
     const refetchMs =
-      interval.interval === "ONE_MINUTE"    ? 60_000  :
-      interval.interval === "FIVE_MINUTE"   ? 120_000 :
-      interval.interval === "FIFTEEN_MINUTE"? 180_000 : 300_000;
-    const id = setInterval(fetchCandles, refetchMs);
+      timeframe.fetchInterval === "ONE_MINUTE"     ? 120_000 :
+      timeframe.fetchInterval === "FIVE_MINUTE"    ? 180_000 :
+      timeframe.fetchInterval === "FIFTEEN_MINUTE" ? 300_000 : 420_000;
+    const id = setInterval(() => fetchCandles(true), refetchMs);
     return () => clearInterval(id);
-  }, [interval.interval, fetchCandles]);
+  }, [timeframe.fetchInterval, fetchCandles]);
 
   // ── Orders tab ────────────────────────────────────────────────────────────
   const fetchOrders = useCallback(async () => {
@@ -695,15 +808,40 @@ function TradingTerminalInner() {
     } catch { /* ignore */ }
   }, []);
 
-  useEffect(() => { if (tab === "orders") fetchOrders(); }, [tab, fetchOrders]);
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
+
+  const normalizeSelection = (item: WatchlistItem): WatchlistItem => ({
+    ...item,
+    exchange: resolveMarketExchange({
+      exchange: item.exchange,
+      symboltoken: item.token,
+      tradingSymbol: item.tradingSymbol,
+      instrumentType: item.type,
+    }),
+  });
+
+  const openOptionChart = useCallback((item: WatchlistItem) => {
+    const normalized = normalizeSelection(item);
+    setSelected(normalized);
+    setCenterTab("chart");
+    setCandleError(null);
+  }, []);
 
   const addToWatchlist = (item: WatchlistItem) => {
-    if (watchlist.some(w => w.token === item.token)) { setSelected(item); return; }
-    setWatchlist(prev => [...prev, item]);
-    setSelected(item);
+    const normalized = normalizeSelection(item);
+    if (watchlist.some(w => w.token === normalized.token && w.exchange === normalized.exchange)) {
+      setSelected(normalized);
+      setCenterTab("chart");
+      setCandleError(null);
+      return;
+    }
+    setWatchlist(prev => [...prev, normalized]);
+    setSelected(normalized);
+    setCenterTab("chart");
+    setCandleError(null);
   };
 
-  const last = candles[candles.length - 1];
+  const last = displayCandles[displayCandles.length - 1] ?? candles[candles.length - 1];
   const up   = (selected.changePct ?? 0) >= 0;
 
   return (
@@ -722,7 +860,7 @@ function TradingTerminalInner() {
             const active = item.token === selected.token;
             const pos    = (item.changePct ?? 0) >= 0;
             return (
-              <button key={item.token} type="button" onClick={() => setSelected(item)}
+              <button key={item.token} type="button" onClick={() => { setSelected(normalizeSelection(item)); setCandleError(null); }}
                 style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", padding: "9px 14px", border: "none",
                   background: active ? "rgba(14,165,233,0.07)" : "transparent", cursor: "pointer",
                   borderLeft: active ? "3px solid #0ea5e9" : "3px solid transparent",
@@ -769,7 +907,7 @@ function TradingTerminalInner() {
         <div style={{ background: "#fff", borderBottom: "1px solid #eef0f4", padding: "8px 16px", display: "flex", alignItems: "center", gap: 14, flexShrink: 0, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
             <span style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{selected.display}</span>
-            <span style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, background: "#f1f5f9", padding: "1px 6px", borderRadius: 4 }}>{selected.exchange} · {selected.type}</span>
+            <span style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, background: "#f1f5f9", padding: "1px 6px", borderRadius: 4 }}>{selected.exchange} · {timeframeLabel(timeframe)}</span>
           </div>
           {selected.ltp !== undefined && (
             <>
@@ -794,114 +932,90 @@ function TradingTerminalInner() {
 
         {/* Toolbar */}
         <div style={{ background: "#fff", borderBottom: "1px solid #eef0f4", padding: "0 16px", display: "flex", alignItems: "center", flexShrink: 0 }}>
-          {(["chart", "orders"] as const).map(t => (
-            <button key={t} type="button" onClick={() => setTab(t)}
+          {([
+            { id: "chart" as const, label: "Chart" },
+            { id: "overview" as const, label: "Overview" },
+            { id: "option-chain" as const, label: "Option Chain" },
+          ]).map(t => (
+            <button key={t.id} type="button" onClick={() => setCenterTab(t.id)}
               style={{ padding: "9px 14px", border: "none", background: "transparent", fontWeight: 700, fontSize: 12, cursor: "pointer",
-                color: tab === t ? "#0ea5e9" : "#64748b",
-                borderBottom: tab === t ? "2px solid #0ea5e9" : "2px solid transparent",
-                textTransform: "capitalize", letterSpacing: 0.3, whiteSpace: "nowrap" }}>
-              {t === "orders" ? "Order Book" : "Chart"}
+                color: centerTab === t.id ? "#0ea5e9" : "#64748b",
+                borderBottom: centerTab === t.id ? "2px solid #0ea5e9" : "2px solid transparent",
+                letterSpacing: 0.3, whiteSpace: "nowrap" }}>
+              {t.label}
             </button>
           ))}
 
-          {tab === "chart" && (
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 3 }}>
-              {/* Interval pills */}
-              {INTERVALS.map(iv => (
-                <button key={iv.label} type="button" onClick={() => changeInterval(iv)}
-                  style={{ padding: "3px 8px", border: "none", borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                    background: interval.label === iv.label ? "rgba(14,165,233,0.12)" : "transparent",
-                    color: interval.label === iv.label ? "#0ea5e9" : "#94a3b8" }}>
-                  {iv.label}
-                </button>
-              ))}
-
-              <div style={{ width: 1, height: 16, background: "#eef0f4", margin: "0 4px" }} />
-
-              {/* Indicators dropdown */}
-              <div style={{ position: "relative" }} ref={indicatorsRef}>
-                <button type="button" onClick={() => setShowIndicators(v => !v)}
-                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", border: "1px solid #eef0f4", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                    background: showIndicators ? "#f0f9ff" : "#fff", color: "#0f172a" }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                  Indicators {customIndicators.length > 0 && <span style={{ background: "#0ea5e9", color: "#fff", borderRadius: "50%", width: 14, height: 14, fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{customIndicators.length}</span>}
+          {centerTab === "chart" && (
+            <div ref={toolbarRef} className="tv-toolbar" style={{ marginLeft: "auto" }}>
+              {/* Timeframe */}
+              <div className="tv-toolbar-item">
+                <button
+                  type="button"
+                  className={`tv-toolbar-btn ${showTfMenu ? "open" : ""}`}
+                  onClick={() => { setShowTfMenu(v => !v); setShowChartMenu(false); }}
+                >
+                  {timeframeLabel(timeframe)}
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
+                <TimeframeMenu
+                  value={timeframe}
+                  onChange={changeTimeframe}
+                  open={showTfMenu}
+                  onClose={() => setShowTfMenu(false)}
+                />
+              </div>
 
-                {showIndicators && (
-                  <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, background: "#fff", border: "1px solid #eef0f4", borderRadius: 10, padding: "12px", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 50, minWidth: 220 }}>
+              {/* Chart type */}
+              <div className="tv-toolbar-item">
+                <button
+                  type="button"
+                  className={`tv-toolbar-btn ${showChartMenu ? "open" : ""}`}
+                  onClick={() => { setShowChartMenu(v => !v); setShowTfMenu(false); }}
+                  title={chartTypeLabel(chartType)}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" stroke="currentColor" strokeWidth="1.5" fill="none"><rect x="2" y="4" width="3" height="5"/><line x1="3.5" y1="1" x2="3.5" y2="4"/><rect x="9" y="5" width="3" height="4" fill="currentColor"/></svg>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <ChartTypeMenu
+                  value={chartType}
+                  onChange={setChartType}
+                  open={showChartMenu}
+                  onClose={() => setShowChartMenu(false)}
+                />
+              </div>
 
-                    {/* Built-in MAs */}
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 8 }}>Moving Averages</div>
-                    {[
-                      { label: "MA 20", active: showMA20, toggle: () => setShowMA20(v => !v), color: "#f59e0b" },
-                      { label: "MA 50", active: showMA50, toggle: () => setShowMA50(v => !v), color: "#8b5cf6" },
-                    ].map(ind => (
-                      <button key={ind.label} type="button" onClick={ind.toggle}
-                        style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "7px 4px", border: "none", background: "transparent", cursor: "pointer", textAlign: "left", borderRadius: 6 }}>
-                        <span style={{ width: 24, height: 3, borderRadius: 2, background: ind.active ? ind.color : "#e2e8f0", flexShrink: 0 }} />
-                        <span style={{ fontSize: 13, fontWeight: 600, color: "#0f172a", flex: 1 }}>{ind.label}</span>
-                        <span style={{ width: 16, height: 16, borderRadius: 4, border: `2px solid ${ind.active ? ind.color : "#d1d5db"}`, background: ind.active ? ind.color : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          {ind.active && <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#fff" strokeWidth="2"><polyline points="1.5 5 4 7.5 8.5 2"/></svg>}
-                        </span>
-                      </button>
-                    ))}
+              <div className="tv-toolbar-sep" />
 
-                    {/* Custom indicators list */}
-                    {customIndicators.length > 0 && (
-                      <>
-                        <div style={{ borderTop: "1px solid #f1f5f9", margin: "10px 0 8px", paddingTop: 8, fontSize: 10, fontWeight: 700, color: "#64748b", letterSpacing: 0.6, textTransform: "uppercase" }}>Custom</div>
-                        {customIndicators.map(ci => (
-                          <div key={ci.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 4px", borderRadius: 6 }}>
-                            <span style={{ width: 10, height: 10, borderRadius: "50%", background: ci.color, flexShrink: 0 }} />
-                            <span style={{ fontSize: 12, fontWeight: 600, color: "#0f172a", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ci.name}</span>
-                            <button type="button" onClick={() => setCustomIndicators(prev => prev.filter(c => c.id !== ci.id))}
-                              style={{ border: "none", background: "transparent", color: "#94a3b8", cursor: "pointer", fontSize: 15, lineHeight: 1, padding: "0 2px", flexShrink: 0 }}>×</button>
-                          </div>
-                        ))}
-                      </>
-                    )}
-
-                    {/* Add custom indicator */}
-                    <button type="button"
-                      onClick={() => { setShowIndicators(false); setShowAddIndicator(true); }}
-                      style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", marginTop: 10, padding: "8px 10px", border: "1px dashed #0ea5e9", borderRadius: 7, background: "rgba(14,165,233,0.04)", color: "#0ea5e9", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                      Add Custom Indicator
-                    </button>
-                  </div>
+              {/* Indicators */}
+              <button
+                type="button"
+                className="tv-toolbar-btn tv-ind-btn"
+                onClick={() => setShowIndModal(true)}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Indicators
+                {(customIndicators.length > 0 || showMA20 || showMA50) && (
+                  <span className="tv-badge">{customIndicators.length + (showMA20 ? 1 : 0) + (showMA50 ? 1 : 0)}</span>
                 )}
-              </div>
+              </button>
 
-              {/* Chart type icons */}
-              <div style={{ display: "flex", gap: 2, marginLeft: 4 }}>
-                {([
-                  { id: "candle" as ChartType, title: "Candlestick", icon: <svg width="13" height="13" viewBox="0 0 14 14" stroke="currentColor" strokeWidth="1.5" fill="none"><rect x="2" y="4" width="3" height="5" rx="0.5"/><line x1="3.5" y1="1" x2="3.5" y2="4"/><line x1="3.5" y1="9" x2="3.5" y2="13"/><rect x="9" y="5" width="3" height="4" rx="0.5" fill="currentColor"/><line x1="10.5" y1="2" x2="10.5" y2="5"/><line x1="10.5" y1="9" x2="10.5" y2="12"/></svg> },
-                  { id: "bar"    as ChartType, title: "Bar chart",    icon: <svg width="13" height="13" viewBox="0 0 14 14" stroke="currentColor" strokeWidth="1.5" fill="none"><line x1="3" y1="1" x2="3" y2="13"/><line x1="1" y1="5" x2="3" y2="5"/><line x1="3" y1="9" x2="5" y2="9"/><line x1="10" y1="2" x2="10" y2="14"/><line x1="8" y1="6" x2="10" y2="6"/><line x1="10" y1="10" x2="12" y2="10"/></svg> },
-                  { id: "line"   as ChartType, title: "Line chart",   icon: <svg width="13" height="13" viewBox="0 0 14 14" stroke="currentColor" strokeWidth="1.5" fill="none"><polyline points="1,11 4,6 7,8 10,3 13,5"/></svg> },
-                ] as { id: ChartType; title: string; icon: React.ReactNode }[]).map(ct => (
-                  <button key={ct.id} type="button" title={ct.title} onClick={() => setChartType(ct.id)}
-                    style={{ width: 26, height: 26, border: "1px solid", borderRadius: 5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                      borderColor: chartType === ct.id ? "#0ea5e9" : "#eef0f4",
-                      background: chartType === ct.id ? "rgba(14,165,233,0.1)" : "#fff",
-                      color: chartType === ct.id ? "#0ea5e9" : "#64748b" }}>
-                    {ct.icon}
-                  </button>
-                ))}
-              </div>
+              {/* Quick MA toggles */}
+              <button type="button" className={`tv-ma-chip ${showMA20 ? "on" : ""}`} onClick={() => setShowMA20(v => !v)} title="MA 20">MA20</button>
+              <button type="button" className={`tv-ma-chip ${showMA50 ? "on" : ""}`} onClick={() => setShowMA50(v => !v)} title="MA 50">MA50</button>
 
-              {/* Screenshot */}
-              <button type="button" title="Save chart as PNG" onClick={() => setScreenshotCount(c => c + 1)}
-                style={{ width: 26, height: 26, border: "1px solid #eef0f4", borderRadius: 5, background: "#fff", color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginLeft: 2 }}>
+              <div className="tv-toolbar-sep" />
+
+              <button type="button" title="Save chart as PNG" className="tv-toolbar-icon" onClick={() => setScreenshotCount(c => c + 1)}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="4"/></svg>
               </button>
             </div>
           )}
         </div>
 
-        {/* Chart / Order Book body */}
+        {/* Chart / Overview / Option chain body */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          {tab === "chart" ? (
+          {centerTab === "chart" ? (
             <>
               <div style={{ flex: 1, position: "relative", margin: "8px 16px 0", overflow: "hidden" }}>
                 {candleLoading ? (
@@ -912,14 +1026,14 @@ function TradingTerminalInner() {
                   <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 24 }}>
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="#dc2626"/></svg>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#dc2626", textAlign: "center", maxWidth: 360 }}>{candleError}</div>
-                    <button type="button" onClick={fetchCandles}
+                    <button type="button" onClick={() => fetchCandles(false)}
                       style={{ marginTop: 4, padding: "7px 16px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "#f8fafc", color: "#0f172a" }}>
                       Retry
                     </button>
                   </div>
                 ) : (
                   <ChartWidget
-                    candles={candles}
+                    candles={displayCandles}
                     showMA20={showMA20}
                     showMA50={showMA50}
                     chartType={chartType}
@@ -935,7 +1049,7 @@ function TradingTerminalInner() {
 
               {/* Period selector — only show periods within the interval's max-day limit */}
               <div style={{ background: "#fff", borderTop: "1px solid #eef0f4", display: "flex", alignItems: "center", padding: "4px 16px", gap: 2, flexShrink: 0 }}>
-                {PERIODS.filter(p => p.days <= (INTERVAL_MAX_DAYS[interval.interval] ?? 2000)).map(p => (
+                {PERIODS.filter(p => p.days <= maxDaysForTimeframe(timeframe)).map(p => (
                   <button key={p.label} type="button" onClick={() => setPeriod(p)}
                     style={{ padding: "3px 10px", border: "none", borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: "pointer",
                       background: period.label === p.label ? "rgba(14,165,233,0.12)" : "transparent",
@@ -945,47 +1059,15 @@ function TradingTerminalInner() {
                 ))}
               </div>
             </>
+          ) : centerTab === "overview" ? (
+            <OverviewPanel symbol={selected} candles={candles} loading={candleLoading} />
           ) : (
-            <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Order Book ({orders.length})</h3>
-                <button type="button" onClick={fetchOrders} style={{ fontSize: 11, color: "#0ea5e9", border: "none", background: "transparent", cursor: "pointer", fontWeight: 600 }}>↺ Refresh</button>
-              </div>
-              {orders.length === 0 ? (
-                <div style={{ padding: 32, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>No orders today.</div>
-              ) : (
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ background: "#f8fafc" }}>
-                        {["Time","Symbol","Type","Qty","Price","Status"].map(h => (
-                          <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, borderBottom: "1px solid #eef0f4" }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.map((o, i) => {
-                        const ord = o as Record<string, string>;
-                        const isBuy = ord.transactiontype === "BUY";
-                        const sc = ord.status === "complete" ? "#16a34a" : ord.status === "rejected" ? "#dc2626" : "#f59e0b";
-                        return (
-                          <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                            <td style={{ padding: "10px 12px", color: "#64748b" }}>{ord.updatetime?.slice(0, 8) ?? "—"}</td>
-                            <td style={{ padding: "10px 12px", fontWeight: 700, color: "#0f172a" }}>{ord.tradingsymbol}</td>
-                            <td style={{ padding: "10px 12px", fontWeight: 700, color: isBuy ? "#16a34a" : "#dc2626" }}>{ord.transactiontype}</td>
-                            <td style={{ padding: "10px 12px" }}>{ord.quantity}</td>
-                            <td style={{ padding: "10px 12px" }}>₹{Number(ord.price ?? 0).toLocaleString("en-IN")}</td>
-                            <td style={{ padding: "10px 12px" }}>
-                              <span style={{ padding: "2px 8px", borderRadius: 999, background: `${sc}18`, color: sc, fontSize: 10, fontWeight: 700, textTransform: "capitalize" }}>{ord.status ?? "—"}</span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+            <OptionChainPanel
+              symbol={selected}
+              spotLtp={selected.ltp}
+              spotChangePct={selected.changePct}
+              onOpenChart={openOptionChart}
+            />
           )}
         </div>
       </div>
@@ -997,14 +1079,48 @@ function TradingTerminalInner() {
         </div>
         <div style={{ flex: 1, overflowY: "auto" }}>
           <OrderPanel symbol={selected} />
+          <div style={{ borderTop: "1px solid #eef0f4", padding: "10px 12px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: "#64748b", letterSpacing: 0.6, textTransform: "uppercase" }}>Today&apos;s Orders</span>
+              <button type="button" onClick={fetchOrders} style={{ fontSize: 10, color: "#0ea5e9", border: "none", background: "transparent", cursor: "pointer", fontWeight: 600 }}>↺</button>
+            </div>
+            {orders.length === 0 ? (
+              <p style={{ margin: 0, fontSize: 11, color: "#94a3b8" }}>No orders today.</p>
+            ) : (
+              <div style={{ display: "grid", gap: 6, maxHeight: 160, overflowY: "auto" }}>
+                {orders.slice(0, 8).map((o, i) => {
+                  const ord = o as Record<string, string>;
+                  const isBuy = ord.transactiontype === "BUY";
+                  return (
+                    <div key={i} style={{ fontSize: 10, padding: "6px 8px", background: "#f8fafc", borderRadius: 6 }}>
+                      <div style={{ fontWeight: 700, color: "#0f172a" }}>{ord.tradingsymbol}</div>
+                      <div style={{ color: isBuy ? "#16a34a" : "#dc2626", fontWeight: 600 }}>{ord.transactiontype} · {ord.quantity} @ ₹{Number(ord.price ?? 0).toLocaleString("en-IN")}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* ── Custom Indicator Modal ─────────────────────────────────────────── */}
+      <IndicatorsModal
+        open={showIndModal}
+        onClose={() => setShowIndModal(false)}
+        activeIds={activeIndicatorIds}
+        onToggle={toggleCatalogIndicator}
+        onAddCustom={() => setShowAddIndicator(true)}
+      />
+
       {showAddIndicator && (
         <AddIndicatorModal
-          candles={candles}
-          onAdd={ind => { setCustomIndicators(prev => [...prev, ind]); setShowAddIndicator(false); }}
+          candles={displayCandles}
+          onAdd={ind => {
+            setCustomIndicators(prev => [...prev, ind]);
+            setActiveIndicatorIds(prev => new Set(prev).add(ind.id));
+            setShowAddIndicator(false);
+          }}
           onClose={() => setShowAddIndicator(false)}
         />
       )}
