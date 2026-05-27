@@ -24,7 +24,17 @@ export async function POST(req: NextRequest) {
     where: isEmail
       ? { email: identifier.toLowerCase() }
       : { phone: identifier.replace(/\s|-/g, "") },
-    include: {
+    select: {
+      id: true,
+      uuid: true,
+      fullName: true,
+      email: true,
+      phone: true,
+      role: true,
+      status: true,
+      deletedAt: true,
+      passwordHash: true,
+      emailVerifiedAt: true,
       advisorProfile: {
         select: { sebiRegistrationNo: true, verificationStatus: true, rejectionReason: true },
       },
@@ -60,7 +70,9 @@ export async function POST(req: NextRequest) {
           ? user.advisorProfile?.verificationStatus === "approved"
             ? "/advisor/dashboard"
             : "/advisor/pending"
-          : "/user/home";
+          : user.emailVerifiedAt
+            ? "/user/home"
+            : "/user/feed";
 
   const response = NextResponse.json({
     status: true,

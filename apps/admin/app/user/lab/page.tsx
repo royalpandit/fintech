@@ -6,6 +6,14 @@ import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
 import AreaChart from "@/components/advisor-ui/area-chart";
+import PaperTradeForm from "@/components/paper/paper-trade-form";
+import {
+  computePortfolioSummary,
+  lastPricesFromTrades,
+  type VirtualTradeRow,
+} from "@/lib/virtual-trading";
+
+const INITIAL_BALANCE = 1_000_000;
 
 export const dynamic = "force-dynamic";
 
@@ -26,13 +34,19 @@ export default async function VirtualLabPage() {
   const isAuthed = Boolean(auth);
   const userId = auth?.userId ?? null;
 
-  const [wallet, trades, leaderboard] = await Promise.all([
+  const [wallet, trades, allTradesAsc, leaderboard] = await Promise.all([
     userId ? prisma.virtualWallet.findUnique({ where: { userId } }) : Promise.resolve(null),
     userId
       ? prisma.tradeVirtual.findMany({
           where: { wallet: { userId } },
           orderBy: { tradedAt: "desc" },
           take: 20,
+        })
+      : Promise.resolve([]),
+    userId
+      ? prisma.tradeVirtual.findMany({
+          where: { wallet: { userId } },
+          orderBy: { tradedAt: "asc" },
         })
       : Promise.resolve([]),
     prisma.leaderboardEntry.findMany({
@@ -43,6 +57,27 @@ export default async function VirtualLabPage() {
   ]);
 
   const balance = wallet?.balance ? Number(wallet.balance) : 0;
+
+  const tradeRows: VirtualTradeRow[] = allTradesAsc.map((t) => ({
+    id: t.id,
+    symbol: t.symbol,
+    side: t.side as "buy" | "sell",
+    quantity: Number(t.quantity),
+    price: Number(t.price),
+    tradedAt: t.tradedAt,
+  }));
+  const summary = wallet
+    ? computePortfolioSummary(
+        balance,
+        tradeRows,
+        lastPricesFromTrades(tradeRows),
+        INITIAL_BALANCE,
+      )
+    : null;
+  const pnlLabel =
+    summary != null
+      ? `${summary.totalPnL >= 0 ? "+" : ""}${formatINR(summary.totalPnL, true)}`
+      : "+₹0";
 
   // Generate a synthetic 14-day curve based on trades for visualization
   const tradesByDay = new Map<string, number>();
@@ -136,27 +171,47 @@ export default async function VirtualLabPage() {
               ? `${trades.length} trades executed. Build a strategy without risk.`
               : "Test strategies, learn the market, climb the leaderboard — all with simulated money."}
           </p>
-          <AuthGate
-            isAuthenticated={isAuthed}
-            promptTitle="Sign in to start trading"
-            promptDescription="Open a free account to access your ₹10L virtual capital and start practicing."
-          >
-            <button
-              type="button"
-              style={{
-                padding: "12px 22px",
-                borderRadius: 12,
-                background: "rgba(255,255,255,0.95)",
-                color: "#0c4a6e",
-                fontWeight: 800,
-                fontSize: 14,
-                border: "none",
-                cursor: "pointer",
-              }}
+          {isAuthed ? (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <Link
+                href="/user/wallet"
+                style={{
+                  padding: "12px 22px",
+                  borderRadius: 12,
+                  background: "rgba(255,255,255,0.95)",
+                  color: "#0c4a6e",
+                  fontWeight: 800,
+                  fontSize: 14,
+                  textDecoration: "none",
+                }}
+              >
+                Add funds
+              </Link>
+              <Link
+                href="/user/portfolio"
+                style={{
+                  padding: "12px 22px",
+                  borderRadius: 12,
+                  background: "rgba(255,255,255,0.2)",
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  textDecoration: "none",
+                  border: "1px solid rgba(255,255,255,0.35)",
+                }}
+              >
+                View holdings
+              </Link>
+            </div>
+          ) : (
+            <AuthGate
+              isAuthenticated={isAuthed}
+              promptTitle="Sign in to start trading"
+              promptDescription="Open a free account to access your ₹10L virtual capital and start practicing."
             >
-              {isAuthed ? "Place Virtual Trade" : "Get started — free"}
-            </button>
-          </AuthGate>
+              <span />
+            </AuthGate>
+          )}
         </div>
 
         <div
@@ -169,7 +224,7 @@ export default async function VirtualLabPage() {
           {[
             { label: "BALANCE", value: formatINR(balance || 1000000, true) },
             { label: "TRADES", value: trades.length.toString() },
-            { label: "P&L", value: "+₹0" },
+            { label: "P&L", value: pnlLabel },
             { label: "RANK", value: isAuthed ? "—" : "Top 10%" },
           ].map((s) => (
             <div
@@ -293,6 +348,23 @@ export default async function VirtualLabPage() {
           )}
         </article>
       </div>
+
+      {isAuthed && (
+        <article
+          style={{
+            background: "#fff",
+            border: "1px solid #eef0f4",
+            borderRadius: 14,
+            padding: 18,
+            marginBottom: 18,
+          }}
+        >
+          <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+            Place paper trade
+          </h3>
+          <PaperTradeForm />
+        </article>
+      )}
 
       {/* Recent trades */}
       <article

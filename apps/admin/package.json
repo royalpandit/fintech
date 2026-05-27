@@ -8,6 +8,7 @@
     "start": "next start -p 3000",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
+    "db:watchlist": "psql \"${DATABASE_URL:-postgresql://localhost:5432/flexi}\" -f scripts/sql/create-watchlist-tables.sql",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed:admin": "tsx scripts/seed-admin.ts",

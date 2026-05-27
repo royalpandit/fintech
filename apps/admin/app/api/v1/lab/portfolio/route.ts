@@ -1,7 +1,12 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err } from "@/lib/api-helpers";
-import { requireAuth, requireRole } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
+import {
+  computePositions,
+  lastPricesFromTrades,
+  type VirtualTradeRow,
+} from "@/lib/virtual-trading";
 
 export const dynamic = "force-dynamic";
 
@@ -13,26 +18,20 @@ export async function GET(req: NextRequest) {
   const wallet = await prisma.virtualWallet.findUnique({
     where: { userId },
     include: {
-      trades: { orderBy: { tradedAt: "desc" } },
+      trades: { orderBy: { tradedAt: "asc" } },
     },
   });
 
   if (!wallet) return ok({ data: [] });
 
-  const positions: Record<string, { symbol: string; quantity: number; avgPrice: number }> = {};
-  for (const t of [...wallet.trades].reverse()) {
-    const key = t.symbol;
-    if (!positions[key]) positions[key] = { symbol: key, quantity: 0, avgPrice: 0 };
-    const pos = positions[key];
-    if (t.side === "buy") {
-      const totalCost = pos.avgPrice * pos.quantity + Number(t.price) * Number(t.quantity);
-      pos.quantity += Number(t.quantity);
-      pos.avgPrice = pos.quantity > 0 ? totalCost / pos.quantity : 0;
-    } else {
-      pos.quantity -= Number(t.quantity);
-    }
-  }
+  const trades: VirtualTradeRow[] = wallet.trades.map((t) => ({
+    symbol: t.symbol,
+    side: t.side as "buy" | "sell",
+    quantity: Number(t.quantity),
+    price: Number(t.price),
+    tradedAt: t.tradedAt,
+  }));
 
-  const data = Object.values(positions).filter((p) => p.quantity > 0);
+  const data = computePositions(trades, lastPricesFromTrades(trades));
   return ok({ data });
 }

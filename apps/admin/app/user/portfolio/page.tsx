@@ -11,6 +11,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
+import PaperPortfolioSection from "@/components/paper/paper-portfolio-section";
 import AreaChart from "@/components/advisor-ui/area-chart";
 import DonutChart from "@/components/advisor-ui/donut-chart";
 import LiveCandleChart from "@/components/live-candle-chart";
@@ -118,11 +119,13 @@ export default async function PortfolioPage() {
           Portfolio
         </h1>
         <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
-          {isAuthed && activePortfolio
-            ? `${holdings.length} holdings · ${brokerAccounts.length} broker connection${brokerAccounts.length !== 1 ? "s" : ""}`
+          {isAuthed
+            ? "Paper holdings + connected broker portfolio"
             : "Connect your broker for AI-powered portfolio insights"}
         </p>
       </div>
+
+      {isAuthed && userId ? <PaperPortfolioSection userId={userId} /> : null}
 
       {!isAuthed || !activePortfolio ? (
         <article

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import type { ComponentType } from "react";
 import {
   FiHome,
@@ -18,6 +18,7 @@ import {
   FiBookOpen,
   FiMessageSquare,
   FiMenu,
+  FiCreditCard,
   FiX,
   FiSearch,
   FiChevronRight,
@@ -26,7 +27,7 @@ import { TbFlask } from "react-icons/tb";
 
 type UserShellProps = {
   children: React.ReactNode;
-  currentUser: { fullName: string; email: string } | null;
+  currentUser: { fullName: string; email: string; isVerified: boolean } | null;
   unreadNotifications: number;
   walletBalance: number;
   todayPnL: number;
@@ -52,10 +53,11 @@ const MAIN_NAV: NavItem[] = [
 
 const INVESTING_NAV: NavItem[] = [
   { label: "Dashboard",    href: "/user/home",      Icon: FiPieChart },
+  { label: "Wallet",       href: "/user/wallet",    Icon: FiCreditCard },
   { label: "Watchlist",    href: "/user/watchlist", Icon: FiStar },
   { label: "Portfolio",    href: "/user/portfolio", Icon: FiBriefcase },
   { label: "Courses",      href: "/user/courses",   Icon: FiBookOpen },
-  { label: "Virtual Lab",  href: "/user/lab",       Icon: TbFlask, badge: "New" },
+  { label: "Virtual Lab",  href: "/user/lab",       Icon: TbFlask, badge: "Paper" },
   { label: "Trade History",href: "/user/history",   Icon: FiClock },
 ];
 
@@ -103,6 +105,34 @@ export default function UserShell({
   const initials = currentUser ? getInitials(currentUser.fullName) : "G";
   const pnlColor = todayPnL >= 0 ? "#16a34a" : "#dc2626";
   const pnlSign = todayPnL >= 0 ? "+" : "";
+
+  const isVerified = Boolean(currentUser?.isVerified);
+
+  const mainNav = useMemo(() => {
+    // Default: only Feed visible until verified
+    if (!currentUser) return MAIN_NAV.filter((i) => i.href === "/user/feed");
+    if (!isVerified) return MAIN_NAV.filter((i) => i.href === "/user/feed");
+    return MAIN_NAV;
+  }, [currentUser, isVerified]);
+
+  const investingNav = useMemo(() => {
+    if (!currentUser || !isVerified) return [];
+    return INVESTING_NAV;
+  }, [currentUser, isVerified]);
+
+  const bottomNav = useMemo(() => {
+    if (!currentUser || !isVerified) return BOTTOM_NAV.filter((i) => i.href === "/user/feed");
+    return BOTTOM_NAV;
+  }, [currentUser, isVerified]);
+
+  // Hard guard: if logged-in but not verified, keep to Feed
+  useEffect(() => {
+    if (!currentUser) return;
+    if (isVerified) return;
+    if (pathname.startsWith("/user") && pathname !== "/user/feed" && !pathname.startsWith("/user/feed/")) {
+      router.replace("/user/feed");
+    }
+  }, [currentUser, isVerified, pathname, router]);
 
   // Close menu on outside click
   useEffect(() => {
@@ -345,7 +375,7 @@ export default function UserShell({
 
             {/* Main nav */}
             <nav className="us-nav">
-              {MAIN_NAV.map((item) => {
+              {mainNav.map((item) => {
                 const active = isActive(item.href);
                 const Icon = item.Icon;
                 return (
@@ -368,29 +398,33 @@ export default function UserShell({
             <div className="us-nav-divider" />
 
             {/* Investing section */}
-            <div className="us-nav-section-title">
-              <span className="us-nav-label">Investing</span>
-              <FiChevronRight size={12} />
-            </div>
-            <nav className="us-nav">
-              {INVESTING_NAV.map((item) => {
-                const active = isActive(item.href);
-                const Icon = item.Icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`us-nav-link ${active ? "us-nav-link-active us-nav-link-invest" : ""}`}
-                  >
-                    <span className="us-nav-icon"><Icon size={18} /></span>
-                    <span className="us-nav-label">{item.label}</span>
-                    {item.badge && (
-                      <span className="us-nav-pill">{item.badge}</span>
-                    )}
-                  </Link>
-                );
-              })}
-            </nav>
+            {investingNav.length > 0 && (
+              <>
+                <div className="us-nav-section-title">
+                  <span className="us-nav-label">Investing</span>
+                  <FiChevronRight size={12} />
+                </div>
+                <nav className="us-nav">
+                  {investingNav.map((item) => {
+                    const active = isActive(item.href);
+                    const Icon = item.Icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`us-nav-link ${active ? "us-nav-link-active us-nav-link-invest" : ""}`}
+                      >
+                        <span className="us-nav-icon"><Icon size={18} /></span>
+                        <span className="us-nav-label">{item.label}</span>
+                        {item.badge && (
+                          <span className="us-nav-pill">{item.badge}</span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </nav>
+              </>
+            )}
 
             {/* Footer links */}
             <div className="us-sidebar-footer">
@@ -413,7 +447,7 @@ export default function UserShell({
 
       {/* ── Mobile bottom tab bar ── */}
       <nav className="us-bottom-bar">
-        {BOTTOM_NAV.map((item) => {
+        {bottomNav.map((item) => {
           const active = isActive(item.href);
           const Icon = item.Icon;
           return (

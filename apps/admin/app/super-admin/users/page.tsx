@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import UsersFilters from "./users-filters";
+import UserRowActions from "./user-row-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -170,7 +171,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
             <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#f8fafc" }}>
-                  {["User", "Phone", "Role", "Status", "Last Login", "Joined"].map((h) => (
+                  {["User", "Phone", "Role", "Status", "Verified", "Last Login", "Joined", "Actions"].map((h) => (
                     <th
                       key={h}
                       style={{
@@ -260,11 +261,36 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
                           {user.status}
                         </span>
                       </td>
+                      <td style={{ padding: "14px 18px" }}>
+                        <span
+                          style={{
+                            padding: "2px 10px",
+                            borderRadius: 999,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            background: user.emailVerifiedAt ? "#d1fae5" : "#f1f5f9",
+                            color: user.emailVerifiedAt ? "#047857" : "#64748b",
+                          }}
+                        >
+                          {user.emailVerifiedAt ? "Yes" : "No"}
+                        </span>
+                      </td>
                       <td style={{ padding: "14px 18px", color: "#64748b", fontSize: 11 }}>
                         {user.lastLoginAt ? user.lastLoginAt.toLocaleDateString() : "Never"}
                       </td>
                       <td style={{ padding: "14px 18px", color: "#64748b", fontSize: 11 }}>
                         {user.createdAt.toLocaleDateString()}
+                      </td>
+                      <td style={{ padding: "14px 18px" }}>
+                        {user.role === "user" ? (
+                          <UserRowActions
+                            userId={user.id}
+                            status={user.status}
+                            emailVerified={Boolean(user.emailVerifiedAt)}
+                          />
+                        ) : (
+                          <span style={{ fontSize: 11, color: "#94a3b8" }}>—</span>
+                        )}
                       </td>
                     </tr>
                   );

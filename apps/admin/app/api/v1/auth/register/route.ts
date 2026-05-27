@@ -108,6 +108,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    await tx.virtualWallet.create({
+      data: { userId: created.id, balance: 1_000_000 },
+    });
+
+    await tx.watchlist.create({
+      data: { userId: created.id, name: "Default" },
+    });
+
     return created;
   });
 
@@ -135,7 +143,7 @@ export async function POST(req: NextRequest) {
       advisorProfile,
     },
     redirectTo:
-      user.role === "advisor" ? "/advisor/pending" : "/user/home",
+      user.role === "advisor" ? "/advisor/pending" : "/user/feed",
   });
 
   response.cookies.set("access_token", token, {
