@@ -12,6 +12,13 @@ export async function GET(req: Request) {
       return NextResponse.json({ ok: true, data: [] });
 
     const results = await searchSymbol(exchange, query);
+    if (!results.length) {
+      return NextResponse.json({
+        ok: true,
+        data: [],
+        message: `No symbols found for "${query}"`,
+      });
+    }
     return NextResponse.json({ ok: true, data: results });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";

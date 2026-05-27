@@ -4,11 +4,22 @@ import { PrismaClient } from "@prisma/client";
 
 const g = globalThis as unknown as { prisma: PrismaClient; pgPool: Pool };
 
+function poolSslOption(connectionString: string | undefined) {
+  if (!connectionString) return {};
+  const needsSsl =
+    /sslmode=(require|verify-full|verify-ca)/i.test(connectionString) ||
+    /ssl=true/i.test(connectionString);
+  const isLocal = /@(localhost|127\.0\.0\.1)(:|\/)/i.test(connectionString);
+  if (!needsSsl || isLocal) return {};
+  // pg v8.20 treats sslmode=require as verify-full — disable cert check for hosted DBs
+  return { ssl: { rejectUnauthorized: false } as const };
+}
+
 if (!g.pgPool) {
+  const connectionString = process.env.DATABASE_URL;
   g.pgPool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    // pg v8.20 treats sslmode=require as verify-full — disable cert check for Prisma Accelerate
-    ssl: { rejectUnauthorized: false },
+    connectionString,
+    ...poolSslOption(connectionString),
     max: 1,
     idleTimeoutMillis: 5_000,
     connectionTimeoutMillis: 15_000,

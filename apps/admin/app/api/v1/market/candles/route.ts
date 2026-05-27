@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getCandles, type CandleInterval } from "@/lib/angelone";
+import { getCandles, resolveMarketExchange, type CandleInterval } from "@/lib/angelone";
+import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -7,8 +8,15 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const token    = searchParams.get("token");
-    const exchange = searchParams.get("exchange") ?? "NSE";
+    const token         = searchParams.get("token");
+    const tradingSymbol = searchParams.get("tradingSymbol") ?? undefined;
+    const instrumentType = searchParams.get("instrumentType") ?? undefined;
+    const exchange = resolveMarketExchange({
+      exchange: searchParams.get("exchange") ?? "NSE",
+      symboltoken: token,
+      tradingSymbol,
+      instrumentType,
+    });
     const interval = (searchParams.get("interval") ?? "ONE_DAY") as CandleInterval;
 
     const INTERVAL_MAX: Partial<Record<CandleInterval, number>> = {
@@ -36,12 +44,32 @@ export async function GET(req: NextRequest) {
 
     console.log("[candles] token=%s exchange=%s interval=%s from=%s to=%s", token, exchange, interval, fromdate, todate);
 
-    const candles = await getCandles({ exchange, symboltoken: token, interval, fromdate, todate });
+    if (isRateLimited()) {
+      return NextResponse.json({
+        ok: false,
+        error: "Angel One rate limit — chart refresh paused. Please wait.",
+        rateLimited: true,
+      }, { status: 200 });
+    }
+
+    const cacheKey = `candles:${token}:${exchange}:${interval}:${days}`;
+    const candles = await withMarketCache(cacheKey, 8_000, () =>
+      getCandles({
+        exchange,
+        symboltoken: token,
+        tradingSymbol,
+        instrumentType,
+        interval,
+        fromdate,
+        todate,
+      })
+    );
     console.log("[candles] got %d candles", candles.length);
     return NextResponse.json({ ok: true, token, data: candles });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
+    handleRateLimitMessage(msg);
     console.error("[candles] ERROR:", msg);
-    return NextResponse.json({ ok: false, error: msg }, { status: 200 });
+    return NextResponse.json({ ok: false, error: msg, rateLimited: isRateLimited() }, { status: 200 });
   }
 }
