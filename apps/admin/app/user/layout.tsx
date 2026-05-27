@@ -22,7 +22,7 @@ export default async function UserLayout({ children }: { children: React.ReactNo
     }
   }
 
-  let user: { fullName: string; email: string } | null = null;
+  let user: { fullName: string; email: string; isVerified: boolean } | null = null;
   let unreadNotifications = 0;
   let walletBalance = 0;
   let todayPnL = 0;
@@ -37,7 +37,7 @@ export default async function UserLayout({ children }: { children: React.ReactNo
     const [u, unread, wallet, todayPortfolio, yesterdayPortfolio] = await Promise.all([
       prisma.user.findUnique({
         where: { id: auth.userId },
-        select: { fullName: true, email: true, status: true },
+        select: { fullName: true, email: true, status: true, emailVerifiedAt: true },
       }),
       prisma.notification.count({ where: { userId: auth.userId, readAt: null } }),
       prisma.virtualWallet.findUnique({ where: { userId: auth.userId } }),
@@ -55,7 +55,7 @@ export default async function UserLayout({ children }: { children: React.ReactNo
     ]);
 
     if (u && u.status !== "suspended") {
-      user = { fullName: u.fullName, email: u.email };
+      user = { fullName: u.fullName, email: u.email, isVerified: Boolean(u.emailVerifiedAt) };
       unreadNotifications = unread;
       walletBalance = wallet?.balance ? Number(wallet.balance) : 0;
 

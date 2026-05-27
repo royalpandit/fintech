@@ -40,32 +40,22 @@ export default function OptionOrderSheet({
     setLoading(true);
     setMsg(null);
     try {
+      const { placePaperTrade, paperSymbolFromWatchlist } = await import("@/lib/paper-trade-client");
       const isMarket = orderType === "MARKET";
-      const res = await fetch("/api/v1/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          variety: "regular",
-          tradingsymbol: symbol.tradingSymbol,
-          symboltoken: symbol.token,
-          transactiontype: side,
-          exchange: symbol.exchange,
-          ordertype: isMarket ? "MARKET" : "LIMIT",
-          producttype: product,
-          duration: "DAY",
-          price: isMarket ? "0" : price,
-          triggerprice: "0",
-          squareoff: "0",
-          stoploss: "0",
-          quantity: qty,
-        }),
+      const execPrice = isMarket ? Number(symbol.ltp) : Number(price);
+      if (!execPrice || execPrice <= 0) {
+        setMsg({ ok: false, text: "Enter a valid price or wait for live quote." });
+        return;
+      }
+      const result = await placePaperTrade({
+        symbol: paperSymbolFromWatchlist(symbol),
+        side: side === "BUY" ? "buy" : "sell",
+        quantity: Math.max(1, Number(qty) || 0),
+        price: execPrice,
       });
-      const json = await res.json();
-      setMsg(json.ok
-        ? { ok: true, text: `Order placed! ID: ${json.orderId}` }
-        : { ok: false, text: json.error ?? "Order failed" });
+      setMsg({ ok: result.ok, text: result.text });
     } catch {
-      setMsg({ ok: false, text: "Network error" });
+      setMsg({ ok: false, text: "Network error — sign in to use paper wallet." });
     } finally {
       setLoading(false);
     }

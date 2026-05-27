@@ -261,6 +261,7 @@ export default function AdvisorShell({
               { label: "Posts", href: "/advisor/posts" },
               { label: "Subscribers", href: "/advisor/subscribers" },
               { label: "Earnings", href: "/advisor/earnings" },
+              { label: "Paper", href: "/advisor/paper" },
               { label: "Profile", href: "/advisor/profile" },
             ].map((nav) => {
               const active = pathname === nav.href || pathname.startsWith(nav.href + "/");

@@ -4,9 +4,16 @@ import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
+function sslForDb(url: string | undefined) {
+  if (!url) return undefined;
+  // Local Postgres (brew/docker) typically does not support SSL.
+  if (url.includes("localhost") || url.includes("127.0.0.1")) return undefined;
+  return { rejectUnauthorized: false };
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  ssl: sslForDb(process.env.DATABASE_URL),
 });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 

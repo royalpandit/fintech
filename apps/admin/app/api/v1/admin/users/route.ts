@@ -153,8 +153,25 @@ export async function POST(req: NextRequest) {
 
   const user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
-      data: { fullName, email, phone, passwordHash, role, status },
-      select: { id: true, uuid: true, fullName: true, email: true, role: true, status: true },
+      data: {
+        fullName,
+        email,
+        phone,
+        passwordHash,
+        role,
+        status,
+        // Super-admin–created active accounts are pre-verified for app access.
+        ...(status === "active" ? { emailVerifiedAt: new Date() } : {}),
+      },
+      select: {
+        id: true,
+        uuid: true,
+        fullName: true,
+        email: true,
+        role: true,
+        status: true,
+        emailVerifiedAt: true,
+      },
     });
 
     if (role === "advisor" && sebiRegistrationNo) {

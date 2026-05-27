@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import ChartWidget, { evalCustom } from "./chart-widget";
 import type { ChartType, CustomIndicator } from "./chart-widget";
 import type { Candle, CandleInterval } from "@/lib/angelone";
@@ -445,7 +446,13 @@ function OverviewPanel({
 
 // ── OrderPanel ────────────────────────────────────────────────────────────────
 
-function OrderPanel({ symbol }: { symbol: WatchlistItem }) {
+function OrderPanel({
+  symbol,
+  onOrderPlaced,
+}: {
+  symbol: WatchlistItem;
+  onOrderPlaced?: () => void;
+}) {
   const [side,         setSide]         = useState<"BUY" | "SELL">("BUY");
   const [orderType,    setOrderType]    = useState<"MARKET" | "LIMIT" | "SL" | "SL-M">("MARKET");
   const [product,      setProduct]      = useState<"CNC" | "MIS" | "NRML">("MIS");
@@ -459,38 +466,70 @@ function OrderPanel({ symbol }: { symbol: WatchlistItem }) {
   const needsPrice   = orderType === "LIMIT" || orderType === "SL";
   const needsTrigger = orderType === "SL"    || orderType === "SL-M";
 
+  useEffect(() => {
+    if (symbol.ltp != null && symbol.ltp > 0) {
+      setPrice(String(symbol.ltp));
+    }
+  }, [symbol.token, symbol.ltp]);
+
   const placeOrder = async () => {
     if (isIndex) return;
-    setLoading(true); setMsg(null);
+    setLoading(true);
+    setMsg(null);
     try {
-      const res = await fetch("/api/v1/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          variety:         "regular",
-          tradingsymbol:   symbol.tradingSymbol,
-          symboltoken:     symbol.token,
-          transactiontype: side,
-          exchange:        symbol.exchange,
-          ordertype:       orderType,
-          producttype:     product,
-          duration:        "DAY",
-          price:           needsPrice   ? price        : "0",
-          triggerprice:    needsTrigger ? triggerPrice : "0",
-          squareoff: "0", stoploss: "0", quantity: qty,
-        }),
+      const { placePaperTrade, paperSymbolFromWatchlist } = await import("@/lib/paper-trade-client");
+      const sym = paperSymbolFromWatchlist(symbol);
+      const quantity = Math.max(1, Number(qty) || 0);
+
+      let execPrice = 0;
+      if (orderType === "MARKET") {
+        execPrice = Number(symbol.ltp);
+        if (!execPrice || execPrice <= 0) {
+          setMsg({ ok: false, text: "Live price not available yet — use Limit and enter a price." });
+          return;
+        }
+      } else if (orderType === "LIMIT") {
+        execPrice = Number(price);
+      } else {
+        execPrice = Number(needsTrigger ? triggerPrice : price) || Number(symbol.ltp);
+      }
+
+      if (!execPrice || execPrice <= 0) {
+        setMsg({ ok: false, text: "Enter a valid price for this order." });
+        return;
+      }
+
+      const result = await placePaperTrade({
+        symbol: sym,
+        side: side === "BUY" ? "buy" : "sell",
+        quantity,
+        price: execPrice,
       });
-      const json = await res.json();
-      setMsg(json.ok
-        ? { ok: true,  text: `Order placed! ID: ${json.orderId}` }
-        : { ok: false, text: json.error ?? "Order failed" });
+      setMsg({ ok: result.ok, text: result.text });
+      if (result.ok) onOrderPlaced?.();
     } catch {
-      setMsg({ ok: false, text: "Network error" });
-    } finally { setLoading(false); }
+      setMsg({ ok: false, text: "Network error — sign in to trade with your paper wallet." });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 10,
+          fontWeight: 700,
+          color: "#0ea5e9",
+          textAlign: "center",
+          padding: "6px 8px",
+          background: "rgba(14,165,233,0.08)",
+          borderRadius: 6,
+        }}
+      >
+        Paper trading · virtual wallet
+      </p>
       <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid #eef0f4" }}>
         {(["BUY", "SELL"] as const).map(s => (
           <button key={s} type="button" onClick={() => setSide(s)}
@@ -583,6 +622,7 @@ export default function TradingTerminal() {
 }
 
 function TradingTerminalInner() {
+  const router = useRouter();
   const [watchlist,       setWatchlist]       = useState<WatchlistItem[]>(DEFAULT_WATCHLIST);
   const [selected,        setSelected]        = useState<WatchlistItem>(DEFAULT_WATCHLIST[0]);
   const [timeframe,       setTimeframe]       = useState<TimeframeOption>(DEFAULT_TIMEFRAME);
@@ -602,7 +642,9 @@ function TradingTerminalInner() {
   const [centerTab,       setCenterTab]       = useState<CenterTab>("chart");
   const [showMA20,        setShowMA20]        = useState(true);
   const [showMA50,        setShowMA50]        = useState(true);
-  const [orders,          setOrders]          = useState<Record<string, unknown>[]>([]);
+  const [orders,          setOrders]          = useState<
+    { symbol: string; side: string; quantity: number; price: number }[]
+  >([]);
   const [activeTool,      setActiveTool]      = useState("cursor");
   const [chartType,       setChartType]       = useState<ChartType>("candle");
   const [screenshotCount, setScreenshotCount] = useState(0);
@@ -802,11 +844,23 @@ function TradingTerminalInner() {
   // ── Orders tab ────────────────────────────────────────────────────────────
   const fetchOrders = useCallback(async () => {
     try {
-      const res  = await fetch("/api/v1/orders");
-      const json = await res.json();
-      if (json.ok) setOrders(json.data ?? []);
+      const { fetchTodayPaperTrades } = await import("@/lib/paper-trade-client");
+      const rows = await fetchTodayPaperTrades();
+      setOrders(
+        rows.map((t) => ({
+          symbol: t.symbol,
+          side: t.side.toUpperCase(),
+          quantity: t.quantity,
+          price: t.price,
+        })),
+      );
     } catch { /* ignore */ }
   }, []);
+
+  const handlePaperOrderPlaced = useCallback(() => {
+    fetchOrders();
+    router.refresh();
+  }, [fetchOrders, router]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
@@ -1075,13 +1129,13 @@ function TradingTerminalInner() {
       {/* ── RIGHT: Order Panel ─────────────────────────────────────────────── */}
       <div style={{ width: 226, minWidth: 226, background: "#fff", borderLeft: "1px solid #eef0f4", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ padding: "10px 14px 8px", borderBottom: "1px solid #f1f5f9" }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: "#64748b", letterSpacing: 0.8, textTransform: "uppercase" }}>Place Order</div>
+          <div style={{ fontSize: 10, fontWeight: 800, color: "#64748b", letterSpacing: 0.8, textTransform: "uppercase" }}>Paper Order</div>
         </div>
         <div style={{ flex: 1, overflowY: "auto" }}>
-          <OrderPanel symbol={selected} />
+          <OrderPanel symbol={selected} onOrderPlaced={handlePaperOrderPlaced} />
           <div style={{ borderTop: "1px solid #eef0f4", padding: "10px 12px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: "#64748b", letterSpacing: 0.6, textTransform: "uppercase" }}>Today&apos;s Orders</span>
+              <span style={{ fontSize: 10, fontWeight: 800, color: "#64748b", letterSpacing: 0.6, textTransform: "uppercase" }}>Today&apos;s paper trades</span>
               <button type="button" onClick={fetchOrders} style={{ fontSize: 10, color: "#0ea5e9", border: "none", background: "transparent", cursor: "pointer", fontWeight: 600 }}>↺</button>
             </div>
             {orders.length === 0 ? (
@@ -1089,12 +1143,11 @@ function TradingTerminalInner() {
             ) : (
               <div style={{ display: "grid", gap: 6, maxHeight: 160, overflowY: "auto" }}>
                 {orders.slice(0, 8).map((o, i) => {
-                  const ord = o as Record<string, string>;
-                  const isBuy = ord.transactiontype === "BUY";
+                  const isBuy = o.side === "BUY";
                   return (
                     <div key={i} style={{ fontSize: 10, padding: "6px 8px", background: "#f8fafc", borderRadius: 6 }}>
-                      <div style={{ fontWeight: 700, color: "#0f172a" }}>{ord.tradingsymbol}</div>
-                      <div style={{ color: isBuy ? "#16a34a" : "#dc2626", fontWeight: 600 }}>{ord.transactiontype} · {ord.quantity} @ ₹{Number(ord.price ?? 0).toLocaleString("en-IN")}</div>
+                      <div style={{ fontWeight: 700, color: "#0f172a" }}>{o.symbol}</div>
+                      <div style={{ color: isBuy ? "#16a34a" : "#dc2626", fontWeight: 600 }}>{o.side} · {o.quantity} @ ₹{Number(o.price).toLocaleString("en-IN")}</div>
                     </div>
                   );
                 })}
