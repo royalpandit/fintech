@@ -1461,7 +1461,7 @@ model GeminiAgent {
   description  String   @db.VarChar(500)
   avatar       String   @default("🤖") @db.VarChar(10)
   systemPrompt String   @map("system_prompt") @db.Text
-  model        String   @default("gemini-2.0-flash") @db.VarChar(60)
+  model        String   @default("gemini-1.5-flash") @db.VarChar(60)
   temperature  Float    @default(0.7)
   isActive     Boolean  @default(true) @map("is_active")
   createdById  Int      @map("created_by_id")

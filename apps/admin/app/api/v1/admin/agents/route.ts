@@ -28,8 +28,8 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { name, description, avatar, systemPrompt, model, temperature, isActive } = body;
 
-  if (!name?.trim() || !description?.trim() || !systemPrompt?.trim()) {
-    return NextResponse.json({ ok: false, error: "name, description and systemPrompt are required" }, { status: 400 });
+  if (!name?.trim() || !systemPrompt?.trim()) {
+    return NextResponse.json({ ok: false, error: "name and systemPrompt are required" }, { status: 400 });
   }
 
   const agent = await prisma.geminiAgent.create({
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       description: description.trim(),
       avatar: avatar?.trim() || "🤖",
       systemPrompt: systemPrompt.trim(),
-      model: model || "gemini-2.0-flash",
+      model: model || "gemini-2.5-flash",
       temperature: typeof temperature === "number" ? Math.max(0, Math.min(2, temperature)) : 0.7,
       isActive: isActive !== false,
       createdById: auth.userId,

@@ -13,6 +13,8 @@ import {
   type VirtualTradeRow,
 } from "@/lib/virtual-trading";
 
+type AgentRow = { id: number; name: string; description: string; avatar: string; model: string };
+
 const INITIAL_BALANCE = 1_000_000;
 
 export const dynamic = "force-dynamic";
@@ -34,7 +36,7 @@ export default async function VirtualLabPage() {
   const isAuthed = Boolean(auth);
   const userId = auth?.userId ?? null;
 
-  const [wallet, trades, allTradesAsc, leaderboard] = await Promise.all([
+  const [wallet, trades, allTradesAsc, leaderboard, agents] = await Promise.all([
     userId ? prisma.virtualWallet.findUnique({ where: { userId } }) : Promise.resolve(null),
     userId
       ? prisma.tradeVirtual.findMany({
@@ -54,6 +56,12 @@ export default async function VirtualLabPage() {
       take: 10,
       include: { user: { select: { id: true, fullName: true } } },
     }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ((prisma as any).geminiAgent?.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, description: true, avatar: true, model: true },
+      orderBy: { createdAt: "asc" },
+    }) as Promise<AgentRow[]> | undefined)?.catch(() => []) ?? Promise.resolve([] as AgentRow[]),
   ]);
 
   const balance = wallet?.balance ? Number(wallet.balance) : 0;
@@ -363,6 +371,61 @@ export default async function VirtualLabPage() {
             Place paper trade
           </h3>
           <PaperTradeForm />
+        </article>
+      )}
+
+      {/* AI Agents */}
+      {agents.length > 0 && (
+        <article
+          style={{
+            background: "#fff",
+            border: "1px solid #eef0f4",
+            borderRadius: 14,
+            padding: 18,
+            marginBottom: 18,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>AI Agents</h3>
+              <p style={{ margin: "3px 0 0", fontSize: 12, color: "#64748b" }}>Custom AI assistants trained for financial analysis and strategy</p>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
+            {(agents as AgentRow[]).map((a) => (
+              <div key={a.id} style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg,#ede9fe,#c7d2fe)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
+                    {a.avatar}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</div>
+                    <div style={{ fontSize: 11, color: "#94a3b8" }}>{a.model.replace("gemini-", "Gemini ").replace(/-/g, " ")}</div>
+                  </div>
+                </div>
+                {a.description && (
+                  <p style={{ margin: 0, fontSize: 12, color: "#64748b", lineHeight: 1.55, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                    {a.description}
+                  </p>
+                )}
+                {isAuthed ? (
+                  <Link
+                    href={`/user/lab/agents/${a.id}`}
+                    style={{ display: "inline-block", padding: "8px 16px", background: "linear-gradient(135deg,#6366f1,#4f46e5)", color: "#fff", borderRadius: 8, fontSize: 12, fontWeight: 700, textDecoration: "none", textAlign: "center" }}
+                  >
+                    Chat
+                  </Link>
+                ) : (
+                  <Link
+                    href="/login"
+                    style={{ display: "inline-block", padding: "8px 16px", background: "#f1f5f9", color: "#64748b", borderRadius: 8, fontSize: 12, fontWeight: 600, textDecoration: "none", textAlign: "center" }}
+                  >
+                    Sign in to chat
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
         </article>
       )}
 
