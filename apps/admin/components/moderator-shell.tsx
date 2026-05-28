@@ -29,6 +29,7 @@ const TOP_NAV = [
   { label: "Verifications", href: "/admin/advisors" },
   { label: "Posts", href: "/admin/market-posts" },
   { label: "Reports", href: "/admin/reports" },
+  { label: "AI Agents", href: "/admin/agents" },
   { label: "Audit", href: "/admin/audit-logs" },
 ];
 

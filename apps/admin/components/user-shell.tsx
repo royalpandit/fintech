@@ -23,7 +23,7 @@ import {
   FiSearch,
   FiChevronRight,
 } from "react-icons/fi";
-import { TbFlask } from "react-icons/tb";
+import { TbFlask, TbRobot } from "react-icons/tb";
 
 type UserShellProps = {
   children: React.ReactNode;
@@ -58,6 +58,7 @@ const INVESTING_NAV: NavItem[] = [
   { label: "Portfolio",    href: "/user/portfolio", Icon: FiBriefcase },
   { label: "Courses",      href: "/user/courses",   Icon: FiBookOpen },
   { label: "Virtual Lab",  href: "/user/lab",       Icon: TbFlask, badge: "Paper" },
+  { label: "AI Agents",   href: "/user/lab/agents", Icon: TbRobot, badge: "AI" },
   { label: "Trade History",href: "/user/history",   Icon: FiClock },
 ];
 
