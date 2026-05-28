@@ -269,6 +269,8 @@ model User {
   blocksReceived       UserBlock[]           @relation("blocked")
   sentFriendRequests   FriendRequest[]       @relation("reqFrom")
   receivedFriendRequests FriendRequest[]     @relation("reqTo")
+  createdAgents        GeminiAgent[]         @relation("AgentCreator")
+  agentChatSessions    AgentChatSession[]
 
   @@map("users")
 }
@@ -1449,6 +1451,57 @@ model StrategyTemplate {
 
   @@index([userId])
   @@map("strategy_templates")
+}
+
+// ─── 20b) Gemini AI Agents ────────────────────────────
+
+model GeminiAgent {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(100)
+  description  String   @db.VarChar(500)
+  avatar       String   @default("🤖") @db.VarChar(10)
+  systemPrompt String   @map("system_prompt") @db.Text
+  model        String   @default("gemini-2.0-flash") @db.VarChar(60)
+  temperature  Float    @default(0.7)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdById  Int      @map("created_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  createdBy User               @relation("AgentCreator", fields: [createdById], references: [id])
+  sessions  AgentChatSession[]
+
+  @@index([isActive])
+  @@map("gemini_agents")
+}
+
+model AgentChatSession {
+  id        Int      @id @default(autoincrement())
+  agentId   Int      @map("agent_id")
+  userId    Int      @map("user_id")
+  title     String   @default("New Chat") @db.VarChar(200)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  agent    GeminiAgent        @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AgentChatMessage[]
+
+  @@index([userId, agentId])
+  @@map("agent_chat_sessions")
+}
+
+model AgentChatMessage {
+  id        Int      @id @default(autoincrement())
+  sessionId Int      @map("session_id")
+  role      String   @db.VarChar(10)
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session AgentChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt(sort: Asc)])
+  @@map("agent_chat_messages")
 }
 
 model BacktestResult {
