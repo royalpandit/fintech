@@ -52,8 +52,17 @@ export function streamGeminiChat(opts: {
         });
 
         if (!res.ok || !res.body) {
-          const err = await res.text();
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: err.slice(0, 200) })}\n\n`));
+          const errText = await res.text();
+          console.error(`[Gemini] ${res.status} error for model ${model}:`, errText);
+          let errMsg = `Gemini error (${res.status})`;
+          try {
+            const parsed = JSON.parse(errText);
+            const msg: string = parsed?.error?.message ?? "";
+            if (res.status === 429) errMsg = `Quota exceeded (${model}): ${msg || "check billing/limits"}`;
+            else if (res.status === 401 || res.status === 403) errMsg = "Invalid Gemini API key.";
+            else if (msg) errMsg = msg.slice(0, 200);
+          } catch { errMsg = `Gemini error (${res.status}): ${errText.slice(0, 150)}`; }
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errMsg })}\n\n`));
           controller.close();
           return;
         }
