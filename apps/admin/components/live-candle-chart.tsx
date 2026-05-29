@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import CandlestickChart from "@/components/advisor-ui/candlestick-chart";
-import type { Candle, CandleInterval } from "@/lib/angelone";
+import type { Candle, CandleInterval } from "@/lib/angelone-types";
 
 const SYMBOLS = [
   "NIFTY 50",

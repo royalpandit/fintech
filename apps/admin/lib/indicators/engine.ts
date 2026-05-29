@@ -1,4 +1,4 @@
-import type { Candle } from "@/lib/angelone";
+import type { Candle } from "@/lib/angelone-types";
 import { parseCandleTimestampToUnix } from "@/lib/nse-market-time";
 import { BUILTIN_INDICATOR_IDS, INDICATOR_REGISTRY, PANE_ORDER } from "./registry";
 import type {

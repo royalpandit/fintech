@@ -2,7 +2,9 @@
 
 import { Children, Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { WatchlistItem } from "./trading-terminal-types";
-import { optionUnderlyingKey, type OptionLeg } from "@/lib/angelone";
+import type { OptionLeg } from "@/lib/angelone-types";
+import { optionUnderlyingKey } from "@/lib/angelone-shared";
+import { useMarketStream } from "@/hooks/use-market-stream";
 import MarketDepthModal from "./market-depth-modal";
 import OptionOrderSheet from "./option-order-sheet";
 import { optionLegToWatchlist } from "./option-leg-utils";
@@ -27,7 +29,7 @@ export interface OptionChainRow {
   pe?: OptionLeg;
 }
 
-const SILENT_REFRESH_MS = 6_000;
+const SILENT_REFRESH_MS = 15_000;
 
 type LegPick = {
   leg: OptionLeg;
@@ -142,6 +144,7 @@ export default function OptionChainPanel({
   const prevOiRef = useRef<Map<string, number>>(new Map());
   const chainRef = useRef<OptionChainData | null>(null);
   const tableWrapRef = useRef<HTMLDivElement>(null);
+  const didScrollToSpotRef = useRef(false);
 
   const [activeLeg, setActiveLeg] = useState<LegPick | null>(null);
   const [toolbarPos, setToolbarPos] = useState<{ top: number; left: number } | null>(null);
@@ -292,10 +295,38 @@ export default function OptionChainPanel({
     loadChain(undefined, false);
   }, [underlying, symbol.token, loadChain]);
 
+  const streamSymbols = useMemo(
+    () => chain?.tokens?.map(t => `${t.exchange}:${t.token}`) ?? [],
+    [chain?.expiry, chain?.exchange, chain?.tokens],
+  );
+
+  const handleStreamTick = useCallback(
+    (tick: { token: string; ltp: number }) => {
+      if (!Number.isFinite(tick.ltp) || tick.ltp <= 0) return;
+      setChain(prev => {
+        if (!prev) return prev;
+        const rows = prev.rows.map(row => {
+          const patchLeg = (leg?: OptionLeg): OptionLeg | undefined => {
+            if (!leg || leg.token !== tick.token) return leg;
+            return { ...leg, ltp: tick.ltp };
+          };
+          return { ...row, ce: patchLeg(row.ce), pe: patchLeg(row.pe) };
+        });
+        return { ...prev, rows };
+      });
+      setLastTick(Date.now());
+      setRatePaused(false);
+    },
+    [],
+  );
+
+  useMarketStream(streamSymbols, handleStreamTick, !!chain?.tokens?.length && !ratePaused);
+
+  // REST refresh for OI / volume (FULL mode) — slower; LTP also from WebSocket
   useEffect(() => {
     if (!chain?.tokens?.length) return;
     const run = () => refreshQuotes();
-    const t0 = setTimeout(run, 1_500);
+    const t0 = setTimeout(run, 2_500);
     const id = setInterval(run, SILENT_REFRESH_MS);
     return () => { clearTimeout(t0); clearInterval(id); };
   }, [chain?.expiry, chain?.exchange, chain?.tokens?.length, refreshQuotes]);
@@ -338,6 +369,26 @@ export default function OptionChainPanel({
     }
     return -1;
   }, [filteredRows, spot]);
+
+  // Scroll ATM / spot line into view (lower third of panel) when chain opens or expiry changes
+  useEffect(() => {
+    didScrollToSpotRef.current = false;
+  }, [underlying, symbol.token, chain?.expiry]);
+
+  useEffect(() => {
+    if (didScrollToSpotRef.current || spotRowIndex < 0 || !tableWrapRef.current) return;
+    const wrap = tableWrapRef.current;
+    const scrollToSpot = () => {
+      const spotRow = wrap.querySelector(".oc-spot-row") as HTMLElement | null;
+      if (!spotRow) return;
+      const rowTop = spotRow.offsetTop;
+      // Place spot line in the lower ~35% of the scroll area (not stuck at top)
+      const target = rowTop - wrap.clientHeight * 0.65;
+      wrap.scrollTop = Math.max(0, target);
+      didScrollToSpotRef.current = true;
+    };
+    requestAnimationFrame(() => requestAnimationFrame(scrollToSpot));
+  }, [spotRowIndex, filteredRows.length, chain?.expiry, loading]);
 
   if (!underlying) {
     return (

@@ -1,5 +1,39 @@
+import "server-only";
+
 import crypto from "crypto";
 import { normalizeCandleTimestamp } from "@/lib/nse-market-time";
+import {
+  formatExpiryLabel,
+  optionChainExchange,
+  resolveMarketExchange,
+} from "@/lib/angelone-shared";
+import type {
+  Candle,
+  CandleInterval,
+  DepthLevel,
+  LTPData,
+  MarketDepthQuote,
+  OptionChainRow,
+  OptionLeg,
+} from "@/lib/angelone-types";
+
+export {
+  formatExpiryLabel,
+  MARKET_INSTRUMENTS,
+  optionChainExchange,
+  optionUnderlyingKey,
+  resolveMarketExchange,
+} from "@/lib/angelone-shared";
+export type { KnownSymbol } from "@/lib/angelone-shared";
+export type {
+  Candle,
+  CandleInterval,
+  DepthLevel,
+  LTPData,
+  MarketDepthQuote,
+  OptionChainRow,
+  OptionLeg,
+} from "@/lib/angelone-types";
 
 const BASE_URL = "https://apiconnect.angelone.in";
 
@@ -151,44 +185,6 @@ function angelError(data: AngelJson, fallback: string): string {
   return (data.message || data.errorcode || fallback).trim();
 }
 
-/** SmartAPI requires token + exchange to match scrip master — normalize before quotes/candles */
-export function resolveMarketExchange(input: {
-  exchange: string;
-  symboltoken: string;
-  tradingSymbol?: string;
-  instrumentType?: string;
-}): string {
-  const sym = (input.tradingSymbol ?? "").toUpperCase();
-  const exch = (input.exchange ?? "NSE").toUpperCase();
-  if (sym.endsWith("-EQ") || sym.endsWith("-BE") || input.instrumentType === "EQ") {
-    if (exch === "BSE" || input.symboltoken === "99919000" || sym.includes("SENSEX")) return "BSE";
-    return "NSE";
-  }
-  if (sym.endsWith("CE") || sym.endsWith("PE") || input.instrumentType === "OPT") return "NFO";
-  if (sym.includes("FUT") || input.instrumentType === "FUT") return "NFO";
-  if (input.symboltoken === "99919000" || sym.includes("SENSEX")) return "BSE";
-  if (exch === "BSE") return "BSE";
-  if (exch === "MCX" || exch === "NCDEX") return exch;
-  return "NSE";
-}
-
-export function optionChainExchange(underlying: string): string {
-  return underlying.toUpperCase() === "SENSEX" ? "BFO" : "NFO";
-}
-
-export interface LTPData {
-  exchange: string;
-  tradingSymbol: string;
-  symbolToken: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  ltp: number;
-  percentChange: number;
-  netChange: number;
-}
-
 export type QuoteInstrument = {
   exchange: string;
   symboltoken: string;
@@ -240,44 +236,29 @@ export async function getLTP(instruments: QuoteInstrument[]): Promise<LTPData[]>
 export async function getOHLC(
   instruments: { exchange: string; symboltoken: string }[]
 ): Promise<LTPData[]> {
+  if (!instruments.length) return [];
   const { jwtToken, feedToken } = await getToken();
-  const exchangeTokens = instruments.reduce<Record<string, string[]>>(
-    (acc, inst) => {
-      (acc[inst.exchange] ||= []).push(inst.symboltoken);
-      return acc;
-    },
-    {}
-  );
-  const res = await fetch(
-    `${BASE_URL}/rest/secure/angelbroking/market/v1/quote/`,
-    {
-      method: "POST",
-      headers: commonHeaders(jwtToken, feedToken),
-      body: JSON.stringify({ mode: "OHLC", exchangeTokens }),
-      next: { revalidate: 0 },
+  const byExch = instruments.reduce<Record<string, string[]>>((acc, inst) => {
+    const exch = resolveMarketExchange({
+      exchange: inst.exchange,
+      symboltoken: inst.symboltoken,
+    });
+    (acc[exch] ||= []).push(inst.symboltoken);
+    return acc;
+  }, {});
+
+  const out: LTPData[] = [];
+  for (const [exch, tokens] of Object.entries(byExch)) {
+    for (let i = 0; i < tokens.length; i += 50) {
+      const chunk = tokens.slice(i, i + 50);
+      const rows = await fetchQuoteChunk(jwtToken, feedToken, exch, chunk, "OHLC");
+      for (const row of rows) {
+        const q = mapExtendedQuote(row);
+        if (q.symbolToken) out.push(q);
+      }
     }
-  );
-  const data = await res.json();
-  return data.data?.fetched ?? [];
-}
-
-export type CandleInterval =
-  | "ONE_MINUTE"
-  | "THREE_MINUTE"
-  | "FIVE_MINUTE"
-  | "TEN_MINUTE"
-  | "FIFTEEN_MINUTE"
-  | "THIRTY_MINUTE"
-  | "ONE_HOUR"
-  | "ONE_DAY";
-
-export interface Candle {
-  timestamp: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
+  }
+  return out;
 }
 
 /** Fetch historical OHLCV candle data. fromdate/todate format: "YYYY-MM-DD HH:MM" */
@@ -505,36 +486,6 @@ export async function searchSymbol(exchange: string, query: string): Promise<Sea
   return rankSearchResults(merged, q);
 }
 
-/** Map watchlist symbol → NFO underlying search key for option chain */
-export function optionUnderlyingKey(tradingSymbol: string, display: string): string | null {
-  const sym = tradingSymbol.toUpperCase();
-  const name = display.toUpperCase();
-  if (sym.endsWith("CE") || sym.endsWith("PE")) return null;
-  if (name.includes("BANK") && (name.includes("NIFTY") || sym.includes("BANKNIFTY"))) return "BANKNIFTY";
-  if (name.includes("NIFTY 50") || sym === "NIFTY 50" || sym === "NIFTY") return "NIFTY";
-  if (name.includes("SENSEX") || sym.includes("SENSEX")) return "SENSEX";
-  if (sym.endsWith("-EQ")) return sym.replace(/-EQ$/, "");
-  return sym.split("-")[0] || null;
-}
-
-export interface OptionLeg {
-  tradingsymbol: string;
-  token: string;
-  ltp?: number;
-  change?: number;
-  changePct?: number;
-  oi?: number;
-  oiChange?: number;
-  oiChangePct?: number;
-  volume?: number;
-}
-
-export interface OptionChainRow {
-  strike: number;
-  ce?: OptionLeg;
-  pe?: OptionLeg;
-}
-
 export interface OptionChainExpiry {
   code: string;
   label: string;
@@ -558,37 +509,6 @@ export interface ExtendedQuote extends LTPData {
   opnInterest?: number;
   opnInterestChange?: number;
   opnInterestChangePct?: number;
-}
-
-export function formatExpiryLabel(code: string): string {
-  const m = code.match(/^(\d{2})([A-Z]{3})(\d{2})$/);
-  if (!m) return code;
-  return `${m[1]} ${m[2]} 20${m[3]}`;
-}
-
-export interface DepthLevel {
-  price: number;
-  quantity: number;
-  orders: number;
-}
-
-export interface MarketDepthQuote {
-  tradingSymbol: string;
-  token: string;
-  exchange: string;
-  ltp: number;
-  netChange: number;
-  percentChange: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  avgPrice?: number;
-  tradeVolume?: number;
-  buy: DepthLevel[];
-  sell: DepthLevel[];
-  totalBuyQty: number;
-  totalSellQty: number;
 }
 
 function mapDepthLevels(arr: unknown): DepthLevel[] {
@@ -664,8 +584,21 @@ function mapExtendedQuote(raw: Record<string, unknown>): ExtendedQuote {
     }
     return undefined;
   };
-  const oi = num("opnInterest", "openInterest", "oi");
-  const vol = num("tradeVolume", "volume", "tradevolume");
+  const oi = num(
+    "opnInterest",
+    "openInterest",
+    "oi",
+    "OpenInterest",
+    "opn_interest",
+  );
+  const vol = num(
+    "tradeVolume",
+    "volume",
+    "tradevolume",
+    "totaltradedvolume",
+    "totalTradedVolume",
+    "tradedVolume",
+  );
   return {
     exchange: String(raw.exchange ?? ""),
     tradingSymbol: String(raw.tradingsymbol ?? raw.tradingSymbol ?? ""),
@@ -684,33 +617,41 @@ function mapExtendedQuote(raw: Record<string, unknown>): ExtendedQuote {
   };
 }
 
+export type AngelQuoteMode = "FULL" | "OHLC" | "LTP" | "QUOTE";
+
 async function fetchQuoteChunk(
   jwtToken: string,
   feedToken: string,
   exch: string,
   chunk: string[],
-  mode: "FULL" | "OHLC" | "LTP"
+  mode: AngelQuoteMode,
 ): Promise<Record<string, unknown>[]> {
-  const res = await fetch(`${BASE_URL}/rest/secure/angelbroking/market/v1/quote/`, {
-    method: "POST",
-    headers: commonHeaders(jwtToken, feedToken),
-    body: JSON.stringify({ mode, exchangeTokens: { [exch]: chunk } }),
-    cache: "no-store",
-  });
-  const data = await parseAngelJson(res);
-  if (!data.status) {
-    const msg = angelError(data, "Quote failed");
-    const { handleRateLimitMessage } = await import("./market-rate-limit");
-    if (handleRateLimitMessage(msg)) throw new Error(msg);
-    return [];
-  }
-  return (data.data as { fetched?: Record<string, unknown>[] })?.fetched ?? [];
+  const { scheduleAngelRest } = await import("./angelone-quote-coordinator");
+  const dedupeKey = `quote:${mode}:${exch}:${chunk.join(",")}`;
+
+  return scheduleAngelRest(`quote/${mode}/${exch}/${chunk.length}`, async () => {
+    const res = await fetch(`${BASE_URL}/rest/secure/angelbroking/market/v1/quote/`, {
+      method: "POST",
+      headers: commonHeaders(jwtToken, feedToken),
+      body: JSON.stringify({ mode, exchangeTokens: { [exch]: chunk } }),
+      cache: "no-store",
+    });
+    const data = await parseAngelJson(res);
+    if (!data.status) {
+      const msg = angelError(data, "Quote failed");
+      const { handleRateLimitMessage } = await import("./market-rate-limit");
+      if (handleRateLimitMessage(msg)) throw new Error(msg);
+      return [];
+    }
+    return (data.data as { fetched?: Record<string, unknown>[] })?.fetched ?? [];
+  }, dedupeKey);
 }
 
-/** Batch quotes — FULL (OI + volume) with OHLC fallback for missing tokens */
+/** Batch quotes — default OHLC for watchlist; use FULL for option chain (OI + volume). */
 export async function getExtendedQuotes(
   exchange: string,
-  tokens: string[]
+  tokens: string[],
+  mode: AngelQuoteMode = "OHLC",
 ): Promise<Map<string, ExtendedQuote>> {
   if (!tokens.length) return new Map();
   const { jwtToken, feedToken } = await getToken();
@@ -719,33 +660,33 @@ export async function getExtendedQuotes(
 
   for (let i = 0; i < tokens.length; i += 50) {
     const chunk = tokens.slice(i, i + 50);
-    const fullRows = await fetchQuoteChunk(jwtToken, feedToken, exch, chunk, "FULL");
-    const got = new Set<string>();
-    for (const row of fullRows) {
+    const rows = await fetchQuoteChunk(jwtToken, feedToken, exch, chunk, mode);
+    for (const row of rows) {
       const q = mapExtendedQuote(row);
-      if (q.symbolToken) {
-        out.set(q.symbolToken, q);
-        got.add(q.symbolToken);
-      }
+      if (q.symbolToken) out.set(q.symbolToken, q);
     }
-    const missing = chunk.filter(t => !got.has(t));
-    if (missing.length > 0) {
-      const ohlcRows = await fetchQuoteChunk(jwtToken, feedToken, exch, missing, "OHLC");
-      for (const row of ohlcRows) {
-        const q = mapExtendedQuote(row);
-        if (q.symbolToken && !out.has(q.symbolToken)) out.set(q.symbolToken, q);
+    // Only fall back to OHLC when FULL/QUOTE missed tokens
+    if (mode === "FULL" || mode === "QUOTE") {
+      const got = new Set(rows.map(r => String((r as { symboltoken?: string }).symboltoken ?? "")));
+      const missing = chunk.filter(t => !got.has(t));
+      if (missing.length > 0) {
+        const ohlcRows = await fetchQuoteChunk(jwtToken, feedToken, exch, missing, "OHLC");
+        for (const row of ohlcRows) {
+          const q = mapExtendedQuote(row);
+          if (q.symbolToken && !out.has(q.symbolToken)) out.set(q.symbolToken, q);
+        }
       }
     }
   }
   return out;
 }
 
-/** Fast OHLC refresh for option chain tokens (single mode per chunk — avoids rate limits). */
+/** Option chain live refresh — FULL mode (OI + volume; single request per chunk). */
 export async function refreshOptionChainQuotes(
   exchange: string,
-  tokens: string[]
+  tokens: string[],
 ): Promise<Map<string, ExtendedQuote>> {
-  return getExtendedQuotes(exchange, tokens);
+  return getExtendedQuotes(exchange, tokens, "FULL");
 }
 
 function applyQuoteToLeg(leg: OptionLeg, q: ExtendedQuote, prevOi?: number) {
@@ -829,7 +770,7 @@ export async function getOptionChain(
   }
 
   const tokenIds = [...new Set(tokens.map(t => t.symboltoken))];
-  const quoteMap = await getExtendedQuotes(optExchange, tokenIds);
+  const quoteMap = await getExtendedQuotes(optExchange, tokenIds, "FULL");
 
   for (const row of byStrike.values()) {
     for (const side of ["ce", "pe"] as const) {
@@ -896,22 +837,3 @@ export async function getOrderBook() {
   return res.json();
 }
 
-// ── Instrument Registry ───────────────────────────────────────────────────────
-
-export const MARKET_INSTRUMENTS = [
-  { symbol: "NIFTY 50",   token: "99926000", exchange: "NSE" },
-  { symbol: "SENSEX",     token: "99919000", exchange: "BSE" },
-  { symbol: "NIFTY BANK", token: "99926009", exchange: "NSE" },
-  { symbol: "RELIANCE",   token: "2885",     exchange: "NSE" },
-  { symbol: "TCS",        token: "11536",    exchange: "NSE" },
-  { symbol: "HDFCBANK",   token: "1333",     exchange: "NSE" },
-  { symbol: "INFY",       token: "1594",     exchange: "NSE" },
-  { symbol: "ICICIBANK",  token: "4963",     exchange: "NSE" },
-  { symbol: "WIPRO",      token: "3787",     exchange: "NSE" },
-  { symbol: "SBIN",       token: "3045",     exchange: "NSE" },
-  { symbol: "BAJFINANCE", token: "317",      exchange: "NSE" },
-  { symbol: "BHARTIARTL", token: "10604",    exchange: "NSE" },
-  { symbol: "LT",         token: "11483",    exchange: "NSE" },
-] as const;
-
-export type KnownSymbol = (typeof MARKET_INSTRUMENTS)[number]["symbol"];

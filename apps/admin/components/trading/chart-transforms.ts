@@ -1,4 +1,4 @@
-import type { Candle } from "@/lib/angelone";
+import type { Candle } from "@/lib/angelone-types";
 
 /** Merge N consecutive candles (same order) into one bar */
 export function aggregateCandles(candles: Candle[], factor: number): Candle[] {

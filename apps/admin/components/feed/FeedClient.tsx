@@ -17,6 +17,7 @@ import {
   FiChevronDown,
 } from "react-icons/fi";
 import { CheckCircle } from "@/components/advisor-ui/icons";
+import SocialFeedSection from "@/components/social/social-feed-section";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -64,6 +65,7 @@ export type FeedClientProps = {
   userId: number | null;
   initialFollowedIds: number[];
   initialLikedPostIds: number[];
+  currentUserName?: string | null;
   suggestedAdvisors: {
     userId: number;
     user: { id: number; fullName: string; _count: { followers: number } } | null;
@@ -885,6 +887,7 @@ export default function FeedClient({
   userId,
   initialFollowedIds,
   initialLikedPostIds,
+  currentUserName,
   suggestedAdvisors,
   trendingSymbols,
 }: FeedClientProps) {
@@ -1159,26 +1162,10 @@ export default function FeedClient({
       <div className="user-layout-rail">
         {/* Feed column */}
         <div>
-          <div style={{ marginBottom: 16 }}>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 22,
-                fontWeight: 800,
-                color: "#0f172a",
-                letterSpacing: -0.5,
-              }}
-            >
-              Your Feed
-            </h1>
-            <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
-              {isAuthed
-                ? hasFollowed
-                  ? "Latest from advisors you follow, then top picks across the network"
-                  : "Discover SEBI-verified advisors. Follow to personalize your feed."
-                : "A live timeline of sentiment from SEBI-verified advisors"}
-            </p>
-          </div>
+          <SocialFeedSection
+            isAuthed={isAuthed}
+            userName={currentUserName ?? "You"}
+          />
 
           {/* Following section */}
           {hasFollowed && (

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { placePaperOrder } from "@/lib/paper-trade-client";
 
 type Props = {
   defaultSymbol?: string;
@@ -13,7 +14,8 @@ export default function PaperTradeForm({ defaultSymbol = "", compact = false }: 
   const [symbol, setSymbol] = useState(defaultSymbol);
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [quantity, setQuantity] = useState("1");
-  const [price, setPrice] = useState("");
+  const [orderType, setOrderType] = useState<"MARKET" | "LIMIT">("MARKET");
+  const [limitPrice, setLimitPrice] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -23,36 +25,30 @@ export default function PaperTradeForm({ defaultSymbol = "", compact = false }: 
     setSuccess("");
     const sym = symbol.trim().toUpperCase();
     const qty = Number(quantity);
-    const px = Number(price);
     if (!sym) return setError("Symbol required");
     if (!Number.isFinite(qty) || qty <= 0) return setError("Invalid quantity");
-    if (!Number.isFinite(px) || px <= 0) return setError("Invalid price");
+    if (orderType === "LIMIT") {
+      const lim = Number(limitPrice);
+      if (!Number.isFinite(lim) || lim <= 0) return setError("Limit price required");
+    }
 
     setLoading(true);
     try {
-      const createRes = await fetch("/api/v1/lab/create", { method: "POST" });
-      if (!createRes.ok) {
-        const c = await createRes.json();
-        if (createRes.status !== 200 && c.status === false) {
-          /* wallet may already exist */
-        }
-      }
-      const res = await fetch("/api/v1/lab/trade", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbol: sym, side, quantity: qty, price: px }),
+      const result = await placePaperOrder({
+        symbol: sym,
+        side,
+        orderType,
+        quantity: qty,
+        limitPrice: orderType === "LIMIT" ? Number(limitPrice) : undefined,
       });
-      const data = await res.json();
-      if (!res.ok || data.status === false) {
-        setError(data.error || "Trade failed");
+      if (!result.ok) {
+        setError(result.text);
         return;
       }
-      setSuccess(
-        `${side.toUpperCase()} ${qty} × ${sym} @ ₹${px.toLocaleString("en-IN")} — balance ₹${Number(data.new_balance).toLocaleString("en-IN")}`,
-      );
+      setSuccess(result.text);
       router.refresh();
     } catch {
-      setError("Network error");
+      setError("Network error — sign in to use paper trading.");
     } finally {
       setLoading(false);
     }
@@ -74,7 +70,13 @@ export default function PaperTradeForm({ defaultSymbol = "", compact = false }: 
       <div className={compact ? "paper-trade-grid-compact" : "paper-trade-grid"}>
         <input placeholder="Symbol (e.g. RELIANCE)" value={symbol} onChange={(e) => setSymbol(e.target.value)} style={field} />
         <input type="number" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={field} />
-        <input type="number" placeholder="Price ₹" value={price} onChange={(e) => setPrice(e.target.value)} style={field} />
+        <select value={orderType} onChange={(e) => setOrderType(e.target.value as "MARKET" | "LIMIT")} style={field}>
+          <option value="MARKET">Market (live LTP)</option>
+          <option value="LIMIT">Limit</option>
+        </select>
+        {orderType === "LIMIT" && (
+          <input type="number" placeholder="Limit price ₹" value={limitPrice} onChange={(e) => setLimitPrice(e.target.value)} style={field} />
+        )}
         {!compact && (
           <div className="bs-toggle" style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
             <button type="button" className={`bs-toggle-item ${side === "buy" ? "active buy" : ""}`} onClick={() => setSide("buy")}>
@@ -86,37 +88,27 @@ export default function PaperTradeForm({ defaultSymbol = "", compact = false }: 
           </div>
         )}
       </div>
-      {compact && (
-        <div className="bs-toggle" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", marginBottom: 8 }}>
-          <button type="button" className={`bs-toggle-item ${side === "buy" ? "active buy" : ""}`} onClick={() => setSide("buy")}>
-            Buy
-          </button>
-          <button type="button" className={`bs-toggle-item ${side === "sell" ? "active sell" : ""}`} onClick={() => setSide("sell")}>
-            Sell
-          </button>
-        </div>
-      )}
+      {error && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 8 }}>{error}</p>}
+      {success && <p style={{ color: "#16a34a", fontSize: 12, marginTop: 8 }}>{success}</p>}
       <button
         type="button"
         onClick={submit}
         disabled={loading}
         style={{
+          marginTop: 12,
           width: "100%",
-          padding: compact ? "8px 12px" : "10px 16px",
+          padding: "10px 0",
           borderRadius: 8,
           border: "none",
           background: side === "buy" ? "#16a34a" : "#dc2626",
           color: "#fff",
-          fontWeight: 700,
+          fontWeight: 800,
           fontSize: 13,
-          cursor: loading ? "not-allowed" : "pointer",
-          opacity: loading ? 0.7 : 1,
+          cursor: loading ? "wait" : "pointer",
         }}
       >
-        {loading ? "Placing…" : `Place paper ${side}`}
+        {loading ? "Placing…" : `${side.toUpperCase()} ${symbol || "—"}`}
       </button>
-      {error && <p style={{ margin: "8px 0 0", fontSize: 11, color: "#b91c1c" }}>{error}</p>}
-      {success && <p style={{ margin: "8px 0 0", fontSize: 11, color: "#047857" }}>{success}</p>}
     </div>
   );
 }

@@ -24,6 +24,7 @@ import {
   FiChevronRight,
 } from "react-icons/fi";
 import { TbFlask } from "react-icons/tb";
+import WatchlistStoreProvider from "@/components/watchlist/watchlist-store-provider";
 
 type UserShellProps = {
   children: React.ReactNode;
@@ -514,7 +515,13 @@ export default function UserShell({
 
         {/* ── Main content ── */}
         <main className="us-main">
-          <div className="us-content">{children}</div>
+          <div className="us-content">
+            {currentUser ? (
+              <WatchlistStoreProvider>{children}</WatchlistStoreProvider>
+            ) : (
+              children
+            )}
+          </div>
         </main>
       </div>
 

@@ -1,4 +1,4 @@
-import type { CandleInterval } from "@/lib/angelone";
+import type { CandleInterval } from "@/lib/angelone-types";
 import { INDICATOR_REGISTRY } from "@/lib/indicators";
 import type { IndicatorPane } from "@/lib/indicators";
 import type { ChartType } from "./chart-widget";
