@@ -39,7 +39,19 @@ export async function GET(req: NextRequest) {
     tradedAt: t.tradedAt,
   }));
 
-  const priceBySymbol = lastPricesFromTrades(trades);
+  let priceBySymbol = lastPricesFromTrades(trades);
+
+  const quotesParam = new URL(req.url).searchParams.get("quotes");
+  if (quotesParam) {
+    try {
+      const parsed = JSON.parse(quotesParam) as { symbol: string; ltp: number }[];
+      for (const q of parsed) {
+        if (q.symbol && q.ltp > 0) priceBySymbol[q.symbol.toUpperCase()] = q.ltp;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
   const cashBalance = Number(wallet.balance);
   const summary = computePortfolioSummary(cashBalance, trades, priceBySymbol, INITIAL_BALANCE);
   const positions = computePositions(trades, priceBySymbol);

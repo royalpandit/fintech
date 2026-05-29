@@ -1,4 +1,4 @@
-import type { OptionLeg } from "@/lib/angelone";
+import type { OptionLeg } from "@/lib/angelone-types";
 import type { WatchlistItem } from "./trading-terminal-types";
 
 export function optionLegToWatchlist(

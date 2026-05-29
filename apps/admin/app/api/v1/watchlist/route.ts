@@ -2,16 +2,19 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/auth";
+import { watchlistItemPayload } from "@/lib/watchlist-db";
+
+/** @deprecated Use /api/v1/watchlists — kept for backward compatibility. */
 
 async function getOrCreateDefaultWatchlist(userId: number) {
   let list = await prisma.watchlist.findFirst({
     where: { userId },
-    orderBy: { createdAt: "asc" },
-    include: { items: { orderBy: { addedAt: "desc" } } },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    include: { items: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] } },
   });
   if (!list) {
     list = await prisma.watchlist.create({
-      data: { userId, name: "Default" },
+      data: { userId, name: "My Portfolio", sortOrder: 0 },
       include: { items: true },
     });
   }
@@ -29,7 +32,7 @@ export async function GET(req: NextRequest) {
     watchlist: {
       id: list.id,
       name: list.name,
-      items: list.items.map((i) => ({
+      items: list.items.map(i => ({
         id: i.id,
         symbol: i.symbol,
         asset_type: i.assetType,
@@ -51,20 +54,27 @@ export async function POST(req: NextRequest) {
   }>(req);
 
   const symbol = (body.symbol ?? "").trim().toUpperCase();
-  if (!symbol || symbol.length < 1) return err("symbol is required");
+  if (!symbol) return err("symbol is required");
 
   const assetType = body.assetType ?? "equity";
   const list = await getOrCreateDefaultWatchlist(auth.userId);
 
+  const payload = watchlistItemPayload({
+    display: symbol,
+    tradingSymbol: symbol,
+    token: symbol,
+    exchange: "NSE",
+    type: "EQ",
+  });
+
   const item = await prisma.watchlistItem.upsert({
-    where: { watchlistId_symbol: { watchlistId: list.id, symbol } },
-    update: {
-      assetType,
-      notes: body.notes?.trim() || null,
+    where: {
+      watchlistId_instrumentKey: { watchlistId: list.id, instrumentKey: payload.instrumentKey },
     },
+    update: { assetType, notes: body.notes?.trim() || null, ...payload },
     create: {
       watchlistId: list.id,
-      symbol,
+      ...payload,
       assetType,
       notes: body.notes?.trim() || null,
     },
@@ -88,12 +98,15 @@ export async function DELETE(req: NextRequest) {
   const symbol = new URL(req.url).searchParams.get("symbol")?.trim().toUpperCase();
   if (!symbol) return err("symbol query param is required");
 
-  const list = await prisma.watchlist.findFirst({ where: { userId: auth.userId } });
-  if (!list) return ok({ removed: false });
-
-  await prisma.watchlistItem.deleteMany({
-    where: { watchlistId: list.id, symbol },
-  });
+  const lists = await prisma.watchlist.findMany({ where: { userId: auth.userId } });
+  for (const list of lists) {
+    await prisma.watchlistItem.deleteMany({
+      where: {
+        watchlistId: list.id,
+        OR: [{ symbol }, { instrumentKey: { contains: symbol } }],
+      },
+    });
+  }
 
   return ok({ removed: true, symbol });
 }

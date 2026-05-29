@@ -4,12 +4,13 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ChartWidget, { evalCustom, OI_PROFILE_INDICATOR_ID } from "./chart-widget";
 import type { OptionChainData } from "./option-chain-panel";
-import type { OptionLeg } from "@/lib/angelone";
-import { optionUnderlyingKey } from "@/lib/angelone";
+import type { OptionLeg, Candle, CandleInterval } from "@/lib/angelone-types";
+import { optionUnderlyingKey, MARKET_INSTRUMENTS, resolveMarketExchange } from "@/lib/angelone-shared";
 import type { ChartType, CustomIndicator } from "./chart-widget";
-import type { Candle, CandleInterval } from "@/lib/angelone";
-import { MARKET_INSTRUMENTS, resolveMarketExchange } from "@/lib/angelone";
 import OptionChainPanel from "./option-chain-panel";
+import TradingUtilityShell from "./trading-utility-shell";
+import { allWatchlistItems, refresh, useWatchlistStore } from "@/lib/watchlist-store";
+import type { UtilityPanelId } from "./trading-utility-types";
 import type { WatchlistItem } from "./trading-terminal-types";
 import {
   DEFAULT_TIMEFRAME,
@@ -25,6 +26,11 @@ import { applyTimeframePipeline } from "./chart-transforms";
 import { applyLiveQuoteToCandles, liveHeaderOhlc } from "@/lib/live-candle";
 import { BUILTIN_INDICATOR_IDS, runIndicatorEngine } from "@/lib/indicators";
 import { nseLiveCandleOpenUnix } from "@/lib/nse-market-time";
+import { useMarketStream } from "@/hooks/use-market-stream";
+import {
+  matchPendingPaperOrders,
+  paperSymbolFromWatchlist,
+} from "@/lib/paper-trade-client";
 import {
   ChartTypeMenu,
   IndicatorsModal,
@@ -272,124 +278,6 @@ function AddIndicatorModal({ onAdd, onClose, candles }: {
   );
 }
 
-// ── SearchBar ─────────────────────────────────────────────────────────────────
-
-const EXCHANGE_COLORS: Record<string, string> = {
-  NSE: "#0ea5e9", BSE: "#8b5cf6", NFO: "#f59e0b",
-  MCX: "#ef4444", CDS: "#22c55e", BFO: "#f97316",
-};
-
-function ExchangeBadge({ exchange, type }: { exchange: string; type: string }) {
-  const color = EXCHANGE_COLORS[exchange] ?? "#64748b";
-  return (
-    <span style={{ display: "flex", gap: 4, alignItems: "center", flexShrink: 0 }}>
-      <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: `${color}18`, color }}>{exchange}</span>
-      <span style={{ fontSize: 9, fontWeight: 600, color: "#94a3b8" }}>{type}</span>
-    </span>
-  );
-}
-
-function SearchBar({ onSelect }: { onSelect: (item: WatchlistItem) => void }) {
-  const [q,           setQ]           = useState("");
-  const [results,     setResults]     = useState<WatchlistItem[]>([]);
-  const [open,        setOpen]        = useState(false);
-  const [loading,     setLoading]     = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const search = useCallback(async (query: string) => {
-    if (query.length < 1) { setResults([]); setSearchError(null); return; }
-    setLoading(true);
-    setSearchError(null);
-    try {
-      const res  = await fetch(`/api/v1/market/search?q=${encodeURIComponent(query)}&exchange=ALL`, { cache: "no-store" });
-      const json = await res.json();
-      if (json.ok) {
-        const mapped: WatchlistItem[] = (json.data ?? []).map((d: {
-          symbolName: string; tradingSymbol: string; token: string; exchange: string; instrumentType: string;
-        }) => {
-          const type = d.instrumentType || "EQ";
-          const exchange = resolveMarketExchange({
-            exchange: d.exchange,
-            symboltoken: d.token,
-            tradingSymbol: d.tradingSymbol,
-            instrumentType: type,
-          });
-          return {
-            display:       (d.symbolName || d.tradingSymbol).replace(/-EQ$/i, ""),
-            tradingSymbol: d.tradingSymbol,
-            token:         d.token,
-            exchange,
-            type,
-          };
-        });
-        setResults(mapped);
-        setSearchError(mapped.length ? null : (json.message ?? `No results for "${query}"`));
-      } else {
-        setResults([]);
-        setSearchError(json.error ?? "Search failed");
-      }
-    } catch {
-      setResults([]);
-      setSearchError("Search request failed");
-    }
-    finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => search(q), 300);
-  }, [q, search]);
-
-  return (
-    <div style={{ position: "relative", padding: "8px 10px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: "#f8fafc", border: "1px solid #eef0f4", borderRadius: 8 }}>
-        {loading
-          ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2.5" style={{ animation: "spin 1s linear infinite" }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-          : <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        }
-        <input value={q}
-          onChange={e => { setQ(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setOpen(false)}
-          placeholder="Search NSE, BSE, MCX, F&O…"
-          style={{ border: "none", background: "transparent", outline: "none", fontSize: 12, width: "100%", color: "#0f172a" }} />
-        {q && (
-          <button type="button" onClick={() => { setQ(""); setResults([]); }}
-            style={{ border: "none", background: "transparent", color: "#94a3b8", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
-        )}
-      </div>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      {open && results.length > 0 && (
-        // onMouseDown preventDefault stops input blur from firing before onClick
-        <div onMouseDown={e => e.preventDefault()}
-          style={{ position: "absolute", top: "calc(100% - 2px)", left: 10, right: 10, background: "#fff", border: "1px solid #eef0f4", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 50, maxHeight: 300, overflowY: "auto" }}>
-          {results.map(r => (
-            <button key={`${r.exchange}:${r.token}`} type="button"
-              onMouseDown={e => e.preventDefault()}
-              onClick={() => { onSelect(r); setQ(""); setResults([]); setOpen(false); }}
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", padding: "8px 12px", border: "none", background: "transparent", cursor: "pointer", borderBottom: "1px solid #f8fafc", textAlign: "left", gap: 8 }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.tradingSymbol}</div>
-                {r.display !== r.tradingSymbol && (
-                  <div style={{ fontSize: 10, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.display}</div>
-                )}
-              </div>
-              <ExchangeBadge exchange={r.exchange} type={r.type} />
-            </button>
-          ))}
-        </div>
-      )}
-      {open && q.length > 0 && results.length === 0 && !loading && (
-        <div onMouseDown={e => e.preventDefault()}
-          style={{ position: "absolute", top: "calc(100% - 2px)", left: 10, right: 10, background: "#fff", border: "1px solid #eef0f4", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 50, padding: "14px 12px", fontSize: 12, color: searchError ? "#dc2626" : "#94a3b8", textAlign: "center" }}>
-          {searchError ?? `No results for "${q}"`}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Overview / Option chain panels ────────────────────────────────────────────
 
 function OverviewPanel({
@@ -455,177 +343,6 @@ function OverviewPanel({
   );
 }
 
-// ── OrderPanel ────────────────────────────────────────────────────────────────
-
-function OrderPanel({
-  symbol,
-  onOrderPlaced,
-}: {
-  symbol: WatchlistItem;
-  onOrderPlaced?: () => void;
-}) {
-  const [side,         setSide]         = useState<"BUY" | "SELL">("BUY");
-  const [orderType,    setOrderType]    = useState<"MARKET" | "LIMIT" | "SL" | "SL-M">("MARKET");
-  const [product,      setProduct]      = useState<"CNC" | "MIS" | "NRML">("MIS");
-  const [qty,          setQty]          = useState("1");
-  const [price,        setPrice]        = useState("0");
-  const [triggerPrice, setTriggerPrice] = useState("0");
-  const [loading,      setLoading]      = useState(false);
-  const [msg,          setMsg]          = useState<{ ok: boolean; text: string } | null>(null);
-
-  const isIndex      = symbol.type === "INDEX";
-  const needsPrice   = orderType === "LIMIT" || orderType === "SL";
-  const needsTrigger = orderType === "SL"    || orderType === "SL-M";
-
-  useEffect(() => {
-    if (symbol.ltp != null && symbol.ltp > 0) {
-      setPrice(String(symbol.ltp));
-    }
-  }, [symbol.token, symbol.ltp]);
-
-  const placeOrder = async () => {
-    if (isIndex) return;
-    setLoading(true);
-    setMsg(null);
-    try {
-      const { placePaperTrade, paperSymbolFromWatchlist } = await import("@/lib/paper-trade-client");
-      const sym = paperSymbolFromWatchlist(symbol);
-      const quantity = Math.max(1, Number(qty) || 0);
-
-      let execPrice = 0;
-      if (orderType === "MARKET") {
-        execPrice = Number(symbol.ltp);
-        if (!execPrice || execPrice <= 0) {
-          setMsg({ ok: false, text: "Live price not available yet — use Limit and enter a price." });
-          return;
-        }
-      } else if (orderType === "LIMIT") {
-        execPrice = Number(price);
-      } else {
-        execPrice = Number(needsTrigger ? triggerPrice : price) || Number(symbol.ltp);
-      }
-
-      if (!execPrice || execPrice <= 0) {
-        setMsg({ ok: false, text: "Enter a valid price for this order." });
-        return;
-      }
-
-      const result = await placePaperTrade({
-        symbol: sym,
-        side: side === "BUY" ? "buy" : "sell",
-        quantity,
-        price: execPrice,
-      });
-      setMsg({ ok: result.ok, text: result.text });
-      if (result.ok) onOrderPlaced?.();
-    } catch {
-      setMsg({ ok: false, text: "Network error — sign in to trade with your paper wallet." });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-      <p
-        style={{
-          margin: 0,
-          fontSize: 10,
-          fontWeight: 700,
-          color: "#0ea5e9",
-          textAlign: "center",
-          padding: "6px 8px",
-          background: "rgba(14,165,233,0.08)",
-          borderRadius: 6,
-        }}
-      >
-        Paper trading · virtual wallet
-      </p>
-      <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid #eef0f4" }}>
-        {(["BUY", "SELL"] as const).map(s => (
-          <button key={s} type="button" onClick={() => setSide(s)}
-            style={{ flex: 1, padding: "10px 0", border: "none", fontWeight: 800, fontSize: 13, cursor: "pointer",
-              background: side === s ? (s === "BUY" ? "#16a34a" : "#dc2626") : "#f8fafc",
-              color: side === s ? "#fff" : "#94a3b8", letterSpacing: 0.5 }}>
-            {s}
-          </button>
-        ))}
-      </div>
-
-      {isIndex && (
-        <p style={{ margin: 0, fontSize: 11, color: "#94a3b8", textAlign: "center", padding: "8px 0" }}>
-          Index cannot be traded directly.
-        </p>
-      )}
-
-      {!isIndex && (
-        <>
-          <div>
-            <label style={{ fontSize: 10, color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>Order Type</label>
-            <select value={orderType} onChange={e => setOrderType(e.target.value as typeof orderType)}
-              style={{ width: "100%", marginTop: 4, padding: "7px 8px", border: "1px solid #eef0f4", borderRadius: 6, fontSize: 12, color: "#0f172a", background: "#fff", outline: "none" }}>
-              <option value="MARKET">Market</option>
-              <option value="LIMIT">Limit</option>
-              <option value="SL">SL (Stop Loss + price)</option>
-              <option value="SL-M">SL-M (Stop Loss Market)</option>
-            </select>
-          </div>
-
-          <div>
-            <label style={{ fontSize: 10, color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>Product</label>
-            <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-              {(["MIS", "CNC", "NRML"] as const).map(p => (
-                <button key={p} type="button" onClick={() => setProduct(p)}
-                  style={{ flex: 1, padding: "5px 0", border: "1px solid", borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: "pointer",
-                    borderColor: product === p ? "#0ea5e9" : "#eef0f4",
-                    background: product === p ? "rgba(14,165,233,0.08)" : "#fff",
-                    color: product === p ? "#0ea5e9" : "#64748b" }}>
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label style={{ fontSize: 10, color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>Quantity</label>
-            <input type="number" min="1" value={qty} onChange={e => setQty(e.target.value)}
-              style={{ width: "100%", marginTop: 4, padding: "7px 8px", border: "1px solid #eef0f4", borderRadius: 6, fontSize: 13, fontWeight: 700, color: "#0f172a", outline: "none", boxSizing: "border-box" }} />
-          </div>
-
-          {needsPrice && (
-            <div>
-              <label style={{ fontSize: 10, color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>Price</label>
-              <input type="number" value={price} onChange={e => setPrice(e.target.value)}
-                style={{ width: "100%", marginTop: 4, padding: "7px 8px", border: "1px solid #eef0f4", borderRadius: 6, fontSize: 13, color: "#0f172a", outline: "none", boxSizing: "border-box" }} />
-            </div>
-          )}
-
-          {needsTrigger && (
-            <div>
-              <label style={{ fontSize: 10, color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>Trigger Price</label>
-              <input type="number" value={triggerPrice} onChange={e => setTriggerPrice(e.target.value)}
-                style={{ width: "100%", marginTop: 4, padding: "7px 8px", border: "1px solid #eef0f4", borderRadius: 6, fontSize: 13, color: "#0f172a", outline: "none", boxSizing: "border-box" }} />
-            </div>
-          )}
-
-          <button type="button" onClick={placeOrder} disabled={loading}
-            style={{ padding: "11px 0", borderRadius: 8, border: "none", fontWeight: 800, fontSize: 14, cursor: loading ? "not-allowed" : "pointer",
-              background: side === "BUY" ? "#16a34a" : "#dc2626", color: "#fff", opacity: loading ? 0.7 : 1, letterSpacing: 0.5 }}>
-            {loading ? "Placing…" : `${side} ${symbol.display}`}
-          </button>
-
-          {msg && (
-            <div style={{ padding: "8px 10px", borderRadius: 7, fontSize: 11, fontWeight: 600,
-              background: msg.ok ? "#dcfce7" : "#fee2e2", color: msg.ok ? "#15803d" : "#dc2626" }}>
-              {msg.text}
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
 // ── Main Terminal ─────────────────────────────────────────────────────────────
 
 export default function TradingTerminal() {
@@ -634,6 +351,7 @@ export default function TradingTerminal() {
 
 function TradingTerminalInner() {
   const router = useRouter();
+  const { lists: storeLists, version: storeVersion } = useWatchlistStore();
   const [watchlist,       setWatchlist]       = useState<WatchlistItem[]>(DEFAULT_WATCHLIST);
   const [selected,        setSelected]        = useState<WatchlistItem>(DEFAULT_WATCHLIST[0]);
   const [timeframe,       setTimeframe]       = useState<TimeframeOption>(DEFAULT_TIMEFRAME);
@@ -670,7 +388,13 @@ function TradingTerminalInner() {
   const [candleError,     setCandleError]     = useState<string | null>(null);
   const [liveTick,        setLiveTick]        = useState<{ price: number; time: number; seq: number } | null>(null);
   const [liveSessionVol,  setLiveSessionVol]  = useState<number | undefined>(undefined);
-  const [mobilePanel,     setMobilePanel]     = useState<"watchlist" | "chart" | "order">("chart");
+  const [mobilePanel,     setMobilePanel]     = useState<"chart" | "utility">("chart");
+  const [utilityPanel,    setUtilityPanel]    = useState<UtilityPanelId | null>(null);
+  const [orderSide,       setOrderSide]       = useState<"BUY" | "SELL">("BUY");
+  const [paperRefreshKey, setPaperRefreshKey] = useState(0);
+  const paperMatchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const watchlistForMatchRef = useRef(watchlist);
+  watchlistForMatchRef.current = watchlist;
 
   const toolbarRef = useRef<HTMLDivElement>(null);
   // Stable ref for watchlist — avoids restarting the 10s quote poll on every watchlist change
@@ -713,7 +437,7 @@ function TradingTerminalInner() {
     });
   }, []);
 
-  // ── Single live quote poll (watchlist + chart tick) — avoids rate limits ──
+  // ── Live: WebSocket LTP (SSE) + slow REST OHLC fallback for watchlist ──
   const selectedRef = useRef(selected);
   const centerTabRef = useRef(centerTab);
   const liveSeqRef = useRef(0);
@@ -733,6 +457,22 @@ function TradingTerminalInner() {
     },
     [candleFloor],
   );
+
+  const schedulePaperOrderMatch = useCallback(() => {
+    if (paperMatchTimerRef.current) clearTimeout(paperMatchTimerRef.current);
+    paperMatchTimerRef.current = setTimeout(async () => {
+      const quotes = watchlistForMatchRef.current
+        .filter(w => w.ltp && w.ltp > 0)
+        .map(w => ({ symbol: paperSymbolFromWatchlist(w), ltp: w.ltp! }));
+      const sel = selectedRef.current;
+      if (sel.ltp && sel.ltp > 0) {
+        quotes.push({ symbol: paperSymbolFromWatchlist(sel), ltp: sel.ltp });
+      }
+      if (!quotes.length) return;
+      const matched = await matchPendingPaperOrders(quotes);
+      if (matched > 0) setPaperRefreshKey(k => k + 1);
+    }, 1500);
+  }, []);
 
   const fetchQuotes = useCallback(async () => {
     try {
@@ -771,6 +511,14 @@ function TradingTerminalInner() {
         return q ? { ...item, ltp: q.ltp, open: q.open, high: q.high, low: q.low, change: q.netChange, changePct: q.percentChange } : item;
       }));
 
+      const matchQuotes: { symbol: string; ltp: number }[] = [];
+      for (const item of watchlistRef.current) {
+        const q = quoteMap.get(item.token);
+        if (q?.ltp && q.ltp > 0) {
+          matchQuotes.push({ symbol: paperSymbolFromWatchlist(item), ltp: q.ltp });
+        }
+      }
+
       const sel = selectedRef.current;
       const q = quoteMap.get(sel.token);
       if (q) {
@@ -784,45 +532,75 @@ function TradingTerminalInner() {
         setCandleError(prev =>
           prev?.includes("rate limit") ? null : prev
         );
+        const sq = quoteMap.get(sel.token);
+        if (sq?.ltp && sq.ltp > 0) {
+          matchQuotes.push({ symbol: paperSymbolFromWatchlist(sel), ltp: sq.ltp });
+        }
+      }
+
+      if (matchQuotes.length) {
+        const matched = await matchPendingPaperOrders(matchQuotes);
+        if (matched > 0) {
+          setPaperRefreshKey(k => k + 1);
+        }
       }
     } catch { /* ignore */ }
   }, [pushLiveTick]);
 
-  /** Fast LTP poll for the active chart symbol — keeps header and candle in sync. */
-  const fetchChartTick = useCallback(async () => {
-    const sel = selectedRef.current;
-    if (!sel.token) return;
-    try {
-      const res = await fetch(
-        `/api/v1/market/tick?token=${encodeURIComponent(sel.token)}` +
-        `&exchange=${encodeURIComponent(sel.exchange)}` +
-        `&symbol=${encodeURIComponent(sel.tradingSymbol)}`,
-        { cache: "no-store" },
-      );
-      const json = await res.json();
-      if (!json.ok || json.ltp == null) return;
-      const ltp = Number(json.ltp);
+  // ── Angel WebSocket (one SSE → one server WS) for LTP ticks ───────────────
+  const streamSymbols = useMemo(() => {
+    const keys = new Set<string>();
+    const add = (exchange: string, token: string) => {
+      if (token) keys.add(`${exchange}:${token}`);
+    };
+    add(resolveMarketExchange({
+      exchange: selected.exchange,
+      symboltoken: selected.token,
+      tradingSymbol: selected.tradingSymbol,
+      instrumentType: selected.type,
+    }), selected.token);
+    for (const w of watchlist) {
+      add(resolveMarketExchange({
+        exchange: w.exchange,
+        symboltoken: w.token,
+        tradingSymbol: w.tradingSymbol,
+        instrumentType: w.type,
+      }), w.token);
+    }
+    return [...keys];
+  }, [selected.token, selected.exchange, selected.tradingSymbol, selected.type, watchlist]);
+
+  const handleStreamTick = useCallback(
+    (tick: { token: string; exchange: string; ltp: number; volume?: number }) => {
+      const ltp = tick.ltp;
       if (!Number.isFinite(ltp) || ltp <= 0) return;
-      setSelected(prev => ({
-        ...prev,
-        ltp,
-        change: json.netChange ?? prev.change,
-        changePct: json.pctChange ?? prev.changePct,
-      }));
-      pushLiveTick(ltp);
-    } catch { /* ignore */ }
-  }, [pushLiveTick]);
 
-  useEffect(() => {
-    if (centerTab !== "chart" || candleLoading) return;
-    fetchChartTick();
-    const id = setInterval(fetchChartTick, 2_000);
-    return () => clearInterval(id);
-  }, [centerTab, candleLoading, selected.token, timeframe.id, fetchChartTick]);
+      setWatchlist(prev =>
+        prev.map(item =>
+          item.token === tick.token
+            ? { ...item, ltp }
+            : item,
+        ),
+      );
 
+      const sel = selectedRef.current;
+      if (sel.token === tick.token) {
+        setSelected(prev => ({ ...prev, ltp }));
+        pushLiveTick(ltp, tick.volume);
+        setCandleError(prev => (prev?.includes("rate limit") ? null : prev));
+      }
+
+      schedulePaperOrderMatch();
+    },
+    [pushLiveTick, schedulePaperOrderMatch],
+  );
+
+  useMarketStream(streamSymbols, handleStreamTick, centerTab === "chart" && !candleLoading);
+
+  // REST fallback for OHLC / % change on watchlist (WebSocket = LTP only)
   useEffect(() => {
     fetchQuotes();
-    const ms = centerTab === "chart" ? 4_000 : 8_000;
+    const ms = centerTab === "chart" ? 12_000 : 20_000;
     const id = setInterval(fetchQuotes, ms);
     return () => clearInterval(id);
   }, [fetchQuotes, centerTab]);
@@ -1017,7 +795,7 @@ function TradingTerminalInner() {
 
   useEffect(() => {
     if (!oiProfileActive || centerTab !== "chart") return;
-    const id = setInterval(refreshOiProfile, 6_000);
+    const id = setInterval(refreshOiProfile, 12_000);
     return () => clearInterval(id);
   }, [oiProfileActive, centerTab, refreshOiProfile]);
 
@@ -1053,6 +831,7 @@ function TradingTerminalInner() {
 
   const handlePaperOrderPlaced = useCallback(() => {
     fetchOrders();
+    setPaperRefreshKey(k => k + 1);
     router.refresh();
   }, [fetchOrders, router]);
 
@@ -1075,19 +854,85 @@ function TradingTerminalInner() {
     setCandleError(null);
   }, []);
 
-  const addToWatchlist = (item: WatchlistItem) => {
+  const selectSymbol = useCallback((item: WatchlistItem, tab: CenterTab = "chart") => {
     const normalized = normalizeSelection(item);
-    if (watchlist.some(w => w.token === normalized.token && w.exchange === normalized.exchange)) {
-      setSelected(normalized);
-      setCenterTab("chart");
-      setCandleError(null);
-      return;
-    }
-    setWatchlist(prev => [...prev, normalized]);
     setSelected(normalized);
-    setCenterTab("chart");
+    setCenterTab(tab);
     setCandleError(null);
-  };
+  }, []);
+
+  const handleBuy = useCallback((item: WatchlistItem) => {
+    selectSymbol(item, "chart");
+    setOrderSide("BUY");
+    setUtilityPanel("orders");
+    setMobilePanel("utility");
+  }, [selectSymbol]);
+
+  const handleSell = useCallback((item: WatchlistItem) => {
+    selectSymbol(item, "chart");
+    setOrderSide("SELL");
+    setUtilityPanel("orders");
+    setMobilePanel("utility");
+  }, [selectSymbol]);
+
+  const resolveWatchlistForPaperSymbol = useCallback(
+    (sym: string): WatchlistItem => {
+      const upper = sym.toUpperCase();
+      const hit = watchlist.find(w => paperSymbolFromWatchlist(w) === upper);
+      if (hit) return hit;
+      return {
+        display: sym,
+        tradingSymbol: sym,
+        token: "",
+        exchange: "NSE",
+        type: "EQ",
+      };
+    },
+    [watchlist],
+  );
+
+  const handleHoldingsBuy = useCallback(
+    (sym: string) => handleBuy(resolveWatchlistForPaperSymbol(sym)),
+    [handleBuy, resolveWatchlistForPaperSymbol],
+  );
+
+  const handleHoldingsSell = useCallback(
+    (sym: string) => handleSell(resolveWatchlistForPaperSymbol(sym)),
+    [handleSell, resolveWatchlistForPaperSymbol],
+  );
+
+  const baseWatchlist = useMemo(() => {
+    const items = allWatchlistItems(storeLists);
+    return items.length ? items : DEFAULT_WATCHLIST;
+  }, [storeLists, storeVersion]);
+
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  useEffect(() => {
+    setWatchlist(prev => {
+      const byKey = new Map(prev.map(p => [`${p.exchange}:${p.token}`, p]));
+      return baseWatchlist.map(it => {
+        const old = byKey.get(`${it.exchange}:${it.token}`);
+        return old
+          ? { ...it, ltp: old.ltp, change: old.change, changePct: old.changePct, open: old.open, high: old.high, low: old.low }
+          : it;
+      });
+    });
+  }, [baseWatchlist]);
+
+  const mergeQuotesIntoWatchlist = useCallback((items: WatchlistItem[]) => {
+    setWatchlist(prev => {
+      const byKey = new Map(prev.map(p => [`${p.exchange}:${p.token}`, p]));
+      return items.map(it => {
+        const old = byKey.get(`${it.exchange}:${it.token}`);
+        return old
+          ? { ...it, ltp: old.ltp, change: old.change, changePct: old.changePct, open: old.open, high: old.high, low: old.low }
+          : it;
+      });
+    });
+  }, []);
 
   const last = displayCandles[displayCandles.length - 1] ?? candles[candles.length - 1];
   const headerOhlc = liveHeaderOhlc(last, selected.ltp);
@@ -1095,42 +940,6 @@ function TradingTerminalInner() {
 
   return (
     <div className="trading-terminal">
-
-      {/* ── LEFT: Watchlist ──────────────────────────────────────────────── */}
-      <div className={`tt-panel-left${mobilePanel === "watchlist" ? " tt-panel-active" : ""}`}>
-        <div style={{ padding: "10px 12px 0", borderBottom: "1px solid #f1f5f9" }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: "#64748b", letterSpacing: 0.8, textTransform: "uppercase", paddingBottom: 8 }}>Watchlist</div>
-        </div>
-
-        <SearchBar onSelect={addToWatchlist} />
-
-        <div style={{ flex: 1, overflowY: "auto" }}>
-          {watchlist.map(item => {
-            const active = item.token === selected.token;
-            const pos    = (item.changePct ?? 0) >= 0;
-            return (
-              <button key={item.token} type="button" onClick={() => { setSelected(normalizeSelection(item)); setCandleError(null); }}
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", padding: "9px 14px", border: "none",
-                  background: active ? "rgba(14,165,233,0.07)" : "transparent", cursor: "pointer",
-                  borderLeft: active ? "3px solid #0ea5e9" : "3px solid transparent",
-                  textAlign: "left", borderBottom: "1px solid #f8fafc" }}>
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>{item.display}</div>
-                  <div style={{ fontSize: 9, color: "#94a3b8", fontWeight: 500 }}>{item.exchange} · {item.type}</div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: "#0f172a" }}>
-                    {item.ltp ? `₹${item.ltp.toLocaleString("en-IN")}` : "—"}
-                  </div>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: pos ? "#16a34a" : "#dc2626" }}>
-                    {fmtPct(item.changePct)}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       {/* ── DRAWING TOOLS ─────────────────────────────────────────────────── */}
       <div className="tt-panel-tools">
@@ -1149,8 +958,9 @@ function TradingTerminalInner() {
         </button>
       </div>
 
-      {/* ── CENTER: Chart area ─────────────────────────────────────────────── */}
-      <div className={`tt-panel-center${mobilePanel === "chart" ? " tt-panel-active" : ""}`}>
+      {/* ── CHART + RIGHT UTILITY (watchlist via drawer only) ─────────────── */}
+      <div className={`tt-panel-main${mobilePanel === "chart" || mobilePanel === "utility" ? " tt-panel-active" : ""}`}>
+      <div className="tt-panel-center">
 
         {/* Symbol header */}
         <div style={{ background: "#fff", borderBottom: "1px solid #eef0f4", padding: "8px 16px", display: "flex", alignItems: "center", gap: 14, flexShrink: 0, flexWrap: "wrap" }}>
@@ -1351,48 +1161,57 @@ function TradingTerminalInner() {
         </div>
       </div>
 
-      {/* ── RIGHT: Order Panel ─────────────────────────────────────────────── */}
-      <div className={`tt-panel-right${mobilePanel === "order" ? " tt-panel-active" : ""}`}>
-        <div style={{ padding: "10px 14px 8px", borderBottom: "1px solid #f1f5f9" }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: "#64748b", letterSpacing: 0.8, textTransform: "uppercase" }}>Paper Order</div>
-        </div>
-        <div style={{ flex: 1, overflowY: "auto" }}>
-          <OrderPanel symbol={selected} onOrderPlaced={handlePaperOrderPlaced} />
-          <div style={{ borderTop: "1px solid #eef0f4", padding: "10px 12px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: "#64748b", letterSpacing: 0.6, textTransform: "uppercase" }}>Today&apos;s paper trades</span>
-              <button type="button" onClick={fetchOrders} style={{ fontSize: 10, color: "#0ea5e9", border: "none", background: "transparent", cursor: "pointer", fontWeight: 600 }}>↺</button>
-            </div>
-            {orders.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 11, color: "#94a3b8" }}>No orders today.</p>
-            ) : (
-              <div style={{ display: "grid", gap: 6, maxHeight: 160, overflowY: "auto" }}>
-                {orders.slice(0, 8).map((o, i) => {
-                  const isBuy = o.side === "BUY";
-                  return (
-                    <div key={i} style={{ fontSize: 10, padding: "6px 8px", background: "#f8fafc", borderRadius: 6 }}>
-                      <div style={{ fontWeight: 700, color: "#0f172a" }}>{o.symbol}</div>
-                      <div style={{ color: isBuy ? "#16a34a" : "#dc2626", fontWeight: 600 }}>{o.side} · {o.quantity} @ ₹{Number(o.price).toLocaleString("en-IN")}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+      <TradingUtilityShell
+        activePanel={utilityPanel}
+        onPanelChange={setUtilityPanel}
+        selected={selected}
+        watchlist={watchlist}
+        onWatchlistItemsChange={mergeQuotesIntoWatchlist}
+        onSelectSymbol={item => selectSymbol(item, "chart")}
+        onOpenChart={openOptionChart}
+        onBuy={handleBuy}
+        onSell={handleSell}
+        orderSide={orderSide}
+        orders={orders}
+        onRefreshOrders={fetchOrders}
+        onOrderPlaced={handlePaperOrderPlaced}
+        paperRefreshKey={paperRefreshKey}
+        onHoldingsBuy={handleHoldingsBuy}
+        onHoldingsSell={handleHoldingsSell}
+        onShowOverview={() => setCenterTab("overview")}
+        onShowIndicators={() => setShowIndModal(true)}
+      />
       </div>
 
       <nav className="tt-mobile-nav" aria-label="Terminal panels">
         {([
-          { id: "watchlist" as const, label: "Symbols" },
-          { id: "chart" as const, label: "Chart" },
-          { id: "order" as const, label: "Trade" },
-        ]).map((item) => (
+          { label: "Watchlist", panel: "watchlist" as UtilityPanelId },
+          { label: "Chart", panel: null },
+          { label: "Orders", panel: "orders" as UtilityPanelId },
+          { label: "Depth", panel: "depth" as UtilityPanelId },
+          { label: "More", panel: "more" as UtilityPanelId },
+        ]).map(item => (
           <button
-            key={item.id}
+            key={item.label}
             type="button"
-            className={mobilePanel === item.id ? "tt-mobile-active" : ""}
-            onClick={() => setMobilePanel(item.id)}
+            className={
+              item.panel === null
+                ? mobilePanel === "chart" && !utilityPanel
+                  ? "tt-mobile-active"
+                  : ""
+                : mobilePanel === "utility" && utilityPanel === item.panel
+                  ? "tt-mobile-active"
+                  : ""
+            }
+            onClick={() => {
+              if (item.panel === null) {
+                setMobilePanel("chart");
+                setUtilityPanel(null);
+              } else {
+                setMobilePanel("utility");
+                setUtilityPanel(item.panel);
+              }
+            }}
           >
             {item.label}
           </button>

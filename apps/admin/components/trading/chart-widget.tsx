@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
-import type { Candle } from "@/lib/angelone";
+import type { Candle } from "@/lib/angelone-types";
 import {
   nseChartLocalization,
   nseChartTickMarkFormatter,

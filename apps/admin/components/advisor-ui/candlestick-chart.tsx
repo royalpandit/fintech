@@ -1,4 +1,4 @@
-import type { Candle } from "@/lib/angelone";
+import type { Candle } from "@/lib/angelone-types";
 
 type Props = {
   data: Candle[];

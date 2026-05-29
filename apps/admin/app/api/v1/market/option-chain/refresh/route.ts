@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     const cacheKey = `oc-refresh:${exchange}:${tokens.length}:${tokens[0]}:${tokens[tokens.length - 1]}`;
-    const map = await withMarketCache(cacheKey, 5_000, () =>
+    const map = await withMarketCache(cacheKey, 10_000, () =>
       refreshOptionChainQuotes(exchange, tokens)
     );
 

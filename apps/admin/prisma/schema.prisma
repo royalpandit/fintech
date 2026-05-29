@@ -86,6 +86,17 @@ enum PostVisibility {
   @@map("post_visibility")
 }
 
+enum FeedPostType {
+  text
+  image
+  video
+  chart
+  article
+  idea
+
+  @@map("feed_post_type")
+}
+
 enum ReactionType {
   like
 
@@ -104,6 +115,25 @@ enum TradeSide {
   sell
 
   @@map("trade_side")
+}
+
+enum PaperOrderType {
+  MARKET
+  LIMIT
+  SL
+  SL_M
+
+  @@map("paper_order_type")
+}
+
+enum PaperOrderStatus {
+  OPEN
+  PENDING
+  EXECUTED
+  CANCELLED
+  REJECTED
+
+  @@map("paper_order_status")
 }
 
 enum SubscriptionStatus {
@@ -481,27 +511,81 @@ model SentimentAggregate {
 // ─── 4) Community Social ─────────────────────────────────
 
 model CommunityPost {
-  id         Int            @id @default(autoincrement())
-  uuid       String         @unique @default(uuid())
-  userId     Int            @map("user_id")
-  content    String
-  mediaUrl   String?        @map("media_url")
-  category   String         @default("general") @db.VarChar(50)
-  visibility PostVisibility @default(public)
-  groupId    Int?           @map("group_id")
-  createdAt  DateTime       @default(now()) @map("created_at")
-  updatedAt  DateTime       @updatedAt @map("updated_at")
-  deletedAt  DateTime?      @map("deleted_at")
+  id            Int            @id @default(autoincrement())
+  uuid          String         @unique @default(uuid())
+  userId        Int            @map("user_id")
+  content       String
+  mediaUrl      String?        @map("media_url")
+  postType      FeedPostType   @default(text) @map("post_type")
+  title         String?        @db.VarChar(200)
+  sentiment     SentimentType?
+  targetPrice   Decimal?       @map("target_price") @db.Decimal(18, 4)
+  stopLossPrice Decimal?       @map("stop_loss_price") @db.Decimal(18, 4)
+  thumbnailUrl  String?        @map("thumbnail_url")
+  articleBody   String?        @map("article_body")
+  category      String         @default("general") @db.VarChar(50)
+  visibility    PostVisibility @default(public)
+  groupId       Int?           @map("group_id")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  deletedAt     DateTime?      @map("deleted_at")
 
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   comments  CommunityComment[]
   saves     CommunityPostSave[]
   reactions CommunityReaction[]
   tags      CommunityPostTag[]
+  images    CommunityPostImage[]
+  videos    CommunityPostVideo[]
+  symbols   CommunityPostSymbol[]
 
   @@index([userId])
   @@index([createdAt(sort: Desc)])
+  @@index([postType])
   @@map("community_posts")
+}
+
+model CommunityPostImage {
+  id        Int      @id @default(autoincrement())
+  postId    Int      @map("post_id")
+  url       String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("community_post_images")
+}
+
+model CommunityPostVideo {
+  id        Int      @id @default(autoincrement())
+  postId    Int      @map("post_id")
+  url       String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("community_post_videos")
+}
+
+model CommunityPostSymbol {
+  id            Int      @id @default(autoincrement())
+  postId        Int      @map("post_id")
+  symbol        String   @db.VarChar(50)
+  tradingSymbol String?  @map("trading_symbol") @db.VarChar(80)
+  exchange      String?  @db.VarChar(16)
+  token         String?  @db.VarChar(32)
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([symbol])
+  @@map("community_post_symbols")
 }
 
 model CommunityComment {
@@ -787,6 +871,7 @@ model VirtualWallet {
 
   user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   trades TradeVirtual[]
+  orders PaperOrder[]
 
   @@map("virtual_wallets")
 }
@@ -801,9 +886,40 @@ model TradeVirtual {
   tradedAt DateTime  @default(now()) @map("traded_at")
 
   wallet VirtualWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  order  PaperOrder?
 
   @@index([walletId, tradedAt(sort: Desc)])
   @@map("trades_virtual")
+}
+
+model PaperOrder {
+  id             Int              @id @default(autoincrement())
+  walletId       Int              @map("wallet_id")
+  userId         Int              @map("user_id")
+  symbol         String           @db.VarChar(50)
+  tradingSymbol  String?          @map("trading_symbol") @db.VarChar(80)
+  token          String?          @db.VarChar(32)
+  exchange       String?          @db.VarChar(16)
+  side           TradeSide
+  orderType      PaperOrderType   @map("order_type")
+  product        String           @default("CNC") @db.VarChar(16)
+  quantity       Decimal          @db.Decimal(20, 6)
+  limitPrice     Decimal?         @map("limit_price") @db.Decimal(18, 4)
+  triggerPrice   Decimal?         @map("trigger_price") @db.Decimal(18, 4)
+  executionPrice Decimal?         @map("execution_price") @db.Decimal(18, 4)
+  status         PaperOrderStatus @default(PENDING)
+  rejectReason   String?          @map("reject_reason") @db.VarChar(255)
+  tradeId        Int?             @unique @map("trade_id")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  executedAt     DateTime?        @map("executed_at")
+
+  wallet VirtualWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  trade  TradeVirtual? @relation(fields: [tradeId], references: [id], onDelete: SetNull)
+
+  @@index([walletId, status])
+  @@index([userId, status, createdAt(sort: Desc)])
+  @@map("paper_orders")
 }
 
 model LeaderboardPeriod {
@@ -1214,6 +1330,7 @@ model Watchlist {
   id        Int      @id @default(autoincrement())
   userId    Int      @map("user_id")
   name      String   @default("Default") @db.VarChar(120)
+  sortOrder Int      @default(0) @map("sort_order")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -1221,21 +1338,30 @@ model Watchlist {
   items WatchlistItem[]
 
   @@index([userId])
+  @@index([userId, sortOrder])
   @@map("watchlists")
 }
 
 model WatchlistItem {
-  id          Int       @id @default(autoincrement())
-  watchlistId Int       @map("watchlist_id")
-  symbol      String    @db.VarChar(50)
-  assetType   AssetType @default(equity) @map("asset_type")
-  notes       String?
-  addedAt     DateTime  @default(now()) @map("added_at")
+  id             Int       @id @default(autoincrement())
+  watchlistId    Int       @map("watchlist_id")
+  symbol         String    @db.VarChar(50)
+  instrumentKey  String    @map("instrument_key") @db.VarChar(80)
+  displayName    String?   @map("display_name") @db.VarChar(120)
+  tradingSymbol  String?   @map("trading_symbol") @db.VarChar(80)
+  token          String?   @db.VarChar(32)
+  exchange       String?   @db.VarChar(16)
+  instrumentType String?   @map("instrument_type") @db.VarChar(16)
+  assetType      AssetType @default(equity) @map("asset_type")
+  sortOrder      Int       @default(0) @map("sort_order")
+  notes          String?
+  addedAt        DateTime  @default(now()) @map("added_at")
 
   watchlist Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
 
-  @@unique([watchlistId, symbol])
+  @@unique([watchlistId, instrumentKey])
   @@index([symbol])
+  @@index([watchlistId, sortOrder])
   @@map("watchlist_items")
 }
 

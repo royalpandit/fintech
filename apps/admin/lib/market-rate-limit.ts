@@ -1,5 +1,7 @@
 /** Shared Angel One rate-limit guard + short TTL cache (server-side). */
 
+import "server-only";
+
 let blockedUntil = 0;
 
 export function isRateLimited(): boolean {
@@ -17,6 +19,8 @@ export function isRateLimitMessage(msg: string): boolean {
 export function handleRateLimitMessage(msg: string): boolean {
   if (isRateLimitMessage(msg)) {
     markRateLimited(30);
+    (globalThis as typeof globalThis & { __angelRateLimitHook?: (s: number) => void })
+      .__angelRateLimitHook?.(30);
     return true;
   }
   return false;

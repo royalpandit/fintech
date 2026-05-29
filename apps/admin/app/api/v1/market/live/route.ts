@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
       return acc;
     }, {});
 
-    const quoteMap = await withMarketCache(cacheKey, 4_000, async () => {
+    const quoteMap = await withMarketCache(cacheKey, 8_000, async () => {
       const merged = new Map<string, Record<string, unknown>>();
       for (const [exch, tokens] of Object.entries(byExchange)) {
         const m = await getExtendedQuotes(exch, tokens);

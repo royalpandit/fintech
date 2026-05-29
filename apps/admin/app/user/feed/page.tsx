@@ -13,6 +13,13 @@ export default async function UserFeedPage() {
   const isAuthed = Boolean(auth);
   const userId = auth?.userId ?? null;
 
+  const currentUser = userId
+    ? await prisma.user.findUnique({
+        where: { id: userId },
+        select: { fullName: true },
+      })
+    : null;
+
   // Blocked advisor IDs — requires UserBlock table (run: npx prisma db push)
   let blockedIds: number[] = [];
   if (userId) {
@@ -150,6 +157,7 @@ export default async function UserFeedPage() {
         userId={userId}
         initialFollowedIds={followedIds}
         initialLikedPostIds={likedPostIds}
+        currentUserName={currentUser?.fullName ?? null}
         suggestedAdvisors={suggestedAdvisors}
         trendingSymbols={trendingSymbols}
       />

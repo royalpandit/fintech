@@ -1,4 +1,4 @@
-import type { Candle } from "@/lib/angelone";
+import type { Candle } from "@/lib/angelone-types";
 import { parseCandleTimestampToUnix, unixSecToIsoIst } from "@/lib/nse-market-time";
 
 export type LiveQuoteTick = {

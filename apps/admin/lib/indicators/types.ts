@@ -1,4 +1,4 @@
-import type { Candle } from "@/lib/angelone";
+import type { Candle } from "@/lib/angelone-types";
 
 /** Where the indicator is drawn on the terminal chart. */
 export type IndicatorPane = "overlay" | "volume" | "rsi" | "macd";

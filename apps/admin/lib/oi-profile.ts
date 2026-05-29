@@ -1,5 +1,5 @@
-import type { OptionChainRow } from "@/lib/angelone";
-import { formatExpiryLabel } from "@/lib/angelone";
+import type { OptionChainRow } from "@/lib/angelone-types";
+import { formatExpiryLabel } from "@/lib/angelone-shared";
 
 export type OiStrikeProfile = {
   strike: number;
