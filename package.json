@@ -2,6 +2,11 @@
   "name": "fintech-monorepo",
   "version": "0.0.0",
   "private": true,
+  "scripts": {
+    "build": "npm run build --prefix apps/admin",
+    "dev": "npm run dev --prefix apps/admin",
+    "start": "npm run start --prefix apps/admin"
+  },
   "dependencies": {
     "next": "14.2.15"
   }

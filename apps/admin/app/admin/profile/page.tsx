@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import { DEFAULT_PERMISSION_MATRIX, FEATURES } from "@/lib/rbac";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminProfilePage() {
   const token = cookies().get("access_token")?.value ?? null;
   const auth = await requireAuthToken(token);

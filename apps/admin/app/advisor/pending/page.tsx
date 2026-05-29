@@ -4,6 +4,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdvisorPendingPage() {
   const token = cookies().get("access_token")?.value ?? null;
   const auth = await requireAuthToken(token);

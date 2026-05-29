@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 async function getSettingsData() {
   const [failedPayments, pendingSubscriptions, activeSessions, recentSecurityEvents, providerSummary] = await Promise.all([
     prisma.payment.count({ where: { status: "failed" } }),
