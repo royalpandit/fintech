@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getCandles, resolveMarketExchange, type CandleInterval } from "@/lib/angelone";
+import { enrichCandlesWithVolume } from "@/lib/chart-volume";
+import { angelCandleRange } from "@/lib/nse-market-time";
 import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -34,13 +36,7 @@ export async function GET(req: NextRequest) {
 
     if (!token) return NextResponse.json({ ok: false, error: "Missing token" }, { status: 400 });
 
-    const now  = new Date();
-    const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-    const fmtDate = (d: Date) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-    const fromdate = `${fmtDate(from)} 09:15`;
-    const todate   = `${fmtDate(now)} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const { fromdate, todate } = angelCandleRange(days);
 
     console.log("[candles] token=%s exchange=%s interval=%s from=%s to=%s", token, exchange, interval, fromdate, todate);
 
@@ -52,9 +48,9 @@ export async function GET(req: NextRequest) {
       }, { status: 200 });
     }
 
-    const cacheKey = `candles:${token}:${exchange}:${interval}:${days}`;
-    const candles = await withMarketCache(cacheKey, 8_000, () =>
-      getCandles({
+    const cacheKey = `candles:v2:${token}:${exchange}:${interval}:${days}`;
+    const candles = await withMarketCache(cacheKey, 8_000, async () => {
+      const raw = await getCandles({
         exchange,
         symboltoken: token,
         tradingSymbol,
@@ -62,9 +58,19 @@ export async function GET(req: NextRequest) {
         interval,
         fromdate,
         todate,
-      })
-    );
-    console.log("[candles] got %d candles", candles.length);
+      });
+      return enrichCandlesWithVolume(raw, {
+        exchange,
+        symboltoken: token,
+        tradingSymbol,
+        instrumentType,
+        interval,
+        fromdate,
+        todate,
+      });
+    });
+    const volSample = candles.find(c => c.volume > 0)?.volume ?? 0;
+    console.log("[candles] got %d candles (sample vol %s)", candles.length, volSample);
     return NextResponse.json({ ok: true, token, data: candles });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";

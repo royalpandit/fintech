@@ -21,10 +21,12 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    const profile = searchParams.get("profile") === "1";
     const chain = await getOptionChain(
       underlying,
       spot ? Number(spot) : undefined,
-      expiry
+      expiry,
+      { profile },
     );
     return NextResponse.json({ ok: true, data: chain });
   } catch (err) {

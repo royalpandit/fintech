@@ -103,6 +103,7 @@ export default async function WatchlistPage() {
           </article>
 
           <article
+            className="user-page-table-wrap"
             style={{
               background: "#fff",
               border: "1px solid #eef0f4",

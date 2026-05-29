@@ -11,7 +11,7 @@ export default async function AgentsBrowserPage() {
   });
 
   return (
-    <div style={{ padding: "28px 24px", maxWidth: 1100, margin: "0 auto" }}>
+    <div style={{ width: "100%", minWidth: 0 }}>
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#0f172a" }}>AI Agents</h1>
         <p style={{ margin: "6px 0 0", fontSize: 14, color: "#64748b" }}>Chat with expert AI agents powered by Gemini — built for finance, investing & more</p>

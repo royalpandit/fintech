@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { normalizeCandleTimestamp } from "@/lib/nse-market-time";
 
 const BASE_URL = "https://apiconnect.angelone.in";
 
@@ -321,14 +322,16 @@ export async function getCandles(params: {
     }
     const raw: [string, number, number, number, number, number][] =
       (data.data as [string, number, number, number, number, number][]) ?? [];
-    return raw.map(([timestamp, open, high, low, close, volume]) => ({
-      timestamp,
-      open,
-      high,
-      low,
-      close,
-      volume,
-    }));
+    return raw
+      .map(([timestamp, open, high, low, close, volume]) => ({
+        timestamp: normalizeCandleTimestamp(String(timestamp)),
+        open: Number(open),
+        high: Number(high),
+        low: Number(low),
+        close: Number(close),
+        volume: Math.max(0, Number(volume) || 0),
+      }))
+      .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
   }
 
   throw new Error(lastError);
@@ -765,7 +768,8 @@ function applyQuoteToLeg(leg: OptionLeg, q: ExtendedQuote, prevOi?: number) {
 export async function getOptionChain(
   underlying: string,
   spotLtp?: number,
-  expiryCode?: string
+  expiryCode?: string,
+  options?: { profile?: boolean },
 ): Promise<OptionChainResult> {
   const key = underlying.toUpperCase();
   const optExchange = optionChainExchange(key);
@@ -803,11 +807,12 @@ export async function getOptionChain(
       Math.abs(s - spotLtp) < Math.abs(best - spotLtp) ? s : best
     , strikes[0]);
     const idx = strikes.indexOf(atm);
-    const from = Math.max(0, idx - 15);
-    const to = Math.min(strikes.length, idx + 16);
+    const half = options?.profile ? 35 : 15;
+    const from = Math.max(0, idx - half);
+    const to = Math.min(strikes.length, idx + half + 1);
     strikes = strikes.slice(from, to);
   } else {
-    strikes = strikes.slice(0, 31);
+    strikes = strikes.slice(0, options?.profile ? 71 : 31);
   }
 
   const byStrike = new Map<number, OptionChainRow>();

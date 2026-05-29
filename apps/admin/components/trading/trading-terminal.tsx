@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import ChartWidget, { evalCustom } from "./chart-widget";
+import ChartWidget, { evalCustom, OI_PROFILE_INDICATOR_ID } from "./chart-widget";
+import type { OptionChainData } from "./option-chain-panel";
+import type { OptionLeg } from "@/lib/angelone";
+import { optionUnderlyingKey } from "@/lib/angelone";
 import type { ChartType, CustomIndicator } from "./chart-widget";
 import type { Candle, CandleInterval } from "@/lib/angelone";
 import { MARKET_INSTRUMENTS, resolveMarketExchange } from "@/lib/angelone";
@@ -10,11 +13,18 @@ import OptionChainPanel from "./option-chain-panel";
 import type { WatchlistItem } from "./trading-terminal-types";
 import {
   DEFAULT_TIMEFRAME,
+  defaultPeriodForTimeframe,
+  defaultVisibleBars,
+  isIntradayTimeframe,
   maxDaysForTimeframe,
   type IndicatorDefinition,
+  type PeriodPreset,
   type TimeframeOption,
 } from "./chart-config";
 import { applyTimeframePipeline } from "./chart-transforms";
+import { applyLiveQuoteToCandles, liveHeaderOhlc } from "@/lib/live-candle";
+import { BUILTIN_INDICATOR_IDS, runIndicatorEngine } from "@/lib/indicators";
+import { nseLiveCandleOpenUnix } from "@/lib/nse-market-time";
 import {
   ChartTypeMenu,
   IndicatorsModal,
@@ -30,9 +40,10 @@ type CenterTab = "chart" | "overview" | "option-chain";
 
 const PRESET_TOKENS = new Set<string>(MARKET_INSTRUMENTS.map(m => m.token));
 
-const PERIODS = [
+const PERIODS: PeriodPreset[] = [
   { label: "1D",  days: 1   },
   { label: "5D",  days: 5   },
+  { label: "10D", days: 10  },
   { label: "1M",  days: 30  },
   { label: "3M",  days: 90  },
   { label: "6M",  days: 180 },
@@ -626,7 +637,7 @@ function TradingTerminalInner() {
   const [watchlist,       setWatchlist]       = useState<WatchlistItem[]>(DEFAULT_WATCHLIST);
   const [selected,        setSelected]        = useState<WatchlistItem>(DEFAULT_WATCHLIST[0]);
   const [timeframe,       setTimeframe]       = useState<TimeframeOption>(DEFAULT_TIMEFRAME);
-  const [period,          setPeriod]          = useState(PERIODS[4]); // 6M default
+  const [period,          setPeriod]          = useState(() => defaultPeriodForTimeframe(DEFAULT_TIMEFRAME));
   const [showTfMenu,      setShowTfMenu]      = useState(false);
   const [showChartMenu,   setShowChartMenu]   = useState(false);
   const [showIndModal,    setShowIndModal]    = useState(false);
@@ -635,13 +646,19 @@ function TradingTerminalInner() {
   const changeTimeframe = useCallback((tf: TimeframeOption) => {
     setTimeframe(tf);
     const max = maxDaysForTimeframe(tf);
-    setPeriod(prev => prev.days <= max ? prev : PERIODS.slice().reverse().find(p => p.days <= max) ?? PERIODS[0]);
+    const def = defaultPeriodForTimeframe(tf);
+    setPeriod(prev => {
+      if (prev.days > max) {
+        return PERIODS.slice().reverse().find(p => p.days <= max) ?? PERIODS[0];
+      }
+      // Switching to intraday with a multi-month window loads too many bars — use sensible default.
+      if (isIntradayTimeframe(tf) && prev.days > def.days * 2) return def;
+      return prev;
+    });
   }, []);
   const [candles,         setCandles]         = useState<Candle[]>([]);
   const [candleLoading,   setCandleLoading]   = useState(true);
   const [centerTab,       setCenterTab]       = useState<CenterTab>("chart");
-  const [showMA20,        setShowMA20]        = useState(true);
-  const [showMA50,        setShowMA50]        = useState(true);
   const [orders,          setOrders]          = useState<
     { symbol: string; side: string; quantity: number; price: number }[]
   >([]);
@@ -652,6 +669,8 @@ function TradingTerminalInner() {
   const [showAddIndicator,setShowAddIndicator]= useState(false);
   const [candleError,     setCandleError]     = useState<string | null>(null);
   const [liveTick,        setLiveTick]        = useState<{ price: number; time: number; seq: number } | null>(null);
+  const [liveSessionVol,  setLiveSessionVol]  = useState<number | undefined>(undefined);
+  const [mobilePanel,     setMobilePanel]     = useState<"watchlist" | "chart" | "order">("chart");
 
   const toolbarRef = useRef<HTMLDivElement>(null);
   // Stable ref for watchlist — avoids restarting the 10s quote poll on every watchlist change
@@ -681,10 +700,14 @@ function TradingTerminalInner() {
       const next = new Set(prev);
       if (next.has(def.id)) {
         next.delete(def.id);
-        setCustomIndicators(ci => ci.filter(c => c.id !== def.id));
+        if (!def.builtin) {
+          setCustomIndicators(ci => ci.filter(c => c.id !== def.id));
+        }
       } else {
         next.add(def.id);
-        setCustomIndicators(ci => [...ci.filter(c => c.id !== def.id), indicatorToCustom(def)]);
+        if (!def.builtin) {
+          setCustomIndicators(ci => [...ci.filter(c => c.id !== def.id), indicatorToCustom(def)]);
+        }
       }
       return next;
     });
@@ -697,20 +720,19 @@ function TradingTerminalInner() {
   useEffect(() => { selectedRef.current = selected; }, [selected]);
   useEffect(() => { centerTabRef.current = centerTab; }, [centerTab]);
 
-  const candleFloor = useCallback(() => {
-    const INTERVAL_MS: Partial<Record<CandleInterval, number>> = {
-      ONE_MINUTE: 60_000, THREE_MINUTE: 180_000, FIVE_MINUTE: 300_000,
-      TEN_MINUTE: 600_000, FIFTEEN_MINUTE: 900_000, THIRTY_MINUTE: 1_800_000,
-      ONE_HOUR: 3_600_000, ONE_DAY: 86_400_000,
-    };
-    const ms = INTERVAL_MS[timeframe.fetchInterval] ?? 60_000;
-    const bucketMs = ms * (timeframe.aggregate ?? 1);
-    const now = Date.now();
-    if (bucketMs < 86_400_000) return Math.floor(now / bucketMs) * (bucketMs / 1000);
-    const DAY_OPEN_OFFSET_S = 3 * 3600 + 45 * 60;
-    const dayStartUTC = Math.floor(now / 86_400_000) * 86_400 + DAY_OPEN_OFFSET_S;
-    return now / 1000 >= dayStartUTC ? dayStartUTC : dayStartUTC - 86_400;
-  }, [timeframe.fetchInterval, timeframe.aggregate]);
+  const candleFloor = useCallback(
+    () => nseLiveCandleOpenUnix(timeframe.fetchInterval, timeframe.aggregate ?? 1),
+    [timeframe.fetchInterval, timeframe.aggregate],
+  );
+
+  const pushLiveTick = useCallback(
+    (ltp: number, sessionVolume?: number) => {
+      liveSeqRef.current += 1;
+      setLiveTick({ price: ltp, time: candleFloor(), seq: liveSeqRef.current });
+      if (sessionVolume != null && sessionVolume > 0) setLiveSessionVol(sessionVolume);
+    },
+    [candleFloor],
+  );
 
   const fetchQuotes = useCallback(async () => {
     try {
@@ -735,10 +757,12 @@ function TradingTerminalInner() {
       const quoteMap = new Map<string, {
         ltp: number; open: number; high: number; low: number;
         percentChange: number; netChange: number;
+        tradeVolume?: number; volume?: number;
       }>(
         json.data.map((q: {
           symbolToken: string; ltp: number; open: number; high: number; low: number;
           percentChange: number; netChange: number;
+          tradeVolume?: number; volume?: number;
         }) => [q.symbolToken, q])
       );
 
@@ -750,36 +774,51 @@ function TradingTerminalInner() {
       const sel = selectedRef.current;
       const q = quoteMap.get(sel.token);
       if (q) {
-        liveSeqRef.current += 1;
+        const liveVol = Number(q.tradeVolume ?? q.volume) || undefined;
         setSelected(prev => ({
           ...prev,
           ltp: q.ltp, open: q.open, high: q.high, low: q.low,
           change: q.netChange, changePct: q.percentChange,
         }));
-        setLiveTick({ price: q.ltp, time: candleFloor(), seq: liveSeqRef.current });
+        pushLiveTick(q.ltp, liveVol);
         setCandleError(prev =>
           prev?.includes("rate limit") ? null : prev
         );
-
-        if (centerTabRef.current === "chart") {
-          setCandles(prev => {
-            if (!prev.length) return prev;
-            const last = prev[prev.length - 1];
-            const close = q.ltp;
-            return [
-              ...prev.slice(0, -1),
-              {
-                ...last,
-                close,
-                high: Math.max(last.high, close),
-                low: Math.min(last.low, close),
-              },
-            ];
-          });
-        }
       }
     } catch { /* ignore */ }
-  }, [candleFloor]);
+  }, [pushLiveTick]);
+
+  /** Fast LTP poll for the active chart symbol — keeps header and candle in sync. */
+  const fetchChartTick = useCallback(async () => {
+    const sel = selectedRef.current;
+    if (!sel.token) return;
+    try {
+      const res = await fetch(
+        `/api/v1/market/tick?token=${encodeURIComponent(sel.token)}` +
+        `&exchange=${encodeURIComponent(sel.exchange)}` +
+        `&symbol=${encodeURIComponent(sel.tradingSymbol)}`,
+        { cache: "no-store" },
+      );
+      const json = await res.json();
+      if (!json.ok || json.ltp == null) return;
+      const ltp = Number(json.ltp);
+      if (!Number.isFinite(ltp) || ltp <= 0) return;
+      setSelected(prev => ({
+        ...prev,
+        ltp,
+        change: json.netChange ?? prev.change,
+        changePct: json.pctChange ?? prev.changePct,
+      }));
+      pushLiveTick(ltp);
+    } catch { /* ignore */ }
+  }, [pushLiveTick]);
+
+  useEffect(() => {
+    if (centerTab !== "chart" || candleLoading) return;
+    fetchChartTick();
+    const id = setInterval(fetchChartTick, 2_000);
+    return () => clearInterval(id);
+  }, [centerTab, candleLoading, selected.token, timeframe.id, fetchChartTick]);
 
   useEffect(() => {
     fetchQuotes();
@@ -789,7 +828,10 @@ function TradingTerminalInner() {
   }, [fetchQuotes, centerTab]);
 
   // Reset live tick on symbol / interval change
-  useEffect(() => { setLiveTick(null); }, [selected.token, timeframe.id]);
+  useEffect(() => {
+    setLiveTick(null);
+    setLiveSessionVol(undefined);
+  }, [selected.token, timeframe.id]);
 
   // ── Candle fetch (silent refresh keeps chart visible) ─────────────────────
   const fetchCandles = useCallback(async (silent = false) => {
@@ -808,7 +850,9 @@ function TradingTerminalInner() {
       const res  = await fetch(url, { cache: "no-store" });
       const json = await res.json();
       if (json.ok && Array.isArray(json.data)) {
-        setCandles(json.data);
+        setCandles(json.data as Candle[]);
+        const ltp = selectedRef.current.ltp;
+        if (ltp && ltp > 0) pushLiveTick(ltp, liveSessionVol);
         if (!silent) setCandleError(null);
       } else if (!silent) {
         setCandleError(json.error ?? "Failed to load chart data");
@@ -820,12 +864,162 @@ function TradingTerminalInner() {
     } finally {
       if (!silent) setCandleLoading(false);
     }
-  }, [selected.token, selected.exchange, selected.tradingSymbol, selected.type, timeframe.fetchInterval, period]);
+  }, [selected.token, selected.exchange, selected.tradingSymbol, selected.type, timeframe.fetchInterval, period, pushLiveTick, liveSessionVol]);
 
-  const displayCandles = useMemo(
-    () => applyTimeframePipeline(candles, timeframe.aggregate),
-    [candles, timeframe.aggregate],
+  const displayCandles = useMemo(() => {
+    const piped = applyTimeframePipeline(candles, timeframe.aggregate);
+    if (!liveTick?.price || piped.length === 0) return piped;
+    return applyLiveQuoteToCandles(piped, {
+      ltp: liveTick.price,
+      bucketOpenUnix: liveTick.time,
+      sessionVolume: liveSessionVol,
+    });
+  }, [candles, timeframe.aggregate, liveTick, liveSessionVol]);
+
+  const chartViewportKey = useMemo(
+    () => `${selected.token}:${timeframe.id}:${period.days}`,
+    [selected.token, timeframe.id, period.days],
   );
+
+  const chartVisibleBars = useMemo(() => defaultVisibleBars(timeframe), [timeframe]);
+
+  const chartIndicators = useMemo(
+    () => runIndicatorEngine(displayCandles, activeIndicatorIds),
+    [displayCandles, activeIndicatorIds, liveTick?.seq],
+  );
+
+  const formulaCustomIndicators = useMemo(
+    () => customIndicators.filter(ci => !BUILTIN_INDICATOR_IDS.has(ci.id) && ci.id !== OI_PROFILE_INDICATOR_ID),
+    [customIndicators],
+  );
+
+  const oiProfileActive = activeIndicatorIds.has(OI_PROFILE_INDICATOR_ID);
+  const oiUnderlying = useMemo(
+    () => optionUnderlyingKey(selected.tradingSymbol, selected.display),
+    [selected.tradingSymbol, selected.display],
+  );
+
+  const [oiChain, setOiChain] = useState<OptionChainData | null>(null);
+  const [oiExpiry, setOiExpiry] = useState<string | undefined>();
+  const [oiError, setOiError] = useState<string | null>(null);
+  const oiChainRef = useRef<OptionChainData | null>(null);
+  const oiPrevOiRef = useRef<Map<string, number>>(new Map());
+  const [oiRefreshKey, setOiRefreshKey] = useState(0);
+
+  const loadOiProfile = useCallback(async (expiryCode?: string, silent = false) => {
+    if (!oiUnderlying) {
+      setOiChain(null);
+      setOiError("No option chain for this symbol.");
+      return;
+    }
+    if (!silent) setOiError(null);
+    try {
+      const params = new URLSearchParams({
+        symbol: selected.tradingSymbol,
+        display: selected.display,
+        profile: "1",
+      });
+      const ltp = selected.ltp ?? liveTick?.price;
+      if (ltp) params.set("ltp", String(ltp));
+      if (expiryCode) params.set("expiry", expiryCode);
+
+      const res = await fetch(`/api/v1/market/option-chain?${params}`, { cache: "no-store" });
+      const json = await res.json();
+      if (json.ok && json.data) {
+        const data = json.data as OptionChainData;
+        data.spot = ltp ?? data.spot;
+        setOiChain(data);
+        setOiExpiry(data.expiry);
+        oiChainRef.current = data;
+        oiPrevOiRef.current.clear();
+        for (const row of data.rows) {
+          if (row.ce?.oi) oiPrevOiRef.current.set(row.ce.token, row.ce.oi);
+          if (row.pe?.oi) oiPrevOiRef.current.set(row.pe.token, row.pe.oi);
+        }
+        setOiRefreshKey(k => k + 1);
+      } else if (!silent) {
+        setOiChain(null);
+        setOiError(json.error ?? "Failed to load OI profile");
+      }
+    } catch (e) {
+      if (!silent) {
+        setOiChain(null);
+        setOiError(e instanceof Error ? e.message : "Network error");
+      }
+    }
+  }, [oiUnderlying, selected, liveTick?.price]);
+
+  const refreshOiProfile = useCallback(async () => {
+    const c = oiChainRef.current;
+    if (!c?.tokens?.length) return;
+    try {
+      const res = await fetch("/api/v1/market/option-chain/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          exchange: c.exchange,
+          tokens: c.tokens.map(t => t.token),
+        }),
+        cache: "no-store",
+      });
+      const json = await res.json();
+      if (!json.ok) return;
+
+      setOiChain(prev => {
+        if (!prev) return prev;
+        const quotes = json.quotes as Record<string, {
+          opnInterest?: number; oiChange?: number; oiChangePct?: number;
+        }>;
+        const patchLeg = (leg?: OptionLeg): OptionLeg | undefined => {
+          if (!leg) return leg;
+          const q = quotes[leg.token];
+          if (!q) return leg;
+          const prevOi = oiPrevOiRef.current.get(leg.token);
+          const next = { ...leg };
+          if (q.opnInterest != null) {
+            next.oi = q.opnInterest;
+            if (q.oiChange != null) {
+              next.oiChange = q.oiChange;
+              next.oiChangePct = q.oiChangePct;
+            } else if (prevOi != null && prevOi > 0) {
+              next.oiChange = q.opnInterest - prevOi;
+              next.oiChangePct = (next.oiChange / prevOi) * 100;
+            }
+            oiPrevOiRef.current.set(leg.token, q.opnInterest);
+          }
+          return next;
+        };
+        const rows = prev.rows.map(row => ({
+          ...row,
+          ce: patchLeg(row.ce),
+          pe: patchLeg(row.pe),
+        }));
+        const updated = { ...prev, rows };
+        oiChainRef.current = updated;
+        return updated;
+      });
+      setOiRefreshKey(k => k + 1);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    setOiExpiry(undefined);
+  }, [selected.token]);
+
+  useEffect(() => {
+    if (!oiProfileActive || centerTab !== "chart") {
+      setOiChain(null);
+      oiChainRef.current = null;
+      return;
+    }
+    loadOiProfile(oiExpiry, !!oiChainRef.current);
+  }, [oiProfileActive, centerTab, selected.token, oiUnderlying, oiExpiry, loadOiProfile]);
+
+  useEffect(() => {
+    if (!oiProfileActive || centerTab !== "chart") return;
+    const id = setInterval(refreshOiProfile, 6_000);
+    return () => clearInterval(id);
+  }, [oiProfileActive, centerTab, refreshOiProfile]);
 
   useEffect(() => { fetchCandles(false); }, [selected.token, selected.exchange, selected.tradingSymbol, selected.type, timeframe.fetchInterval, period.days]);
 
@@ -896,13 +1090,14 @@ function TradingTerminalInner() {
   };
 
   const last = displayCandles[displayCandles.length - 1] ?? candles[candles.length - 1];
+  const headerOhlc = liveHeaderOhlc(last, selected.ltp);
   const up   = (selected.changePct ?? 0) >= 0;
 
   return (
     <div className="trading-terminal">
 
       {/* ── LEFT: Watchlist ──────────────────────────────────────────────── */}
-      <div style={{ width: 220, minWidth: 220, background: "#fff", borderRight: "1px solid #eef0f4", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div className={`tt-panel-left${mobilePanel === "watchlist" ? " tt-panel-active" : ""}`}>
         <div style={{ padding: "10px 12px 0", borderBottom: "1px solid #f1f5f9" }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: "#64748b", letterSpacing: 0.8, textTransform: "uppercase", paddingBottom: 8 }}>Watchlist</div>
         </div>
@@ -938,7 +1133,7 @@ function TradingTerminalInner() {
       </div>
 
       {/* ── DRAWING TOOLS ─────────────────────────────────────────────────── */}
-      <div style={{ width: 38, background: "#fff", borderRight: "1px solid #eef0f4", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 10, gap: 2, flexShrink: 0 }}>
+      <div className="tt-panel-tools">
         {DRAW_TOOLS.map(tool => (
           <button key={tool.id} type="button" title={tool.title} onClick={() => setActiveTool(tool.id)}
             style={{ width: 30, height: 30, border: "none", borderRadius: 6, cursor: "pointer",
@@ -955,7 +1150,7 @@ function TradingTerminalInner() {
       </div>
 
       {/* ── CENTER: Chart area ─────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+      <div className={`tt-panel-center${mobilePanel === "chart" ? " tt-panel-active" : ""}`}>
 
         {/* Symbol header */}
         <div style={{ background: "#fff", borderBottom: "1px solid #eef0f4", padding: "8px 16px", display: "flex", alignItems: "center", gap: 14, flexShrink: 0, flexWrap: "wrap" }}>
@@ -974,12 +1169,12 @@ function TradingTerminalInner() {
               </span>
             </>
           )}
-          {last && (
+          {headerOhlc && (
             <div style={{ display: "flex", gap: 10, marginLeft: "auto", fontSize: 11, color: "#64748b" }}>
               {(["O", "H", "L", "C"] as const).map((l, idx) => (
-                <span key={l}><b style={{ color: "#0f172a" }}>{l}</b> {fmtP([last.open, last.high, last.low, last.close][idx])}</span>
+                <span key={l}><b style={{ color: "#0f172a" }}>{l}</b> {fmtP([headerOhlc.open, headerOhlc.high, headerOhlc.low, headerOhlc.close][idx])}</span>
               ))}
-              <span><b style={{ color: "#0f172a" }}>Vol</b> {Number(last.volume).toLocaleString("en-IN")}</span>
+              <span><b style={{ color: "#0f172a" }}>Vol</b> {Number(headerOhlc.volume).toLocaleString("en-IN")}</span>
             </div>
           )}
         </div>
@@ -1049,14 +1244,29 @@ function TradingTerminalInner() {
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 Indicators
-                {(customIndicators.length > 0 || showMA20 || showMA50) && (
-                  <span className="tv-badge">{customIndicators.length + (showMA20 ? 1 : 0) + (showMA50 ? 1 : 0)}</span>
+                {activeIndicatorIds.size > 0 && (
+                  <span className="tv-badge">{activeIndicatorIds.size}</span>
                 )}
               </button>
 
-              {/* Quick MA toggles */}
-              <button type="button" className={`tv-ma-chip ${showMA20 ? "on" : ""}`} onClick={() => setShowMA20(v => !v)} title="MA 20">MA20</button>
-              <button type="button" className={`tv-ma-chip ${showMA50 ? "on" : ""}`} onClick={() => setShowMA50(v => !v)} title="MA 50">MA50</button>
+              {oiProfileActive && oiChain && (
+                <>
+                  <div className="tv-toolbar-sep" />
+                  <div className="tv-toolbar-item oi-prof-toolbar">
+                    <span className="oi-prof-toolbar-label">OI</span>
+                    <select
+                      className="oi-prof-expiry-select"
+                      value={oiExpiry ?? oiChain.expiry}
+                      onChange={e => setOiExpiry(e.target.value)}
+                      aria-label="OI Profile expiry"
+                    >
+                      {oiChain.expiries.map(ex => (
+                        <option key={ex.code} value={ex.code}>{ex.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
 
               <div className="tv-toolbar-sep" />
 
@@ -1086,18 +1296,33 @@ function TradingTerminalInner() {
                     </button>
                   </div>
                 ) : (
-                  <ChartWidget
-                    candles={displayCandles}
-                    showMA20={showMA20}
-                    showMA50={showMA50}
-                    chartType={chartType}
-                    activeTool={activeTool}
-                    livePrice={liveTick?.price ?? selected.ltp}
-                    liveTimestamp={liveTick?.time}
-                    liveSeq={liveTick?.seq}
-                    screenshotTrigger={screenshotCount}
-                    customIndicators={customIndicators}
-                  />
+                  <>
+                    <ChartWidget
+                      candles={displayCandles}
+                      chartType={chartType}
+                      activeTool={activeTool}
+                      livePrice={liveTick?.price ?? selected.ltp}
+                      liveTimestamp={liveTick?.time}
+                      liveSeq={liveTick?.seq}
+                      screenshotTrigger={screenshotCount}
+                      customIndicators={formulaCustomIndicators}
+                      chartIndicators={chartIndicators}
+                      visibleBars={chartVisibleBars}
+                      viewportResetKey={chartViewportKey}
+                      oiProfile={
+                        oiProfileActive
+                          ? {
+                              chain: oiChain,
+                              symbolLabel: oiUnderlying ?? selected.display,
+                              refreshKey: oiRefreshKey + (liveTick?.seq ?? 0),
+                            }
+                          : undefined
+                      }
+                    />
+                    {oiProfileActive && oiError && !oiChain && (
+                      <div className="oi-prof-error">{oiError}</div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -1127,7 +1352,7 @@ function TradingTerminalInner() {
       </div>
 
       {/* ── RIGHT: Order Panel ─────────────────────────────────────────────── */}
-      <div style={{ width: 226, minWidth: 226, background: "#fff", borderLeft: "1px solid #eef0f4", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div className={`tt-panel-right${mobilePanel === "order" ? " tt-panel-active" : ""}`}>
         <div style={{ padding: "10px 14px 8px", borderBottom: "1px solid #f1f5f9" }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: "#64748b", letterSpacing: 0.8, textTransform: "uppercase" }}>Paper Order</div>
         </div>
@@ -1156,6 +1381,23 @@ function TradingTerminalInner() {
           </div>
         </div>
       </div>
+
+      <nav className="tt-mobile-nav" aria-label="Terminal panels">
+        {([
+          { id: "watchlist" as const, label: "Symbols" },
+          { id: "chart" as const, label: "Chart" },
+          { id: "order" as const, label: "Trade" },
+        ]).map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={mobilePanel === item.id ? "tt-mobile-active" : ""}
+            onClick={() => setMobilePanel(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
 
       {/* ── Custom Indicator Modal ─────────────────────────────────────────── */}
       <IndicatorsModal

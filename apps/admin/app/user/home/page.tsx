@@ -273,14 +273,7 @@ export default async function UserDashboardPage({
 
   return (
     <section>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 320px",
-          gap: 18,
-          alignItems: "start",
-        }}
-      >
+      <div className="user-layout-rail">
         {/* ═══ MAIN ═══ */}
         <div>
           {/* Header */}
@@ -313,14 +306,7 @@ export default async function UserDashboardPage({
           </div>
 
           {/* KPI cards row */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 12,
-              marginBottom: 18,
-            }}
-          >
+          <div className="user-stat-grid" style={{ marginBottom: 18 }}>
             <article
               style={{
                 background: "#fff",
@@ -508,14 +494,7 @@ export default async function UserDashboardPage({
           </div>
 
           {/* Performance + Holdings */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1.55fr 1fr",
-              gap: 14,
-              marginBottom: 18,
-            }}
-          >
+          <div className="user-split-chart">
             <article
               style={{
                 background: "#fff",
@@ -781,7 +760,7 @@ export default async function UserDashboardPage({
         </div>
 
         {/* ═══ RIGHT RAIL ═══ */}
-        <aside style={{ display: "grid", gap: 14, position: "sticky", top: 80 }}>
+        <aside className="user-rail-sticky" style={{ display: "grid", gap: 14 }}>
           {/* Watchlist */}
           <article
             style={{

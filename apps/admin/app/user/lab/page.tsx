@@ -126,16 +126,13 @@ export default async function VirtualLabPage() {
 
       {/* Hero */}
       <article
+        className="user-split-hero"
         style={{
           background: "linear-gradient(135deg, #0c4a6e, #0ea5e9)",
           color: "#fff",
           borderRadius: 18,
           padding: 28,
           marginBottom: 18,
-          display: "grid",
-          gridTemplateColumns: "1.4fr 1fr",
-          gap: 24,
-          alignItems: "center",
         }}
       >
         <div>
@@ -256,7 +253,7 @@ export default async function VirtualLabPage() {
         </div>
       </article>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 14, marginBottom: 18 }}>
+      <div className="user-split-chart">
         {/* Performance chart */}
         <article
           style={{

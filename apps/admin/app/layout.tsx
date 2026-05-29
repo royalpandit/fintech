@@ -1,8 +1,9 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Flexi Admin",
-  description: "Flexi Super Admin + Advisor panel",
+  title: "Corescent — Learn. Invest. Connect. Grow.",
+  description:
+    "India's all-in-one FinMedia platform for social investing, SEBI registered advisors, virtual trading, and market insights.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

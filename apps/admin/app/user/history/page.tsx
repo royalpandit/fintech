@@ -217,14 +217,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
         </article>
       ) : (
         <>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 12,
-              marginBottom: 18,
-            }}
-          >
+          <div className="user-stat-grid" style={{ marginBottom: 18 }}>
             {[
               { label: "Trades (view)", value: filtered.length.toLocaleString(), color: "#0f172a" },
               {
@@ -263,6 +256,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
           </Suspense>
 
           <article
+            className="user-page-table-wrap"
             style={{
               background: "#fff",
               border: "1px solid #eef0f4",
