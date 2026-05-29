@@ -96,14 +96,7 @@ export default async function WalletPage() {
         </article>
       ) : (
         <>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 12,
-              marginBottom: 18,
-            }}
-          >
+          <div className="user-stat-grid" style={{ marginBottom: 18 }}>
             {[
               {
                 label: "Cash balance",
@@ -141,7 +134,7 @@ export default async function WalletPage() {
             ))}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>
+          <div className="user-split-2" style={{ marginBottom: 18 }}>
             <WalletActions hasWallet={Boolean(wallet)} balance={Number(wallet?.balance ?? 0)} />
             <article
               style={{

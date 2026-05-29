@@ -1,8 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import type { Candle } from "@/lib/angelone";
+import {
+  nseChartLocalization,
+  nseChartTickMarkFormatter,
+  parseCandleTimestampToUnix,
+} from "@/lib/nse-market-time";
+import type { ChartIndicatorOutput, IndicatorSeriesOutput } from "@/lib/indicators";
+import { lastPointsPerSeries } from "@/lib/indicators";
+import OiProfileOverlay from "./oi-profile-overlay";
+import type { OptionChainData } from "./option-chain-panel";
 import { toHeikinAshi, toRenko } from "./chart-transforms";
+
+export const OI_PROFILE_INDICATOR_ID = "oi-profile";
+
+type LowerPaneId = "volume" | "rsi" | "macd";
 
 export type ChartType =
   | "candle" | "hollow" | "bar" | "line" | "line-markers" | "step"
@@ -17,13 +30,14 @@ export interface CustomIndicator {
   color: string;
   lineWidth: number; // 1–4
   lineStyle: number; // 0=solid 2=dashed 3=large_dashed 4=sparse_dotted
-  kind?: "overlay" | "oscillator";
+  kind?: "overlay" | "oscillator" | "volume";
 }
 
+/** Angel One / TradingView-style soft volume bars */
+const VOL_COLOR_UP = "rgba(38, 166, 154, 0.55)";
+const VOL_COLOR_DOWN = "rgba(239, 83, 80, 0.55)";
 type Props = {
   candles: Candle[];
-  showMA20?: boolean;
-  showMA50?: boolean;
   chartType?: ChartType;
   activeTool?: string;
   livePrice?: number;
@@ -33,22 +47,32 @@ type Props = {
   liveSeq?: number;
   screenshotTrigger?: number;
   customIndicators?: CustomIndicator[];
+  /** Built-in indicators from OHLCV engine (MA, RSI, MACD, …). */
+  chartIndicators?: ChartIndicatorOutput;
+  /** Bars visible on load / after symbol·timeframe·period change (logical indices). */
+  visibleBars?: number;
+  /** Change to re-anchor viewport to the latest candles. */
+  viewportResetKey?: string;
+  /** OI Profile overlay (option chain → price axis). */
+  oiProfile?: {
+    chain: OptionChainData | null;
+    symbolLabel: string;
+    refreshKey?: number;
+  };
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFn = (...args: any[]) => any;
 type ChartObj  = { remove: AnyFn; applyOptions: AnyFn; addSeries: AnyFn; timeScale: AnyFn; subscribeClick: AnyFn; takeScreenshot?: AnyFn };
-type SeriesObj = { setData: AnyFn; update: AnyFn; data: AnyFn; createPriceLine: AnyFn; removePriceLine: AnyFn; coordinateToPrice: AnyFn };
-
-function builtinSMA(candles: Candle[], period: number) {
-  return candles
-    .map((_, i) => {
-      if (i < period - 1) return null;
-      const avg = candles.slice(i - period + 1, i + 1).reduce((s, c) => s + c.close, 0) / period;
-      return { time: Math.floor(new Date(candles[i].timestamp).getTime() / 1000), value: avg };
-    })
-    .filter(Boolean) as { time: number; value: number }[];
-}
+type SeriesObj = {
+  setData: AnyFn;
+  update: AnyFn;
+  data: AnyFn;
+  createPriceLine: AnyFn;
+  removePriceLine: AnyFn;
+  coordinateToPrice: AnyFn;
+  priceScale?: () => { applyOptions: (o: object) => void };
+};
 
 /**
  * Evaluate a per-candle formula and return a time-series.
@@ -153,7 +177,7 @@ export function evalCustom(formula: string, candles: Candle[]): { time: number; 
         () => getVWAP()[i],
       );
       if (typeof val === "number" && isFinite(val))
-        out.push({ time: Math.floor(new Date(candles[i].timestamp).getTime() / 1000), value: val });
+        out.push({ time: parseCandleTimestampToUnix(candles[i].timestamp), value: val });
     } catch { /* skip bad candle */ }
   }
   return out;
@@ -166,17 +190,131 @@ function prepareCandles(raw: Candle[], chartType: ChartType): Candle[] {
 }
 
 function candleTime(c: Candle) {
-  return Math.floor(new Date(c.timestamp).getTime() / 1000);
+  return parseCandleTimestampToUnix(c.timestamp);
 }
 
 function chartStructureKey(
   chartType: ChartType,
-  showMA20: boolean,
-  showMA50: boolean,
+  indicatorKey: string,
   overlayIndicators: CustomIndicator[],
-  oscillatorIndicators: CustomIndicator[],
+  customOscIndicators: CustomIndicator[],
 ) {
-  return `${chartType}|${showMA20}|${showMA50}|${overlayIndicators.map(i => i.id).join()}|${oscillatorIndicators.map(i => i.id).join()}`;
+  return `${chartType}|${indicatorKey}|${overlayIndicators.map(i => i.id).join()}|${customOscIndicators.map(i => i.id).join()}`;
+}
+
+function indicatorLayoutKey(output: ChartIndicatorOutput | undefined): string {
+  if (!output) return "";
+  const panes = output.panes.map(p => p.pane).join(",");
+  const overlays = output.overlays.map(o => o.key).join(",");
+  return `${panes}|${overlays}`;
+}
+
+function computeChartLayout(totalH: number, paneCount: number) {
+  if (paneCount <= 0) return { mainH: Math.max(200, totalH), paneH: 0 };
+  const paneH = Math.min(120, Math.max(72, Math.floor(totalH * 0.15)));
+  const mainH = Math.max(160, totalH - paneH * paneCount);
+  return { mainH, paneH };
+}
+
+function isVolumeIndicator(ci: CustomIndicator) {
+  return ci.kind === "volume" || ci.id === "volume";
+}
+
+/** Keep main + lower panes scrolled/zoomed together */
+/** Angel One / TradingView-style: recent bars, readable spacing, no fit-all compression. */
+function applyRecentViewport(chart: ChartObj, barCount: number, visibleBars: number) {
+  if (barCount <= 0) return;
+  const ts = chart.timeScale();
+  try {
+    ts.applyOptions({
+      barSpacing: 8,
+      minBarSpacing: 3,
+      rightOffset: 12,
+      fixLeftEdge: false,
+      fixRightEdge: false,
+    });
+    const vis = Math.min(Math.max(visibleBars, 40), barCount);
+    const from = Math.max(0, barCount - vis);
+    ts.setVisibleLogicalRange({ from, to: barCount + 4 });
+    if (typeof ts.scrollToRealTime === "function") ts.scrollToRealTime();
+  } catch {
+    try {
+      ts.fitContent();
+    } catch {
+      /* chart tearing down */
+    }
+  }
+}
+
+function bindTimeScales(leader: ChartObj, followers: ChartObj[]) {
+  if (followers.length === 0) return;
+  let syncing = false;
+  const apply = (range: unknown) => {
+    if (!range || syncing) return;
+    syncing = true;
+    for (const chart of followers) {
+      try {
+        chart.timeScale().setVisibleLogicalRange(range);
+      } catch {
+        /* pane not ready */
+      }
+    }
+    syncing = false;
+  };
+  try {
+    leader.timeScale().subscribeVisibleLogicalRangeChange(apply);
+    const initial = leader.timeScale().getVisibleLogicalRange?.();
+    if (initial) apply(initial);
+  } catch {
+    /* older API */
+  }
+}
+
+function mountIndicatorSeries(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  lc: any,
+  chart: ChartObj,
+  spec: IndicatorSeriesOutput,
+  pane: "main" | LowerPaneId,
+): SeriesObj {
+  if (spec.type === "histogram") {
+    const hs = chart.addSeries(lc.HistogramSeries, {
+      color: spec.color,
+      title: spec.title,
+      priceFormat: pane === "volume" ? { type: "volume" } : { type: "price" },
+      priceLineVisible: false,
+      lastValueVisible: true,
+      crosshairMarkerVisible: false,
+    }) as unknown as SeriesObj;
+    hs.setData(spec.data);
+    return hs;
+  }
+  const ls = chart.addSeries(lc.LineSeries, {
+    color: spec.color,
+    lineWidth: Math.min(4, Math.max(1, spec.lineWidth ?? 2)) as 1,
+    lineStyle: spec.lineStyle ?? 0,
+    title: spec.title,
+    priceLineVisible: false,
+    lastValueVisible: true,
+    crosshairMarkerVisible: false,
+  }) as unknown as SeriesObj;
+  ls.setData(spec.data);
+  return ls;
+}
+
+function patchIndicatorSeries(
+  seriesMap: Map<string, SeriesObj>,
+  output: ChartIndicatorOutput | undefined,
+) {
+  if (!output) return;
+  const points = lastPointsPerSeries(output);
+  points.forEach((pt, key) => {
+    const s = seriesMap.get(key);
+    if (!s) return;
+    try {
+      s.update(pt);
+    } catch { /* skip */ }
+  });
 }
 
 function isLineChartType(chartType: ChartType) {
@@ -197,18 +335,65 @@ function mainSeriesPoints(candles: Candle[], chartType: ChartType) {
   }));
 }
 
-function volumePoints(candles: Candle[]) {
-  return candles.map(c => ({
-    time: candleTime(c),
-    value: c.volume,
-    color: c.close >= c.open ? "rgba(22,163,74,0.3)" : "rgba(220,38,38,0.3)",
-  }));
+/** Push latest candle OHLC into LWC without replacing the full series (avoids lag vs header). */
+function patchActiveBarOnSeries(
+  series: SeriesObj,
+  volSeries: SeriesObj | null,
+  priceCandles: Candle[],
+  volumeSource: Candle[],
+  chartType: ChartType,
+) {
+  if (priceCandles.length === 0) return;
+  const c = priceCandles[priceCandles.length - 1];
+  const t = candleTime(c);
+
+  if (isLineChartType(chartType)) {
+    series.update({ time: t, value: c.close });
+    return;
+  }
+
+  const point =
+    chartType === "highlow"
+      ? { time: t, open: c.low, high: c.high, low: c.low, close: c.high }
+      : { time: t, open: c.open, high: c.high, low: c.low, close: c.close };
+
+  series.update(point);
+
+  if (volSeries) {
+    const volPts = volumePoints(priceCandles, volumeSource);
+    const v = volPts[volPts.length - 1];
+    if (v) volSeries.update(v);
+  }
+}
+
+function volumePoints(priceCandles: Candle[], volumeSource: Candle[]) {
+  const volByTime = new Map(
+    volumeSource.map(c => [candleTime(c), Math.max(0, Number(c.volume) || 0)]),
+  );
+  const raw = priceCandles.map(c => {
+    const t = candleTime(c);
+    return volByTime.get(t) ?? Math.max(0, Number(c.volume) || 0);
+  });
+  const maxVol = Math.max(0, ...raw);
+  const maxRange = Math.max(1e-6, ...priceCandles.map(c => Math.max(0, c.high - c.low)));
+
+  return priceCandles.map((c, i) => {
+    const t = candleTime(c);
+    let value = raw[i];
+    // Index spot often has volume=0 from Angel API — use range-relative height until futures vol merges
+    if (maxVol <= 0) {
+      value = Math.max(1, Math.round(((c.high - c.low) / maxRange) * 1000));
+    }
+    return {
+      time: t,
+      value,
+      color: c.close >= c.open ? VOL_COLOR_UP : VOL_COLOR_DOWN,
+    };
+  });
 }
 
 export default function ChartWidget({
   candles: rawCandles,
-  showMA20 = true,
-  showMA50 = true,
   chartType = "candle",
   activeTool = "cursor",
   livePrice,
@@ -216,69 +401,69 @@ export default function ChartWidget({
   liveSeq,
   screenshotTrigger = 0,
   customIndicators = [],
+  chartIndicators,
+  visibleBars = 120,
+  viewportResetKey = "",
+  oiProfile,
 }: Props) {
   const candles = useMemo(() => prepareCandles(rawCandles, chartType), [rawCandles, chartType]);
-  const overlayIndicators = useMemo(
-    () => customIndicators.filter(ci => ci.kind !== "oscillator"),
+  const customOverlayIndicators = useMemo(
+    () => customIndicators.filter(ci => !isVolumeIndicator(ci) && ci.kind !== "oscillator"),
     [customIndicators],
   );
-  const oscillatorIndicators = useMemo(
+  const customOscIndicators = useMemo(
     () => customIndicators.filter(ci => ci.kind === "oscillator"),
     [customIndicators],
   );
+  const lowerPaneIds = useMemo((): LowerPaneId[] => {
+    const ids = chartIndicators?.panes.map(p => p.pane) ?? [];
+    return ids.filter((p): p is LowerPaneId => p === "volume" || p === "rsi" || p === "macd");
+  }, [chartIndicators]);
+  const hasCustomOsc = customOscIndicators.length > 0;
+  const hasLowerPanes = lowerPaneIds.length > 0 || hasCustomOsc;
 
   const containerRef  = useRef<HTMLDivElement>(null);
+  const mainPaneWrapRef = useRef<HTMLDivElement>(null);
   const mainPaneRef   = useRef<HTMLDivElement>(null);
-  const oscPaneRef    = useRef<HTMLDivElement>(null);
+  const lowerPaneRefs = useRef<Partial<Record<LowerPaneId | "custom", HTMLDivElement | null>>>({});
   const chartRef      = useRef<ChartObj | null>(null);
-  const oscChartRef   = useRef<ChartObj | null>(null);
+  const lowerChartRefs = useRef<Map<string, ChartObj>>(new Map());
   const seriesRef     = useRef<SeriesObj | null>(null);
-  const volumeSeriesRef = useRef<SeriesObj | null>(null);
-  const ma20SeriesRef   = useRef<SeriesObj | null>(null);
-  const ma50SeriesRef   = useRef<SeriesObj | null>(null);
+  const indicatorSeriesRef = useRef<Map<string, SeriesObj>>(new Map());
+  const chartIndicatorsRef = useRef(chartIndicators);
   const structureKeyRef = useRef("");
   const candlesRef      = useRef(candles);
+  const rawCandlesRef     = useRef(rawCandles);
+  const visibleBarsRef  = useRef(visibleBars);
+  const prevBarCountRef = useRef(0);
   const priceLinesRef = useRef<unknown[]>([]);
   const activeToolRef = useRef(activeTool);
   const chartTypeRef  = useRef(chartType);
 
   candlesRef.current = candles;
+  rawCandlesRef.current = rawCandles;
+  visibleBarsRef.current = visibleBars;
+  chartIndicatorsRef.current = chartIndicators;
 
   useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
   useEffect(() => { chartTypeRef.current = chartType;   }, [chartType]);
 
-  // ── Live price tick on the last bar (no full chart rebuild) ───────────────
-  useEffect(() => {
+  // ── Live tick → active bar (runs after setData in the same commit) ─────────
+  useLayoutEffect(() => {
     const series = seriesRef.current;
     const cList = candlesRef.current;
-    if (!series || livePrice == null || cList.length === 0) return;
+    if (!series || cList.length === 0) return;
     try {
-      if (isLineChartType(chartTypeRef.current)) {
-        const t = candleTime(cList[cList.length - 1]);
-        series.update({ time: t, value: livePrice });
-        return;
-      }
-
-      const bars = series.data() as { time: number; open: number; high: number; low: number }[];
-      const lastBar = bars[bars.length - 1];
-      if (!lastBar) return;
-
-      const barT = lastBar.time as number;
-      const newBar = liveTimestamp != null && liveTimestamp > barT;
-
-      if (newBar) {
-        series.update({ time: liveTimestamp!, open: livePrice, high: livePrice, low: livePrice, close: livePrice });
-      } else {
-        series.update({
-          time:  barT,
-          open:  lastBar.open,
-          high:  Math.max(lastBar.high, livePrice),
-          low:   Math.min(lastBar.low,  livePrice),
-          close: livePrice,
-        });
-      }
+      patchActiveBarOnSeries(
+        series,
+        null,
+        cList,
+        rawCandlesRef.current,
+        chartTypeRef.current,
+      );
+      patchIndicatorSeries(indicatorSeriesRef.current, chartIndicatorsRef.current);
     } catch { /* series not ready */ }
-  }, [livePrice, liveTimestamp, liveSeq]);
+  }, [livePrice, liveTimestamp, liveSeq, candles, rawCandles, chartIndicators]);
 
   // ── Eraser: wipe all drawn price lines ───────────────────────────────────
   useEffect(() => {
@@ -306,38 +491,77 @@ export default function ChartWidget({
     const mainEl = mainPaneRef.current;
     if (!mainEl || candles.length === 0) return;
 
-    const key = chartStructureKey(chartType, showMA20, showMA50, overlayIndicators, oscillatorIndicators);
+    const key = chartStructureKey(
+      chartType,
+      `${indicatorLayoutKey(chartIndicators)}|oi:${oiProfile?.chain ? "1" : "0"}`,
+      customOverlayIndicators,
+      customOscIndicators,
+    );
     const dataOnly = key === structureKeyRef.current && chartRef.current && seriesRef.current;
 
     if (dataOnly) {
-      seriesRef.current!.setData(mainSeriesPoints(candles, chartType));
-      volumeSeriesRef.current?.setData(volumePoints(candles));
-      if (ma20SeriesRef.current && candles.length >= 20) ma20SeriesRef.current.setData(builtinSMA(candles, 20));
-      if (ma50SeriesRef.current && candles.length >= 50) ma50SeriesRef.current.setData(builtinSMA(candles, 50));
+      const prevCount = prevBarCountRef.current;
+      const countChanged = candles.length !== prevCount;
+      prevBarCountRef.current = candles.length;
+
+      if (countChanged) {
+        seriesRef.current!.setData(mainSeriesPoints(candles, chartType));
+        if (chartIndicators) {
+          const all = [...chartIndicators.overlays, ...chartIndicators.panes.flatMap(p => p.series)];
+          for (const spec of all) {
+            const s = indicatorSeriesRef.current.get(spec.key);
+            s?.setData(spec.data);
+          }
+        }
+      } else {
+        patchActiveBarOnSeries(
+          seriesRef.current!,
+          null,
+          candles,
+          rawCandles,
+          chartType,
+        );
+        patchIndicatorSeries(indicatorSeriesRef.current, chartIndicators);
+      }
+
+      const chart = chartRef.current;
+      if (chart) {
+        const prevCount = prevBarCountRef.current;
+        const ts = chart.timeScale();
+        let atEnd = true;
+        try {
+          const range = ts.getVisibleLogicalRange?.();
+          if (range && typeof range.to === "number") {
+            atEnd = range.to >= prevCount - 8;
+          }
+        } catch { /* ignore */ }
+        if (atEnd || countChanged) {
+          applyRecentViewport(chart, candles.length, visibleBarsRef.current);
+        }
+      }
       return;
     }
 
     structureKeyRef.current = key;
     chartRef.current?.remove();
-    oscChartRef.current?.remove();
+    lowerChartRefs.current.forEach(c => c.remove());
+    lowerChartRefs.current.clear();
+    indicatorSeriesRef.current.clear();
     chartRef.current = null;
-    oscChartRef.current = null;
     seriesRef.current = null;
-    volumeSeriesRef.current = null;
-    ma20SeriesRef.current = null;
-    ma50SeriesRef.current = null;
     priceLinesRef.current = [];
 
     let observer: ResizeObserver | null = null;
-    const hasOsc = oscillatorIndicators.length > 0;
+    const paneIds = lowerPaneIds;
+    const customPane = hasCustomOsc;
 
     import("lightweight-charts").then((lc) => {
       if (!mainPaneRef.current) return;
       const el2 = mainPaneRef.current;
       const w = el2.clientWidth  || 800;
       const totalH = containerRef.current?.clientHeight || 400;
-      const oscH = hasOsc ? Math.min(140, Math.floor(totalH * 0.28)) : 0;
-      const mainH = Math.max(200, totalH - oscH);
+      const layoutPaneCount = paneIds.length + (customPane ? 1 : 0);
+      const { mainH, paneH } = computeChartLayout(totalH, layoutPaneCount);
 
       const chartOpts = {
         layout: {
@@ -345,16 +569,30 @@ export default function ChartWidget({
           textColor: "#64748b", fontSize: 11,
           fontFamily: "Inter, system-ui, sans-serif",
         },
+        localization: nseChartLocalization,
         grid:      { vertLines: { color: "#f1f5f9" }, horzLines: { color: "#f1f5f9" } },
         crosshair: { mode: lc.CrosshairMode.Normal },
         rightPriceScale: { borderColor: "#eef0f4" },
-        timeScale: { borderColor: "#eef0f4", timeVisible: true, secondsVisible: false, rightOffset: 8 },
+        timeScale: {
+          borderColor: "#eef0f4",
+          timeVisible: !hasLowerPanes,
+          secondsVisible: false,
+          rightOffset: 8,
+          tickMarkFormatter: nseChartTickMarkFormatter,
+        },
         handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
         handleScale: { mouseWheel: true, pinch: true },
       };
 
       const chart = lc.createChart(el2, { width: w, height: mainH, ...chartOpts }) as unknown as ChartObj;
       chartRef.current = chart;
+
+      const priceScaleApi = chart as unknown as {
+        priceScale: (id: string) => { applyOptions: (o: object) => void };
+      };
+      priceScaleApi.priceScale("right").applyOptions({
+        scaleMargins: { top: 0.06, bottom: 0.08 },
+      });
 
       const ohlcTypes: ChartType[] = ["candle", "hollow", "heikin"];
       const lineTypes: ChartType[] = ["line", "line-markers", "step"];
@@ -428,35 +666,16 @@ export default function ChartWidget({
       }
       seriesRef.current = mainSeries;
 
-      // ── Volume histogram ─────────────────────────────────────────────────
-      const vs = chart.addSeries(lc.HistogramSeries, {
-        priceFormat: { type: "volume" }, priceScaleId: "vol",
-      }) as unknown as SeriesObj;
-      volumeSeriesRef.current = vs;
-      (chart as unknown as { priceScale: (id: string) => { applyOptions: (o: object) => void } })
-        .priceScale("vol").applyOptions({ scaleMargins: { top: 0.85, bottom: 0 }, visible: false });
-      vs.setData(volumePoints(candles));
-
-      // ── Built-in MAs ──────────────────────────────────────────────────────
-      if (showMA20 && candles.length >= 20) {
-        const ma20 = chart.addSeries(lc.LineSeries, {
-          color: "#f59e0b", lineWidth: 1.5, priceLineVisible: false,
-          lastValueVisible: true, title: "MA20", crosshairMarkerVisible: false,
-        }) as unknown as SeriesObj;
-        ma20SeriesRef.current = ma20;
-        ma20.setData(builtinSMA(candles, 20));
-      }
-      if (showMA50 && candles.length >= 50) {
-        const ma50 = chart.addSeries(lc.LineSeries, {
-          color: "#8b5cf6", lineWidth: 1.5, priceLineVisible: false,
-          lastValueVisible: true, title: "MA50", crosshairMarkerVisible: false,
-        }) as unknown as SeriesObj;
-        ma50SeriesRef.current = ma50;
-        ma50.setData(builtinSMA(candles, 50));
+      // ── Built-in overlay indicators (engine) ─────────────────────────────
+      if (chartIndicators) {
+        for (const spec of chartIndicators.overlays) {
+          const s = mountIndicatorSeries(lc, chart, spec, "main");
+          indicatorSeriesRef.current.set(spec.key, s);
+        }
       }
 
-      // ── Overlay custom indicators ─────────────────────────────────────────
-      for (const ci of overlayIndicators) {
+      // ── Custom formula overlays ───────────────────────────────────────────
+      for (const ci of customOverlayIndicators) {
         try {
           const data = evalCustom(ci.formula, candles);
           if (data.length === 0) continue;
@@ -473,14 +692,37 @@ export default function ChartWidget({
         } catch { /* skip */ }
       }
 
-      // ── Oscillator pane ───────────────────────────────────────────────────
-      if (hasOsc && oscPaneRef.current) {
-        const oscChart = lc.createChart(oscPaneRef.current, {
-          width: w, height: oscH, ...chartOpts,
-          timeScale: { ...chartOpts.timeScale, visible: false },
+      const lowerCharts: ChartObj[] = [];
+
+      for (const paneDef of chartIndicators?.panes ?? []) {
+        const el = lowerPaneRefs.current[paneDef.pane];
+        if (!el) continue;
+        const paneChart = lc.createChart(el, {
+          width: w,
+          height: paneH,
+          ...chartOpts,
+          timeScale: {
+            ...chartOpts.timeScale,
+            visible: paneDef.pane === paneIds[paneIds.length - 1],
+          },
         }) as unknown as ChartObj;
-        oscChartRef.current = oscChart;
-        for (const ci of oscillatorIndicators) {
+        lowerChartRefs.current.set(paneDef.pane, paneChart);
+        for (const spec of paneDef.series) {
+          const s = mountIndicatorSeries(lc, paneChart, spec, paneDef.pane);
+          indicatorSeriesRef.current.set(spec.key, s);
+        }
+        lowerCharts.push(paneChart);
+      }
+
+      if (customPane && lowerPaneRefs.current.custom) {
+        const oscChart = lc.createChart(lowerPaneRefs.current.custom, {
+          width: w,
+          height: paneH,
+          ...chartOpts,
+          timeScale: { ...chartOpts.timeScale, visible: paneIds.length === 0 },
+        }) as unknown as ChartObj;
+        lowerChartRefs.current.set("custom", oscChart);
+        for (const ci of customOscIndicators) {
           try {
             const data = evalCustom(ci.formula, candles);
             if (data.length === 0) continue;
@@ -494,10 +736,12 @@ export default function ChartWidget({
             cs.setData(data);
           } catch { /* skip */ }
         }
-        oscChart.timeScale().fitContent();
+        lowerCharts.push(oscChart);
       }
 
-      chart.timeScale().fitContent();
+      bindTimeScales(chart, lowerCharts);
+      applyRecentViewport(chart, candles.length, visibleBarsRef.current);
+      prevBarCountRef.current = candles.length;
 
       // ── Click handler: H-lines ────────────────────────────────────────────
       chart.subscribeClick((param: { point?: { x: number; y: number }; time?: unknown }) => {
@@ -521,10 +765,9 @@ export default function ChartWidget({
         if (!el2 || !chartRef.current || !containerRef.current) return;
         const tw = el2.clientWidth;
         const totalH = containerRef.current.clientHeight || mainH;
-        const oH = hasOsc ? Math.min(140, Math.floor(totalH * 0.28)) : 0;
-        const mH = Math.max(200, totalH - oH);
+        const { mainH: mH, paneH: pH } = computeChartLayout(totalH, layoutPaneCount);
         chartRef.current.applyOptions({ width: tw, height: mH });
-        oscChartRef.current?.applyOptions({ width: tw, height: oH });
+        lowerChartRefs.current.forEach(c => c.applyOptions({ width: tw, height: pH }));
       });
       observer.observe(containerRef.current ?? el2);
     });
@@ -532,16 +775,23 @@ export default function ChartWidget({
     return () => {
       observer?.disconnect();
       chartRef.current?.remove();
-      oscChartRef.current?.remove();
+      lowerChartRefs.current.forEach(c => c.remove());
       chartRef.current = null;
-      oscChartRef.current = null;
+      lowerChartRefs.current.clear();
       seriesRef.current = null;
-      volumeSeriesRef.current = null;
-      ma20SeriesRef.current = null;
-      ma50SeriesRef.current = null;
+      indicatorSeriesRef.current.clear();
       structureKeyRef.current = "";
     };
-  }, [candles, showMA20, showMA50, chartType, overlayIndicators, oscillatorIndicators]);
+  }, [candles, rawCandles, chartType, chartIndicators, customOverlayIndicators, customOscIndicators, lowerPaneIds, hasCustomOsc, oiProfile?.chain]);
+
+  // Re-anchor when symbol / timeframe / period changes (structure may stay identical).
+  useEffect(() => {
+    const chart = chartRef.current;
+    const n = candlesRef.current.length;
+    if (!chart || n === 0 || !viewportResetKey) return;
+    applyRecentViewport(chart, n, visibleBars);
+    prevBarCountRef.current = n;
+  }, [viewportResetKey, visibleBars]);
 
   // ── Cursor style ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -562,17 +812,46 @@ export default function ChartWidget({
     );
   }
 
-  const hasOsc = oscillatorIndicators.length > 0;
-
   return (
     <div ref={containerRef} style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column" }}>
-      <div ref={mainPaneRef} style={{ flex: hasOsc ? "1 1 auto" : "1 1 100%", minHeight: 0 }} />
-      {hasOsc && (
+      <div
+        ref={mainPaneWrapRef}
+        style={{
+          position: "relative",
+          flex: hasLowerPanes ? "1 1 auto" : "1 1 100%",
+          minHeight: 0,
+        }}
+      >
+        <div ref={mainPaneRef} style={{ position: "absolute", inset: 0 }} />
+        {oiProfile?.chain && (
+          <OiProfileOverlay
+            chain={oiProfile.chain}
+            symbolLabel={oiProfile.symbolLabel}
+            chartRef={chartRef as RefObject<{ timeScale: () => { subscribeVisibleLogicalRangeChange?: (fn: () => void) => void; unsubscribeVisibleLogicalRangeChange?: (fn: () => void) => void } } | null>}
+            seriesRef={seriesRef as RefObject<{ priceToCoordinate?: (price: number) => number | null } | null>}
+            paneRef={mainPaneWrapRef}
+            refreshKey={oiProfile.refreshKey}
+          />
+        )}
+      </div>
+      {lowerPaneIds.map(pane => (
         <div
-          ref={oscPaneRef}
+          key={pane}
+          ref={el => { lowerPaneRefs.current[pane] = el; }}
           style={{
             flex: "0 0 auto",
-            height: 120,
+            height: 100,
+            borderTop: "1px solid #eef0f4",
+            background: "#fafafa",
+          }}
+        />
+      ))}
+      {hasCustomOsc && (
+        <div
+          ref={el => { lowerPaneRefs.current.custom = el; }}
+          style={{
+            flex: "0 0 auto",
+            height: 100,
             borderTop: "1px solid #eef0f4",
             background: "#fafafa",
           }}

@@ -97,9 +97,11 @@ export default function UserShell({
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const initials = currentUser ? getInitials(currentUser.fullName) : "G";
@@ -145,17 +147,69 @@ export default function UserShell({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Close sidebar on route change
   useEffect(() => {
-    setSidebarOpen(false);
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  // Restore desktop collapsed preference
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("us-sidebar-collapsed") === "1") {
+        setSidebarCollapsed(true);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // Close drawer on route change
+  useEffect(() => {
+    setMobileDrawerOpen(false);
     setMenuOpen(false);
   }, [pathname]);
 
-  // Prevent body scroll when sidebar open on mobile
+  // Prevent body scroll when mobile drawer is open
   useEffect(() => {
-    document.body.style.overflow = sidebarOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [sidebarOpen]);
+    const mq = window.matchMedia("(max-width: 767px)");
+    const apply = () => {
+      document.body.style.overflow = mq.matches && mobileDrawerOpen ? "hidden" : "";
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => {
+      mq.removeEventListener("change", apply);
+      document.body.style.overflow = "";
+    };
+  }, [mobileDrawerOpen]);
+
+  // Escape closes mobile drawer
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileDrawerOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const toggleSidebar = () => {
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+      setMobileDrawerOpen((v) => !v);
+      return;
+    }
+    setSidebarCollapsed((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem("us-sidebar-collapsed", next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -172,7 +226,9 @@ export default function UserShell({
     pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <div className="us-root advisor-scope">
+    <div
+      className={`us-root advisor-scope${sidebarCollapsed ? " us-sidebar-collapsed" : " us-sidebar-expanded"}`}
+    >
       {/* ── Header ── */}
       <header className="us-header">
         <div className="us-header-inner">
@@ -182,10 +238,11 @@ export default function UserShell({
             <button
               className="us-hamburger"
               type="button"
-              aria-label="Toggle menu"
-              onClick={() => setSidebarOpen((v) => !v)}
+              aria-label={mobileDrawerOpen ? "Close navigation menu" : "Toggle navigation menu"}
+              aria-expanded={isMobile ? mobileDrawerOpen : !sidebarCollapsed}
+              onClick={toggleSidebar}
             >
-              {sidebarOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+              {mobileDrawerOpen ? <FiX size={20} /> : <FiMenu size={20} />}
             </button>
 
             <Link href="/user/home" className="us-brand">
@@ -316,16 +373,28 @@ export default function UserShell({
       <div className="us-body">
 
         {/* Overlay backdrop (mobile) */}
-        {sidebarOpen && (
+        {mobileDrawerOpen && (
           <div
             className="us-overlay"
-            onClick={() => setSidebarOpen(false)}
+            onClick={() => setMobileDrawerOpen(false)}
+            aria-hidden="true"
           />
         )}
 
         {/* ── Left Sidebar ── */}
-        <aside className={`us-sidebar ${sidebarOpen ? "us-sidebar-open" : ""}`}>
+        <aside
+          className={`us-sidebar${mobileDrawerOpen ? " us-sidebar-open" : ""}`}
+          aria-label="Main navigation"
+        >
           <div className="us-sidebar-inner">
+            <button
+              type="button"
+              className="us-sidebar-drawer-close"
+              aria-label="Close menu"
+              onClick={() => setMobileDrawerOpen(false)}
+            >
+              <FiX size={18} />
+            </button>
 
             {/* Profile card */}
             <div className="us-profile-card">
@@ -378,11 +447,14 @@ export default function UserShell({
               {mainNav.map((item) => {
                 const active = isActive(item.href);
                 const Icon = item.Icon;
+                const showNavTitle = !isMobile && sidebarCollapsed;
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     className={`us-nav-link ${active ? "us-nav-link-active" : ""}`}
+                    title={showNavTitle ? item.label : undefined}
+                    onClick={() => setMobileDrawerOpen(false)}
                   >
                     <span className="us-nav-icon"><Icon size={18} /></span>
                     <span className="us-nav-label">{item.label}</span>
@@ -408,11 +480,14 @@ export default function UserShell({
                   {investingNav.map((item) => {
                     const active = isActive(item.href);
                     const Icon = item.Icon;
+                    const showNavTitle = !isMobile && sidebarCollapsed;
                     return (
                       <Link
                         key={item.href}
                         href={item.href}
                         className={`us-nav-link ${active ? "us-nav-link-active us-nav-link-invest" : ""}`}
+                        title={showNavTitle ? item.label : undefined}
+                        onClick={() => setMobileDrawerOpen(false)}
                       >
                         <span className="us-nav-icon"><Icon size={18} /></span>
                         <span className="us-nav-label">{item.label}</span>
@@ -439,9 +514,7 @@ export default function UserShell({
 
         {/* ── Main content ── */}
         <main className="us-main">
-          <div className="us-content">
-            {children}
-          </div>
+          <div className="us-content">{children}</div>
         </main>
       </div>
 

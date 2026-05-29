@@ -1,4 +1,6 @@
 import type { CandleInterval } from "@/lib/angelone";
+import { INDICATOR_REGISTRY } from "@/lib/indicators";
+import type { IndicatorPane } from "@/lib/indicators";
 import type { ChartType } from "./chart-widget";
 
 /** UI timeframe → Angel One fetch interval + optional client aggregation */
@@ -71,6 +73,52 @@ export function maxDaysForTimeframe(tf: TimeframeOption): number {
   return base;
 }
 
+/** Bottom-bar history preset (calendar days fetched from Angel One). */
+export interface PeriodPreset {
+  label: string;
+  days: number;
+}
+
+/** Default fetch window per timeframe — avoids loading months of intraday bars. */
+export function defaultPeriodForTimeframe(tf: TimeframeOption): PeriodPreset {
+  switch (tf.fetchInterval) {
+    case "ONE_DAY":
+      return { label: "6M", days: 180 };
+    case "ONE_MINUTE":
+      return { label: "5D", days: 5 };
+    case "FIVE_MINUTE":
+    case "THREE_MINUTE":
+    case "TEN_MINUTE":
+      return { label: "10D", days: 10 };
+    case "FIFTEEN_MINUTE":
+    case "THIRTY_MINUTE":
+      return { label: "1M", days: 30 };
+    case "ONE_HOUR":
+      return { label: "3M", days: 90 };
+    default:
+      return { label: "1M", days: 30 };
+  }
+}
+
+/** How many bars to show on load (logical range — weekends collapse, no time gaps). */
+export function defaultVisibleBars(tf: TimeframeOption): number {
+  const byId: Record<string, number> = {
+    "15s": 90, "30s": 90, "45s": 90,
+    "1m": 150,
+    "2m": 140, "3m": 130, "4m": 130,
+    "5m": 180,
+    "10m": 140, "15m": 130, "30m": 120,
+    "75m": 100, "125m": 80,
+    "1h": 130, "2h": 110, "3h": 100, "4h": 90,
+    "1D": 120,
+  };
+  return byId[tf.id] ?? 120;
+}
+
+export function isIntradayTimeframe(tf: TimeframeOption): boolean {
+  return tf.fetchInterval !== "ONE_DAY";
+}
+
 export interface ChartTypeOption {
   id: ChartType;
   label: string;
@@ -120,7 +168,8 @@ export const CHART_TYPE_GROUPS: { section: ChartTypeOption["section"]; items: Ch
 
 export const ALL_CHART_TYPES = CHART_TYPE_GROUPS.flatMap(g => g.items);
 
-export type IndicatorKind = "overlay" | "oscillator";
+/** @deprecated Use `pane` for built-ins; custom formulas still use kind. */
+export type IndicatorKind = "overlay" | "oscillator" | "volume";
 
 export interface IndicatorDefinition {
   id: string;
@@ -132,28 +181,48 @@ export interface IndicatorDefinition {
   lineWidth?: number;
   favorite?: boolean;
   badge?: string;
+  /** Built-in engine indicator (OHLCV math, not formula eval). */
+  builtin?: boolean;
+  pane?: IndicatorPane;
 }
 
+const BUILTIN_CATALOG: IndicatorDefinition[] = Object.values(INDICATOR_REGISTRY).map(spec => ({
+  id: spec.id,
+  name: spec.paramsLabel ? `${spec.name} (${spec.paramsLabel})` : spec.name,
+  category: spec.category,
+  kind: (spec.pane === "volume"
+    ? "volume"
+    : spec.pane === "overlay"
+      ? "overlay"
+      : "oscillator") as IndicatorKind,
+  formula: "",
+  color: "#64748b",
+  favorite: spec.favorite,
+  builtin: true,
+  pane: spec.pane,
+}));
+
 export const INDICATOR_CATALOG: IndicatorDefinition[] = [
-  { id: "ema20",    name: "Moving Average Exponential", category: "POPULAR", kind: "overlay",    formula: "EMA(20)", color: "#f59e0b", favorite: true },
-  { id: "sma20",    name: "Moving Average",             category: "POPULAR", kind: "overlay",    formula: "SMA(20)", color: "#0ea5e9" },
-  { id: "vwap",     name: "VWAP",                       category: "POPULAR", kind: "overlay",    formula: "VWAP()",  color: "#8b5cf6", favorite: true },
-  { id: "bb",       name: "Bollinger Bands",            category: "POPULAR", kind: "overlay",    formula: "SMA(20)", color: "#6366f1" },
-  { id: "bb-up",    name: "Bollinger Bands Upper",      category: "POPULAR", kind: "overlay",    formula: "SMA(20)+STDDEV(20)*2", color: "#6366f1", lineWidth: 1 },
-  { id: "bb-low",   name: "Bollinger Bands Lower",      category: "POPULAR", kind: "overlay",    formula: "SMA(20)-STDDEV(20)*2", color: "#6366f1", lineWidth: 1 },
-  { id: "rsi14",    name: "Relative Strength Index",    category: "POPULAR", kind: "oscillator", formula: "RSI(14)", color: "#ec4899", favorite: true },
-  { id: "macd",     name: "MACD",                       category: "POPULAR", kind: "oscillator", formula: "EMA(12)-EMA(26)", color: "#14b8a6" },
-  { id: "st",       name: "SuperTrend (approx)",        category: "POPULAR", kind: "overlay",    formula: "(h+l)/2", color: "#22c55e", favorite: true },
-  { id: "pivot",    name: "Pivot Points Standard",      category: "POPULAR", kind: "overlay",    formula: "(h+l+c)/3", color: "#64748b" },
-  { id: "ema9",     name: "EMA (9)",                    category: "OTHER",   kind: "overlay",    formula: "EMA(9)",  color: "#f97316" },
-  { id: "ema50",    name: "EMA (50)",                   category: "OTHER",   kind: "overlay",    formula: "EMA(50)", color: "#a855f7" },
-  { id: "sma50",    name: "SMA (50)",                   category: "OTHER",   kind: "overlay",    formula: "SMA(50)", color: "#8b5cf6" },
-  { id: "mid",      name: "Midpoint (HL/2)",            category: "OTHER",   kind: "overlay",    formula: "(h+l)/2", color: "#94a3b8" },
-  { id: "hl-range", name: "HL Range",                   category: "OTHER",   kind: "overlay",    formula: "h-l", color: "#ef4444" },
-  { id: "mom",      name: "Momentum",                   category: "OTHER",   kind: "oscillator", formula: "c-EMA(20)", color: "#0ea5e9" },
-  { id: "acc",      name: "Accelerator Oscillator",     category: "OTHER",   kind: "oscillator", formula: "c-SMA(5)", color: "#f59e0b" },
-  { id: "typical",  name: "Typical Price",              category: "OTHER",   kind: "overlay",    formula: "(h+l+c)/3", color: "#64748b" },
-  { id: "oi-prof",  name: "Open Interest Profile",      category: "OTHER",   kind: "overlay",    formula: "v", color: "#dc2626", badge: "NEW" },
+  ...BUILTIN_CATALOG,
+  { id: "pivot",    name: "Pivot Points Standard",      category: "OTHER", kind: "overlay",    formula: "(h+l+c)/3", color: "#64748b" },
+  { id: "ema9",     name: "EMA (9)",                    category: "OTHER", kind: "overlay",    formula: "EMA(9)",  color: "#f97316" },
+  { id: "mid",      name: "Midpoint (HL/2)",            category: "OTHER", kind: "overlay",    formula: "(h+l)/2", color: "#94a3b8" },
+  { id: "hl-range", name: "HL Range",                   category: "OTHER", kind: "overlay",    formula: "h-l", color: "#ef4444" },
+  { id: "mom",      name: "Momentum",                   category: "OTHER", kind: "oscillator", formula: "c-EMA(20)", color: "#0ea5e9" },
+  { id: "acc",      name: "Accelerator Oscillator",     category: "OTHER", kind: "oscillator", formula: "c-SMA(5)", color: "#f59e0b" },
+  { id: "typical",  name: "Typical Price",              category: "OTHER", kind: "overlay",    formula: "(h+l+c)/3", color: "#64748b" },
+  {
+    id: "oi-profile",
+    name: "OI Profile",
+    category: "POPULAR",
+    kind: "overlay",
+    formula: "",
+    color: "#dc2626",
+    favorite: true,
+    badge: "NEW",
+    builtin: true,
+    pane: "overlay",
+  },
 ];
 
 export const FAVORITE_TIMEFRAMES_KEY = "tv-fav-timeframes";

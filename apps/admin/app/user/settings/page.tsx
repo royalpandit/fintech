@@ -117,7 +117,7 @@ export default async function UserSettingsPage() {
         </p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div className="user-split-2" style={{ gap: 14 }}>
         <article
           style={{
             background: "#fff",

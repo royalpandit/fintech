@@ -134,12 +134,9 @@ export default async function PortfolioPage() {
             color: "#fff",
             borderRadius: 18,
             padding: 36,
-            display: "grid",
-            gridTemplateColumns: "1.4fr 1fr",
-            gap: 24,
-            alignItems: "center",
             marginBottom: 18,
           }}
+          className="user-split-hero"
         >
           <div>
             <span
@@ -237,14 +234,7 @@ export default async function PortfolioPage() {
       ) : (
         <>
           {/* Stats strip */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 12,
-              marginBottom: 18,
-            }}
-          >
+          <div className="user-stat-grid" style={{ marginBottom: 18 }}>
             {[
               { label: "Total Value", value: formatINR(totalValue, true), color: "#0f172a" },
               {
@@ -282,7 +272,7 @@ export default async function PortfolioPage() {
             ))}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1.55fr 1fr", gap: 14, marginBottom: 18 }}>
+          <div className="user-split-chart">
             <article style={{ background: "#fff", border: "1px solid #eef0f4", borderRadius: 14, padding: 18 }}>
               <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
                 Portfolio Value — 90 days

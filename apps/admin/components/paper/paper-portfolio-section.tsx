@@ -104,12 +104,8 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
       </div>
 
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
-          gap: 10,
-          marginBottom: 14,
-        }}
+        className="user-stat-grid-5"
+        style={{ marginBottom: 14 }}
       >
         {[
           { label: "Cash", value: formatINR(summary.cashBalance), color: "#0ea5e9" },

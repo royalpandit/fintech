@@ -71,7 +71,7 @@ export default function PaperTradeForm({ defaultSymbol = "", compact = false }: 
 
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr 1fr" : "1.2fr 1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+      <div className={compact ? "paper-trade-grid-compact" : "paper-trade-grid"}>
         <input placeholder="Symbol (e.g. RELIANCE)" value={symbol} onChange={(e) => setSymbol(e.target.value)} style={field} />
         <input type="number" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={field} />
         <input type="number" placeholder="Price ₹" value={price} onChange={(e) => setPrice(e.target.value)} style={field} />

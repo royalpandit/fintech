@@ -39,7 +39,7 @@ export default async function CommunityPage() {
 
   return (
     <section>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 18, alignItems: "start" }}>
+      <div className="user-layout-rail">
         <div>
           <div
             style={{

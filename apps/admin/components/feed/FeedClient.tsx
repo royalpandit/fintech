@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import { formatRelativeTime } from "@/lib/format-date";
 import {
   FiHeart,
   FiMessageSquare,
@@ -88,18 +89,6 @@ const REPORT_REASONS = [
 
 // ─── Helpers ──────────────────────────────────────────────
 
-function relTime(date: string): string {
-  const diff = Date.now() - new Date(date).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(date).toLocaleDateString();
-}
-
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "??";
@@ -157,7 +146,7 @@ function CommentBubble({
         </div>
         <div style={{ display: "flex", gap: 10, marginTop: 4, paddingLeft: 4 }}>
           <span style={{ fontSize: 10, color: "#94a3b8" }}>
-            {relTime(comment.createdAt)}
+            {formatRelativeTime(comment.createdAt)}
           </span>
           {"_count" in comment === false && (
             <button
@@ -293,7 +282,7 @@ function PostCard({
             <CheckCircle size={12} style={{ color: "#10b981" }} />
           </div>
           <div style={{ fontSize: 11, color: "#64748b" }}>
-            {post.advisor?.advisorProfile?.sebiRegistrationNo} · {relTime(when)}
+            {post.advisor?.advisorProfile?.sebiRegistrationNo} · {formatRelativeTime(when)}
           </div>
         </div>
 
@@ -1167,14 +1156,7 @@ export default function FeedClient({
 
   return (
     <>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 320px",
-          gap: 18,
-          alignItems: "start",
-        }}
-      >
+      <div className="user-layout-rail">
         {/* Feed column */}
         <div>
           <div style={{ marginBottom: 16 }}>
