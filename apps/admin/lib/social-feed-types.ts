@@ -1,4 +1,4 @@
-export type FeedPostType = "text" | "image" | "video" | "chart" | "article" | "idea";
+export type FeedPostType = "text" | "image" | "video" | "chart" | "article" | "idea" | "link";
 export type FeedSentiment = "bullish" | "bearish" | "neutral";
 export type FeedPostAccessType = "free" | "paid";
 
@@ -34,6 +34,7 @@ export type SocialPost = {
   like_count: number;
   comment_count: number;
   save_count: number;
+  share_count?: number;
   liked_by_me: boolean;
   saved_by_me: boolean;
   is_own: boolean;

@@ -110,8 +110,32 @@ enum FeedPostType {
   chart
   article
   idea
+  link
 
   @@map("feed_post_type")
+}
+
+enum CommunityType {
+  public
+  private
+
+  @@map("community_type")
+}
+
+enum JoinRequestStatus {
+  pending
+  approved
+  rejected
+
+  @@map("join_request_status")
+}
+
+enum PostPermission {
+  everyone
+  admins
+  owner
+
+  @@map("post_permission")
 }
 
 enum ReactionType {
@@ -285,6 +309,11 @@ model User {
   following            UserFollow[]          @relation("follower")
   createdGroups        Group[]
   groupMemberships     GroupMember[]
+  groupJoinRequests    GroupJoinRequest[] @relation("joinRequestUser")
+  reviewedJoinRequests GroupJoinRequest[] @relation("joinRequestReviewer")
+  groupBansReceived    GroupBan[]         @relation("bannedUser")
+  groupBansIssued      GroupBan[]         @relation("banIssuer")
+  communityPostShares  CommunityPostShare[]
   reputationLogs       ReputationLog[]
   dmParticipations     DmThreadParticipant[]
   dmMessages           DmMessage[]
@@ -580,11 +609,15 @@ model CommunityPost {
   unlockPrice      Decimal?          @map("unlock_price") @db.Decimal(12, 2)
   paymentStatus    PostPaymentStatus @default(none) @map("payment_status")
   groupId          Int?              @map("group_id")
+  linkUrl          String?           @map("link_url")
+  pinnedAt         DateTime?         @map("pinned_at")
+  shareCount       Int               @default(0) @map("share_count")
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
   deletedAt     DateTime?      @map("deleted_at")
 
   user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group?                @relation(fields: [groupId], references: [id], onDelete: SetNull)
   comments  CommunityComment[]
   saves     CommunityPostSave[]
   reactions CommunityReaction[]
@@ -593,11 +626,14 @@ model CommunityPost {
   videos    CommunityPostVideo[]
   symbols   CommunityPostSymbol[]
   unlocks   CommunityPostUnlock[]
+  shares    CommunityPostShare[]
 
   @@index([userId])
+  @@index([groupId])
   @@index([createdAt(sort: Desc)])
   @@index([postType])
   @@index([postAccessType])
+  @@index([pinnedAt(sort: Desc)])
   @@map("community_posts")
 }
 
@@ -736,15 +772,29 @@ model UserBlock {
 }
 
 model Group {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique @db.VarChar(150)
-  description String?
-  createdBy   Int      @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id            Int           @id @default(autoincrement())
+  uuid          String        @unique @default(uuid())
+  slug          String        @unique @db.VarChar(150)
+  name          String        @unique @db.VarChar(150)
+  description   String?
+  logoUrl       String?       @map("logo_url")
+  bannerUrl     String?       @map("banner_url")
+  communityType CommunityType @default(public) @map("community_type")
+  postPermission PostPermission @default(everyone) @map("post_permission")
+  rules         String?
+  createdBy     Int           @map("created_by")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  deletedAt     DateTime?     @map("deleted_at")
 
-  creator User          @relation(fields: [createdBy], references: [id], onDelete: Restrict)
-  members GroupMember[]
+  creator      User               @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  members      GroupMember[]
+  joinRequests GroupJoinRequest[]
+  bans         GroupBan[]
+  posts        CommunityPost[]
 
+  @@index([communityType])
+  @@index([createdAt(sort: Desc)])
   @@map("groups")
 }
 
@@ -759,7 +809,58 @@ model GroupMember {
 
   @@id([groupId, userId])
   @@index([userId])
+  @@index([groupId, role])
   @@map("group_members")
+}
+
+model GroupJoinRequest {
+  id         Int               @id @default(autoincrement())
+  groupId    Int               @map("group_id")
+  userId     Int               @map("user_id")
+  status     JoinRequestStatus @default(pending)
+  message    String?
+  reviewedBy Int?              @map("reviewed_by")
+  reviewedAt DateTime?         @map("reviewed_at")
+  createdAt  DateTime          @default(now()) @map("created_at")
+  updatedAt  DateTime          @updatedAt @map("updated_at")
+
+  group    Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user     User  @relation("joinRequestUser", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer User? @relation("joinRequestReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@unique([groupId, userId])
+  @@index([groupId, status])
+  @@map("group_join_requests")
+}
+
+model GroupBan {
+  groupId   Int      @map("group_id")
+  userId    Int      @map("user_id")
+  bannedBy  Int      @map("banned_by")
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  group  Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user   User  @relation("bannedUser", fields: [userId], references: [id], onDelete: Cascade)
+  banner User  @relation("banIssuer", fields: [bannedBy], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId])
+  @@index([userId])
+  @@map("group_bans")
+}
+
+model CommunityPostShare {
+  id        Int      @id @default(autoincrement())
+  postId    Int      @map("post_id")
+  userId    Int      @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([userId])
+  @@map("community_post_shares")
 }
 
 model ReputationLog {
