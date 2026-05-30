@@ -67,6 +67,8 @@ export async function createSocialPost(input: CreateSocialPostInput): Promise<So
       imageUrls: input.imageUrls,
       videoUrls: input.videoUrls,
       symbols: input.symbols,
+      postAccessType: input.postAccessType ?? "free",
+      unlockPrice: input.unlockPrice,
     }),
   });
   const json = await parseJson(res);
@@ -155,6 +157,30 @@ export async function postSocialComment(
   const json = await parseJson(res);
   if (!res.ok) throw new Error(json.error || "Comment failed");
   return json.comment;
+}
+
+export async function unlockCommunityPost(postId: number): Promise<SocialPost> {
+  const res = await fetch(`/api/v1/community/posts/${postId}/unlock`, {
+    method: "POST",
+    credentials: "include",
+  });
+  const json = await parseJson(res);
+  if (!res.ok || json.status === false) {
+    throw new Error(json.error || "Failed to unlock post");
+  }
+  return json.post as SocialPost;
+}
+
+export async function unlockMarketPost(postId: number): Promise<Record<string, unknown>> {
+  const res = await fetch(`/api/v1/market/posts/${postId}/unlock`, {
+    method: "POST",
+    credentials: "include",
+  });
+  const json = await parseJson(res);
+  if (!res.ok || json.status === false) {
+    throw new Error(json.error || "Failed to unlock post");
+  }
+  return json.post as Record<string, unknown>;
 }
 
 export async function reportSocialPost(postId: number, reason: string): Promise<void> {

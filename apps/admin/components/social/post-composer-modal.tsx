@@ -18,7 +18,8 @@ import {
   createSocialPost,
   uploadSocialMedia,
 } from "@/lib/social-feed-client";
-import type { FeedSentiment } from "@/lib/social-feed-types";
+import type { FeedSentiment, FeedPostAccessType } from "@/lib/social-feed-types";
+import PostAccessSelector from "@/components/posts/post-access-selector";
 
 type Mode = "post" | "article";
 
@@ -60,6 +61,7 @@ export default function PostComposerModal({
   const [showEmoji, setShowEmoji] = useState(false);
   const [showSymbolPicker, setShowSymbolPicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [postAccessType, setPostAccessType] = useState<FeedPostAccessType>("free");
   const [error, setError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -80,6 +82,7 @@ export default function PostComposerModal({
     setTargetPrice("");
     setStopLoss("");
     setMode("post");
+    setPostAccessType("free");
     setError("");
   }, [images, videos]);
 
@@ -162,6 +165,7 @@ export default function PostComposerModal({
 
       await createSocialPost({
         content: mode === "article" ? title : content,
+        postAccessType,
         postType: mode === "article" ? "article" : symbols.length ? "chart" : imageUrls.length ? "image" : videoUrls.length ? "video" : "text",
         title: mode === "article" ? title : undefined,
         articleBody: mode === "article" ? articleBody : undefined,
@@ -325,6 +329,14 @@ export default function PostComposerModal({
             )}
           </div>
         )}
+
+        <div className="sf-composer-access-wrap">
+          <PostAccessSelector
+            value={postAccessType}
+            onChange={setPostAccessType}
+            variant="composer"
+          />
+        </div>
 
         <footer className="sf-composer-foot">
           <div className="sf-toolbar">

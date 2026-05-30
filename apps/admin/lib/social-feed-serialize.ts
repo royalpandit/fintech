@@ -1,4 +1,5 @@
 import type { SocialPost } from "./social-feed-types";
+import { applyContentLock, isPostLocked, type PostAccessType } from "./post-access";
 
 type DbPost = {
   id: number;
@@ -11,6 +12,8 @@ type DbPost = {
   stopLossPrice: unknown;
   thumbnailUrl: string | null;
   articleBody: string | null;
+  postAccessType: string;
+  unlockPrice: unknown;
   createdAt: Date;
   updatedAt: Date;
   userId: number;
@@ -29,9 +32,19 @@ type DbPost = {
 
 export function serializeSocialPost(
   post: DbPost,
-  opts: { userId?: number | null; likedIds?: Set<number>; savedIds?: Set<number> },
+  opts: {
+    userId?: number | null;
+    likedIds?: Set<number>;
+    savedIds?: Set<number>;
+    unlockedIds?: Set<number>;
+  },
 ): SocialPost {
-  return {
+  const postAccessType = (post.postAccessType ?? "free") as PostAccessType;
+  const isOwn = opts.userId != null && post.userId === opts.userId;
+  const isUnlocked = isOwn || (opts.unlockedIds?.has(post.id) ?? false);
+  const locked = isPostLocked({ postAccessType, isUnlocked, isOwn });
+
+  const base: SocialPost = {
     id: post.id,
     uuid: post.uuid,
     content: post.content,
@@ -45,9 +58,9 @@ export function serializeSocialPost(
     created_at: post.createdAt.toISOString(),
     updated_at: post.updatedAt.toISOString(),
     user: post.user,
-    images: post.images.map(i => ({ id: i.id, url: i.url, sort_order: i.sortOrder })),
-    videos: post.videos.map(v => ({ id: v.id, url: v.url, sort_order: v.sortOrder })),
-    symbols: post.symbols.map(s => ({
+    images: post.images.map((i) => ({ id: i.id, url: i.url, sort_order: i.sortOrder })),
+    videos: post.videos.map((v) => ({ id: v.id, url: v.url, sort_order: v.sortOrder })),
+    symbols: post.symbols.map((s) => ({
       id: s.id,
       symbol: s.symbol,
       trading_symbol: s.tradingSymbol,
@@ -59,8 +72,14 @@ export function serializeSocialPost(
     save_count: post._count.saves,
     liked_by_me: opts.likedIds?.has(post.id) ?? false,
     saved_by_me: opts.savedIds?.has(post.id) ?? false,
-    is_own: opts.userId != null && post.userId === opts.userId,
+    is_own: isOwn,
+    post_access_type: postAccessType,
+    unlock_price: post.unlockPrice != null ? Number(post.unlockPrice) : null,
+    is_unlocked: isUnlocked,
+    is_locked: locked,
   };
+
+  return applyContentLock(base);
 }
 
 export const socialPostInclude = {

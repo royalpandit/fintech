@@ -20,6 +20,10 @@ import { PostImageGallery, PostMediaImage } from "./post-image-gallery";
 import { formatPostText } from "./format-post-text";
 import type { SocialPost } from "@/lib/social-feed-types";
 import type { SocialComment } from "@/lib/social-feed-client";
+import PostAccessBadge from "@/components/posts/post-access-badge";
+import PremiumPostOverlay from "@/components/posts/premium-post-overlay";
+import PremiumUnlockModal from "@/components/posts/premium-unlock-modal";
+import { usePremiumPostUnlock } from "@/components/posts/use-premium-post-unlock";
 
 const SENTIMENT: Record<
   string,
@@ -86,8 +90,22 @@ export default function SocialPostCard({
   commentsLoading: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [postState, setPostState] = useState(post);
   const menuRef = useRef<HTMLDivElement>(null);
-  const sent = post.sentiment ? SENTIMENT[post.sentiment] : null;
+  const sent = postState.sentiment ? SENTIMENT[postState.sentiment] : null;
+
+  useEffect(() => {
+    setPostState(post);
+  }, [post]);
+
+  const premium = usePremiumPostUnlock({
+    postId: postState.id,
+    kind: "community",
+    initialLocked: Boolean(postState.is_locked),
+    initialUnlocked: postState.is_unlocked,
+    isAuthed,
+    onUnlocked: (full) => setPostState(full as SocialPost),
+  });
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -101,18 +119,21 @@ export default function SocialPostCard({
   }, [menuOpen]);
 
   const share = async () => {
-    const url = `${window.location.origin}/user/feed?post=${post.uuid}`;
+    const url = `${window.location.origin}/user/feed?post=${postState.uuid}`;
     if (navigator.share) {
-      await navigator.share({ title: post.title ?? "Market idea", url });
+      await navigator.share({ title: postState.title ?? "Market idea", url });
     } else {
       await navigator.clipboard.writeText(url);
     }
   };
 
   const bodyText =
-    post.post_type === "article" ? post.article_body ?? post.content : post.content;
+    postState.post_type === "article"
+      ? postState.article_body ?? postState.content
+      : postState.content;
 
-  const showMenu = post.is_own || (isAuthed && !post.is_own);
+  const showMenu = postState.is_own || (isAuthed && !postState.is_own);
+  const locked = premium.locked;
 
   return (
     <article className="sf-post-card">
@@ -126,6 +147,7 @@ export default function SocialPostCard({
         </div>
 
         <div className="sf-post-head-right">
+          <PostAccessBadge type={postState.post_access_type} />
           {sent && (
             <span
               className="sf-sentiment-badge"
@@ -154,7 +176,7 @@ export default function SocialPostCard({
 
               {menuOpen && (
                 <div className="sf-post-menu" role="menu">
-                  {post.is_own && (
+                  {postState.is_own && (
                     <>
                       <button
                         type="button"
@@ -181,7 +203,7 @@ export default function SocialPostCard({
                       </button>
                     </>
                   )}
-                  {isAuthed && !post.is_own && (
+                  {isAuthed && !postState.is_own && (
                     <button
                       type="button"
                       role="menuitem"
@@ -202,62 +224,76 @@ export default function SocialPostCard({
         </div>
       </header>
 
-      {post.post_type === "article" && post.title && (
-        <h3 className="sf-post-article-title">{post.title}</h3>
+      {postState.post_type === "article" && postState.title && (
+        <h3 className="sf-post-article-title">{postState.title}</h3>
       )}
 
-      {bodyText && (
-        <div className="sf-post-text">{formatPostText(bodyText)}</div>
-      )}
+      <div className={`premium-post-body${locked ? " is-locked" : ""}`}>
+        {bodyText && (
+          <div className={`sf-post-text${locked ? " premium-text-blur" : ""}`}>
+            {formatPostText(bodyText)}
+          </div>
+        )}
 
-      {post.symbols.length > 0 && (
-        <div className="sf-post-symbols">
-          {post.symbols.map(s => (
-            <AttachedSymbolCard key={s.id} item={s} variant="feed" />
-          ))}
-        </div>
-      )}
+        {!locked && postState.symbols.length > 0 && (
+          <div className="sf-post-symbols">
+            {postState.symbols.map((s) => (
+              <AttachedSymbolCard key={s.id} item={s} variant="feed" />
+            ))}
+          </div>
+        )}
 
-      {(post.target_price != null || post.stop_loss_price != null) && (
-        <div className="sf-post-levels">
-          {post.target_price != null && (
-            <div className="sf-level-chip target">
-              <span className="sf-level-label">Target</span>
-              <span className="sf-level-value">
-                ₹{post.target_price.toLocaleString("en-IN")}
-              </span>
-            </div>
-          )}
-          {post.stop_loss_price != null && (
-            <div className="sf-level-chip sl">
-              <span className="sf-level-label">Stop loss</span>
-              <span className="sf-level-value">
-                ₹{post.stop_loss_price.toLocaleString("en-IN")}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
+        {!locked && (postState.target_price != null || postState.stop_loss_price != null) && (
+          <div className="sf-post-levels">
+            {postState.target_price != null && (
+              <div className="sf-level-chip target">
+                <span className="sf-level-label">Target</span>
+                <span className="sf-level-value">
+                  ₹{postState.target_price.toLocaleString("en-IN")}
+                </span>
+              </div>
+            )}
+            {postState.stop_loss_price != null && (
+              <div className="sf-level-chip sl">
+                <span className="sf-level-label">Stop loss</span>
+                <span className="sf-level-value">
+                  ₹{postState.stop_loss_price.toLocaleString("en-IN")}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
-      {post.thumbnail_url && <PostMediaImage url={post.thumbnail_url} />}
+        {postState.thumbnail_url && (
+          <div className={locked ? "premium-media-blur-wrap" : undefined}>
+            <PostMediaImage url={postState.thumbnail_url} />
+          </div>
+        )}
 
-      {post.images.length > 0 && <PostImageGallery images={post.images} />}
+        {postState.images.length > 0 && (
+          <div className={locked ? "premium-media-blur-wrap" : undefined}>
+            <PostImageGallery images={postState.images} locked={locked} />
+          </div>
+        )}
 
-      {post.videos.length > 0 && (
-        <div className="sf-post-video">
-          <video src={post.videos[0].url} controls />
-        </div>
-      )}
+        {postState.videos.length > 0 && (
+          <div className={`sf-post-video${locked ? " premium-media-blur-wrap" : ""}`}>
+            <video src={postState.videos[0].url} controls={!locked} />
+          </div>
+        )}
+
+        {locked && <PremiumPostOverlay onUnlock={premium.openUnlock} />}
+      </div>
 
       <footer className="sf-post-actions">
         <button
           type="button"
-          className={`sf-action-btn${post.liked_by_me ? " liked" : ""}`}
+          className={`sf-action-btn${postState.liked_by_me ? " liked" : ""}`}
           onClick={onLike}
           disabled={!isAuthed}
         >
           <FiHeart size={17} />
-          <span>{post.like_count || "Like"}</span>
+          <span>{postState.like_count || "Like"}</span>
         </button>
         <button
           type="button"
@@ -265,7 +301,7 @@ export default function SocialPostCard({
           onClick={onToggleComments}
         >
           <FiMessageSquare size={17} />
-          <span>{post.comment_count || "Comment"}</span>
+          <span>{postState.comment_count || "Comment"}</span>
         </button>
         <button type="button" className="sf-action-btn" onClick={share}>
           <FiShare2 size={17} />
@@ -273,7 +309,7 @@ export default function SocialPostCard({
         </button>
         <button
           type="button"
-          className={`sf-action-btn sf-action-save${post.saved_by_me ? " saved" : ""}`}
+          className={`sf-action-btn sf-action-save${postState.saved_by_me ? " saved" : ""}`}
           onClick={onSave}
           disabled={!isAuthed}
           title="Bookmark"
@@ -319,6 +355,13 @@ export default function SocialPostCard({
           )}
         </div>
       )}
+
+      <PremiumUnlockModal
+        open={premium.modalOpen}
+        onClose={() => premium.setModalOpen(false)}
+        onUnlock={premium.confirmUnlock}
+        loading={premium.loading}
+      />
     </article>
   );
 }

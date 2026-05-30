@@ -3,6 +3,8 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PostAccessSelector from "@/components/posts/post-access-selector";
+import type { PostAccessType } from "@/lib/post-access";
 
 type AssetType = "equity" | "crypto" | "mf" | "commodity" | "other";
 type Sentiment = "bullish" | "bearish" | "neutral";
@@ -19,6 +21,7 @@ export default function NewPostPage() {
   const [timeframe, setTimeframe] = useState("");
   const [targetPrice, setTargetPrice] = useState("");
   const [stopLossPrice, setStopLossPrice] = useState("");
+  const [postAccessType, setPostAccessType] = useState<PostAccessType>("free");
   const [disclaimer, setDisclaimer] = useState(
     "This post is for informational purposes only and does not constitute investment advice. Please consult a qualified financial advisor before making any investment decisions. Past performance is not indicative of future results.",
   );
@@ -45,6 +48,7 @@ export default function NewPostPage() {
           targetPrice: targetPrice ? Number(targetPrice) : undefined,
           stopLossPrice: stopLossPrice ? Number(stopLossPrice) : undefined,
           disclaimer: disclaimer.trim(),
+          postAccessType,
         }),
       });
       const data = await response.json();
@@ -199,6 +203,10 @@ export default function NewPostPage() {
                   />
                 </div>
               </div>
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <PostAccessSelector value={postAccessType} onChange={setPostAccessType} variant="form" />
             </div>
 
             <label className="metric-label" style={{ marginTop: 16 }}>

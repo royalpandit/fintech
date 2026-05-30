@@ -260,10 +260,24 @@ function ImageLightbox({
   );
 }
 
-function FeedImagePreview({ url, onOpen }: { url: string; onOpen: () => void }) {
+function FeedImagePreview({
+  url,
+  onOpen,
+  locked = false,
+}: {
+  url: string;
+  onOpen: () => void;
+  locked?: boolean;
+}) {
   return (
     <div className="sf-post-image-wrap">
-      <button type="button" className="sf-post-image-btn" onClick={onOpen} aria-label="View full image">
+      <button
+        type="button"
+        className="sf-post-image-btn"
+        onClick={locked ? undefined : onOpen}
+        disabled={locked}
+        aria-label={locked ? "Premium image" : "View full image"}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt="" className="sf-post-image" />
       </button>
@@ -271,7 +285,7 @@ function FeedImagePreview({ url, onOpen }: { url: string; onOpen: () => void }) 
   );
 }
 
-export function PostImageGallery({ images }: { images: PostImage[] }) {
+export function PostImageGallery({ images, locked = false }: { images: PostImage[]; locked?: boolean }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const urls = images.slice(0, 4).map(i => i.url);
   const count = urls.length;
@@ -282,7 +296,12 @@ export function PostImageGallery({ images }: { images: PostImage[] }) {
     <>
       <div className={`sf-post-images count-${count}`}>
         {images.slice(0, 4).map((img, i) => (
-          <FeedImagePreview key={img.id} url={img.url} onOpen={() => setLightboxIndex(i)} />
+          <FeedImagePreview
+            key={img.id}
+            url={img.url}
+            locked={locked}
+            onOpen={() => setLightboxIndex(i)}
+          />
         ))}
       </div>
 

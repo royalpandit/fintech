@@ -86,6 +86,23 @@ enum PostVisibility {
   @@map("post_visibility")
 }
 
+enum PostAccessType {
+  free
+  paid
+
+  @@map("post_access_type")
+}
+
+enum PostPaymentStatus {
+  none
+  pending
+  completed
+  failed
+  dev_bypass
+
+  @@map("post_payment_status")
+}
+
 enum FeedPostType {
   text
   image
@@ -115,6 +132,16 @@ enum TradeSide {
   sell
 
   @@map("trade_side")
+}
+
+enum StockPickRecommendation {
+  strong_buy
+  buy
+  hold
+  sell
+  strong_sell
+
+  @@map("stock_pick_recommendation")
 }
 
 enum PaperOrderType {
@@ -301,6 +328,9 @@ model User {
   receivedFriendRequests FriendRequest[]     @relation("reqTo")
   createdAgents        GeminiAgent[]         @relation("AgentCreator")
   agentChatSessions    AgentChatSession[]
+  createdStockPickGroups StockPickGroup[]    @relation("StockPickGroupCreator")
+  communityPostUnlocks CommunityPostUnlock[]
+  marketPostUnlocks    MarketPostUnlock[]
 
   @@map("users")
 }
@@ -419,6 +449,9 @@ model MarketPost {
   disclaimer          String
   complianceStatus    ComplianceStatus @default(pending) @map("compliance_status")
   complianceRiskScore Decimal?         @map("compliance_risk_score") @db.Decimal(5, 2)
+  postAccessType      PostAccessType   @default(free) @map("post_access_type")
+  unlockPrice         Decimal?         @map("unlock_price") @db.Decimal(12, 2)
+  paymentStatus       PostPaymentStatus @default(none) @map("payment_status")
   publishedAt         DateTime?        @map("published_at")
   editedAt            DateTime?        @map("edited_at")
   createdAt           DateTime         @default(now()) @map("created_at")
@@ -429,12 +462,30 @@ model MarketPost {
   comments  MarketComment[]
   reactions MarketReaction[]
   tags      MarketPostTag[]
+  unlocks   MarketPostUnlock[]
 
   @@index([advisorUserId])
   @@index([marketSymbol])
   @@index([createdAt(sort: Desc)])
   @@index([complianceStatus])
+  @@index([postAccessType])
   @@map("market_posts")
+}
+
+model MarketPostUnlock {
+  id              Int               @id @default(autoincrement())
+  postId          Int               @map("post_id")
+  userId          Int               @map("user_id")
+  paymentStatus   PostPaymentStatus @default(dev_bypass) @map("payment_status")
+  unlockPrice     Decimal?          @map("unlock_price") @db.Decimal(12, 2)
+  unlockedAt      DateTime          @default(now()) @map("unlocked_at")
+
+  post MarketPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId])
+  @@map("market_post_unlocks")
 }
 
 model MarketComment {
@@ -523,9 +574,12 @@ model CommunityPost {
   stopLossPrice Decimal?       @map("stop_loss_price") @db.Decimal(18, 4)
   thumbnailUrl  String?        @map("thumbnail_url")
   articleBody   String?        @map("article_body")
-  category      String         @default("general") @db.VarChar(50)
-  visibility    PostVisibility @default(public)
-  groupId       Int?           @map("group_id")
+  category         String            @default("general") @db.VarChar(50)
+  visibility       PostVisibility    @default(public)
+  postAccessType   PostAccessType    @default(free) @map("post_access_type")
+  unlockPrice      Decimal?          @map("unlock_price") @db.Decimal(12, 2)
+  paymentStatus    PostPaymentStatus @default(none) @map("payment_status")
+  groupId          Int?              @map("group_id")
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
   deletedAt     DateTime?      @map("deleted_at")
@@ -538,11 +592,29 @@ model CommunityPost {
   images    CommunityPostImage[]
   videos    CommunityPostVideo[]
   symbols   CommunityPostSymbol[]
+  unlocks   CommunityPostUnlock[]
 
   @@index([userId])
   @@index([createdAt(sort: Desc)])
   @@index([postType])
+  @@index([postAccessType])
   @@map("community_posts")
+}
+
+model CommunityPostUnlock {
+  id            Int               @id @default(autoincrement())
+  postId        Int               @map("post_id")
+  userId        Int               @map("user_id")
+  paymentStatus PostPaymentStatus @default(dev_bypass) @map("payment_status")
+  unlockPrice   Decimal?          @map("unlock_price") @db.Decimal(12, 2)
+  unlockedAt    DateTime          @default(now()) @map("unlocked_at")
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId])
+  @@map("community_post_unlocks")
 }
 
 model CommunityPostImage {
@@ -1647,6 +1719,56 @@ model BacktestResult {
 
   @@index([strategyId])
   @@map("backtest_results")
+}
+
+// ─── 19b) AI Stock Picks ────────────────────────────────
+
+model StockPickGroup {
+  id             Int       @id @default(autoincrement())
+  name           String    @db.VarChar(120)
+  slug           String    @unique @db.VarChar(140)
+  description    String?   @db.Text
+  category       String?   @db.VarChar(80)
+  iconEmoji      String    @default("📈") @map("icon_emoji") @db.VarChar(10)
+  performancePct Decimal?  @map("performance_pct") @db.Decimal(9, 4)
+  benchmarkPct   Decimal?  @map("benchmark_pct") @db.Decimal(9, 4)
+  chartData      Json?     @map("chart_data")
+  sortOrder      Int       @default(0) @map("sort_order")
+  isPublished    Boolean   @default(false) @map("is_published")
+  createdById    Int?      @map("created_by_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  createdBy User?            @relation("StockPickGroupCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  stocks    StockPickStock[]
+
+  @@index([isPublished, sortOrder])
+  @@index([deletedAt])
+  @@map("stock_pick_groups")
+}
+
+model StockPickStock {
+  id             Int                     @id @default(autoincrement())
+  groupId        Int                     @map("group_id")
+  symbol         String                  @db.VarChar(30)
+  stockName      String                  @map("stock_name") @db.VarChar(120)
+  cmp            Decimal?                @db.Decimal(18, 4)
+  targetPrice    Decimal?                @map("target_price") @db.Decimal(18, 4)
+  stopLoss       Decimal?                @map("stop_loss") @db.Decimal(18, 4)
+  recommendation StockPickRecommendation @default(buy)
+  analystNote    String?                 @map("analyst_note") @db.Text
+  sortOrder      Int                     @default(0) @map("sort_order")
+  isPublished    Boolean                 @default(false) @map("is_published")
+  createdAt      DateTime                @default(now()) @map("created_at")
+  updatedAt      DateTime                @updatedAt @map("updated_at")
+  deletedAt      DateTime?               @map("deleted_at")
+
+  group StockPickGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, sortOrder])
+  @@index([groupId, isPublished])
+  @@map("stock_pick_stocks")
 }
 
 // ─── 20) Invoices ───────────────────────────────────────

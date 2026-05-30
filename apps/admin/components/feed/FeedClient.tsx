@@ -18,6 +18,10 @@ import {
 } from "react-icons/fi";
 import { CheckCircle } from "@/components/advisor-ui/icons";
 import SocialFeedSection from "@/components/social/social-feed-section";
+import PostAccessBadge from "@/components/posts/post-access-badge";
+import PremiumPostOverlay from "@/components/posts/premium-post-overlay";
+import PremiumUnlockModal from "@/components/posts/premium-unlock-modal";
+import { usePremiumPostUnlock } from "@/components/posts/use-premium-post-unlock";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -49,6 +53,10 @@ type FeedPost = {
   sentiment: string;
   publishedAt: string | null;
   createdAt: string;
+  post_access_type?: "free" | "paid";
+  unlock_price?: number | null;
+  is_unlocked?: boolean;
+  is_locked?: boolean;
   advisor: {
     id: number;
     fullName: string;
@@ -225,10 +233,30 @@ function PostCard({
   onBlock: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [postState, setPostState] = useState(post);
   const menuRef = useRef<HTMLDivElement>(null);
-  const sColor = SENTIMENT_COLORS[post.sentiment] ?? "#64748b";
-  const initials = getInitials(post.advisor?.fullName ?? "??");
-  const when = post.publishedAt ?? post.createdAt;
+  const sColor = SENTIMENT_COLORS[postState.sentiment] ?? "#64748b";
+  const initials = getInitials(postState.advisor?.fullName ?? "??");
+  const when = postState.publishedAt ?? postState.createdAt;
+
+  const premium = usePremiumPostUnlock({
+    postId: postState.id,
+    kind: "market",
+    initialLocked: Boolean(postState.is_locked),
+    initialUnlocked: Boolean(postState.is_unlocked),
+    isAuthed,
+    onUnlocked: (full) => {
+      const f = full as FeedPost;
+      setPostState((prev) => ({
+        ...prev,
+        ...f,
+        is_locked: false,
+        is_unlocked: true,
+        content: String(f.content ?? prev.content),
+      }));
+    },
+  });
+  const locked = premium.locked;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -314,6 +342,7 @@ function PostCard({
           </button>
         )}
 
+        <PostAccessBadge type={postState.post_access_type ?? "free"} />
         {/* Sentiment pill */}
         <span
           style={{
@@ -328,7 +357,7 @@ function PostCard({
             flexShrink: 0,
           }}
         >
-          {post.sentiment}
+          {postState.sentiment}
         </span>
 
         {/* Three-dot menu */}
@@ -419,40 +448,74 @@ function PostCard({
       </div>
 
       {/* Content */}
-      <Link
-        href={`/user/markets/${post.id}`}
-        style={{ textDecoration: "none", color: "inherit" }}
-      >
-        <h3
-          style={{
-            margin: "0 0 8px",
-            fontSize: 17,
-            fontWeight: 700,
-            color: "#0f172a",
-            letterSpacing: -0.2,
-          }}
-        >
-          {post.title}
-        </h3>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 14,
-            color: "#334155",
-            lineHeight: 1.55,
-            display: "-webkit-box",
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
-        >
-          {post.content}
-        </p>
-      </Link>
+      <div className={`premium-post-body${locked ? " is-locked" : ""}`}>
+        {locked ? (
+          <div style={{ textDecoration: "none", color: "inherit" }}>
+            <h3
+              style={{
+                margin: "0 0 8px",
+                fontSize: 17,
+                fontWeight: 700,
+                color: "#0f172a",
+                letterSpacing: -0.2,
+              }}
+            >
+              {postState.title}
+            </h3>
+            <p
+              className="premium-text-blur"
+              style={{
+                margin: 0,
+                fontSize: 14,
+                color: "#334155",
+                lineHeight: 1.55,
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {postState.content}
+            </p>
+          </div>
+        ) : (
+          <Link
+            href={`/user/markets/${postState.id}`}
+            style={{ textDecoration: "none", color: "inherit" }}
+          >
+            <h3
+              style={{
+                margin: "0 0 8px",
+                fontSize: 17,
+                fontWeight: 700,
+                color: "#0f172a",
+                letterSpacing: -0.2,
+              }}
+            >
+              {postState.title}
+            </h3>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 14,
+                color: "#334155",
+                lineHeight: 1.55,
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {postState.content}
+            </p>
+          </Link>
+        )}
+        {locked && <PremiumPostOverlay onUnlock={premium.openUnlock} />}
+      </div>
 
       {/* Tags */}
       <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-        {post.marketSymbol && (
+        {postState.marketSymbol && (
           <span
             style={{
               padding: "4px 10px",
@@ -463,7 +526,7 @@ function PostCard({
               fontWeight: 700,
             }}
           >
-            {post.marketSymbol}
+            {postState.marketSymbol}
           </span>
         )}
         <span
@@ -476,22 +539,22 @@ function PostCard({
             fontWeight: 600,
           }}
         >
-          {post.assetType.toUpperCase()}
+          {postState.assetType.toUpperCase()}
         </span>
         <span
           style={{
             padding: "4px 10px",
             borderRadius: 999,
             background:
-              post.riskLevel === "high"
+              postState.riskLevel === "high"
                 ? "#fee2e2"
-                : post.riskLevel === "medium"
+                : postState.riskLevel === "medium"
                   ? "#fef3c7"
                   : "#d1fae5",
             color:
-              post.riskLevel === "high"
+              postState.riskLevel === "high"
                 ? "#991b1b"
-                : post.riskLevel === "medium"
+                : postState.riskLevel === "medium"
                   ? "#92400e"
                   : "#047857",
             fontSize: 11,
@@ -499,9 +562,16 @@ function PostCard({
             textTransform: "capitalize",
           }}
         >
-          {post.riskLevel} risk
+          {postState.riskLevel} risk
         </span>
       </div>
+
+      <PremiumUnlockModal
+        open={premium.modalOpen}
+        onClose={() => premium.setModalOpen(false)}
+        onUnlock={premium.confirmUnlock}
+        loading={premium.loading}
+      />
 
       {/* Action bar */}
       <div

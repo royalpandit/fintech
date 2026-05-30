@@ -1,5 +1,6 @@
 export type FeedPostType = "text" | "image" | "video" | "chart" | "article" | "idea";
 export type FeedSentiment = "bullish" | "bearish" | "neutral";
+export type FeedPostAccessType = "free" | "paid";
 
 export type SocialPostSymbol = {
   id: number;
@@ -36,10 +37,16 @@ export type SocialPost = {
   liked_by_me: boolean;
   saved_by_me: boolean;
   is_own: boolean;
+  post_access_type: FeedPostAccessType;
+  unlock_price: number | null;
+  is_unlocked: boolean;
+  is_locked: boolean;
 };
 
 export type CreateSocialPostInput = {
   content: string;
+  postAccessType: FeedPostAccessType;
+  unlockPrice?: number;
   postType?: FeedPostType;
   title?: string;
   sentiment?: FeedSentiment;
