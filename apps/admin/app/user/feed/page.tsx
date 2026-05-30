@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import FeedClient from "@/components/feed/FeedClient";
+import { serializeMarketFeedPost } from "@/lib/market-feed-serialize";
 
 export const dynamic = "force-dynamic";
 
@@ -138,13 +139,20 @@ export default async function UserFeedPage() {
         ).map((r) => r.postId)
       : [];
 
+  const unlockedPostIds: number[] =
+    userId && allVisibleIds.length > 0
+      ? (
+          await prisma.marketPostUnlock.findMany({
+            where: { userId, postId: { in: allVisibleIds } },
+            select: { postId: true },
+          })
+        ).map((r) => r.postId)
+      : [];
+  const unlockedSet = new Set(unlockedPostIds);
+
   // Serialize dates to strings (plain objects for client component)
   function serializePost(p: (typeof discoverPosts)[number]) {
-    return {
-      ...p,
-      publishedAt: p.publishedAt?.toISOString() ?? null,
-      createdAt: p.createdAt.toISOString(),
-    };
+    return serializeMarketFeedPost(p, { userId, unlockedPostIds: unlockedSet });
   }
 
   return (

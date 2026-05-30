@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireAuth, requireRole } from "@/lib/auth";
+import { parsePostAccessType } from "@/lib/post-access";
 
 export const dynamic = "force-dynamic";
 
@@ -56,10 +57,17 @@ export async function POST(req: NextRequest) {
     targetPrice?: number;
     stopLossPrice?: number;
     disclaimer?: string;
+    postAccessType?: string;
+    unlockPrice?: number;
   }>(req);
 
   if (!body.title || !body.content || !body.assetType || !body.sentiment || !body.riskLevel || !body.disclaimer) {
     return err("title, content, assetType, sentiment, riskLevel, disclaimer are required");
+  }
+
+  const postAccessType = parsePostAccessType(body.postAccessType) ?? "free";
+  if (body.postAccessType != null && !parsePostAccessType(body.postAccessType)) {
+    return err("postAccessType must be 'free' or 'paid'");
   }
 
   const post = await prisma.marketPost.create({
@@ -77,6 +85,11 @@ export async function POST(req: NextRequest) {
       disclaimer: body.disclaimer,
       complianceStatus: "approved",
       publishedAt: new Date(),
+      postAccessType,
+      unlockPrice:
+        postAccessType === "paid" && typeof body.unlockPrice === "number"
+          ? body.unlockPrice
+          : null,
     },
   });
 

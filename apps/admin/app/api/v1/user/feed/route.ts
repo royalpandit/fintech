@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok } from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/auth";
+import { serializeMarketFeedPosts } from "@/lib/market-feed-serialize";
 
 export const dynamic = "force-dynamic";
 
@@ -68,15 +69,25 @@ export async function GET(req: NextRequest) {
   const data = hasMore ? posts.slice(0, limit) : posts;
   const nextCursor = hasMore ? data[data.length - 1].id : null;
 
-  // Which of these posts has the user already liked?
   let likedPostIds: number[] = [];
+  let unlockedPostIds: number[] = [];
   if (userId && data.length > 0) {
-    const reactions = await prisma.marketReaction.findMany({
-      where: { userId, postId: { in: data.map((p) => p.id) }, type: "like" },
-      select: { postId: true },
-    });
+    const ids = data.map((p) => p.id);
+    const [reactions, unlocks] = await Promise.all([
+      prisma.marketReaction.findMany({
+        where: { userId, postId: { in: ids }, type: "like" },
+        select: { postId: true },
+      }),
+      prisma.marketPostUnlock.findMany({
+        where: { userId, postId: { in: ids } },
+        select: { postId: true },
+      }),
+    ]);
     likedPostIds = reactions.map((r) => r.postId);
+    unlockedPostIds = unlocks.map((u) => u.postId);
   }
 
-  return ok({ data, nextCursor, likedPostIds });
+  const serialized = serializeMarketFeedPosts(data, userId, unlockedPostIds);
+
+  return ok({ data: serialized, nextCursor, likedPostIds });
 }

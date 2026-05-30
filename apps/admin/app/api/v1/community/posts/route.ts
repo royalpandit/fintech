@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/auth";
 import { serializeSocialPost, socialPostInclude } from "@/lib/social-feed-serialize";
+import { parsePostAccessType } from "@/lib/post-access";
 import type { FeedPostType, FeedSentiment } from "@/lib/social-feed-types";
 
 export const dynamic = "force-dynamic";
@@ -30,8 +31,8 @@ async function upsertTags(postId: number, tagNames: string[]) {
 }
 
 async function enrichPosts(userId: number | null, posts: Parameters<typeof serializeSocialPost>[0][]) {
-  const ids = posts.map(p => p.id);
-  const [likes, saves] = userId
+  const ids = posts.map((p) => p.id);
+  const [likes, saves, unlocks] = userId
     ? await Promise.all([
         prisma.communityReaction.findMany({
           where: { userId, postId: { in: ids }, type: "like" },
@@ -41,11 +42,16 @@ async function enrichPosts(userId: number | null, posts: Parameters<typeof seria
           where: { userId, postId: { in: ids } },
           select: { postId: true },
         }),
+        prisma.communityPostUnlock.findMany({
+          where: { userId, postId: { in: ids } },
+          select: { postId: true },
+        }),
       ])
-    : [[], []];
-  const likedIds = new Set(likes.map(l => l.postId));
-  const savedIds = new Set(saves.map(s => s.postId));
-  return posts.map(p => serializeSocialPost(p, { userId, likedIds, savedIds }));
+    : [[], [], []];
+  const likedIds = new Set(likes.map((l) => l.postId));
+  const savedIds = new Set(saves.map((s) => s.postId));
+  const unlockedIds = new Set(unlocks.map((u) => u.postId));
+  return posts.map((p) => serializeSocialPost(p, { userId, likedIds, savedIds, unlockedIds }));
 }
 
 export async function GET(req: NextRequest) {
@@ -100,7 +106,14 @@ export async function POST(req: NextRequest) {
       }[];
       mediaUrl?: string;
       category?: string;
+      postAccessType?: string;
+      unlockPrice?: number;
     }>(req);
+
+    const postAccessType = parsePostAccessType(body.postAccessType) ?? "free";
+    if (body.postAccessType != null && !parsePostAccessType(body.postAccessType)) {
+      return err("postAccessType must be 'free' or 'paid'");
+    }
 
     const content = (body.content ?? "").trim();
     const isArticle = body.postType === "article";
@@ -126,6 +139,11 @@ export async function POST(req: NextRequest) {
         articleBody: body.articleBody,
         mediaUrl: body.mediaUrl,
         category: body.category ?? "general",
+        postAccessType,
+        unlockPrice:
+          postAccessType === "paid" && typeof body.unlockPrice === "number"
+            ? body.unlockPrice
+            : null,
         images: body.imageUrls?.length
           ? {
               create: body.imageUrls.map((url, i) => ({ url, sortOrder: i })),
@@ -158,6 +176,7 @@ export async function POST(req: NextRequest) {
       userId: auth.userId,
       likedIds: new Set(),
       savedIds: new Set(),
+      unlockedIds: new Set(),
     });
 
     return ok({ post: serialized });

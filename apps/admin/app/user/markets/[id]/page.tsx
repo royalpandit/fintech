@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
 import { CheckCircle } from "@/components/advisor-ui/icons";
+import MarketPostDetailBody from "@/components/posts/market-post-detail-body";
+import { isPostLocked, previewText } from "@/lib/post-access";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +65,18 @@ export default async function PostDetailPage({ params }: { params: { id: string 
   });
 
   if (!post) notFound();
+
+  const postAccessType = (post.postAccessType ?? "free") as "free" | "paid";
+  const isOwn = auth?.userId === post.advisorUserId;
+  let isUnlocked = isOwn;
+  if (auth && postAccessType === "paid" && !isOwn) {
+    const unlock = await prisma.marketPostUnlock.findUnique({
+      where: { postId_userId: { postId, userId: auth.userId } },
+    });
+    isUnlocked = Boolean(unlock);
+  }
+  const locked = isPostLocked({ postAccessType, isUnlocked, isOwn });
+  const displayContent = locked ? previewText(post.content, 200) : post.content;
 
   const initials = (post.advisor?.fullName ?? "??")
     .split(" ")
@@ -149,31 +163,17 @@ export default async function PostDetailPage({ params }: { params: { id: string 
               </span>
             </div>
 
-            <h1
-              style={{
-                margin: "0 0 12px",
-                fontSize: 24,
-                fontWeight: 800,
-                color: "#0f172a",
-                letterSpacing: -0.5,
-                lineHeight: 1.3,
+            <MarketPostDetailBody
+              isAuthed={isAuthed}
+              post={{
+                id: post.id,
+                title: post.title,
+                content: displayContent,
+                post_access_type: postAccessType,
+                is_locked: locked,
+                is_unlocked: isUnlocked,
               }}
             >
-              {post.title}
-            </h1>
-
-            <p
-              style={{
-                margin: "0 0 16px",
-                fontSize: 15,
-                color: "#334155",
-                lineHeight: 1.65,
-                whiteSpace: "pre-wrap",
-              }}
-            >
-              {post.content}
-            </p>
-
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
               {post.marketSymbol && (
                 <span
@@ -286,6 +286,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
             >
               <strong>Disclaimer:</strong> {post.disclaimer}
             </div>
+            </MarketPostDetailBody>
 
             <div
               style={{

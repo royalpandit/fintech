@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
+import { parsePostAccessType } from "@/lib/post-access";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,8 @@ export async function POST(req: NextRequest) {
     targetPrice?: number;
     stopLossPrice?: number;
     disclaimer?: string;
+    postAccessType?: string;
+    unlockPrice?: number;
   }>(req);
 
   const title = (body.title ?? "").trim();
@@ -83,6 +86,11 @@ export async function POST(req: NextRequest) {
   if (!assetType || !VALID_ASSET.includes(assetType as any)) return err("Invalid asset type");
   if (!sentiment || !VALID_SENTIMENT.includes(sentiment as any)) return err("Invalid sentiment");
   if (!riskLevel || !VALID_RISK.includes(riskLevel as any)) return err("Invalid risk level");
+
+  const postAccessType = parsePostAccessType(body.postAccessType) ?? "free";
+  if (body.postAccessType != null && !parsePostAccessType(body.postAccessType)) {
+    return err("postAccessType must be 'free' or 'paid'");
+  }
 
   // Basic rule-based compliance pre-check. Real pipeline should be richer.
   const lowerContent = (title + " " + content).toLowerCase();
@@ -118,6 +126,11 @@ export async function POST(req: NextRequest) {
       disclaimer,
       complianceStatus: complianceStatus as any,
       complianceRiskScore,
+      postAccessType,
+      unlockPrice:
+        postAccessType === "paid" && typeof body.unlockPrice === "number"
+          ? body.unlockPrice
+          : null,
       publishedAt: matchedPhrase ? null : new Date(),
     },
   });
