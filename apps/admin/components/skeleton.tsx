@@ -73,8 +73,8 @@ export function SkeletonStatCard() {
   return (
     <article
       style={{
-        background: "#fff",
-        border: "1px solid #eef0f4",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
         borderRadius: 14,
         padding: 16,
       }}
@@ -105,8 +105,8 @@ export function SkeletonWidget({
   return (
     <article
       style={{
-        background: "#fff",
-        border: "1px solid #eef0f4",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
         borderRadius: 14,
         padding: 18,
       }}
@@ -147,8 +147,8 @@ export function SkeletonChart({ height = 240, title = "Chart" }: { height?: numb
   return (
     <article
       style={{
-        background: "#fff",
-        border: "1px solid #eef0f4",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
         borderRadius: 14,
         padding: 18,
       }}
@@ -234,8 +234,8 @@ export function SkeletonDonut({ size = 170 }: { size?: number }) {
   return (
     <article
       style={{
-        background: "#fff",
-        border: "1px solid #eef0f4",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
         borderRadius: 14,
         padding: 18,
       }}
@@ -302,8 +302,8 @@ export function SkeletonTable({
   return (
     <article
       style={{
-        background: "#fff",
-        border: "1px solid #eef0f4",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
         borderRadius: 14,
         padding: 0,
         overflow: "hidden",
@@ -313,8 +313,8 @@ export function SkeletonTable({
         <div
           style={{
             padding: "12px 18px",
-            background: "#f8fafc",
-            borderBottom: "1px solid #eef0f4",
+            background: "var(--hover)",
+            borderBottom: "1px solid var(--border)",
             display: "grid",
             gridTemplateColumns: `repeat(${cols}, 1fr)`,
             gap: 16,
@@ -362,8 +362,8 @@ export function SkeletonFeed({ count = 4 }: { count?: number }) {
         <article
           key={i}
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             padding: 18,
           }}
@@ -425,8 +425,8 @@ export function SkeletonGrid({
         <article
           key={i}
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             padding: 18,
           }}

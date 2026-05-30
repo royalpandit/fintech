@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import ThemeToggleMenu from "@/components/theme/theme-toggle-menu";
+import ThemeHeaderButton from "@/components/theme/theme-header-button";
 import { ADMIN_MODULES, ADMIN_MODULE_ROUTE_MAP } from "../lib/admin-nav";
 import { Bell } from "./advisor-ui/icons";
 
@@ -255,6 +257,8 @@ export default function ModeratorShell({
               )}
             </Link>
 
+            <ThemeHeaderButton />
+
             <button
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
@@ -325,6 +329,7 @@ export default function ModeratorShell({
                 >
                   Profile
                 </Link>
+                <ThemeToggleMenu onSelect={() => setMenuOpen(false)} />
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -349,7 +354,7 @@ export default function ModeratorShell({
             )}
           </div>
         </header>
-        <main className="admin-main" style={{ background: "#f8fafc" }}>
+        <main className="admin-main theme-page">
           {children}
         </main>
       </section>

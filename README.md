@@ -1,4 +1,4 @@
-# Flexi - Fintech Social Intelligence Platform
+# Finuer - Fintech Social Intelligence Platform
 
 Full-stack setup based on the provided PTDD, Advisor Panel, and Super Admin Panel documents.
 

@@ -136,7 +136,7 @@ export default function SocialPostCard({
   const locked = premium.locked;
 
   return (
-    <article className="sf-post-card">
+    <article className="sf-post-card finuer-card">
       <header className="sf-post-head">
         <div className="sf-post-head-left">
           <div className="sf-avatar sf-avatar-feed">{getInitials(post.user.fullName)}</div>

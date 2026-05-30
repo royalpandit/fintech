@@ -98,9 +98,9 @@ export default function LiveCandleChart({
               fontWeight: 700,
               border: "1px solid",
               cursor: "pointer",
-              background: symbol === s ? "#0f172a" : "#fff",
-              color: symbol === s ? "#fff" : "#64748b",
-              borderColor: symbol === s ? "#0f172a" : "#eef0f4",
+              background: symbol === s ? "var(--text)" : "var(--surface)",
+              color: symbol === s ? "#fff" : "var(--text-muted)",
+              borderColor: symbol === s ? "var(--text)" : "var(--border)",
             }}
           >
             {s}
@@ -118,7 +118,7 @@ export default function LiveCandleChart({
         }}
       >
         <div>
-          <span style={{ fontSize: 20, fontWeight: 800, color: "#0f172a" }}>
+          <span style={{ fontSize: 20, fontWeight: 800, color: "var(--text)" }}>
             {last ? formatPrice(last.close) : "—"}
           </span>
           {pctChange !== null && (
@@ -131,7 +131,7 @@ export default function LiveCandleChart({
               }}
             >
               {up ? "▲" : "▼"} {Math.abs(pctChange).toFixed(2)}%{" "}
-              <span style={{ fontWeight: 500, color: "#94a3b8" }}>
+              <span style={{ fontWeight: 500, color: "var(--text-muted)" }}>
                 ({range.label})
               </span>
             </span>
@@ -157,7 +157,7 @@ export default function LiveCandleChart({
                     ? "rgba(14,165,233,0.12)"
                     : "transparent",
                 color:
-                  range.label === r.label ? "#0ea5e9" : "#94a3b8",
+                  range.label === r.label ? "var(--brand-primary)" : "var(--text-muted)",
               }}
             >
               {r.label}
@@ -172,10 +172,10 @@ export default function LiveCandleChart({
           style={{
             height: 280,
             borderRadius: 10,
-            background: "#f8fafc",
+            background: "var(--hover)",
             display: "grid",
             placeItems: "center",
-            color: "#94a3b8",
+            color: "var(--text-muted)",
             fontSize: 13,
           }}
         >
@@ -205,7 +205,7 @@ export default function LiveCandleChart({
             gap: 20,
             marginTop: 10,
             fontSize: 11,
-            color: "#64748b",
+            color: "var(--text-muted)",
           }}
         >
           {[
@@ -215,14 +215,14 @@ export default function LiveCandleChart({
             ["C", last.close],
           ].map(([label, val]) => (
             <span key={label as string}>
-              <span style={{ fontWeight: 700, color: "#0f172a" }}>
+              <span style={{ fontWeight: 700, color: "var(--text)" }}>
                 {label}
               </span>{" "}
               {formatPrice(val as number)}
             </span>
           ))}
           <span>
-            <span style={{ fontWeight: 700, color: "#0f172a" }}>Vol</span>{" "}
+            <span style={{ fontWeight: 700, color: "var(--text)" }}>Vol</span>{" "}
             {Number(last.volume).toLocaleString("en-IN")}
           </span>
         </div>

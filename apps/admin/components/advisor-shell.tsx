@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import FinuerLogo from "@/components/brand/finuer-logo";
+import ThemeToggleMenu from "@/components/theme/theme-toggle-menu";
+import ThemeHeaderButton from "@/components/theme/theme-header-button";
 import { ADVISOR_MODULES, ADVISOR_MODULE_ROUTE_MAP } from "../lib/advisor-nav";
 import { Bell } from "./advisor-ui/icons";
 
@@ -73,6 +76,9 @@ export default function AdvisorShell({
   return (
     <div className="admin-shell advisor-scope">
       <aside className="admin-sidebar" style={{ background: "#f8fafc", padding: "20px 14px" }}>
+        <div style={{ marginBottom: 16, paddingLeft: 4 }}>
+          <FinuerLogo href="/" height={34} />
+        </div>
         {/* Profile card at the top */}
         <div className="profile-card">
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
@@ -328,6 +334,8 @@ export default function AdvisorShell({
               )}
             </Link>
 
+            <ThemeHeaderButton />
+
             <button
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
@@ -352,6 +360,7 @@ export default function AdvisorShell({
 
             {menuOpen && (
               <div
+                className="admin-theme-dropdown"
                 style={{
                   position: "absolute",
                   top: 48,
@@ -365,8 +374,13 @@ export default function AdvisorShell({
                   zIndex: 50,
                 }}
               >
-                <div style={{ padding: "8px 10px 10px", borderBottom: "1px solid #eef0f4" }}>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: 13 }}>{currentUser.fullName}</p>
+                <div
+                  className="admin-theme-dropdown-head"
+                  style={{ padding: "8px 10px 10px", borderBottom: "1px solid #eef0f4" }}
+                >
+                  <p className="admin-theme-dropdown-name" style={{ margin: 0, fontWeight: 700, fontSize: 13 }}>
+                    {currentUser.fullName}
+                  </p>
                   <p style={{ margin: 0, fontSize: 11, color: "#64748b" }}>{currentUser.email}</p>
                 </div>
                 <Link
@@ -397,6 +411,7 @@ export default function AdvisorShell({
                 >
                   Earnings
                 </Link>
+                <ThemeToggleMenu onSelect={() => setMenuOpen(false)} />
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -421,7 +436,7 @@ export default function AdvisorShell({
             )}
           </div>
         </header>
-        <main className="admin-main" style={{ background: "#f8fafc" }}>
+        <main className="admin-main theme-page">
           {children}
         </main>
       </section>

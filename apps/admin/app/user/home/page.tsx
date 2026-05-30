@@ -1102,7 +1102,7 @@ export default async function UserDashboardPage({
                 time: "4h ago",
               },
               {
-                title: `${totalAdvisors.toLocaleString()} SEBI advisors now active on Corescent`,
+                title: `${totalAdvisors.toLocaleString()} SEBI advisors now active on Finuer`,
                 source: "Platform News",
                 time: "6h ago",
               },

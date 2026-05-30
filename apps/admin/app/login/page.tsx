@@ -3,6 +3,8 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import FinuerLogo from "@/components/brand/finuer-logo";
+import ThemeHeaderButton from "@/components/theme/theme-header-button";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,45 +41,49 @@ export default function LoginPage() {
   };
 
   return (
-    <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, background: "#f4f7fb" }}>
-      <div style={{ width: "100%", maxWidth: 440, background: "#fff", borderRadius: 24, boxShadow: "0 24px 80px rgba(15, 23, 42, 0.08)", padding: 40 }}>
+    <main className="theme-auth-page">
+      <ThemeHeaderButton />
+      <div className="theme-auth-card" style={{ maxWidth: 440, width: "100%" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+          <FinuerLogo href="/" height={44} />
+        </div>
         <h1 style={{ margin: 0, marginBottom: 8, fontSize: 28 }}>Sign in</h1>
-        <p style={{ margin: 0, marginBottom: 28, color: "#61708b" }}>
+        <p className="theme-auth-muted" style={{ margin: 0, marginBottom: 28 }}>
           Use your registered email or phone to continue.
         </p>
 
         <form onSubmit={handleSubmit}>
-          <label style={{ display: "block", marginBottom: 8, fontWeight: 600, fontSize: 14 }}>
+          <label className="theme-label" htmlFor="login-identifier">
             Email or Phone
           </label>
           <input
+            id="login-identifier"
+            className="theme-input"
             type="text"
             value={identifier}
             onChange={(event) => setIdentifier(event.target.value)}
             placeholder="name@example.com or +919999999999"
             autoComplete="username"
             required
-            style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid #d1d9e6", marginBottom: 20, fontSize: 16, boxSizing: "border-box" }}
+            style={{ marginBottom: 20 }}
           />
 
-          <label style={{ display: "block", marginBottom: 8, fontWeight: 600, fontSize: 14 }}>
+          <label className="theme-label" htmlFor="login-password">
             Password
           </label>
           <input
+            id="login-password"
+            className="theme-input"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Enter your password"
             autoComplete="current-password"
             required
-            style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid #d1d9e6", marginBottom: 20, fontSize: 16, boxSizing: "border-box" }}
+            style={{ marginBottom: 20 }}
           />
 
-          {error && (
-            <div style={{ color: "#b91c1c", marginBottom: 20, fontSize: 14, padding: "10px 12px", background: "#fef2f2", borderRadius: 10 }}>
-              {error}
-            </div>
-          )}
+          {error && <div className="theme-error" style={{ marginBottom: 20 }}>{error}</div>}
 
           <button
             type="submit"
@@ -88,16 +94,16 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p style={{ marginTop: 24, textAlign: "center", color: "#61708b", fontSize: 14 }}>
+        <p className="theme-auth-muted" style={{ marginTop: 24, textAlign: "center", fontSize: 14 }}>
           Don&apos;t have an account?{" "}
-          <Link href="/register" style={{ color: "#2563eb", fontWeight: 600 }}>
+          <Link href="/register" style={{ color: "var(--brand-primary)", fontWeight: 600 }}>
             Create one
           </Link>
         </p>
 
-        <p style={{ marginTop: 12, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+        <p className="theme-auth-muted" style={{ marginTop: 12, textAlign: "center", fontSize: 13, opacity: 0.85 }}>
           or{" "}
-          <Link href="/" style={{ color: "#0ea5e9", fontWeight: 600 }}>
+          <Link href="/" style={{ color: "var(--brand-primary)", fontWeight: 600 }}>
             browse without an account →
           </Link>
         </p>

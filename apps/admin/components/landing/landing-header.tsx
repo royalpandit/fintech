@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import FinuerLogo from "@/components/brand/finuer-logo";
+import ThemeHeaderButton from "@/components/theme/theme-header-button";
 
 const NAV = [
   { label: "Products", href: "#products" },
@@ -29,6 +31,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="lp-header-actions">
+        <ThemeHeaderButton />
         <Link href="/login" className="lp-btn-login" onClick={onNavigate}>
           Log in
         </Link>
@@ -131,10 +134,7 @@ export default function LandingHeader() {
     <>
       <header className={`lp-header${open ? " nav-open" : ""}`}>
         <div className="landing-container lp-header-inner">
-          <Link href="/" className="lp-brand" onClick={close}>
-            <span className="lp-brand-icon">C</span>
-            Corescent
-          </Link>
+          <FinuerLogo href="/" height={40} className="lp-brand-logo" onClick={close} />
 
           <div className="lp-nav-drawer lp-nav-drawer--desktop">
             <NavLinks />

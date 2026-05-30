@@ -3,6 +3,8 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import FinuerLogo from "@/components/brand/finuer-logo";
+import ThemeHeaderButton from "@/components/theme/theme-header-button";
 
 type Role = "user" | "advisor";
 
@@ -64,34 +66,21 @@ export default function RegisterPage() {
 
       router.push(data.redirectTo || "/user/home");
       router.refresh();
-    } catch (e) {
+    } catch {
       setError("Network error — please try again");
       setLoading(false);
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "12px 14px",
-    borderRadius: 12,
-    border: "1px solid #d1d9e6",
-    marginBottom: 16,
-    fontSize: 15,
-    boxSizing: "border-box",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    marginBottom: 6,
-    fontWeight: 600,
-    fontSize: 13,
-  };
-
   return (
-    <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, background: "#f4f7fb" }}>
-      <div style={{ width: "100%", maxWidth: 520, background: "#fff", borderRadius: 24, boxShadow: "0 24px 80px rgba(15, 23, 42, 0.08)", padding: 40 }}>
+    <main className="theme-auth-page">
+      <ThemeHeaderButton />
+      <div className="theme-auth-card" style={{ maxWidth: 520, width: "100%" }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+          <FinuerLogo href="/" height={44} />
+        </div>
         <h1 style={{ margin: 0, marginBottom: 8, fontSize: 28 }}>Create your account</h1>
-        <p style={{ margin: 0, marginBottom: 28, color: "#61708b" }}>
+        <p className="theme-auth-muted" style={{ margin: 0, marginBottom: 28 }}>
           Join as a community member or a SEBI-registered advisor.
         </p>
 
@@ -99,164 +88,187 @@ export default function RegisterPage() {
           <button
             type="button"
             onClick={() => setRole("user")}
-            style={{
-              padding: "16px 12px",
-              borderRadius: 14,
-              border: role === "user" ? "2px solid #2563eb" : "1px solid #d1d9e6",
-              background: role === "user" ? "#eff6ff" : "#fff",
-              cursor: "pointer",
-              textAlign: "left",
-            }}
+            className={`theme-role-option${role === "user" ? " active" : ""}`}
           >
             <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Normal User</div>
-            <div style={{ fontSize: 12, color: "#61708b" }}>
+            <div className="theme-role-option-desc">
               Track portfolio, expenses, learn & engage with the community.
             </div>
           </button>
           <button
             type="button"
             onClick={() => setRole("advisor")}
-            style={{
-              padding: "16px 12px",
-              borderRadius: 14,
-              border: role === "advisor" ? "2px solid #2563eb" : "1px solid #d1d9e6",
-              background: role === "advisor" ? "#eff6ff" : "#fff",
-              cursor: "pointer",
-              textAlign: "left",
-            }}
+            className={`theme-role-option${role === "advisor" ? " active" : ""}`}
           >
             <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>SEBI Advisor</div>
-            <div style={{ fontSize: 12, color: "#61708b" }}>
+            <div className="theme-role-option-desc">
               Publish regulated sentiment, run courses, monetize insights.
             </div>
           </button>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <label style={labelStyle}>Full Name</label>
+          <label className="theme-label" htmlFor="register-name">
+            Full Name
+          </label>
           <input
+            id="register-name"
+            className="theme-input"
             type="text"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="As per KYC"
             required
-            style={inputStyle}
+            style={{ marginBottom: 16 }}
           />
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <label style={labelStyle}>Email</label>
+              <label className="theme-label" htmlFor="register-email">
+                Email
+              </label>
               <input
+                id="register-email"
+                className="theme-input"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 autoComplete="email"
                 required
-                style={inputStyle}
+                style={{ marginBottom: 16 }}
               />
             </div>
             <div>
-              <label style={labelStyle}>Phone</label>
+              <label className="theme-label" htmlFor="register-phone">
+                Phone
+              </label>
               <input
+                id="register-phone"
+                className="theme-input"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+919999999999"
                 autoComplete="tel"
                 required
-                style={inputStyle}
+                style={{ marginBottom: 16 }}
               />
             </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <label style={labelStyle}>Password</label>
+              <label className="theme-label" htmlFor="register-password">
+                Password
+              </label>
               <input
+                id="register-password"
+                className="theme-input"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Min 8 chars, letters + numbers"
                 autoComplete="new-password"
                 required
-                style={inputStyle}
+                style={{ marginBottom: 16 }}
               />
             </div>
             <div>
-              <label style={labelStyle}>Confirm Password</label>
+              <label className="theme-label" htmlFor="register-confirm">
+                Confirm Password
+              </label>
               <input
+                id="register-confirm"
+                className="theme-input"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Re-enter password"
                 autoComplete="new-password"
                 required
-                style={inputStyle}
+                style={{ marginBottom: 16 }}
               />
             </div>
           </div>
 
           {role === "advisor" && (
-            <div style={{ padding: 16, borderRadius: 14, background: "#f8fafc", border: "1px solid #e2e8f0", marginBottom: 16 }}>
-              <p style={{ margin: 0, marginBottom: 12, fontSize: 13, color: "#0f172a", fontWeight: 600 }}>
+            <div className="theme-panel-muted" style={{ marginBottom: 16 }}>
+              <p style={{ margin: 0, marginBottom: 12, fontSize: 13, fontWeight: 600 }}>
                 SEBI Advisor Details
               </p>
 
-              <label style={labelStyle}>SEBI Registration Number</label>
+              <label className="theme-label" htmlFor="register-sebi">
+                SEBI Registration Number
+              </label>
               <input
+                id="register-sebi"
+                className="theme-input"
                 type="text"
                 value={sebi}
                 onChange={(e) => setSebi(e.target.value.toUpperCase())}
                 placeholder="INA000012345"
                 required
-                style={inputStyle}
+                style={{ marginBottom: 16 }}
               />
 
-              <label style={labelStyle}>Years of Experience</label>
+              <label className="theme-label" htmlFor="register-exp">
+                Years of Experience
+              </label>
               <input
+                id="register-exp"
+                className="theme-input"
                 type="number"
                 value={experienceYears}
                 onChange={(e) => setExperienceYears(e.target.value)}
                 placeholder="e.g. 5"
                 min={0}
                 max={60}
-                style={inputStyle}
+                style={{ marginBottom: 16 }}
               />
 
-              <label style={labelStyle}>Short Bio (optional)</label>
+              <label className="theme-label" htmlFor="register-bio">
+                Short Bio (optional)
+              </label>
               <textarea
+                id="register-bio"
+                className="theme-input"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 placeholder="Your advisory focus, strategy, credentials..."
                 rows={3}
-                style={{ ...inputStyle, resize: "vertical" }}
+                style={{ marginBottom: 12, resize: "vertical" }}
               />
 
-              <p style={{ margin: 0, fontSize: 12, color: "#61708b" }}>
-                Your account will be created as <strong>Pending Verification</strong>. An admin will review your SEBI registration before your advisor capabilities are enabled.
+              <p className="theme-muted" style={{ margin: 0, fontSize: 12 }}>
+                Your account will be created as <strong>Pending Verification</strong>. An admin will
+                review your SEBI registration before your advisor capabilities are enabled.
               </p>
             </div>
           )}
 
-          {error && (
-            <div style={{ color: "#b91c1c", marginBottom: 16, fontSize: 14, padding: "10px 12px", background: "#fef2f2", borderRadius: 10 }}>
-              {error}
-            </div>
-          )}
+          {error && <div className="theme-error">{error}</div>}
 
           <button
             type="submit"
             disabled={loading}
-            style={{ width: "100%", padding: "14px 16px", background: loading ? "#93a4c8" : "#2563eb", color: "#fff", borderRadius: 12, border: "none", cursor: loading ? "not-allowed" : "pointer", fontSize: 16, fontWeight: 600 }}
+            className="theme-btn-primary"
+            style={{
+              width: "100%",
+              padding: "14px 16px",
+              borderRadius: 12,
+              fontSize: 16,
+              opacity: loading ? 0.7 : 1,
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
           >
             {loading ? "Creating account..." : "Create account"}
           </button>
         </form>
 
-        <p style={{ marginTop: 24, textAlign: "center", color: "#61708b", fontSize: 14 }}>
+        <p className="theme-auth-muted" style={{ marginTop: 24, textAlign: "center", fontSize: 14 }}>
           Already have an account?{" "}
-          <Link href="/login" style={{ color: "#2563eb", fontWeight: 600 }}>
+          <Link href="/login" style={{ color: "var(--brand-primary)", fontWeight: 600 }}>
             Sign in
           </Link>
         </p>

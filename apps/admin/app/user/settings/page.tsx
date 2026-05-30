@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { FiSettings, FiUser, FiBell, FiSliders, FiLock } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
+import ThemeSettingsField from "@/components/theme/theme-settings-field";
 
 export const dynamic = "force-dynamic";
 
@@ -312,46 +313,12 @@ export default async function UserSettingsPage() {
           </div>
         </article>
 
-        <article
-          style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
-            borderRadius: 14,
-            padding: 20,
-          }}
-        >
-          <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
+        <article className="theme-panel-card">
+          <h3 className="theme-panel-title">
             <FiSliders size={16} /> Preferences
           </h3>
 
-          <label
-            style={{
-              display: "block",
-              fontSize: 11,
-              fontWeight: 600,
-              color: "#64748b",
-              marginBottom: 4,
-            }}
-          >
-            Theme
-          </label>
-          <select
-            defaultValue={prefs?.theme ?? "light"}
-            style={{
-              width: "100%",
-              height: 38,
-              padding: "0 12px",
-              borderRadius: 8,
-              border: "1px solid #eef0f4",
-              fontSize: 13,
-              outline: "none",
-              marginBottom: 12,
-              boxSizing: "border-box",
-            }}
-          >
-            <option value="light">Light</option>
-            <option value="dark">Dark (coming soon)</option>
-          </select>
+          <ThemeSettingsField />
 
           <label
             style={{

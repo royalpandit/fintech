@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import FinuerLogo from "@/components/brand/finuer-logo";
+import ThemeToggleMenu from "@/components/theme/theme-toggle-menu";
+import ThemeHeaderButton from "@/components/theme/theme-header-button";
 import { MODULE_ROUTE_MAP, SUPER_ADMIN_MODULES } from "../lib/super-admin";
 import { Bell } from "./advisor-ui/icons";
 
@@ -75,6 +78,9 @@ export default function AdminShell({
       style={{ ["--advisor-primary" as any]: "#7c3aed" }}
     >
       <aside className="admin-sidebar" style={{ background: "#f8fafc", padding: "20px 14px" }}>
+        <div style={{ marginBottom: 16, paddingLeft: 4 }}>
+          <FinuerLogo href="/" height={34} />
+        </div>
         {/* Profile card */}
         <div className="profile-card">
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
@@ -253,6 +259,8 @@ export default function AdminShell({
               <Bell size={18} />
             </Link>
 
+            <ThemeHeaderButton />
+
             <button
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
@@ -277,6 +285,7 @@ export default function AdminShell({
 
             {menuOpen && (
               <div
+                className="admin-theme-dropdown"
                 style={{
                   position: "absolute",
                   top: 48,
@@ -290,8 +299,13 @@ export default function AdminShell({
                   zIndex: 50,
                 }}
               >
-                <div style={{ padding: "8px 10px 10px", borderBottom: "1px solid #eef0f4" }}>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: 13 }}>{currentUser.fullName}</p>
+                <div
+                  className="admin-theme-dropdown-head"
+                  style={{ padding: "8px 10px 10px", borderBottom: "1px solid #eef0f4" }}
+                >
+                  <p className="admin-theme-dropdown-name" style={{ margin: 0, fontWeight: 700, fontSize: 13 }}>
+                    {currentUser.fullName}
+                  </p>
                   <p style={{ margin: 0, fontSize: 11, color: "#64748b" }}>{currentUser.email}</p>
                   <p
                     style={{
@@ -337,6 +351,7 @@ export default function AdminShell({
                 >
                   Settings
                 </Link>
+                <ThemeToggleMenu onSelect={() => setMenuOpen(false)} />
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -361,7 +376,7 @@ export default function AdminShell({
             )}
           </div>
         </header>
-        <main className="admin-main" style={{ background: "#f8fafc" }}>
+        <main className="admin-main theme-page">
           {children}
         </main>
       </section>

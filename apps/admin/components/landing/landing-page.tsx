@@ -1,6 +1,7 @@
 import Link from "next/link";
 import LandingHeader from "./landing-header";
 import LandingTicker from "./landing-ticker";
+import FinuerLogo from "@/components/brand/finuer-logo";
 import { DashboardMock, FeedMock, VirtualLabMock } from "./landing-mockups";
 export type LandingAdvisor = {
   id: number;
@@ -88,7 +89,7 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
               Learn. Invest. Connect. <span className="lp-gradient-text">Grow.</span>
             </h1>
             <p className="lp-hero-lead">
-              Corescent brings together social investing, expert insights, virtual trading, and a
+              Finuer brings together social investing, expert insights, virtual trading, and a
               community of SEBI registered advisors — all in one place.
             </p>
             <div className="lp-hero-ctas">
@@ -141,7 +142,7 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
             <div className="lp-kicker">Powerful Products</div>
             <h2>Everything you need to invest and grow</h2>
             <p>
-              From social feeds to virtual trading and verified advisors — Corescent gives you the
+              From social feeds to virtual trading and verified advisors — Finuer gives you the
               complete toolkit for your investment journey.
             </p>
           </div>
@@ -199,7 +200,7 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
               <div className="lp-kicker">SEBI Registered</div>
               <h2>Trusted advice from verified professionals</h2>
               <p>
-                Every advisor on Corescent is SEBI registered. Follow their research, insights, and
+                Every advisor on Finuer is SEBI registered. Follow their research, insights, and
                 trade ideas with full transparency.
               </p>
             </div>
@@ -257,7 +258,7 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
         <div className="landing-container">
           <div className="lp-cta-inner">
             <h2>Start your investment journey today</h2>
-            <p>Learn, invest, connect and grow with Corescent.</p>
+            <p>Learn, invest, connect and grow with Finuer.</p>
             <div className="lp-cta-btns">
               <Link href="/register" className="lp-btn-primary lp-btn-white">
                 Get Started for Free <span aria-hidden>→</span>
@@ -274,10 +275,7 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
         <div className="landing-container">
           <div className="lp-footer-grid">
             <div className="lp-footer-brand">
-              <Link href="/" className="lp-brand">
-                <span className="lp-brand-icon">C</span>
-                Corescent
-              </Link>
+              <FinuerLogo href="/" height={40} className="lp-brand-logo" />
               <p>India&apos;s all-in-one platform for learning, investing, and connecting with verified advisors.</p>
               <div className="lp-social">
                 <a href="#" aria-label="X">X</a>
@@ -319,7 +317,7 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
             </div>
           </div>
           <div className="lp-footer-bottom">
-            <span>© {new Date().getFullYear()} Corescent. All rights reserved.</span>
+            <span>© {new Date().getFullYear()} Finuer. All rights reserved.</span>
             <span>Made with ❤️ in India</span>
           </div>
         </div>
