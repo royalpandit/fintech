@@ -1,6 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import FinuerLogo from "@/components/brand/finuer-logo";
+import { BRAND_NAME } from "@/lib/brand";
+import ThemeToggleMenu from "@/components/theme/theme-toggle-menu";
+import ThemeHeaderButton from "@/components/theme/theme-header-button";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState, useEffect, useRef } from "react";
 import type { ComponentType } from "react";
@@ -248,10 +252,7 @@ export default function UserShell({
               {mobileDrawerOpen ? <FiX size={20} /> : <FiMenu size={20} />}
             </button>
 
-            <Link href="/user/home" className="us-brand">
-              <div className="us-brand-icon">C</div>
-              <span className="us-brand-name">Corescent</span>
-            </Link>
+            <FinuerLogo href="/user/home" height={36} className="us-brand-logo" />
           </div>
 
           {/* Center zone — search */}
@@ -276,6 +277,8 @@ export default function UserShell({
             >
               <FiSearch size={18} />
             </button>
+
+            <ThemeHeaderButton />
 
             {currentUser ? (
               <>
@@ -335,6 +338,8 @@ export default function UserShell({
                           {item.label}
                         </Link>
                       ))}
+                      <div className="us-dropdown-divider" />
+                      <ThemeToggleMenu onSelect={() => setMenuOpen(false)} />
                       <div className="us-dropdown-divider" />
                       <button
                         type="button"
@@ -510,14 +515,14 @@ export default function UserShell({
               <span className="us-sidebar-footer-dot">·</span>
               <Link href="#" className="us-sidebar-footer-link">Privacy</Link>
               <span className="us-sidebar-footer-dot">·</span>
-              <span className="us-sidebar-footer-link">© Corescent 2025</span>
+              <span className="us-sidebar-footer-link">© {BRAND_NAME} {new Date().getFullYear()}</span>
             </div>
           </div>
         </aside>
 
         {/* ── Main content ── */}
-        <main className="us-main">
-          <div className="us-content">
+        <main className="us-main theme-page">
+          <div className="us-content theme-page">
             {currentUser ? (
               <WatchlistStoreProvider>{children}</WatchlistStoreProvider>
             ) : (

@@ -22,22 +22,22 @@ const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 // Admin / advisor / user are idempotent seeds (created if missing, kept otherwise).
 
 const SUPER_ADMIN = {
-  fullName: "Corescent Super Admin",
-  email: "superadmin@corescent.local",
+  fullName: "Finuer Super Admin",
+  email: "superadmin@finuer.local",
   phone: "+919999990001",
   password: "SuperAdmin@2025",
 };
 
 const ADMIN = {
-  fullName: "Corescent Admin",
-  email: "admin@corescent.local",
+  fullName: "Finuer Admin",
+  email: "admin@finuer.local",
   phone: "+919999990002",
   password: "Admin@2025",
 };
 
 const ADVISOR = {
   fullName: "Ananya Mehta",
-  email: "advisor@corescent.local",
+  email: "advisor@finuer.local",
   phone: "+919999990003",
   password: "Advisor@2025",
   sebiRegistrationNo: "INA000000001",
@@ -47,7 +47,7 @@ const ADVISOR = {
 
 const USER = {
   fullName: "Rohan Retail",
-  email: "user@corescent.local",
+  email: "user@finuer.local",
   phone: "+919999990004",
   password: "User@2025",
 };

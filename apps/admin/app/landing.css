@@ -1,16 +1,16 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 
 .landing-root {
-  --lp-bg: #ffffff;
-  --lp-text: #0f172a;
-  --lp-muted: #64748b;
-  --lp-border: #e8edf3;
-  --lp-surface: #f8fafc;
-  --lp-green: #16a34a;
-  --lp-red: #dc2626;
-  --lp-blue: #2563eb;
+  --lp-bg: var(--bg, #f8fafc);
+  --lp-text: var(--text, #0f172a);
+  --lp-muted: var(--text-muted, #64748b);
+  --lp-border: var(--border, #e2e8f0);
+  --lp-surface: var(--surface, #ffffff);
+  --lp-green: var(--brand-success, #22c55e);
+  --lp-red: var(--brand-danger, #ef4444);
+  --lp-blue: var(--brand-primary, #0ea5e9);
   --lp-purple: #7c3aed;
-  --lp-gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  --lp-gradient: linear-gradient(90deg, #0ea5e9 0%, #06b6d4 100%);
   --lp-container: min(1200px, calc(100% - 48px));
   --lp-gutter: 24px;
   font-family: "Inter", system-ui, -apple-system, sans-serif;
@@ -45,7 +45,7 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--lp-bg) 92%, transparent);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--lp-border);
 }
@@ -64,6 +64,10 @@
   gap: 8px;
   flex: 1;
   justify-content: flex-end;
+}
+
+.lp-brand-logo {
+  flex-shrink: 0;
 }
 
 .lp-brand {

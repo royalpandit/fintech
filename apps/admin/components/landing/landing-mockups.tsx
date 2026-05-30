@@ -1,4 +1,4 @@
-/** Static UI mockups matching the Corescent landing design */
+/** Static UI mockups matching the Finuer landing design */
 
 export function DashboardMock() {
   return (

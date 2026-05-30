@@ -1,3 +1,4 @@
+import { BRAND_COLORS } from "@/lib/brand";
 import type { ChartPoint } from "@/lib/stock-picks";
 
 type Props = {
@@ -5,18 +6,20 @@ type Props = {
   color?: string;
   height?: number;
   width?: number;
+  gridColor?: string;
 };
 
 export default function MiniSparkChart({
   data,
-  color = "#16a34a",
+  color = BRAND_COLORS.success,
   height = 48,
   width = 120,
+  gridColor = BRAND_COLORS.light.chartGrid,
 }: Props) {
   if (!data?.length) {
     return (
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-        <line x1={0} y1={height / 2} x2={width} y2={height / 2} stroke="#e2e8f0" strokeWidth={1} />
+        <line x1={0} y1={height / 2} x2={width} y2={height / 2} stroke={gridColor} strokeWidth={1} />
       </svg>
     );
   }

@@ -1,4 +1,4 @@
-# Data Model — Corescent Fintech
+# Data Model — Finuer Fintech
 
 PostgreSQL database managed via **Prisma ORM**.
 

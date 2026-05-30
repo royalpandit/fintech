@@ -38,7 +38,7 @@ const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 const EXTRA_ADVISORS = [
   {
     fullName: "Vikram Rajan",
-    email: "advisor2@corescent.local",
+    email: "advisor2@finuer.local",
     phone: "+919999990005",
     password: "Advisor2@2025",
     sebi: "INA000000002",
@@ -48,7 +48,7 @@ const EXTRA_ADVISORS = [
   },
   {
     fullName: "Priya Sharma",
-    email: "advisor3@corescent.local",
+    email: "advisor3@finuer.local",
     phone: "+919999990006",
     password: "Advisor3@2025",
     sebi: "INA000000003",
@@ -61,19 +61,19 @@ const EXTRA_ADVISORS = [
 const EXTRA_USERS = [
   {
     fullName: "Arjun Kumar",
-    email: "user2@corescent.local",
+    email: "user2@finuer.local",
     phone: "+919999990007",
     password: "User2@2025",
   },
   {
     fullName: "Meera Singh",
-    email: "user3@corescent.local",
+    email: "user3@finuer.local",
     phone: "+919999990008",
     password: "User3@2025",
   },
   {
     fullName: "Siddharth Rao",
-    email: "user4@corescent.local",
+    email: "user4@finuer.local",
     phone: "+919999990009",
     password: "User4@2025",
   },
@@ -332,13 +332,13 @@ async function main() {
   if (!adminUser) throw new Error("Run seed-all.ts first to create the base admin.");
 
   const advisor1User = await prisma.user.findFirst({
-    where: { email: "advisor@corescent.local" },
+    where: { email: "advisor@finuer.local" },
     select: { id: true },
   });
   if (!advisor1User) throw new Error("Run seed-all.ts first to create the base advisor.");
 
   const user1 = await prisma.user.findFirst({
-    where: { email: "user@corescent.local" },
+    where: { email: "user@finuer.local" },
     select: { id: true },
   });
   if (!user1) throw new Error("Run seed-all.ts first to create the base user.");
@@ -639,15 +639,15 @@ async function main() {
   console.log(DIV);
 
   const accounts = [
-    { role: "SUPER_ADMIN", email: "superadmin@corescent.local", phone: "+919999990001", password: "SuperAdmin@2025", note: "Full platform access" },
-    { role: "ADMIN",       email: "admin@corescent.local",      phone: "+919999990002", password: "Admin@2025",      note: "Content moderation, advisor verification" },
-    { role: "ADVISOR",     email: "advisor@corescent.local",    phone: "+919999990003", password: "Advisor@2025",    note: "Ananya Mehta · SEBI INA000000001 · 8yr" },
-    { role: "ADVISOR",     email: "advisor2@corescent.local",   phone: "+919999990005", password: "Advisor2@2025",   note: "Vikram Rajan · SEBI INA000000002 · 12yr" },
-    { role: "ADVISOR",     email: "advisor3@corescent.local",   phone: "+919999990006", password: "Advisor3@2025",   note: "Priya Sharma · SEBI INA000000003 · 6yr" },
-    { role: "USER",        email: "user@corescent.local",       phone: "+919999990004", password: "User@2025",       note: "Rohan Retail · connected to Arjun, Meera" },
-    { role: "USER",        email: "user2@corescent.local",      phone: "+919999990007", password: "User2@2025",      note: "Arjun Kumar · connected to Rohan, Meera, Siddharth" },
-    { role: "USER",        email: "user3@corescent.local",      phone: "+919999990008", password: "User3@2025",      note: "Meera Singh · connected to Rohan, Arjun, Siddharth" },
-    { role: "USER",        email: "user4@corescent.local",      phone: "+919999990009", password: "User4@2025",      note: "Siddharth Rao · connected to Arjun, Meera" },
+    { role: "SUPER_ADMIN", email: "superadmin@finuer.local", phone: "+919999990001", password: "SuperAdmin@2025", note: "Full platform access" },
+    { role: "ADMIN",       email: "admin@finuer.local",      phone: "+919999990002", password: "Admin@2025",      note: "Content moderation, advisor verification" },
+    { role: "ADVISOR",     email: "advisor@finuer.local",    phone: "+919999990003", password: "Advisor@2025",    note: "Ananya Mehta · SEBI INA000000001 · 8yr" },
+    { role: "ADVISOR",     email: "advisor2@finuer.local",   phone: "+919999990005", password: "Advisor2@2025",   note: "Vikram Rajan · SEBI INA000000002 · 12yr" },
+    { role: "ADVISOR",     email: "advisor3@finuer.local",   phone: "+919999990006", password: "Advisor3@2025",   note: "Priya Sharma · SEBI INA000000003 · 6yr" },
+    { role: "USER",        email: "user@finuer.local",       phone: "+919999990004", password: "User@2025",       note: "Rohan Retail · connected to Arjun, Meera" },
+    { role: "USER",        email: "user2@finuer.local",      phone: "+919999990007", password: "User2@2025",      note: "Arjun Kumar · connected to Rohan, Meera, Siddharth" },
+    { role: "USER",        email: "user3@finuer.local",      phone: "+919999990008", password: "User3@2025",      note: "Meera Singh · connected to Rohan, Arjun, Siddharth" },
+    { role: "USER",        email: "user4@finuer.local",      phone: "+919999990009", password: "User4@2025",      note: "Siddharth Rao · connected to Arjun, Meera" },
   ];
 
   for (const a of accounts) {

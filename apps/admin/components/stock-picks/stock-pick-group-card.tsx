@@ -1,5 +1,6 @@
 import Link from "next/link";
 import MiniSparkChart from "./mini-spark-chart";
+import { BRAND_COLORS } from "@/lib/brand";
 import type { ChartPoint } from "@/lib/stock-picks";
 
 export type StockPickGroupCardData = {
@@ -22,10 +23,10 @@ function fmtPct(n: number | null) {
 export default function StockPickGroupCard({ group }: { group: StockPickGroupCardData }) {
   const perfPositive = (group.performancePct ?? 0) >= 0;
   const benchPositive = (group.benchmarkPct ?? 0) >= 0;
-  const chartColor = perfPositive ? "#16a34a" : "#dc2626";
+  const chartColor = perfPositive ? BRAND_COLORS.success : BRAND_COLORS.danger;
 
   return (
-    <article className="user-page-card stock-pick-group-card">
+    <article className="user-page-card finuer-card stock-pick-group-card">
       <div className="stock-pick-group-card-head">
         <div className="stock-pick-group-card-icon">{group.iconEmoji}</div>
         <div className="stock-pick-group-card-info">
@@ -43,8 +44,7 @@ export default function StockPickGroupCard({ group }: { group: StockPickGroupCar
         <div>
           <p className="stock-pick-group-card-stat-label">Performance</p>
           <p
-            className="stock-pick-group-card-stat-value"
-            style={{ color: perfPositive ? "#16a34a" : "#dc2626" }}
+            className={`stock-pick-group-card-stat-value${perfPositive ? " finuer-text-success" : " finuer-text-danger"}`}
           >
             {fmtPct(group.performancePct)}
           </p>
@@ -52,8 +52,7 @@ export default function StockPickGroupCard({ group }: { group: StockPickGroupCar
         <div>
           <p className="stock-pick-group-card-stat-label">Benchmark</p>
           <p
-            className="stock-pick-group-card-stat-value"
-            style={{ color: benchPositive ? "#64748b" : "#dc2626" }}
+            className={`stock-pick-group-card-stat-value${benchPositive ? " finuer-text-muted" : " finuer-text-danger"}`}
           >
             {fmtPct(group.benchmarkPct)}
           </p>
