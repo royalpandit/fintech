@@ -18,9 +18,10 @@ export async function GET() {
   });
 
   const data = groups.map((g) => {
+    const { stocks, ...rest } = g;
     const serialized = serializeGroup({
-      ...g,
-      _count: { stocks: g.stocks.length },
+      ...rest,
+      _count: { stocks: stocks.length },
     });
     if (!serialized.chartData.length && serialized.performancePct != null) {
       serialized.chartData = defaultChartData(serialized.performancePct);

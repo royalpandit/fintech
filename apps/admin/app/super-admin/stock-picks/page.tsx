@@ -357,7 +357,7 @@ export default function StockPicksAdminPage() {
                 <span style={{ fontSize: 12, fontWeight: 600, color: "#5f6368" }}>{field.label}</span>
                 {field.multiline ? (
                   <textarea
-                    value={(form as Record<string, string>)[field.key]}
+                    value={(form as unknown as Record<string, string>)[field.key]}
                     onChange={(e) => f(field.key, e.target.value)}
                     rows={3}
                     style={{
@@ -372,7 +372,7 @@ export default function StockPicksAdminPage() {
                   />
                 ) : (
                   <input
-                    value={(form as Record<string, string>)[field.key]}
+                    value={(form as unknown as Record<string, string>)[field.key]}
                     onChange={(e) => f(field.key, e.target.value)}
                     placeholder={field.placeholder}
                     style={{

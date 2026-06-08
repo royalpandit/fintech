@@ -367,7 +367,7 @@ export default function StockPickGroupStocksPage() {
               <label key={field.key} style={{ display: "block", marginBottom: 12 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: "#5f6368" }}>{field.label}</span>
                 <input
-                  value={(form as Record<string, string>)[field.key]}
+                  value={(form as unknown as Record<string, string>)[field.key]}
                   onChange={(e) => f(field.key, e.target.value)}
                   style={{
                     width: "100%",
@@ -391,7 +391,7 @@ export default function StockPickGroupStocksPage() {
                   <input
                     type="number"
                     step="0.01"
-                    value={(form as Record<string, string>)[field.key]}
+                    value={(form as unknown as Record<string, string>)[field.key]}
                     onChange={(e) => f(field.key, e.target.value)}
                     style={{
                       width: "100%",
