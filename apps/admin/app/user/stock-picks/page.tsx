@@ -25,7 +25,8 @@ export default async function UserStockPicksPage() {
   });
 
   const cards = groups.map((g) => {
-    const data = serializeGroup({ ...g, _count: { stocks: g.stocks.length } });
+    const { stocks, ...rest } = g;
+    const data = serializeGroup({ ...rest, _count: { stocks: stocks.length } });
     if (!data.chartData.length && data.performancePct != null) {
       data.chartData = defaultChartData(data.performancePct);
     }
