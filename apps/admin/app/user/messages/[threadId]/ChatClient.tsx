@@ -19,6 +19,7 @@ type Props = {
   userId: number;
   partner: { id: number; fullName: string } | null;
   initialMessages: Message[];
+  backHref?: string;
 };
 
 function getInitials(name: string) {
@@ -43,7 +44,7 @@ function dayLabel(date: string): string {
   return d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
 }
 
-export default function ChatClient({ threadId, userId, partner, initialMessages }: Props) {
+export default function ChatClient({ threadId, userId, partner, initialMessages, backHref = "/user/messages" }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -157,7 +158,7 @@ export default function ChatClient({ threadId, userId, partner, initialMessages 
         }}
       >
         <Link
-          href="/user/messages"
+          href={backHref}
           style={{
             display: "flex",
             alignItems: "center",

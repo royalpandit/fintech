@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { FiHeart, FiMessageSquare } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
+import { canViewMarketPost } from "@/lib/post-visibility";
 import AuthGate from "@/components/auth-gate";
 import { CheckCircle } from "@/components/advisor-ui/icons";
 import MarketPostDetailBody from "@/components/posts/market-post-detail-body";
@@ -65,6 +66,9 @@ export default async function PostDetailPage({ params }: { params: { id: string 
   });
 
   if (!post) notFound();
+
+  // Subscriber-only posts are hidden from non-subscribers (and guests).
+  if (!(await canViewMarketPost(post, auth?.userId ?? null))) notFound();
 
   const postAccessType = (post.postAccessType ?? "free") as "free" | "paid";
   const isOwn = auth?.userId === post.advisorUserId;

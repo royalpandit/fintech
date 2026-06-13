@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
+import { marketPostAudienceWhere } from "@/lib/post-visibility";
 import FeedClient from "@/components/feed/FeedClient";
 import { serializeMarketFeedPost } from "@/lib/market-feed-serialize";
 
@@ -67,6 +68,9 @@ export default async function UserFeedPage() {
     { createdAt: "desc" as const },
   ];
 
+  // Hide subscriber-only posts from non-subscribers.
+  const audienceWhere = await marketPostAudienceWhere(userId);
+
   const [followedPosts, discoverPostsRaw, suggestedAdvisors, trendingSymbols] =
     await Promise.all([
       followedIds.length > 0
@@ -75,6 +79,7 @@ export default async function UserFeedPage() {
               complianceStatus: "approved",
               deletedAt: null,
               advisorUserId: { in: followedIds, notIn: blockedIds },
+              ...audienceWhere,
             },
             orderBy,
             take: 20,
@@ -87,6 +92,7 @@ export default async function UserFeedPage() {
           complianceStatus: "approved",
           deletedAt: null,
           ...(notInDiscoverIds.length > 0 ? { advisorUserId: { notIn: notInDiscoverIds } } : {}),
+          ...audienceWhere,
         },
         orderBy,
         take: PAGE_SIZE + 1,

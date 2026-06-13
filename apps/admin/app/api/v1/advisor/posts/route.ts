@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
 import { parsePostAccessType } from "@/lib/post-access";
+import { getBoostTier } from "@/lib/post-boost";
+import { parseAudience } from "@/lib/post-visibility";
 
 export const dynamic = "force-dynamic";
 
@@ -69,7 +71,30 @@ export async function POST(req: NextRequest) {
     disclaimer?: string;
     postAccessType?: string;
     unlockPrice?: number;
+    boostTier?: string;
+    audience?: string;
+    recipientUserIds?: number[];
   }>(req);
+
+  const audience = parseAudience(body.audience);
+
+  // For "custom" audience, keep only ids that are actually active subscribers of
+  // this advisor — you can only send to people who've subscribed to you.
+  let recipientIds: number[] = [];
+  if (audience === "custom") {
+    const requested = Array.isArray(body.recipientUserIds)
+      ? body.recipientUserIds.filter((n) => Number.isInteger(n))
+      : [];
+    if (requested.length === 0) return err("Pick at least one person to send this post to");
+    const validSubs = await prisma.subscription.findMany({
+      where: { advisorUserId: auth.userId, status: "active", userId: { in: requested } },
+      select: { userId: true },
+    });
+    recipientIds = validSubs.map((s) => s.userId);
+    if (recipientIds.length === 0) {
+      return err("The selected people are not active subscribers");
+    }
+  }
 
   const title = (body.title ?? "").trim();
   const content = (body.content ?? "").trim();
@@ -111,6 +136,15 @@ export async function POST(req: NextRequest) {
   const complianceStatus = matchedPhrase ? "flagged" : "approved";
   const complianceRiskScore = matchedPhrase ? 8.5 : 2.0;
 
+  // Optional boost chosen at create time. Only activates for auto-approved posts
+  // (a flagged post can't be promoted). No payment is processed.
+  const boostTierObj = getBoostTier(body.boostTier);
+  const willBoost = Boolean(boostTierObj) && complianceStatus === "approved";
+  const boostedUntil =
+    willBoost && boostTierObj
+      ? new Date(Date.now() + boostTierObj.days * 24 * 60 * 60 * 1000)
+      : null;
+
   const post = await prisma.marketPost.create({
     data: {
       advisorUserId: auth.userId,
@@ -132,8 +166,18 @@ export async function POST(req: NextRequest) {
           ? body.unlockPrice
           : null,
       publishedAt: matchedPhrase ? null : new Date(),
+      boostedUntil,
+      boostTier: willBoost && boostTierObj ? boostTierObj.id : null,
+      audience,
     },
   });
+
+  if (audience === "custom" && recipientIds.length > 0) {
+    await prisma.marketPostRecipient.createMany({
+      data: recipientIds.map((userId) => ({ postId: post.id, userId })),
+      skipDuplicates: true,
+    });
+  }
 
   await prisma.complianceLog.create({
     data: {
@@ -164,6 +208,7 @@ export async function POST(req: NextRequest) {
     complianceRiskScore: post.complianceRiskScore,
     flagged: Boolean(matchedPhrase),
     matchedPhrase: matchedPhrase ?? null,
+    boosted: willBoost,
     post,
   });
 }

@@ -1,5 +1,12 @@
-CREATE TYPE post_access_type AS ENUM ('free', 'paid');
-CREATE TYPE post_payment_status AS ENUM ('none', 'pending', 'completed', 'failed', 'dev_bypass');
+DO $$ BEGIN
+  CREATE TYPE post_access_type AS ENUM ('free', 'paid');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE post_payment_status AS ENUM ('none', 'pending', 'completed', 'failed', 'dev_bypass');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
 ALTER TABLE community_posts
   ADD COLUMN IF NOT EXISTS post_access_type post_access_type NOT NULL DEFAULT 'free',
