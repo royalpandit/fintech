@@ -7,6 +7,8 @@ import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
 import { CheckCircle } from "@/components/advisor-ui/icons";
 import FollowToggle from "@/components/FollowToggle";
+import SubscribeButton from "@/components/subscribe-button";
+import { marketPostAudienceWhere } from "@/lib/post-visibility";
 import MessageAdvisorButton from "./MessageAdvisorButton";
 
 export const dynamic = "force-dynamic";
@@ -81,8 +83,20 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
       )
     : false;
 
+  const isSubscribed = auth
+    ? (
+        await prisma.subscription.findUnique({
+          where: { userId_advisorUserId: { userId: auth.userId, advisorUserId } },
+          select: { status: true },
+        })
+      )?.status === "active"
+    : false;
+
   const thirty = new Date();
   thirty.setDate(thirty.getDate() - 30);
+
+  // Hide subscriber-only / specific-people posts the viewer isn't allowed to see.
+  const audienceWhere = await marketPostAudienceWhere(auth?.userId ?? null);
 
   const [posts, latestMetrics, subscriberCount, courses] = await Promise.all([
     prisma.marketPost.findMany({
@@ -90,6 +104,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
         advisorUserId,
         complianceStatus: "approved",
         deletedAt: null,
+        ...audienceWhere,
       },
       orderBy: { publishedAt: "desc" },
       take: 12,
@@ -214,21 +229,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
                   advisorId={advisorUserId}
                   isFollowing={isFollowing}
                 />
-                <button
-                  type="button"
-                  style={{
-                    padding: "12px 22px",
-                    borderRadius: 12,
-                    background: "rgba(255,255,255,0.95)",
-                    color: "#064e3b",
-                    fontWeight: 800,
-                    fontSize: 14,
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  + Subscribe
-                </button>
+                <SubscribeButton advisorId={advisorUserId} initialSubscribed={isSubscribed} />
               </>
             ) : (
               <AuthGate
