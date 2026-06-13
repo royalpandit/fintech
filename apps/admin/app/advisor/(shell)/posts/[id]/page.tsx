@@ -4,7 +4,9 @@ import { notFound, redirect } from "next/navigation";
 import { FiHeart, FiMessageSquare } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
+import { isBoostActive } from "@/lib/post-boost";
 import PostActions from "./post-actions";
+import BoostButton from "./boost-button";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +27,7 @@ export default async function AdvisorPostDetailPage({ params }: { params: { id: 
   const post = await prisma.marketPost.findFirst({
     where: { id: postId, advisorUserId: auth.userId, deletedAt: null },
     include: {
-      _count: { select: { comments: true, reactions: true } },
+      _count: { select: { comments: true, reactions: true, recipients: true } },
       comments: {
         where: { deletedAt: null },
         orderBy: { createdAt: "desc" },
@@ -86,6 +88,40 @@ export default async function AdvisorPostDetailPage({ params }: { params: { id: 
               }}
             >
               {post.complianceStatus}
+            </span>
+            {isBoostActive(post.boostedUntil) && (
+              <span
+                style={{
+                  padding: "4px 12px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  background: "#e0f2fe",
+                  color: "#0369a1",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                }}
+              >
+                🚀 Promoted
+              </span>
+            )}
+            <span
+              style={{
+                padding: "4px 12px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 700,
+                background: post.audience === "public" ? "#f1f5f9" : "#ede9fe",
+                color: post.audience === "public" ? "#475569" : "#6d28d9",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+              }}
+            >
+              {post.audience === "subscribers"
+                ? "Subscribers only"
+                : post.audience === "custom"
+                  ? `Specific people (${post._count.recipients})`
+                  : "Public"}
             </span>
             <span style={{ fontSize: 12, color: "#61708b" }}>
               {post.publishedAt
@@ -237,6 +273,12 @@ export default async function AdvisorPostDetailPage({ params }: { params: { id: 
           )}
         </article>
       </div>
+
+      <BoostButton
+        postId={post.id}
+        boostedUntil={post.boostedUntil ? post.boostedUntil.toISOString() : null}
+        approved={post.complianceStatus === "approved"}
+      />
 
       <article className="card" style={{ marginTop: 16 }}>
         <h3 style={{ marginTop: 0 }}>Comments ({post._count.comments})</h3>

@@ -20,11 +20,23 @@ if (!g.pgPool) {
   g.pgPool = new Pool({
     connectionString,
     ...poolSslOption(connectionString),
-    max: 1,
-    idleTimeoutMillis: 5_000,
+    // Pages fan out many queries via Promise.all (the advisor dashboard fires
+    // ~17 at once). max:1 serialized them onto a single remote connection, so
+    // queries timed out waiting to acquire it. The hosted endpoint is pooled
+    // (pgbouncer-style), so several client connections are fine.
+    max: 10,
+    // Keep connections warm instead of tearing them down every 5s and
+    // reconnecting across the network (the churn caused "Server has closed the
+    // connection" / "Can't reach database server" on the re-establish).
+    idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 15_000,
+    // Send TCP keepalives so dead/idle-killed sockets are detected and replaced
+    // rather than handed out and failing on first use.
+    keepAlive: true,
     allowExitOnIdle: true,
   });
+  // Swallow pool-level errors (e.g. a backend idle-disconnect) so a dropped
+  // idle connection doesn't crash the dev server; pg will create a new one.
   g.pgPool.on("error", () => {});
 }
 

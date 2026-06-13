@@ -1,7 +1,11 @@
 -- AI Stock Picks module
-CREATE TYPE stock_pick_recommendation AS ENUM (
-  'strong_buy', 'buy', 'hold', 'sell', 'strong_sell'
-);
+DO $$ BEGIN
+  CREATE TYPE stock_pick_recommendation AS ENUM (
+    'strong_buy', 'buy', 'hold', 'sell', 'strong_sell'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS stock_pick_groups (
   id SERIAL PRIMARY KEY,
