@@ -54,9 +54,18 @@ export async function POST(req: NextRequest) {
   if (!target) return err("User not found", 404);
 
   // ── Access gate ──────────────────────────────────────────
-  // Advisors: any logged-in user can message them
+  // Advisors: only users with an active monthly/yearly subscription can message
   // Regular users: need an accepted friend/connection request
-  if (target.role !== "advisor") {
+  if (target.role === "advisor") {
+    const sub = await prisma.subscription.findUnique({
+      where: { userId_advisorUserId: { userId, advisorUserId: targetUserId } },
+      select: { status: true, endDate: true },
+    });
+    const active = sub?.status === "active" && sub.endDate && new Date(sub.endDate) > new Date();
+    if (!active) {
+      return err("Subscribe (monthly or yearly) to message this advisor", 403);
+    }
+  } else {
     let canMessage = false;
     try {
       const accepted = await (prisma as any).friendRequest.findFirst({

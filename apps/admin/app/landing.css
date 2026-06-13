@@ -13,7 +13,11 @@
   --lp-gradient: linear-gradient(90deg, #0ea5e9 0%, #06b6d4 100%);
   --lp-container: min(1200px, calc(100% - 48px));
   --lp-gutter: 24px;
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
   color: var(--lp-text);
   background: var(--lp-bg);
   -webkit-font-smoothing: antialiased;
@@ -153,7 +157,9 @@
   border: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
 }
 
 .lp-btn-primary:hover {
@@ -511,8 +517,12 @@
   font-weight: 700;
 }
 
-.lp-ticker-chg.up { color: var(--lp-green); }
-.lp-ticker-chg.down { color: var(--lp-red); }
+.lp-ticker-chg.up {
+  color: var(--lp-green);
+}
+.lp-ticker-chg.down {
+  color: var(--lp-red);
+}
 
 .lp-ticker-spark {
   height: 28px;
@@ -577,7 +587,9 @@
   border: 1px solid var(--lp-border);
   border-radius: 16px;
   background: #fff;
-  transition: box-shadow 0.2s, transform 0.2s;
+  transition:
+    box-shadow 0.2s,
+    transform 0.2s;
 }
 
 .lp-feature-card:hover {

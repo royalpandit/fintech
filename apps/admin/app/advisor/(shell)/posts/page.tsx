@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { FiHeart, FiMessageSquare } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
+import { isBoostActive } from "@/lib/post-boost";
 
 export const dynamic = "force-dynamic";
 
@@ -15,22 +16,39 @@ function complianceColor(status: string) {
 
 type SearchParams = { status?: string };
 
-export default async function AdvisorPostsPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function AdvisorPostsPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const token = cookies().get("access_token")?.value ?? null;
   const auth = await requireAuthToken(token);
   if (!auth) redirect("/login");
   const userId = auth.userId;
 
   const status = searchParams.status;
-  const valid = status && ["pending", "under_review", "approved", "flagged", "rejected"].includes(status);
+  const valid =
+    status &&
+    ["pending", "under_review", "approved", "flagged", "rejected"].includes(
+      status,
+    );
   const where = {
     advisorUserId: userId,
     deletedAt: null,
     ...(valid ? { complianceStatus: status as any } : {}),
   };
 
-  const [allCount, pendingCount, approvedCount, flaggedCount, rejectedCount, posts] = await Promise.all([
-    prisma.marketPost.count({ where: { advisorUserId: userId, deletedAt: null } }),
+  const [
+    allCount,
+    pendingCount,
+    approvedCount,
+    flaggedCount,
+    rejectedCount,
+    posts,
+  ] = await Promise.all([
+    prisma.marketPost.count({
+      where: { advisorUserId: userId, deletedAt: null },
+    }),
     prisma.marketPost.count({
       where: {
         advisorUserId: userId,
@@ -39,13 +57,25 @@ export default async function AdvisorPostsPage({ searchParams }: { searchParams:
       },
     }),
     prisma.marketPost.count({
-      where: { advisorUserId: userId, deletedAt: null, complianceStatus: "approved" },
+      where: {
+        advisorUserId: userId,
+        deletedAt: null,
+        complianceStatus: "approved",
+      },
     }),
     prisma.marketPost.count({
-      where: { advisorUserId: userId, deletedAt: null, complianceStatus: "flagged" },
+      where: {
+        advisorUserId: userId,
+        deletedAt: null,
+        complianceStatus: "flagged",
+      },
     }),
     prisma.marketPost.count({
-      where: { advisorUserId: userId, deletedAt: null, complianceStatus: "rejected" },
+      where: {
+        advisorUserId: userId,
+        deletedAt: null,
+        complianceStatus: "rejected",
+      },
     }),
     prisma.marketPost.findMany({
       where,
@@ -57,22 +87,51 @@ export default async function AdvisorPostsPage({ searchParams }: { searchParams:
 
   const tabs = [
     { key: "", label: `All (${allCount})`, href: "/advisor/posts" },
-    { key: "pending", label: `Pending (${pendingCount})`, href: "/advisor/posts?status=pending" },
-    { key: "approved", label: `Published (${approvedCount})`, href: "/advisor/posts?status=approved" },
-    { key: "flagged", label: `Flagged (${flaggedCount})`, href: "/advisor/posts?status=flagged" },
-    { key: "rejected", label: `Rejected (${rejectedCount})`, href: "/advisor/posts?status=rejected" },
+    {
+      key: "pending",
+      label: `Pending (${pendingCount})`,
+      href: "/advisor/posts?status=pending",
+    },
+    {
+      key: "approved",
+      label: `Published (${approvedCount})`,
+      href: "/advisor/posts?status=approved",
+    },
+    {
+      key: "flagged",
+      label: `Flagged (${flaggedCount})`,
+      href: "/advisor/posts?status=flagged",
+    },
+    {
+      key: "rejected",
+      label: `Rejected (${rejectedCount})`,
+      href: "/advisor/posts?status=rejected",
+    },
   ];
 
   const activeKey = status || "";
 
   return (
     <section>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", gap: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "end",
+          gap: 12,
+        }}
+      >
         <div>
           <h1 className="page-title">My Market Posts</h1>
-          <p className="page-subtitle">Draft, track, and manage every sentiment post you publish.</p>
+          <p className="page-subtitle">
+            Draft, track, and manage every sentiment post you publish.
+          </p>
         </div>
-        <Link href="/advisor/posts/new" className="btn-primary" style={{ padding: "12px 20px" }}>
+        <Link
+          href="/advisor/posts/new"
+          className="btn-primary"
+          style={{ padding: "12px 20px" }}
+        >
           + New Post
         </Link>
       </div>
@@ -115,9 +174,19 @@ export default async function AdvisorPostsPage({ searchParams }: { searchParams:
             <tbody>
               {posts.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: 24, textAlign: "center", color: "#61708b" }}>
+                  <td
+                    colSpan={7}
+                    style={{
+                      padding: 24,
+                      textAlign: "center",
+                      color: "#61708b",
+                    }}
+                  >
                     No posts in this bucket.{" "}
-                    <Link href="/advisor/posts/new" style={{ color: "#047857", fontWeight: 600 }}>
+                    <Link
+                      href="/advisor/posts/new"
+                      style={{ color: "#047857", fontWeight: 600 }}
+                    >
                       Create one →
                     </Link>
                   </td>
@@ -128,14 +197,38 @@ export default async function AdvisorPostsPage({ searchParams }: { searchParams:
                     <td style={{ maxWidth: 380 }}>
                       <Link
                         href={`/advisor/posts/${post.id}`}
-                        style={{ fontWeight: 600, color: "var(--text)", textDecoration: "none" }}
+                        style={{
+                          fontWeight: 600,
+                          color: "var(--text)",
+                          textDecoration: "none",
+                        }}
                       >
                         {post.title}
                       </Link>
+                      {isBoostActive((post as any).boostedUntil) && (
+                        <span
+                          style={{
+                            marginLeft: 8,
+                            padding: "1px 8px",
+                            borderRadius: 999,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            background: "#e0f2fe",
+                            color: "#0369a1",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          🚀 Promoted
+                        </span>
+                      )}
                     </td>
                     <td>{post.marketSymbol ?? "—"}</td>
-                    <td style={{ textTransform: "capitalize" }}>{post.sentiment}</td>
-                    <td style={{ textTransform: "capitalize" }}>{post.riskLevel}</td>
+                    <td style={{ textTransform: "capitalize" }}>
+                      {post.sentiment}
+                    </td>
+                    <td style={{ textTransform: "capitalize" }}>
+                      {post.riskLevel}
+                    </td>
                     <td>
                       <span
                         style={{
@@ -151,11 +244,23 @@ export default async function AdvisorPostsPage({ searchParams }: { searchParams:
                       </span>
                     </td>
                     <td style={{ fontSize: 13 }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
                         {post._count.reactions} <FiHeart size={12} />
                       </span>{" "}
                       ·{" "}
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
                         {post._count.comments} <FiMessageSquare size={12} />
                       </span>
                     </td>
