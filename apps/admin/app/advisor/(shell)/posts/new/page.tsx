@@ -4,7 +4,12 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PostAccessSelector from "@/components/posts/post-access-selector";
+import BoostPicker from "@/components/posts/boost-picker";
+import RecipientPicker from "@/components/posts/recipient-picker";
 import type { PostAccessType } from "@/lib/post-access";
+import type { BoostTierId } from "@/lib/post-boost";
+
+type Audience = "public" | "subscribers" | "custom";
 
 type AssetType = "equity" | "crypto" | "mf" | "commodity" | "other";
 type Sentiment = "bullish" | "bearish" | "neutral";
@@ -22,15 +27,30 @@ export default function NewPostPage() {
   const [targetPrice, setTargetPrice] = useState("");
   const [stopLossPrice, setStopLossPrice] = useState("");
   const [postAccessType, setPostAccessType] = useState<PostAccessType>("free");
+  const [boostTier, setBoostTier] = useState<BoostTierId | null>(null);
+  // Two top-level choices. When "subscribers" is picked, shareAll=true sends to
+  // all subscribers; shareAll=false sends only to the picked recipients.
+  const [audienceTop, setAudienceTop] = useState<"public" | "subscribers">("public");
+  const [shareAll, setShareAll] = useState(true);
+  const [recipientIds, setRecipientIds] = useState<number[]>([]);
   const [disclaimer, setDisclaimer] = useState(
     "This post is for informational purposes only and does not constitute investment advice. Please consult a qualified financial advisor before making any investment decisions. Past performance is not indicative of future results.",
   );
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Map the UI choices to the backend audience value.
+  const audience: Audience =
+    audienceTop === "public" ? "public" : shareAll ? "subscribers" : "custom";
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
+
+    if (audience === "custom" && recipientIds.length === 0) {
+      setError("Pick at least one person to send this post to.");
+      return;
+    }
     setLoading(true);
 
     try {
@@ -49,6 +69,9 @@ export default function NewPostPage() {
           stopLossPrice: stopLossPrice ? Number(stopLossPrice) : undefined,
           disclaimer: disclaimer.trim(),
           postAccessType,
+          boostTier: boostTier || undefined,
+          audience,
+          recipientUserIds: audience === "custom" ? recipientIds : undefined,
         }),
       });
       const data = await response.json();
@@ -207,6 +230,93 @@ export default function NewPostPage() {
 
             <div style={{ marginTop: 16 }}>
               <PostAccessSelector value={postAccessType} onChange={setPostAccessType} variant="form" />
+            </div>
+
+            <div style={{ marginTop: 20 }}>
+              <label className="metric-label">Audience *</label>
+              <p style={{ margin: "2px 0 8px", fontSize: 12, color: "#64748b" }}>
+                Who can see this post.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {([
+                  { id: "public", title: "Public", blurb: "Visible to everyone." },
+                  { id: "subscribers", title: "Subscribers", blurb: "Send to your subscribers." },
+                ] as const).map((opt) => {
+                  const active = audienceTop === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setAudienceTop(opt.id)}
+                      style={{
+                        textAlign: "left",
+                        padding: "12px 14px",
+                        borderRadius: 12,
+                        border: active ? "2px solid #0ea5e9" : "1px solid var(--border)",
+                        background: active ? "#f0f9ff" : "#fff",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>{opt.title}</div>
+                      <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{opt.blurb}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {audienceTop === "subscribers" && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    padding: 14,
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                    background: "#f8fafc",
+                  }}
+                >
+                  {/* Share-all vs pick-specific toggle */}
+                  <div style={{ display: "flex", gap: 8, marginBottom: shareAll ? 0 : 12 }}>
+                    {([
+                      { id: true, label: "Share with all" },
+                      { id: false, label: "Choose specific people" },
+                    ] as const).map((opt) => {
+                      const active = shareAll === opt.id;
+                      return (
+                        <button
+                          key={String(opt.id)}
+                          type="button"
+                          onClick={() => setShareAll(opt.id)}
+                          style={{
+                            flex: 1,
+                            padding: "9px 0",
+                            borderRadius: 8,
+                            border: active ? "2px solid #0ea5e9" : "1px solid var(--border)",
+                            background: active ? "#fff" : "#fff",
+                            color: active ? "#0369a1" : "#475569",
+                            fontWeight: 700,
+                            fontSize: 12.5,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {!shareAll && (
+                    <RecipientPicker selected={recipientIds} onChange={setRecipientIds} />
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 20 }}>
+              <label className="metric-label">Boost this post (optional)</label>
+              <p style={{ margin: "2px 0 8px", fontSize: 12, color: "#64748b" }}>
+                Promote your post to the top of the feed. Boost activates once the post is approved.
+              </p>
+              <BoostPicker selected={boostTier} onSelect={setBoostTier} includeNone />
             </div>
 
             <label className="metric-label" style={{ marginTop: 16 }}>

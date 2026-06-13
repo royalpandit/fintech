@@ -3,12 +3,17 @@ import { redirect } from "next/navigation";
 import { requireAuthToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import UserShell from "@/components/user-shell";
+import AdvisorApprovalWatcher from "@/components/advisor-approval-watcher";
 
 // Guests can browse user-facing pages without an account.
 // Auth-only roles (advisor, admin, super_admin) get punted to their own consoles.
 export default async function UserLayout({ children }: { children: React.ReactNode }) {
   const token = cookies().get("access_token")?.value ?? null;
   const auth = await requireAuthToken(token);
+
+  // True when a not-yet-approved advisor is browsing the community while they
+  // wait. We mount a watcher that auto-sends them to their console on approval.
+  let pendingAdvisor = false;
 
   if (auth) {
     if (auth.role === "super_admin") redirect("/super-admin/dashboard");
@@ -18,7 +23,13 @@ export default async function UserLayout({ children }: { children: React.ReactNo
         where: { userId: auth.userId },
         select: { verificationStatus: true },
       });
-      redirect(profile?.verificationStatus === "approved" ? "/advisor/dashboard" : "/advisor/pending");
+      // Approved advisors have their own console — send them there.
+      // Pending/rejected advisors have no console yet, so let them browse the
+      // user-facing community while they wait (the pending page links here).
+      if (profile?.verificationStatus === "approved") {
+        redirect("/advisor/dashboard");
+      }
+      pendingAdvisor = true;
     }
   }
 
@@ -77,6 +88,7 @@ export default async function UserLayout({ children }: { children: React.ReactNo
       todayPnL={todayPnL}
       todayPnLPct={todayPnLPct}
     >
+      {pendingAdvisor && <AdvisorApprovalWatcher />}
       {children}
     </UserShell>
   );
