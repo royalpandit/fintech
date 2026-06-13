@@ -22,6 +22,7 @@ import PostAccessBadge from "@/components/posts/post-access-badge";
 import PremiumPostOverlay from "@/components/posts/premium-post-overlay";
 import PremiumUnlockModal from "@/components/posts/premium-unlock-modal";
 import { usePremiumPostUnlock } from "@/components/posts/use-premium-post-unlock";
+import FeedFilter, { DEFAULT_FEED_FILTERS, type FeedFilters } from "@/components/feed/feed-filter";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -998,6 +999,24 @@ export default function FeedClient({
   const [reportedPosts, setReportedPosts] = useState<Set<number>>(new Set());
   const [blockedAdvisors, setBlockedAdvisors] = useState<Set<number>>(new Set());
 
+  // Feed filters (client-side: sort + direction/asset/risk/access).
+  const [filters, setFilters] = useState<FeedFilters>(DEFAULT_FEED_FILTERS);
+
+  function applyFilters(posts: FeedPost[]): FeedPost[] {
+    const out = posts.filter((p) => {
+      if (filters.sentiment !== "all" && p.sentiment !== filters.sentiment) return false;
+      if (filters.asset !== "all" && p.assetType !== filters.asset) return false;
+      if (filters.risk !== "all" && p.riskLevel !== filters.risk) return false;
+      if (filters.access !== "all" && (p.post_access_type ?? "free") !== filters.access) return false;
+      return true;
+    });
+    return out.sort((a, b) => {
+      const ta = new Date(a.publishedAt ?? a.createdAt).getTime();
+      const tb = new Date(b.publishedAt ?? b.createdAt).getTime();
+      return filters.sort === "latest" ? tb - ta : ta - tb;
+    });
+  }
+
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // ── Infinite scroll ──────────────────────────────────────
@@ -1225,7 +1244,9 @@ export default function FeedClient({
     );
   }
 
-  const hasFollowed = initialFollowedPosts.length > 0;
+  const filteredFollowed = applyFilters(initialFollowedPosts);
+  const filteredDiscover = applyFilters(discoverPosts);
+  const hasFollowed = filteredFollowed.length > 0;
 
   return (
     <>
@@ -1237,12 +1258,35 @@ export default function FeedClient({
             userName={currentUserName ?? "You"}
           />
 
+          {/* Feed header: section label + filter on the same row */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 10,
+            }}
+          >
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#94a3b8",
+                textTransform: "uppercase",
+                letterSpacing: 1,
+              }}
+            >
+              {hasFollowed ? "Following" : "Latest posts"}
+            </h2>
+            <FeedFilter value={filters} onChange={setFilters} />
+          </div>
+
           {/* Following section */}
           {hasFollowed && (
             <>
-              <SectionLabel>Following</SectionLabel>
               <div style={{ display: "grid", gap: 12, marginBottom: 20 }}>
-                {initialFollowedPosts.map(renderPost)}
+                {filteredFollowed.map(renderPost)}
               </div>
               <SectionLabel>Discover</SectionLabel>
             </>
@@ -1250,7 +1294,7 @@ export default function FeedClient({
 
           {/* Discover / global */}
           <div style={{ display: "grid", gap: 12 }}>
-            {discoverPosts.length === 0 && !loadingMore ? (
+            {filteredDiscover.length === 0 && !loadingMore ? (
               <article
                 style={{
                   background: "#fff",
@@ -1262,10 +1306,12 @@ export default function FeedClient({
                   fontSize: 13,
                 }}
               >
-                No posts yet — check back soon.
+                {discoverPosts.length === 0
+                  ? "No posts yet — check back soon."
+                  : "No posts match your filters."}
               </article>
             ) : (
-              discoverPosts.map(renderPost)
+              filteredDiscover.map(renderPost)
             )}
           </div>
 

@@ -63,5 +63,9 @@ DO $$ BEGIN ALTER TABLE community_post_images OWNER TO flexi; EXCEPTION WHEN OTH
 DO $$ BEGIN ALTER TABLE community_post_videos OWNER TO flexi; EXCEPTION WHEN OTHERS THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE community_post_symbols OWNER TO flexi; EXCEPTION WHEN OTHERS THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE community_reactions OWNER TO flexi; EXCEPTION WHEN OTHERS THEN NULL; END $$;
-GRANT ALL ON community_post_images, community_post_videos, community_post_symbols, community_reactions TO flexi;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO flexi;
+-- Guarded so this is a no-op on managed DBs (e.g. Prisma Postgres) where the
+-- 'flexi' role doesn't exist and GRANT/REVOKE is not permitted.
+DO $$ BEGIN
+  GRANT ALL ON community_post_images, community_post_videos, community_post_symbols, community_reactions TO flexi;
+  GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO flexi;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import ThemeHeaderButton from "@/components/theme/theme-header-button";
+import AdvisorApprovalWatcher from "@/components/advisor-approval-watcher";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,9 @@ export default async function AdvisorPendingPage() {
 
   return (
     <main className="theme-page" style={{ minHeight: "100vh", padding: 24 }}>
+      {/* While the application is pending, auto-advance to the dashboard the
+          moment an admin approves it — no manual refresh needed. */}
+      {!isRejected && <AdvisorApprovalWatcher />}
       <div style={{ position: "fixed", top: 16, right: 16, zIndex: 50 }}>
         <ThemeHeaderButton />
       </div>
@@ -110,7 +114,7 @@ export default async function AdvisorPendingPage() {
           )}
 
           <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
-            <Link href="/user/home" className="theme-btn-secondary" style={{ padding: "12px 18px" }}>
+            <Link href="/user/community" className="theme-btn-secondary" style={{ padding: "12px 18px" }}>
               Browse community
             </Link>
             <a
