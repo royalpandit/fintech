@@ -21,14 +21,14 @@ export default async function UserProfilePage() {
       <section>
         <article
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             padding: 48,
             textAlign: "center",
           }}
         >
-          <div style={{ fontSize: 36, marginBottom: 12, color: "#94a3b8", display: "flex", justifyContent: "center" }}>
+          <div style={{ fontSize: 36, marginBottom: 12, color: "var(--text-muted)", display: "flex", justifyContent: "center" }}>
             <FiUser size={36} />
           </div>
           <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800 }}>
@@ -119,13 +119,13 @@ export default async function UserProfilePage() {
             margin: 0,
             fontSize: 22,
             fontWeight: 800,
-            color: "#0f172a",
+            color: "var(--text)",
             letterSpacing: -0.5,
           }}
         >
           Profile
         </h1>
-        <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+        <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
           Account information, KYC verification, and risk profile
         </p>
       </div>
@@ -232,8 +232,8 @@ export default async function UserProfilePage() {
           <article
             key={s.label}
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 16,
             }}
@@ -242,7 +242,7 @@ export default async function UserProfilePage() {
               style={{
                 margin: 0,
                 fontSize: 11,
-                color: "#64748b",
+                color: "var(--text-muted)",
                 fontWeight: 500,
                 marginBottom: 6,
               }}
@@ -260,13 +260,13 @@ export default async function UserProfilePage() {
         {/* Account info */}
         <article
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             padding: 18,
           }}
         >
-          <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+          <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
             Account Information
           </h3>
           <div style={{ display: "grid", gap: 12 }}>
@@ -275,7 +275,7 @@ export default async function UserProfilePage() {
                 style={{
                   margin: 0,
                   fontSize: 11,
-                  color: "#64748b",
+                  color: "var(--text-muted)",
                   fontWeight: 600,
                   marginBottom: 4,
                 }}
@@ -289,7 +289,7 @@ export default async function UserProfilePage() {
                 style={{
                   margin: 0,
                   fontSize: 11,
-                  color: "#64748b",
+                  color: "var(--text-muted)",
                   fontWeight: 600,
                   marginBottom: 4,
                 }}
@@ -320,7 +320,7 @@ export default async function UserProfilePage() {
                 style={{
                   margin: 0,
                   fontSize: 11,
-                  color: "#64748b",
+                  color: "var(--text-muted)",
                   fontWeight: 600,
                   marginBottom: 4,
                 }}
@@ -336,7 +336,7 @@ export default async function UserProfilePage() {
                 style={{
                   margin: 0,
                   fontSize: 11,
-                  color: "#64748b",
+                  color: "var(--text-muted)",
                   fontWeight: 600,
                   marginBottom: 4,
                 }}
@@ -355,12 +355,12 @@ export default async function UserProfilePage() {
               style={{
                 padding: "10px 18px",
                 borderRadius: 10,
-                background: "#f8fafc",
-                color: "#0f172a",
+                background: "var(--surface-2)",
+                color: "var(--text)",
                 fontWeight: 700,
                 fontSize: 12,
                 textDecoration: "none",
-                border: "1px solid #eef0f4",
+                border: "1px solid var(--border)",
               }}
             >
               Edit Profile
@@ -372,13 +372,13 @@ export default async function UserProfilePage() {
         <div style={{ display: "grid", gap: 14 }}>
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 18,
             }}
           >
-            <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
               KYC Verification
             </h3>
             <div style={{ display: "grid", gap: 8 }}>
@@ -402,10 +402,10 @@ export default async function UserProfilePage() {
                       alignItems: "center",
                       padding: "10px 12px",
                       borderRadius: 10,
-                      background: "#f8fafc",
+                      background: "var(--surface-2)",
                     }}
                   >
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
                       {doc.label}
                     </span>
                     <span
@@ -434,13 +434,13 @@ export default async function UserProfilePage() {
                 textAlign: "center",
                 padding: "10px 14px",
                 borderRadius: 10,
-                background: kycComplete ? "#f8fafc" : "linear-gradient(135deg, #0ea5e9, #10b981)",
-                color: kycComplete ? "#0f172a" : "#fff",
+                background: kycComplete ? "var(--surface-2)" : "linear-gradient(135deg, #0ea5e9, #10b981)",
+                color: kycComplete ? "var(--text)" : "#fff",
                 fontWeight: 700,
                 fontSize: 12,
                 textDecoration: "none",
                 marginTop: 12,
-                border: kycComplete ? "1px solid #eef0f4" : "none",
+                border: kycComplete ? "1px solid var(--border)" : "none",
               }}
             >
               {kycComplete ? "View documents" : "Complete KYC"}
@@ -449,13 +449,13 @@ export default async function UserProfilePage() {
 
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 18,
             }}
           >
-            <h3 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+            <h3 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
               Risk Profile
             </h3>
             {riskProfile ? (
@@ -472,13 +472,13 @@ export default async function UserProfilePage() {
                 >
                   {riskProfile.riskAppetite}
                 </p>
-                <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>
+                <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
                   Updated {riskProfile.updatedAt.toLocaleDateString()}
                 </p>
               </>
             ) : (
               <>
-                <p style={{ margin: 0, fontSize: 13, color: "#64748b", lineHeight: 1.5 }}>
+                <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5 }}>
                   Take the risk profiling questionnaire to get personalized portfolio insights.
                 </p>
                 <Link

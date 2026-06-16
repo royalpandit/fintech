@@ -143,7 +143,7 @@ export default async function AdvisorDetailView({
             <p className="metric-label">Verification Status</p>
             {statusTag(profile.verificationStatus)}
             {profile.verifiedAt && (
-              <span style={{ marginLeft: 10, fontSize: 13, color: "#61708b" }}>
+              <span style={{ marginLeft: 10, fontSize: 13, color: "var(--text-muted)" }}>
                 {profile.verificationStatus === "approved" ? "Approved" : "Reviewed"}{" "}
                 {profile.verifiedAt.toLocaleDateString()}
                 {profile.verifiedBy?.fullName ? ` by ${profile.verifiedBy.fullName}` : ""}
@@ -157,8 +157,8 @@ export default async function AdvisorDetailView({
                 marginTop: 12,
                 padding: 12,
                 borderRadius: 10,
-                background: "#fef2f2",
-                border: "1px solid #fecaca",
+                background: "rgba(239,68,68,0.12)",
+                border: "1px solid rgba(239,68,68,0.30)",
               }}
             >
               <p style={{ margin: 0, marginBottom: 4, fontWeight: 600, fontSize: 13, color: "#991b1b" }}>
@@ -173,7 +173,7 @@ export default async function AdvisorDetailView({
           <h3 style={{ marginTop: 0 }}>Performance Metrics</h3>
           <p className="metric-label">Quality Score</p>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 180, height: 8, borderRadius: 999, background: "#e2e8f0", overflow: "hidden" }}>
+            <div style={{ width: 180, height: 8, borderRadius: 999, background: "var(--surface-2)", overflow: "hidden" }}>
               <div
                 style={{
                   width: `${qualityScore}%`,
@@ -223,7 +223,7 @@ export default async function AdvisorDetailView({
               <tbody>
                 {advisor.kycDocuments.length === 0 ? (
                   <tr>
-                    <td colSpan={3} style={{ color: "#61708b" }}>
+                    <td colSpan={3} style={{ color: "var(--text-muted)" }}>
                       No KYC documents uploaded yet.
                     </td>
                   </tr>
@@ -246,7 +246,7 @@ export default async function AdvisorDetailView({
           <p className="metric-label">Expertise Tags</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
             {profile.expertiseTags.length === 0 ? (
-              <span style={{ fontSize: 13, color: "#61708b" }}>None specified</span>
+              <span style={{ fontSize: 13, color: "var(--text-muted)" }}>None specified</span>
             ) : (
               profile.expertiseTags.map((tag) => (
                 <span key={tag} className="tag">

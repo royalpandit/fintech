@@ -55,6 +55,12 @@ export default function AdvisorShell({
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [search, setSearch] = useState("");
+
+  function submitSearch() {
+    const q = search.trim();
+    if (q) router.push(`/advisor/search?q=${encodeURIComponent(q)}`);
+  }
 
   const initials = getInitials(currentUser.fullName);
   const todayDeltaPct = deltaPct(todayDelta.current, todayDelta.previous);
@@ -75,7 +81,7 @@ export default function AdvisorShell({
 
   return (
     <div className="admin-shell advisor-scope">
-      <aside className="admin-sidebar" style={{ background: "#f8fafc", padding: "20px 14px" }}>
+      <aside className="admin-sidebar" style={{ background: "var(--surface-2)", padding: "20px 14px" }}>
         <div style={{ marginBottom: 16, paddingLeft: 4 }}>
           <FinuerLogo href="/" height={34} />
         </div>
@@ -103,7 +109,7 @@ export default function AdvisorShell({
                 style={{
                   fontSize: 13,
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text)",
                   letterSpacing: -0.2,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
@@ -112,7 +118,7 @@ export default function AdvisorShell({
               >
                 {currentUser.fullName}
               </div>
-              <div style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>SEBI Advisor</div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>SEBI Advisor</div>
             </div>
           </div>
 
@@ -121,7 +127,7 @@ export default function AdvisorShell({
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
               gap: 10,
-              borderTop: "1px solid #eef0f4",
+              borderTop: "1px solid var(--border)",
               paddingTop: 10,
             }}
           >
@@ -133,8 +139,8 @@ export default function AdvisorShell({
                     width: 12,
                     height: 12,
                     borderRadius: 999,
-                    background: "#eef0f4",
-                    color: "#94a3b8",
+                    background: "var(--surface-2)",
+                    color: "var(--text-muted)",
                     display: "grid",
                     placeItems: "center",
                     fontSize: 9,
@@ -164,7 +170,7 @@ export default function AdvisorShell({
           style={{
             fontSize: 10,
             fontWeight: 700,
-            color: "#94a3b8",
+            color: "var(--text-muted)",
             letterSpacing: 1,
             marginBottom: 8,
             paddingLeft: 6,
@@ -216,48 +222,59 @@ export default function AdvisorShell({
       <section className="admin-content">
         <header
           className="admin-header"
-          style={{ background: "#fff", borderBottom: "1px solid #eef0f4" }}
+          style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
         >
           {/* Search */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, maxWidth: 420 }}>
-            <div
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitSearch();
+              }}
               style={{
                 position: "relative",
                 width: "100%",
               }}
             >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
+              <button
+                type="submit"
+                aria-label="Search"
                 style={{
                   position: "absolute",
-                  left: 14,
+                  left: 12,
                   top: "50%",
                   transform: "translateY(-50%)",
-                  color: "#94a3b8",
+                  background: "none",
+                  border: "none",
+                  padding: 4,
+                  cursor: "pointer",
+                  color: "var(--text-muted)",
+                  display: "inline-flex",
                 }}
               >
-                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-                <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+                  <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
               <input
                 placeholder="Search posts, subscribers, courses..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                 style={{
                   width: "100%",
                   height: 40,
                   paddingLeft: 38,
                   paddingRight: 14,
                   borderRadius: 10,
-                  border: "1px solid #eef0f4",
-                  background: "#f8fafc",
-                  color: "#334155",
+                  border: "1px solid var(--border)",
+                  background: "var(--surface-2)",
+                  color: "var(--text)",
                   fontSize: 13,
                   outline: "none",
                 }}
               />
-            </div>
+            </form>
           </div>
 
           {/* Top page tabs */}
@@ -280,7 +297,7 @@ export default function AdvisorShell({
                     borderRadius: 8,
                     fontSize: 13,
                     fontWeight: 600,
-                    color: active ? "#2563eb" : "#64748b",
+                    color: active ? "#2563eb" : "var(--text-muted)",
                     background: active ? "rgba(37, 99, 235, 0.08)" : "transparent",
                     textDecoration: "none",
                   }}
@@ -310,8 +327,8 @@ export default function AdvisorShell({
                 width: 36,
                 height: 36,
                 borderRadius: 10,
-                background: "#f8fafc",
-                color: "#64748b",
+                background: "var(--surface-2)",
+                color: "var(--text-muted)",
                 display: "grid",
                 placeItems: "center",
                 position: "relative",
@@ -328,7 +345,7 @@ export default function AdvisorShell({
                     height: 8,
                     borderRadius: 999,
                     background: "#dc2626",
-                    border: "2px solid #f8fafc",
+                    border: "2px solid var(--surface-2)",
                   }}
                 />
               )}
@@ -366,8 +383,8 @@ export default function AdvisorShell({
                   top: 48,
                   right: 0,
                   minWidth: 240,
-                  background: "#fff",
-                  border: "1px solid #eef0f4",
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
                   borderRadius: 12,
                   boxShadow: "0 12px 40px rgba(15, 23, 42, 0.1)",
                   padding: 8,
@@ -376,12 +393,12 @@ export default function AdvisorShell({
               >
                 <div
                   className="admin-theme-dropdown-head"
-                  style={{ padding: "8px 10px 10px", borderBottom: "1px solid #eef0f4" }}
+                  style={{ padding: "8px 10px 10px", borderBottom: "1px solid var(--border)" }}
                 >
                   <p className="admin-theme-dropdown-name" style={{ margin: 0, fontWeight: 700, fontSize: 13 }}>
                     {currentUser.fullName}
                   </p>
-                  <p style={{ margin: 0, fontSize: 11, color: "#64748b" }}>{currentUser.email}</p>
+                  <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>{currentUser.email}</p>
                 </div>
                 <Link
                   href="/advisor/profile"
@@ -390,7 +407,7 @@ export default function AdvisorShell({
                     display: "block",
                     padding: "10px",
                     borderRadius: 8,
-                    color: "#0f172a",
+                    color: "var(--text)",
                     textDecoration: "none",
                     fontSize: 13,
                   }}
@@ -404,7 +421,7 @@ export default function AdvisorShell({
                     display: "block",
                     padding: "10px",
                     borderRadius: 8,
-                    color: "#0f172a",
+                    color: "var(--text)",
                     textDecoration: "none",
                     fontSize: 13,
                   }}

@@ -19,8 +19,8 @@ export default async function AdvisorPaperPage() {
   return (
     <section>
       <div style={{ marginBottom: 18 }}>
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "#0f172a" }}>Paper Trading</h1>
-        <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "var(--text)" }}>Paper Trading</h1>
+        <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
           Practice with virtual funds — separate from your advisor earnings wallet
         </p>
       </div>
@@ -30,7 +30,7 @@ export default async function AdvisorPaperPage() {
         <article className="card" style={{ padding: 18 }}>
           <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 800 }}>Quick trade</h3>
           <PaperTradeForm compact />
-          <p style={{ margin: "12px 0 0", fontSize: 11, color: "#64748b" }}>
+          <p style={{ margin: "12px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
             Enter any NSE symbol and price to simulate buys and sells.
           </p>
         </article>

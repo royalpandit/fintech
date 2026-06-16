@@ -168,7 +168,7 @@ export default function NewPostPage() {
                         padding: "10px 8px",
                         borderRadius: 8,
                         border: sentiment === s ? `2px solid ${sentimentColors[s]}` : "1px solid var(--border)",
-                        background: sentiment === s ? `${sentimentColors[s]}22` : "#fff",
+                        background: sentiment === s ? `${sentimentColors[s]}22` : "var(--surface)",
                         color: sentiment === s ? sentimentColors[s] : "var(--text)",
                         fontWeight: 600,
                         fontSize: 13,
@@ -234,7 +234,7 @@ export default function NewPostPage() {
 
             <div style={{ marginTop: 20 }}>
               <label className="metric-label">Audience *</label>
-              <p style={{ margin: "2px 0 8px", fontSize: 12, color: "#64748b" }}>
+              <p style={{ margin: "2px 0 8px", fontSize: 12, color: "var(--text-muted)" }}>
                 Who can see this post.
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -253,12 +253,12 @@ export default function NewPostPage() {
                         padding: "12px 14px",
                         borderRadius: 12,
                         border: active ? "2px solid #0ea5e9" : "1px solid var(--border)",
-                        background: active ? "#f0f9ff" : "#fff",
+                        background: active ? "var(--primary-soft)" : "var(--surface)",
                         cursor: "pointer",
                       }}
                     >
-                      <div style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>{opt.title}</div>
-                      <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{opt.blurb}</div>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: "var(--text)" }}>{opt.title}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{opt.blurb}</div>
                     </button>
                   );
                 })}
@@ -271,7 +271,7 @@ export default function NewPostPage() {
                     padding: 14,
                     border: "1px solid var(--border)",
                     borderRadius: 12,
-                    background: "#f8fafc",
+                    background: "var(--surface-2)",
                   }}
                 >
                   {/* Share-all vs pick-specific toggle */}
@@ -291,8 +291,8 @@ export default function NewPostPage() {
                             padding: "9px 0",
                             borderRadius: 8,
                             border: active ? "2px solid #0ea5e9" : "1px solid var(--border)",
-                            background: active ? "#fff" : "#fff",
-                            color: active ? "#0369a1" : "#475569",
+                            background: active ? "var(--surface)" : "var(--surface)",
+                            color: active ? "var(--primary)" : "var(--text)",
                             fontWeight: 700,
                             fontSize: 12.5,
                             cursor: "pointer",
@@ -313,14 +313,14 @@ export default function NewPostPage() {
 
             <div style={{ marginTop: 20 }}>
               <label className="metric-label">Boost this post (optional)</label>
-              <p style={{ margin: "2px 0 8px", fontSize: 12, color: "#64748b" }}>
+              <p style={{ margin: "2px 0 8px", fontSize: 12, color: "var(--text-muted)" }}>
                 Promote your post to the top of the feed. Boost activates once the post is approved.
               </p>
               <BoostPicker selected={boostTier} onSelect={setBoostTier} includeNone />
             </div>
 
             <label className="metric-label" style={{ marginTop: 16 }}>
-              Disclaimer * <span style={{ color: "#64748b", fontWeight: 400 }}>(required by SEBI)</span>
+              Disclaimer * <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(required by SEBI)</span>
             </label>
             <textarea
               className="input"
@@ -337,7 +337,7 @@ export default function NewPostPage() {
                 style={{
                   marginTop: 16,
                   padding: "10px 12px",
-                  background: "#fef2f2",
+                  background: "rgba(239,68,68,0.12)",
                   color: "#b91c1c",
                   borderRadius: 10,
                   fontSize: 14,
@@ -363,7 +363,7 @@ export default function NewPostPage() {
 
           <article className="card">
             <h3 style={{ marginTop: 0 }}>Compliance Checklist</h3>
-            <ul style={{ paddingLeft: 18, margin: 0, fontSize: 13, lineHeight: 1.8, color: "#334155" }}>
+            <ul style={{ paddingLeft: 18, margin: 0, fontSize: 13, lineHeight: 1.8, color: "var(--text)" }}>
               <li>Do NOT promise guaranteed returns</li>
               <li>Do NOT claim something is "risk-free"</li>
               <li>Do NOT use "insider tip" / "sure shot" language</li>
@@ -372,7 +372,7 @@ export default function NewPostPage() {
               <li>Price targets must have context</li>
             </ul>
 
-            <div style={{ marginTop: 20, padding: 12, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10 }}>
+            <div style={{ marginTop: 20, padding: 12, background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.30)", borderRadius: 10 }}>
               <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#065f46" }}>
                 What happens next
               </p>

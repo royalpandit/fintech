@@ -23,7 +23,7 @@ export default function Sparkline({
           y1={height / 2}
           x2={width}
           y2={height / 2}
-          stroke="#e2e8f0"
+          stroke="var(--border)"
           strokeDasharray="3 3"
         />
       </svg>

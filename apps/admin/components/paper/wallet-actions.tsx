@@ -80,26 +80,26 @@ export default function WalletActions({ hasWallet, balance }: Props) {
     height: 42,
     padding: "0 14px",
     borderRadius: 10,
-    border: "1px solid #eef0f4",
+    border: "1px solid var(--border)",
     fontSize: 14,
     fontWeight: 600,
-    color: "#0f172a",
+    color: "var(--text)",
     boxSizing: "border-box",
   };
 
   return (
     <article
       style={{
-        background: "#fff",
-        border: "1px solid #eef0f4",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
         borderRadius: 14,
         padding: 20,
       }}
     >
-      <h2 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 800, color: "#0f172a" }}>
+      <h2 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 800, color: "var(--text)" }}>
         {hasWallet ? "Add virtual funds" : "Create paper wallet"}
       </h2>
-      <p style={{ margin: "0 0 16px", fontSize: 12, color: "#64748b" }}>
+      <p style={{ margin: "0 0 16px", fontSize: 12, color: "var(--text-muted)" }}>
         {hasWallet
           ? `Current balance: ${formatINR(balance)}. Top up for more paper trades.`
           : "Start with ₹10,00,000 demo balance — no real money."}
@@ -127,7 +127,7 @@ export default function WalletActions({ hasWallet, balance }: Props) {
         </button>
       ) : (
         <>
-          <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 6 }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>
             Amount (₹)
           </label>
           <input
@@ -146,8 +146,8 @@ export default function WalletActions({ hasWallet, balance }: Props) {
                 style={{
                   padding: "6px 12px",
                   borderRadius: 8,
-                  border: "1px solid #eef0f4",
-                  background: Number(amount) === p ? "#dbeafe" : "#f8fafc",
+                  border: "1px solid var(--border)",
+                  background: Number(amount) === p ? "rgba(14,165,233,0.12)" : "var(--surface-2)",
                   fontSize: 11,
                   fontWeight: 700,
                   color: "#2563eb",

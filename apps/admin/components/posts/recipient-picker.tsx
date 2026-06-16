@@ -44,10 +44,10 @@ export default function RecipientPicker({
       s.user.email.toLowerCase().includes(q.toLowerCase()),
   );
 
-  if (loading) return <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>Loading subscribers…</p>;
+  if (loading) return <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>Loading subscribers…</p>;
   if (subs.length === 0)
     return (
-      <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
+      <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>
         You don&apos;t have any subscribers yet to send to.
       </p>
     );
@@ -77,7 +77,7 @@ export default function RecipientPicker({
               gap: 10,
               alignItems: "center",
               padding: "9px 12px",
-              borderBottom: "1px solid #f1f5f9",
+              borderBottom: "1px solid var(--border)",
               cursor: "pointer",
               fontSize: 13,
             }}
@@ -87,12 +87,12 @@ export default function RecipientPicker({
               checked={selected.includes(s.user.id)}
               onChange={() => toggle(s.user.id)}
             />
-            <span style={{ fontWeight: 600, color: "#0f172a" }}>{s.user.fullName}</span>
-            <span style={{ color: "#94a3b8", fontSize: 11 }}>{s.user.email}</span>
+            <span style={{ fontWeight: 600, color: "var(--text)" }}>{s.user.fullName}</span>
+            <span style={{ color: "var(--text-muted)", fontSize: 11 }}>{s.user.email}</span>
           </label>
         ))}
       </div>
-      <p style={{ fontSize: 11, color: "#64748b", margin: "6px 0 0" }}>
+      <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "6px 0 0" }}>
         {selected.length} selected
       </p>
     </div>

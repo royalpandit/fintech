@@ -151,8 +151,8 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
           alignItems: "center",
           gap: 12,
           padding: "14px 18px",
-          background: "#fff",
-          border: "1px solid #eef0f4",
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
           borderRadius: "14px 14px 0 0",
           flexShrink: 0,
         }}
@@ -162,7 +162,7 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
           style={{
             display: "flex",
             alignItems: "center",
-            color: "#64748b",
+            color: "var(--text-muted)",
             textDecoration: "none",
           }}
         >
@@ -189,14 +189,14 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
               {getInitials(partner.fullName)}
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
                 {partner.fullName}
               </div>
               <div style={{ fontSize: 11, color: "#10b981" }}>Active now</div>
             </div>
           </>
         ) : (
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Conversation</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>Conversation</div>
         )}
       </div>
 
@@ -206,8 +206,8 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
           flex: 1,
           overflowY: "auto",
           padding: "18px",
-          background: "#f8fafc",
-          border: "1px solid #eef0f4",
+          background: "var(--surface-2)",
+          border: "1px solid var(--border)",
           borderTop: "none",
           borderBottom: "none",
           display: "flex",
@@ -223,7 +223,7 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               gap: 10,
             }}
           >
@@ -245,18 +245,18 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
                 margin: "12px 0 8px",
               }}
             >
-              <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
+              <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
               <span
                 style={{
                   fontSize: 11,
-                  color: "#94a3b8",
+                  color: "var(--text-muted)",
                   fontWeight: 600,
                   whiteSpace: "nowrap",
                 }}
               >
                 {group.day}
               </span>
-              <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
+              <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
             </div>
 
             {group.messages.map((m) => {
@@ -298,8 +298,8 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
                         borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
                         background: isMine
                           ? "linear-gradient(135deg, #0ea5e9, #0284c7)"
-                          : "#fff",
-                        color: isMine ? "#fff" : "#0f172a",
+                          : "var(--surface)",
+                        color: isMine ? "#fff" : "var(--text)",
                         fontSize: 14,
                         lineHeight: 1.5,
                         boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
@@ -315,7 +315,7 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
                     <div
                       style={{
                         fontSize: 10,
-                        color: "#94a3b8",
+                        color: "var(--text-muted)",
                         marginTop: 3,
                         textAlign: isMine ? "right" : "left",
                         paddingInline: 2,
@@ -339,8 +339,8 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
           display: "flex",
           gap: 10,
           padding: "12px 14px",
-          background: "#fff",
-          border: "1px solid #eef0f4",
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
           borderRadius: "0 0 14px 14px",
           flexShrink: 0,
           alignItems: "flex-end",
@@ -361,7 +361,7 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
           style={{
             flex: 1,
             resize: "none",
-            border: "1px solid #e2e8f0",
+            border: "1px solid var(--border)",
             borderRadius: 10,
             padding: "10px 14px",
             fontSize: 14,
@@ -387,8 +387,8 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
             background:
               input.trim() && !sending
                 ? "linear-gradient(135deg, #0ea5e9, #0284c7)"
-                : "#e2e8f0",
-            color: input.trim() && !sending ? "#fff" : "#94a3b8",
+                : "var(--border)",
+            color: input.trim() && !sending ? "#fff" : "var(--text-muted)",
             cursor: input.trim() && !sending ? "pointer" : "default",
             flexShrink: 0,
             transition: "background 0.15s",
