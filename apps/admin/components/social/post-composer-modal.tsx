@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FiImage,
   FiSmile,
@@ -20,6 +20,7 @@ import {
 } from "@/lib/social-feed-client";
 import type { FeedSentiment, FeedPostAccessType } from "@/lib/social-feed-types";
 import PostAccessSelector from "@/components/posts/post-access-selector";
+import { useTheme } from "@/components/theme/theme-provider";
 
 type Mode = "post" | "article";
 
@@ -47,7 +48,13 @@ export default function PostComposerModal({
   isAuthed: boolean;
 }) {
   const [mode, setMode] = useState<Mode>("post");
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const { theme: appTheme } = useTheme();
+  // Default the composer to the app's current theme; the local toggle below
+  // can still override it for this session. Re-sync whenever the app theme flips.
+  const [theme, setTheme] = useState<"dark" | "light">(appTheme);
+  useEffect(() => {
+    setTheme(appTheme);
+  }, [appTheme]);
   const [text, setText] = useState("");
   const [title, setTitle] = useState("");
   const [articleBody, setArticleBody] = useState("");

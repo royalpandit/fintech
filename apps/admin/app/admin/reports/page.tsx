@@ -65,13 +65,13 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
               margin: 0,
               fontSize: 26,
               fontWeight: 800,
-              color: "#0f172a",
+              color: "var(--text)",
               letterSpacing: -0.6,
             }}
           >
             Content Reports
           </h1>
-          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
             Community-reported posts, comments, and profiles
           </p>
         </div>
@@ -98,7 +98,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
                 className="stat-card"
                 style={{
                   cursor: "pointer",
-                  borderColor: status === t.key ? t.color : "#eef0f4",
+                  borderColor: status === t.key ? t.color : "var(--border)",
                 }}
               >
                 <p className="stat-card-label">{t.label.split(" (")[0]}</p>
@@ -121,9 +121,9 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
               borderRadius: 8,
               fontSize: 13,
               fontWeight: 600,
-              color: status === t.key ? "#fff" : "#64748b",
-              background: status === t.key ? "#2563eb" : "#fff",
-              border: "1px solid #eef0f4",
+              color: status === t.key ? "#fff" : "var(--text-muted)",
+              background: status === t.key ? "#2563eb" : "var(--surface)",
+              border: "1px solid var(--border)",
               textDecoration: "none",
             }}
           >
@@ -139,7 +139,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
               margin: 0,
               padding: 48,
               textAlign: "center",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               fontSize: 13,
             }}
           >
@@ -149,7 +149,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f8fafc" }}>
+                <tr style={{ background: "var(--surface-2)" }}>
                   {["Content", "Reason", "Reporter", "Status", "Reported", "Resolved By"].map((h) => (
                     <th
                       key={h}
@@ -158,10 +158,10 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
                         padding: "12px 18px",
                         fontWeight: 600,
                         fontSize: 11,
-                        color: "#64748b",
+                        color: "var(--text-muted)",
                         textTransform: "uppercase",
                         letterSpacing: 0.6,
-                        borderBottom: "1px solid #eef0f4",
+                        borderBottom: "1px solid var(--border)",
                       }}
                     >
                       {h}
@@ -173,9 +173,9 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
                 {rows.map((r) => {
                   const sc = STATUS_COLORS[r.status] ?? STATUS_COLORS.open;
                   return (
-                    <tr key={r.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <tr key={r.id} style={{ borderBottom: "1px solid var(--border)" }}>
                       <td style={{ padding: "14px 18px" }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>
                           {r.contentKind} #{r.contentId}
                         </div>
                       </td>
@@ -184,7 +184,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
                         <div style={{ fontSize: 12, fontWeight: 600 }}>
                           {r.reporter?.fullName ?? "—"}
                         </div>
-                        <div style={{ fontSize: 11, color: "#64748b" }}>
+                        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
                           {r.reporter?.email ?? ""}
                         </div>
                       </td>
@@ -203,10 +203,10 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
                           {r.status}
                         </span>
                       </td>
-                      <td style={{ padding: "14px 18px", color: "#64748b", fontSize: 11 }}>
+                      <td style={{ padding: "14px 18px", color: "var(--text-muted)", fontSize: 11 }}>
                         {relTime(r.createdAt)}
                       </td>
-                      <td style={{ padding: "14px 18px", color: "#64748b", fontSize: 11 }}>
+                      <td style={{ padding: "14px 18px", color: "var(--text-muted)", fontSize: 11 }}>
                         {r.resolvedBy?.fullName ?? "—"}
                         {r.resolvedAt ? ` · ${r.resolvedAt.toLocaleDateString()}` : ""}
                       </td>

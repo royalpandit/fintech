@@ -68,13 +68,13 @@ export default async function AdminAuditLogsPage({
               margin: 0,
               fontSize: 26,
               fontWeight: 800,
-              color: "#0f172a",
+              color: "var(--text)",
               letterSpacing: -0.6,
             }}
           >
             Audit Logs
           </h1>
-          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
             Every moderation and governance action across the platform
           </p>
         </div>
@@ -90,8 +90,8 @@ export default async function AdminAuditLogsPage({
                 height: 40,
                 padding: "0 14px",
                 borderRadius: 10,
-                border: "1px solid #eef0f4",
-                background: "#f8fafc",
+                border: "1px solid var(--border)",
+                background: "var(--surface-2)",
                 fontSize: 13,
                 outline: "none",
                 minWidth: 200,
@@ -131,7 +131,7 @@ export default async function AdminAuditLogsPage({
               margin: 0,
               padding: 48,
               textAlign: "center",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               fontSize: 13,
             }}
           >
@@ -141,7 +141,7 @@ export default async function AdminAuditLogsPage({
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f8fafc" }}>
+                <tr style={{ background: "var(--surface-2)" }}>
                   {["When", "Actor", "Action", "Module", "Target", "IP"].map((h) => (
                     <th
                       key={h}
@@ -150,10 +150,10 @@ export default async function AdminAuditLogsPage({
                         padding: "12px 18px",
                         fontWeight: 600,
                         fontSize: 11,
-                        color: "#64748b",
+                        color: "var(--text-muted)",
                         textTransform: "uppercase",
                         letterSpacing: 0.6,
-                        borderBottom: "1px solid #eef0f4",
+                        borderBottom: "1px solid var(--border)",
                       }}
                     >
                       {h}
@@ -165,10 +165,10 @@ export default async function AdminAuditLogsPage({
                 {logs.map((log) => {
                   const moduleColor = MODULE_COLORS[log.module] ?? "#64748b";
                   return (
-                    <tr key={log.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                      <td style={{ padding: "12px 18px", color: "#475569", fontSize: 11 }}>
+                    <tr key={log.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                      <td style={{ padding: "12px 18px", color: "var(--text)", fontSize: 11 }}>
                         {relTime(log.createdAt)}
-                        <div style={{ fontSize: 10, color: "#94a3b8" }}>
+                        <div style={{ fontSize: 10, color: "var(--text-muted)" }}>
                           {log.createdAt.toLocaleString()}
                         </div>
                       </td>
@@ -182,8 +182,8 @@ export default async function AdminAuditLogsPage({
                               fontSize: 10,
                               padding: "1px 6px",
                               borderRadius: 999,
-                              background: "#eef0f4",
-                              color: "#475569",
+                              background: "var(--surface-2)",
+                              color: "var(--text)",
                               textTransform: "capitalize",
                               fontWeight: 600,
                             }}
@@ -215,10 +215,10 @@ export default async function AdminAuditLogsPage({
                           {log.module}
                         </span>
                       </td>
-                      <td style={{ padding: "12px 18px", fontSize: 11, color: "#64748b" }}>
+                      <td style={{ padding: "12px 18px", fontSize: 11, color: "var(--text-muted)" }}>
                         {log.targetKind ? `${log.targetKind}#${log.targetId ?? "—"}` : "—"}
                       </td>
-                      <td style={{ padding: "12px 18px", fontSize: 11, color: "#94a3b8" }}>
+                      <td style={{ padding: "12px 18px", fontSize: 11, color: "var(--text-muted)" }}>
                         {log.ipAddress ?? "—"}
                       </td>
                     </tr>
@@ -233,14 +233,14 @@ export default async function AdminAuditLogsPage({
           <div
             style={{
               padding: 14,
-              borderTop: "1px solid #eef0f4",
+              borderTop: "1px solid var(--border)",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               fontSize: 12,
             }}
           >
-            <span style={{ color: "#64748b" }}>
+            <span style={{ color: "var(--text-muted)" }}>
               Page {page} of {totalPages} · {total.toLocaleString()} events
             </span>
             <div style={{ display: "flex", gap: 8 }}>
@@ -253,9 +253,9 @@ export default async function AdminAuditLogsPage({
                   style={{
                     padding: "8px 16px",
                     borderRadius: 8,
-                    border: "1px solid #eef0f4",
-                    background: "#fff",
-                    color: "#475569",
+                    border: "1px solid var(--border)",
+                    background: "var(--surface)",
+                    color: "var(--text)",
                     fontWeight: 600,
                     textDecoration: "none",
                   }}

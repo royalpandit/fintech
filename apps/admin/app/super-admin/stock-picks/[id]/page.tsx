@@ -177,7 +177,7 @@ export default function StockPickGroupStocksPage() {
   const f = (k: string, v: string | boolean) => setForm((p) => ({ ...p, [k]: v }));
 
   return (
-    <div style={{ padding: "28px 32px", minHeight: "100vh", background: "#f8fafc" }}>
+    <div style={{ padding: "28px 32px", minHeight: "100vh", background: "var(--surface-2)" }}>
       <Link
         href="/super-admin/stock-picks"
         style={{ fontSize: 13, color: "#1a73e8", textDecoration: "none", fontWeight: 600 }}
@@ -196,10 +196,10 @@ export default function StockPickGroupStocksPage() {
         }}
       >
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#0f172a" }}>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "var(--text)" }}>
             {group?.name ?? "Group"} — Stocks
           </h1>
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-muted)" }}>
             Add, reorder, publish stocks in this pick group
           </p>
         </div>
@@ -222,18 +222,18 @@ export default function StockPickGroupStocksPage() {
       </div>
 
       {loading ? (
-        <div style={{ color: "#94a3b8" }}>Loading…</div>
+        <div style={{ color: "var(--text-muted)" }}>Loading…</div>
       ) : stocks.length === 0 ? (
-        <p style={{ color: "#64748b" }}>No stocks in this group yet.</p>
+        <p style={{ color: "var(--text-muted)" }}>No stocks in this group yet.</p>
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
           {stocks.map((s, index) => (
             <div
               key={s.id}
               style={{
-                background: "#fff",
+                background: "var(--surface)",
                 borderRadius: 12,
-                border: "1px solid #e8eaed",
+                border: "1px solid var(--border)",
                 padding: "16px 20px",
                 display: "grid",
                 gridTemplateColumns: "auto 1fr auto",
@@ -262,7 +262,7 @@ export default function StockPickGroupStocksPage() {
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontWeight: 800, fontSize: 15 }}>{s.symbol}</span>
-                  <span style={{ color: "#5f6368", fontSize: 13 }}>{s.stockName}</span>
+                  <span style={{ color: "var(--text-muted)", fontSize: 13 }}>{s.stockName}</span>
                   <span
                     style={{
                       fontSize: 10,
@@ -279,7 +279,7 @@ export default function StockPickGroupStocksPage() {
                     {RECOMMENDATION_LABELS[s.recommendation]}
                   </span>
                 </div>
-                <p style={{ margin: "6px 0 0", fontSize: 12, color: "#5f6368" }}>
+                <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--text-muted)" }}>
                   CMP {s.cmp ?? "—"} · Target {s.targetPrice ?? "—"} · SL {s.stopLoss ?? "—"}
                   {s.analystNote ? ` · ${s.analystNote.slice(0, 80)}…` : ""}
                 </p>
@@ -291,9 +291,9 @@ export default function StockPickGroupStocksPage() {
                   style={{
                     fontSize: 11,
                     padding: "5px 12px",
-                    border: "1px solid #dadce0",
+                    border: "1px solid var(--border)",
                     borderRadius: 20,
-                    background: "#fff",
+                    background: "var(--surface)",
                     cursor: "pointer",
                   }}
                 >
@@ -305,9 +305,9 @@ export default function StockPickGroupStocksPage() {
                   style={{
                     fontSize: 11,
                     padding: "5px 12px",
-                    border: "1px solid #dadce0",
+                    border: "1px solid var(--border)",
                     borderRadius: 20,
-                    background: "#fff",
+                    background: "var(--surface)",
                     cursor: "pointer",
                     color: "#1a73e8",
                   }}
@@ -322,7 +322,7 @@ export default function StockPickGroupStocksPage() {
                     padding: "5px 12px",
                     border: "1px solid #fad2cf",
                     borderRadius: 20,
-                    background: "#fff",
+                    background: "var(--surface)",
                     cursor: "pointer",
                     color: "#c5221f",
                   }}
@@ -351,7 +351,7 @@ export default function StockPickGroupStocksPage() {
               width: "100%",
               maxWidth: 440,
               height: "100%",
-              background: "#fff",
+              background: "var(--surface)",
               overflowY: "auto",
               padding: 24,
             }}
@@ -365,7 +365,7 @@ export default function StockPickGroupStocksPage() {
               { key: "stockName", label: "Stock Name *" },
             ].map((field) => (
               <label key={field.key} style={{ display: "block", marginBottom: 12 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#5f6368" }}>{field.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>{field.label}</span>
                 <input
                   value={(form as unknown as Record<string, string>)[field.key]}
                   onChange={(e) => f(field.key, e.target.value)}
@@ -374,7 +374,7 @@ export default function StockPickGroupStocksPage() {
                     marginTop: 6,
                     padding: 10,
                     borderRadius: 8,
-                    border: "1px solid #dadce0",
+                    border: "1px solid var(--border)",
                     boxSizing: "border-box",
                   }}
                 />
@@ -387,7 +387,7 @@ export default function StockPickGroupStocksPage() {
                 { key: "stopLoss", label: "Stop Loss" },
               ].map((field) => (
                 <label key={field.key}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "#5f6368" }}>{field.label}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>{field.label}</span>
                   <input
                     type="number"
                     step="0.01"
@@ -398,14 +398,14 @@ export default function StockPickGroupStocksPage() {
                       marginTop: 6,
                       padding: 10,
                       borderRadius: 8,
-                      border: "1px solid #dadce0",
+                      border: "1px solid var(--border)",
                     }}
                   />
                 </label>
               ))}
             </div>
             <label style={{ display: "block", marginBottom: 12 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#5f6368" }}>Recommendation</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>Recommendation</span>
               <select
                 value={form.recommendation}
                 onChange={(e) => f("recommendation", e.target.value)}
@@ -414,7 +414,7 @@ export default function StockPickGroupStocksPage() {
                   marginTop: 6,
                   padding: 10,
                   borderRadius: 8,
-                  border: "1px solid #dadce0",
+                  border: "1px solid var(--border)",
                 }}
               >
                 {RECS.map((r) => (
@@ -425,7 +425,7 @@ export default function StockPickGroupStocksPage() {
               </select>
             </label>
             <label style={{ display: "block", marginBottom: 12 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#5f6368" }}>Analyst Note</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>Analyst Note</span>
               <textarea
                 value={form.analystNote}
                 onChange={(e) => f("analystNote", e.target.value)}
@@ -435,7 +435,7 @@ export default function StockPickGroupStocksPage() {
                   marginTop: 6,
                   padding: 10,
                   borderRadius: 8,
-                  border: "1px solid #dadce0",
+                  border: "1px solid var(--border)",
                   boxSizing: "border-box",
                 }}
               />

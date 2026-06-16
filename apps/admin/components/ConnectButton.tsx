@@ -53,17 +53,17 @@ export default function ConnectButton({ targetUserId, initialStatus, size = "md"
   const bg =
     status === "accepted" ? "#d1fae5" :
     status === "pending_received" ? "linear-gradient(135deg,#0ea5e9,#10b981)" :
-    status === "pending_sent" ? "#f8fafc" :
+    status === "pending_sent" ? "var(--surface-2)" :
     "rgba(14,165,233,0.1)";
 
   const color =
     status === "accepted" ? "#047857" :
     status === "pending_received" ? "#fff" :
-    status === "pending_sent" ? "#94a3b8" :
+    status === "pending_sent" ? "var(--text-muted)" :
     "#0ea5e9";
 
   const border =
-    status === "pending_sent" ? "1px solid #e2e8f0" :
+    status === "pending_sent" ? "1px solid var(--border)" :
     status === "accepted" ? "1px solid #a7f3d0" :
     "1px solid transparent";
 
@@ -100,9 +100,9 @@ export default function ConnectButton({ targetUserId, initialStatus, size = "md"
           title="Cancel request"
           style={{
             background: "none",
-            border: "1px solid #e2e8f0",
+            border: "1px solid var(--border)",
             borderRadius: 8,
-            color: "#94a3b8",
+            color: "var(--text-muted)",
             padding: "5px 8px",
             cursor: "pointer",
             display: "flex",

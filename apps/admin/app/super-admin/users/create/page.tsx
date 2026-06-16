@@ -177,8 +177,8 @@ export default function CreateUserPage() {
                   marginTop: 20,
                   padding: 16,
                   borderRadius: 12,
-                  background: "#f8fafc",
-                  border: "1px solid #e2e8f0",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
                 }}
               >
                 <p style={{ margin: 0, marginBottom: 12, fontWeight: 600, fontSize: 14 }}>
@@ -235,7 +235,7 @@ export default function CreateUserPage() {
                   marginTop: 16,
                   padding: "10px 12px",
                   color: "#b91c1c",
-                  background: "#fef2f2",
+                  background: "rgba(239,68,68,0.12)",
                   borderRadius: 10,
                   fontSize: 14,
                 }}

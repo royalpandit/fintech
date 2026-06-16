@@ -39,8 +39,8 @@ export default function UserRowActions({ userId, status, emailVerified }: Props)
   const btn: React.CSSProperties = {
     padding: "5px 10px",
     borderRadius: 6,
-    border: "1px solid #eef0f4",
-    background: "#fff",
+    border: "1px solid var(--border)",
+    background: "var(--surface)",
     fontSize: 11,
     fontWeight: 700,
     cursor: loading ? "not-allowed" : "pointer",
