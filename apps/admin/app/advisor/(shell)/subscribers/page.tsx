@@ -128,7 +128,7 @@ export default async function AdvisorSubscribersPage({ searchParams }: { searchP
               padding: "10px 16px",
               borderRadius: 10,
               border: "1px solid var(--border)",
-              background: current === tab.key ? "#047857" : "#fff",
+              background: current === tab.key ? "#047857" : "var(--surface)",
               color: current === tab.key ? "#fff" : "var(--text)",
               textDecoration: "none",
               fontWeight: 600,
@@ -157,7 +157,7 @@ export default async function AdvisorSubscribersPage({ searchParams }: { searchP
             <tbody>
               {subscriptions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: 24, textAlign: "center", color: "#61708b" }}>
+                  <td colSpan={7} style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}>
                     No subscribers in this bucket yet. Your subscribers will appear here once your profile goes live and users subscribe.
                   </td>
                 </tr>
@@ -170,7 +170,7 @@ export default async function AdvisorSubscribersPage({ searchParams }: { searchP
                     <td>{statusTag(sub.status)}</td>
                     <td>{sub.startDate.toLocaleDateString()}</td>
                     <td>{sub.endDate?.toLocaleDateString() ?? "—"}</td>
-                    <td style={{ textTransform: "capitalize", fontSize: 12, color: "#61708b" }}>
+                    <td style={{ textTransform: "capitalize", fontSize: 12, color: "var(--text-muted)" }}>
                       {sub.provider ?? "—"}
                     </td>
                   </tr>

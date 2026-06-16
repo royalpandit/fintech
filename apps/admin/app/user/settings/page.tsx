@@ -16,14 +16,14 @@ export default async function UserSettingsPage() {
       <section>
         <article
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             padding: 48,
             textAlign: "center",
           }}
         >
-          <div style={{ fontSize: 36, marginBottom: 12, color: "#94a3b8", display: "flex", justifyContent: "center" }}>
+          <div style={{ fontSize: 36, marginBottom: 12, color: "var(--text-muted)", display: "flex", justifyContent: "center" }}>
             <FiSettings size={36} />
           </div>
           <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800 }}>
@@ -107,13 +107,13 @@ export default async function UserSettingsPage() {
             margin: 0,
             fontSize: 22,
             fontWeight: 800,
-            color: "#0f172a",
+            color: "var(--text)",
             letterSpacing: -0.5,
           }}
         >
           Settings
         </h1>
-        <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+        <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
           Account preferences, notifications, and security
         </p>
       </div>
@@ -121,13 +121,13 @@ export default async function UserSettingsPage() {
       <div className="user-split-2" style={{ gap: 14 }}>
         <article
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             padding: 20,
           }}
         >
-          <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
+          <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "var(--text)", display: "flex", alignItems: "center", gap: 8 }}>
             <FiUser size={16} /> Account
           </h3>
 
@@ -136,7 +136,7 @@ export default async function UserSettingsPage() {
               display: "block",
               fontSize: 11,
               fontWeight: 600,
-              color: "#64748b",
+              color: "var(--text-muted)",
               marginBottom: 4,
             }}
           >
@@ -149,7 +149,7 @@ export default async function UserSettingsPage() {
               height: 38,
               padding: "0 12px",
               borderRadius: 8,
-              border: "1px solid #eef0f4",
+              border: "1px solid var(--border)",
               fontSize: 13,
               outline: "none",
               marginBottom: 12,
@@ -162,7 +162,7 @@ export default async function UserSettingsPage() {
               display: "block",
               fontSize: 11,
               fontWeight: 600,
-              color: "#64748b",
+              color: "var(--text-muted)",
               marginBottom: 4,
             }}
           >
@@ -176,7 +176,7 @@ export default async function UserSettingsPage() {
               height: 38,
               padding: "0 12px",
               borderRadius: 8,
-              border: "1px solid #eef0f4",
+              border: "1px solid var(--border)",
               fontSize: 13,
               outline: "none",
               marginBottom: 12,
@@ -189,7 +189,7 @@ export default async function UserSettingsPage() {
               display: "block",
               fontSize: 11,
               fontWeight: 600,
-              color: "#64748b",
+              color: "var(--text-muted)",
               marginBottom: 4,
             }}
           >
@@ -203,7 +203,7 @@ export default async function UserSettingsPage() {
               height: 38,
               padding: "0 12px",
               borderRadius: 8,
-              border: "1px solid #eef0f4",
+              border: "1px solid var(--border)",
               fontSize: 13,
               outline: "none",
               marginBottom: 16,
@@ -230,13 +230,13 @@ export default async function UserSettingsPage() {
 
         <article
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             padding: 20,
           }}
         >
-          <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
+          <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "var(--text)", display: "flex", alignItems: "center", gap: 8 }}>
             <FiBell size={16} /> Notifications
           </h3>
 
@@ -245,7 +245,7 @@ export default async function UserSettingsPage() {
               margin: "0 0 8px",
               fontSize: 11,
               fontWeight: 700,
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               textTransform: "uppercase",
               letterSpacing: 0.5,
             }}
@@ -262,7 +262,7 @@ export default async function UserSettingsPage() {
                   alignItems: "center",
                   padding: "10px 12px",
                   borderRadius: 10,
-                  background: "#f8fafc",
+                  background: "var(--surface-2)",
                   cursor: "pointer",
                 }}
               >
@@ -281,7 +281,7 @@ export default async function UserSettingsPage() {
               margin: "0 0 8px",
               fontSize: 11,
               fontWeight: 700,
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               textTransform: "uppercase",
               letterSpacing: 0.5,
             }}
@@ -298,7 +298,7 @@ export default async function UserSettingsPage() {
                   alignItems: "center",
                   padding: "10px 12px",
                   borderRadius: 10,
-                  background: "#f8fafc",
+                  background: "var(--surface-2)",
                   cursor: "pointer",
                 }}
               >
@@ -325,7 +325,7 @@ export default async function UserSettingsPage() {
               display: "block",
               fontSize: 11,
               fontWeight: 600,
-              color: "#64748b",
+              color: "var(--text-muted)",
               marginBottom: 4,
             }}
           >
@@ -338,7 +338,7 @@ export default async function UserSettingsPage() {
               height: 38,
               padding: "0 12px",
               borderRadius: 8,
-              border: "1px solid #eef0f4",
+              border: "1px solid var(--border)",
               fontSize: 13,
               outline: "none",
               boxSizing: "border-box",
@@ -351,18 +351,18 @@ export default async function UserSettingsPage() {
 
         <article
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             padding: 20,
           }}
         >
-          <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
+          <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "var(--text)", display: "flex", alignItems: "center", gap: 8 }}>
             <FiLock size={16} /> Active Sessions ({sessions.length})
           </h3>
 
           {sessions.length === 0 ? (
-            <p style={{ margin: 0, color: "#94a3b8", fontSize: 12 }}>No active sessions.</p>
+            <p style={{ margin: 0, color: "var(--text-muted)", fontSize: 12 }}>No active sessions.</p>
           ) : (
             sessions.map((s) => (
               <div
@@ -370,7 +370,7 @@ export default async function UserSettingsPage() {
                 style={{
                   padding: "10px 12px",
                   borderRadius: 10,
-                  background: "#f8fafc",
+                  background: "var(--surface-2)",
                   marginBottom: 8,
                   fontSize: 12,
                 }}
@@ -378,7 +378,7 @@ export default async function UserSettingsPage() {
                 <p style={{ margin: 0, fontWeight: 600, fontSize: 12 }}>
                   {s.userAgent?.slice(0, 50) ?? "Unknown device"}
                 </p>
-                <p style={{ margin: "2px 0 0", color: "#64748b", fontSize: 11 }}>
+                <p style={{ margin: "2px 0 0", color: "var(--text-muted)", fontSize: 11 }}>
                   {s.ipAddress ?? "—"} · Started {s.createdAt.toLocaleDateString()}
                 </p>
               </div>
@@ -392,8 +392,8 @@ export default async function UserSettingsPage() {
                 width: "100%",
                 padding: "10px 14px",
                 borderRadius: 10,
-                background: "#fef2f2",
-                border: "1px solid #fecaca",
+                background: "rgba(239,68,68,0.12)",
+                border: "1px solid rgba(239,68,68,0.30)",
                 color: "#991b1b",
                 fontWeight: 700,
                 fontSize: 12,

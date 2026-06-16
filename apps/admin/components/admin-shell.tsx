@@ -77,7 +77,7 @@ export default function AdminShell({
       className="admin-shell advisor-scope"
       style={{ ["--advisor-primary" as any]: "#7c3aed" }}
     >
-      <aside className="admin-sidebar" style={{ background: "#f8fafc", padding: "20px 14px" }}>
+      <aside className="admin-sidebar" style={{ background: "var(--surface-2)", padding: "20px 14px" }}>
         <div style={{ marginBottom: 16, paddingLeft: 4 }}>
           <FinuerLogo href="/" height={34} />
         </div>
@@ -105,7 +105,7 @@ export default function AdminShell({
                 style={{
                   fontSize: 13,
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text)",
                   letterSpacing: -0.2,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
@@ -114,7 +114,7 @@ export default function AdminShell({
               >
                 {currentUser.fullName}
               </div>
-              <div style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>
                 Super Admin
               </div>
             </div>
@@ -125,7 +125,7 @@ export default function AdminShell({
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
               gap: 10,
-              borderTop: "1px solid #eef0f4",
+              borderTop: "1px solid var(--border)",
               paddingTop: 10,
             }}
           >
@@ -147,7 +147,7 @@ export default function AdminShell({
           style={{
             fontSize: 10,
             fontWeight: 700,
-            color: "#94a3b8",
+            color: "var(--text-muted)",
             letterSpacing: 1,
             marginBottom: 8,
             paddingLeft: 6,
@@ -176,7 +176,7 @@ export default function AdminShell({
       <section className="admin-content">
         <header
           className="admin-header"
-          style={{ background: "#fff", borderBottom: "1px solid #eef0f4" }}
+          style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, maxWidth: 420 }}>
             <div style={{ position: "relative", width: "100%" }}>
@@ -190,7 +190,7 @@ export default function AdminShell({
                   left: 14,
                   top: "50%",
                   transform: "translateY(-50%)",
-                  color: "#94a3b8",
+                  color: "var(--text-muted)",
                 }}
               >
                 <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
@@ -209,9 +209,9 @@ export default function AdminShell({
                   paddingLeft: 38,
                   paddingRight: 14,
                   borderRadius: 10,
-                  border: "1px solid #eef0f4",
-                  background: "#f8fafc",
-                  color: "#334155",
+                  border: "1px solid var(--border)",
+                  background: "var(--surface-2)",
+                  color: "var(--text)",
                   fontSize: 13,
                   outline: "none",
                 }}
@@ -231,7 +231,7 @@ export default function AdminShell({
                     borderRadius: 8,
                     fontSize: 13,
                     fontWeight: 600,
-                    color: active ? "#7c3aed" : "#64748b",
+                    color: active ? "#7c3aed" : "var(--text-muted)",
                     background: active ? "rgba(124, 58, 237, 0.08)" : "transparent",
                     textDecoration: "none",
                   }}
@@ -242,7 +242,7 @@ export default function AdminShell({
             })}
           </nav>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative", marginLeft: 24, flexShrink: 0 }}>
             <Link
               href="/super-admin/audit-logs"
               aria-label="Activity"
@@ -250,8 +250,8 @@ export default function AdminShell({
                 width: 36,
                 height: 36,
                 borderRadius: 10,
-                background: "#f8fafc",
-                color: "#64748b",
+                background: "var(--surface-2)",
+                color: "var(--text-muted)",
                 display: "grid",
                 placeItems: "center",
               }}
@@ -291,8 +291,8 @@ export default function AdminShell({
                   top: 48,
                   right: 0,
                   minWidth: 240,
-                  background: "#fff",
-                  border: "1px solid #eef0f4",
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
                   borderRadius: 12,
                   boxShadow: "0 12px 40px rgba(15, 23, 42, 0.1)",
                   padding: 8,
@@ -301,12 +301,12 @@ export default function AdminShell({
               >
                 <div
                   className="admin-theme-dropdown-head"
-                  style={{ padding: "8px 10px 10px", borderBottom: "1px solid #eef0f4" }}
+                  style={{ padding: "8px 10px 10px", borderBottom: "1px solid var(--border)" }}
                 >
                   <p className="admin-theme-dropdown-name" style={{ margin: 0, fontWeight: 700, fontSize: 13 }}>
                     {currentUser.fullName}
                   </p>
-                  <p style={{ margin: 0, fontSize: 11, color: "#64748b" }}>{currentUser.email}</p>
+                  <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>{currentUser.email}</p>
                   <p
                     style={{
                       margin: "6px 0 0",
@@ -330,7 +330,7 @@ export default function AdminShell({
                     display: "block",
                     padding: "10px",
                     borderRadius: 8,
-                    color: "#0f172a",
+                    color: "var(--text)",
                     textDecoration: "none",
                     fontSize: 13,
                   }}
@@ -344,7 +344,7 @@ export default function AdminShell({
                     display: "block",
                     padding: "10px",
                     borderRadius: 8,
-                    color: "#0f172a",
+                    color: "var(--text)",
                     textDecoration: "none",
                     fontSize: 13,
                   }}

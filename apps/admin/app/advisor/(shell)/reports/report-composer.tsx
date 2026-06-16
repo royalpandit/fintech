@@ -137,7 +137,7 @@ export default function ReportComposer() {
           style={{ display: "block", fontSize: 13, marginTop: 4 }}
         />
         {fileName && (
-          <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Selected: {fileName}</div>
+          <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>Selected: {fileName}</div>
         )}
 
         <label className="metric-label" style={{ marginTop: 16 }}>
@@ -154,8 +154,8 @@ export default function ReportComposer() {
                 padding: "10px 0",
                 borderRadius: 10,
                 border: "1px solid var(--border)",
-                background: access === a ? "#0ea5e9" : "#fff",
-                color: access === a ? "#fff" : "#334155",
+                background: access === a ? "#0ea5e9" : "var(--surface)",
+                color: access === a ? "#fff" : "var(--text)",
                 fontWeight: 700,
                 fontSize: 13,
                 cursor: "pointer",
@@ -187,7 +187,7 @@ export default function ReportComposer() {
             style={{
               marginTop: 16,
               padding: "10px 12px",
-              background: "#fef2f2",
+              background: "rgba(239,68,68,0.12)",
               color: "#b91c1c",
               borderRadius: 10,
               fontSize: 13,

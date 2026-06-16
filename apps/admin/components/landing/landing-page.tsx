@@ -168,7 +168,7 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
             <div>
               <div className="lp-kicker">Practice. Learn. Master.</div>
               <h2 style={{ fontSize: "2rem", fontWeight: 800, margin: "0 0 12px" }}>Virtual Lab</h2>
-              <p style={{ color: "#64748b", lineHeight: 1.65, margin: 0 }}>
+              <p style={{ color: "var(--lp-muted)", lineHeight: 1.65, margin: 0 }}>
                 Trade with real-time simulated markets using unlimited virtual cash. Perfect your
                 strategies before risking real capital.
               </p>
@@ -228,14 +228,14 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
         </div>
       </section>
 
-      <section className="lp-section" id="community" style={{ background: "#fafafa" }}>
+      <section className="lp-section" id="community" style={{ background: "var(--lp-bg)" }}>
         <div className="landing-container lp-split">
           <div>
             <div className="lp-kicker">A Community That Grows Together</div>
             <h2 style={{ fontSize: "2rem", fontWeight: 800, margin: "0 0 12px", letterSpacing: "-0.02em" }}>
               Learn, share and grow with investors like you
             </h2>
-            <p style={{ color: "#64748b", lineHeight: 1.65, margin: 0 }}>
+            <p style={{ color: "var(--lp-muted)", lineHeight: 1.65, margin: 0 }}>
               Join discussions, follow trending topics, and build your network on India&apos;s
               fastest-growing investing community.
             </p>

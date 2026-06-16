@@ -63,11 +63,11 @@ export default function SubscribePlansModal({
         style={{
           width: "100%",
           maxWidth: 420,
-          background: "#fff",
+          background: "var(--surface)",
           borderRadius: 18,
           padding: 24,
           boxShadow: "0 24px 80px rgba(15,23,42,0.18)",
-          color: "#0f172a",
+          color: "var(--text)",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -75,12 +75,12 @@ export default function SubscribePlansModal({
           <button
             type="button"
             onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
           >
             <FiX size={18} />
           </button>
         </div>
-        <p style={{ margin: "0 0 18px", fontSize: 13, color: "#64748b", lineHeight: 1.5 }}>{subtitle}</p>
+        <p style={{ margin: "0 0 18px", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5 }}>{subtitle}</p>
 
         <div style={{ display: "grid", gap: 10 }}>
           {Object.values(SUB_PLANS).map((p) => (
@@ -95,15 +95,15 @@ export default function SubscribePlansModal({
                 alignItems: "center",
                 padding: "14px 16px",
                 borderRadius: 12,
-                border: "1px solid #e2e8f0",
-                background: "#fff",
+                border: "1px solid var(--border)",
+                background: "var(--surface-2)",
                 cursor: subscribing ? "wait" : "pointer",
                 textAlign: "left",
               }}
             >
               <div>
                 <div style={{ fontWeight: 800, fontSize: 14 }}>{p.label}</div>
-                <div style={{ fontSize: 11, color: "#94a3b8" }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
                   {p.id === "yearly" ? "Best value · billed yearly" : "Billed monthly"}
                 </div>
               </div>
@@ -117,7 +117,7 @@ export default function SubscribePlansModal({
         {error && (
           <p style={{ margin: "12px 0 0", fontSize: 12, color: "#b91c1c", textAlign: "center" }}>{error}</p>
         )}
-        <p style={{ margin: "14px 0 0", fontSize: 11, color: "#94a3b8", textAlign: "center" }}>
+        <p style={{ margin: "14px 0 0", fontSize: 11, color: "var(--text-muted)", textAlign: "center" }}>
           No payment is taken yet — selecting a plan subscribes you instantly.
         </p>
       </div>
