@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\app\" -Recurse -Exclude node_modules)",
+      "WebFetch(domain:)",
+      "Bash(python3)",
+      "Bash(command -v pdftotext)",
+      "Bash(command -v pdftops)",
+      "Bash(command -v file)",
+      "Bash(pdftotext \"d:\\\\corescent\\\\fintech\\\\Fintech_SA_CORESCENT_Product & Technical Design Document \\(PTDD\\).pdf\" -)",
+      "PowerShell(Select-String -Path \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\app\\\\globals.css\" -Pattern \"us-main|us-content|us-body|padding\" | Select-Object -First 30 | ForEach-Object { $_.Line })",
+      "PowerShell(Select-String -Path \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\app\\\\globals.css\" -Pattern \"us-main|us-page|us-content\" | ForEach-Object { $_.LineNumber.ToString\\(\\) + \": \" + $_.Line })",
+      "PowerShell(Select-String -Path \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\components\\\\user-shell.tsx\" -Pattern \"children|us-main|us-content\" | ForEach-Object { $_.LineNumber.ToString\\(\\) + \": \" + $_.Line })",
+      "PowerShell(Select-String -Path \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\app\\\\globals.css\" -Pattern \"us-header|header-h|--us-h\" | Select-Object -First 10 | ForEach-Object { $_.LineNumber.ToString\\(\\) + \": \" + $_.Line })",
+      "PowerShell(Select-String -Path \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\app\\\\globals.css\" -Pattern \"us-body|us-sidebar\" | Select-Object -First 15 | ForEach-Object { $_.LineNumber.ToString\\(\\) + \": \" + $_.Line })",
+      "PowerShell(Get-ChildItem \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\components\\\\trading\" | ForEach-Object { $_.Name + \" \\(\" + $_.Length + \" bytes\\)\" }; Write-Host \"---\"; Get-ChildItem \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\app\\\\api\\\\v1\\\\market\" | ForEach-Object { $_.Name }; Write-Host \"---\"; Test-Path \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\app\\\\api\\\\v1\\\\orders\\\\route.ts\")"
+    ]
+  }
+}
