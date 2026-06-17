@@ -38,7 +38,7 @@ export default function DonutChart({
             cy={cy}
             r={radius}
             fill="none"
-            stroke="#f1f5f9"
+            stroke="var(--surface-2)"
             strokeWidth={thickness}
           />
           {total > 0 &&
@@ -81,7 +81,7 @@ export default function DonutChart({
                 <div
                   style={{
                     fontSize: 10,
-                    color: "#64748b",
+                    color: "var(--text-muted)",
                     fontWeight: 600,
                     textTransform: "uppercase",
                     letterSpacing: 0.6,
@@ -95,7 +95,7 @@ export default function DonutChart({
                   style={{
                     fontSize: 18,
                     fontWeight: 800,
-                    color: "#0f172a",
+                    color: "var(--text)",
                     letterSpacing: -0.5,
                     marginTop: 2,
                   }}
@@ -119,7 +119,7 @@ export default function DonutChart({
                 alignItems: "center",
                 gap: 8,
                 padding: "6px 0",
-                borderBottom: i === slices.length - 1 ? "none" : "1px dashed #eef0f4",
+                borderBottom: i === slices.length - 1 ? "none" : "1px dashed var(--border)",
               }}
             >
               <span
@@ -135,17 +135,17 @@ export default function DonutChart({
                 <div
                   style={{
                     fontWeight: 600,
-                    color: "#0f172a",
+                    color: "var(--text)",
                     fontSize: 12,
                   }}
                 >
                   {s.label}
                 </div>
                 {s.detail && (
-                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 1 }}>{s.detail}</div>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 1 }}>{s.detail}</div>
                 )}
               </div>
-              <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+              <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
                 {pct.toFixed(1)}%
               </span>
             </li>

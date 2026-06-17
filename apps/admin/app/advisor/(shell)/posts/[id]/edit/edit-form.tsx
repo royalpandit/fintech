@@ -150,7 +150,7 @@ export default function EditPostForm({ postId, initial }: { postId: number; init
               style={{
                 marginTop: 16,
                 padding: "10px 12px",
-                background: "#fef2f2",
+                background: "rgba(239,68,68,0.12)",
                 color: "#b91c1c",
                 borderRadius: 10,
                 fontSize: 14,

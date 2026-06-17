@@ -74,7 +74,7 @@ export default function QuickAction({ topPending }: { topPending: Pending[] }) {
             margin: 0,
             textAlign: "center",
             padding: 24,
-            color: "#94a3b8",
+            color: "var(--text-muted)",
             fontSize: 12,
           }}
         >
@@ -86,7 +86,7 @@ export default function QuickAction({ topPending }: { topPending: Pending[] }) {
             style={{
               fontSize: 11,
               fontWeight: 600,
-              color: "#64748b",
+              color: "var(--text-muted)",
               display: "block",
               marginBottom: 4,
             }}
@@ -101,10 +101,10 @@ export default function QuickAction({ topPending }: { topPending: Pending[] }) {
               height: 38,
               padding: "0 12px",
               borderRadius: 8,
-              border: "1px solid #eef0f4",
-              background: "#fff",
+              border: "1px solid var(--border)",
+              background: "var(--surface)",
               fontSize: 12,
-              color: "#334155",
+              color: "var(--text)",
               outline: "none",
               marginBottom: 12,
             }}
@@ -120,7 +120,7 @@ export default function QuickAction({ topPending }: { topPending: Pending[] }) {
             style={{
               fontSize: 11,
               fontWeight: 600,
-              color: "#64748b",
+              color: "var(--text-muted)",
               display: "block",
               marginBottom: 4,
             }}
@@ -150,7 +150,7 @@ export default function QuickAction({ topPending }: { topPending: Pending[] }) {
                 style={{
                   fontSize: 11,
                   fontWeight: 600,
-                  color: "#64748b",
+                  color: "var(--text-muted)",
                   display: "block",
                   marginBottom: 4,
                 }}
@@ -166,10 +166,10 @@ export default function QuickAction({ topPending }: { topPending: Pending[] }) {
                   width: "100%",
                   padding: 10,
                   borderRadius: 8,
-                  border: "1px solid #eef0f4",
-                  background: "#fff",
+                  border: "1px solid var(--border)",
+                  background: "var(--surface)",
                   fontSize: 12,
-                  color: "#334155",
+                  color: "var(--text)",
                   outline: "none",
                   marginBottom: 12,
                   resize: "vertical",
@@ -183,7 +183,7 @@ export default function QuickAction({ topPending }: { topPending: Pending[] }) {
             <div
               style={{
                 padding: "8px 10px",
-                background: "#fef2f2",
+                background: "rgba(239,68,68,0.12)",
                 color: "#b91c1c",
                 borderRadius: 8,
                 fontSize: 11,
@@ -198,7 +198,7 @@ export default function QuickAction({ topPending }: { topPending: Pending[] }) {
             <div
               style={{
                 padding: "8px 10px",
-                background: "#f0fdf4",
+                background: "rgba(34,197,94,0.12)",
                 color: "#047857",
                 borderRadius: 8,
                 fontSize: 11,

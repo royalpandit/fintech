@@ -121,8 +121,8 @@ export default function NotificationsClient({
       {requests.length > 0 && (
         <article
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             padding: 16,
             marginBottom: 16,
@@ -133,7 +133,7 @@ export default function NotificationsClient({
               margin: "0 0 12px",
               fontSize: 13,
               fontWeight: 700,
-              color: "#0f172a",
+              color: "var(--text)",
               display: "flex",
               alignItems: "center",
               gap: 6,
@@ -164,7 +164,7 @@ export default function NotificationsClient({
                   gap: 12,
                   padding: "10px 12px",
                   borderRadius: 10,
-                  background: "#f8fafc",
+                  background: "var(--surface-2)",
                 }}
               >
                 <div
@@ -191,10 +191,10 @@ export default function NotificationsClient({
                     .toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
                     {r.fromName}
                   </div>
-                  <div style={{ fontSize: 11, color: "#94a3b8" }}>wants to connect with you</div>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)" }}>wants to connect with you</div>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button
@@ -226,9 +226,9 @@ export default function NotificationsClient({
                       alignItems: "center",
                       padding: "6px 10px",
                       borderRadius: 8,
-                      border: "1px solid #e2e8f0",
-                      background: "#fff",
-                      color: "#64748b",
+                      border: "1px solid var(--border)",
+                      background: "var(--surface)",
+                      color: "var(--text-muted)",
                       fontSize: 12,
                       cursor: requestLoading === r.fromUserId ? "wait" : "pointer",
                     }}
@@ -257,13 +257,13 @@ export default function NotificationsClient({
               margin: 0,
               fontSize: 22,
               fontWeight: 800,
-              color: "#0f172a",
+              color: "var(--text)",
               letterSpacing: -0.5,
             }}
           >
             Notifications
           </h1>
-          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
             {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
           </p>
         </div>
@@ -279,9 +279,9 @@ export default function NotificationsClient({
               gap: 6,
               padding: "8px 16px",
               borderRadius: 8,
-              border: "1px solid #e2e8f0",
-              background: "#fff",
-              color: "#0f172a",
+              border: "1px solid var(--border)",
+              background: "var(--surface)",
+              color: "var(--text)",
               fontSize: 12,
               fontWeight: 600,
               cursor: markingAll ? "wait" : "pointer",
@@ -303,9 +303,9 @@ export default function NotificationsClient({
               borderRadius: 8,
               fontSize: 13,
               fontWeight: 600,
-              color: filter === t.key ? "#fff" : "#64748b",
-              background: filter === t.key ? "#0ea5e9" : "#fff",
-              border: "1px solid #eef0f4",
+              color: filter === t.key ? "#fff" : "var(--text-muted)",
+              background: filter === t.key ? "#0ea5e9" : "var(--surface)",
+              border: "1px solid var(--border)",
               textDecoration: "none",
             }}
           >
@@ -316,8 +316,8 @@ export default function NotificationsClient({
 
       <article
         style={{
-          background: "#fff",
-          border: "1px solid #eef0f4",
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
           borderRadius: 14,
           padding: 0,
           overflow: "hidden",
@@ -329,7 +329,7 @@ export default function NotificationsClient({
               margin: 0,
               padding: 48,
               textAlign: "center",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               fontSize: 13,
             }}
           >
@@ -343,8 +343,8 @@ export default function NotificationsClient({
                 key={n.id}
                 style={{
                   padding: "14px 18px",
-                  borderBottom: i === visible.length - 1 ? "none" : "1px solid #eef0f4",
-                  background: n.readAt ? "transparent" : "#f0f9ff",
+                  borderBottom: i === visible.length - 1 ? "none" : "1px solid var(--border)",
+                  background: n.readAt ? "transparent" : "var(--primary-soft)",
                   display: "flex",
                   gap: 12,
                   alignItems: "flex-start",
@@ -379,7 +379,7 @@ export default function NotificationsClient({
                         margin: 0,
                         fontWeight: 700,
                         fontSize: 14,
-                        color: "#0f172a",
+                        color: "var(--text)",
                       }}
                     >
                       {n.title}
@@ -401,7 +401,7 @@ export default function NotificationsClient({
                     style={{
                       margin: 0,
                       fontSize: 13,
-                      color: "#475569",
+                      color: "var(--text)",
                       lineHeight: 1.5,
                     }}
                   >
@@ -418,7 +418,7 @@ export default function NotificationsClient({
                     flexShrink: 0,
                   }}
                 >
-                  <span style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                     {relTime(n.createdAt)}
                   </span>
                   {!n.readAt && (

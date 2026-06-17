@@ -80,7 +80,7 @@ export default function AdvisorApprovalWatcher() {
         gap: 12,
         padding: "14px 20px",
         borderRadius: 14,
-        background: "#ffffff",
+        background: "var(--surface)",
         border: "1px solid #d1fae5",
         boxShadow: "0 12px 40px rgba(15, 23, 42, 0.14)",
         animation: "advisor-approve-in 0.35s cubic-bezier(0.22, 1, 0.36, 1)",
@@ -103,8 +103,8 @@ export default function AdvisorApprovalWatcher() {
         ✓
       </span>
       <div style={{ lineHeight: 1.3 }}>
-        <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>Application approved!</div>
-        <div style={{ fontSize: 12.5, color: "#64748b" }}>Taking you to your dashboard…</div>
+        <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>Application approved!</div>
+        <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Taking you to your dashboard…</div>
       </div>
       <span
         aria-hidden
@@ -113,7 +113,7 @@ export default function AdvisorApprovalWatcher() {
           height: 16,
           marginLeft: 4,
           borderRadius: 999,
-          border: "2px solid #e2e8f0",
+          border: "2px solid var(--border)",
           borderTopColor: "#22c55e",
           animation: "advisor-approve-spin 0.7s linear infinite",
           flexShrink: 0,

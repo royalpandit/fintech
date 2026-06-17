@@ -290,13 +290,13 @@ export default async function AdvisorDashboardPage({
                   margin: 0,
                   fontSize: 26,
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text)",
                   letterSpacing: -0.6,
                 }}
               >
                 Advisor Dashboard
               </h1>
-              <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+              <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
                 Track your sentiment, watch markets &amp; monetize your insights virtually
               </p>
             </div>
@@ -403,7 +403,7 @@ export default async function AdvisorDashboardPage({
                     height: 240,
                     display: "grid",
                     placeItems: "center",
-                    color: "#94a3b8",
+                    color: "var(--text-muted)",
                     fontSize: 13,
                   }}
                 >
@@ -435,7 +435,7 @@ export default async function AdvisorDashboardPage({
                 style={{
                   textAlign: "center",
                   padding: 32,
-                  color: "#94a3b8",
+                  color: "var(--text-muted)",
                   fontSize: 13,
                   margin: 0,
                 }}
@@ -455,7 +455,7 @@ export default async function AdvisorDashboardPage({
               >
                 <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
                   <thead>
-                    <tr style={{ color: "#64748b", fontWeight: 600 }}>
+                    <tr style={{ color: "var(--text-muted)", fontWeight: 600 }}>
                       <th
                         style={{
                           textAlign: "left",
@@ -464,7 +464,7 @@ export default async function AdvisorDashboardPage({
                           fontSize: 11,
                           textTransform: "uppercase",
                           letterSpacing: 0.6,
-                          borderBottom: "1px solid #eef0f4",
+                          borderBottom: "1px solid var(--border)",
                         }}
                       >
                         Post / Symbol
@@ -477,7 +477,7 @@ export default async function AdvisorDashboardPage({
                           fontSize: 11,
                           textTransform: "uppercase",
                           letterSpacing: 0.6,
-                          borderBottom: "1px solid #eef0f4",
+                          borderBottom: "1px solid var(--border)",
                         }}
                       >
                         Reactions
@@ -490,7 +490,7 @@ export default async function AdvisorDashboardPage({
                           fontSize: 11,
                           textTransform: "uppercase",
                           letterSpacing: 0.6,
-                          borderBottom: "1px solid #eef0f4",
+                          borderBottom: "1px solid var(--border)",
                         }}
                       >
                         Target
@@ -503,7 +503,7 @@ export default async function AdvisorDashboardPage({
                           fontSize: 11,
                           textTransform: "uppercase",
                           letterSpacing: 0.6,
-                          borderBottom: "1px solid #eef0f4",
+                          borderBottom: "1px solid var(--border)",
                         }}
                       >
                         Comments
@@ -516,7 +516,7 @@ export default async function AdvisorDashboardPage({
                           fontSize: 11,
                           textTransform: "uppercase",
                           letterSpacing: 0.6,
-                          borderBottom: "1px solid #eef0f4",
+                          borderBottom: "1px solid var(--border)",
                         }}
                       >
                         Sentiment
@@ -529,7 +529,7 @@ export default async function AdvisorDashboardPage({
                           fontSize: 11,
                           textTransform: "uppercase",
                           letterSpacing: 0.6,
-                          borderBottom: "1px solid #eef0f4",
+                          borderBottom: "1px solid var(--border)",
                         }}
                       >
                         Risk
@@ -542,7 +542,7 @@ export default async function AdvisorDashboardPage({
                           fontSize: 11,
                           textTransform: "uppercase",
                           letterSpacing: 0.6,
-                          borderBottom: "1px solid #eef0f4",
+                          borderBottom: "1px solid var(--border)",
                         }}
                       >
                         Posted
@@ -557,7 +557,7 @@ export default async function AdvisorDashboardPage({
                         neutral: "#64748b",
                       };
                       return (
-                        <tr key={post.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <tr key={post.id} style={{ borderBottom: "1px solid var(--border)" }}>
                           <td style={{ padding: "12px 0" }}>
                             <Link
                               href={`/advisor/posts/${post.id}`}
@@ -565,7 +565,7 @@ export default async function AdvisorDashboardPage({
                                 display: "flex",
                                 gap: 10,
                                 alignItems: "center",
-                                color: "#0f172a",
+                                color: "var(--text)",
                                 textDecoration: "none",
                               }}
                             >
@@ -590,7 +590,7 @@ export default async function AdvisorDashboardPage({
                                   style={{
                                     fontSize: 13,
                                     fontWeight: 700,
-                                    color: "#0f172a",
+                                    color: "var(--text)",
                                     whiteSpace: "nowrap",
                                     overflow: "hidden",
                                     textOverflow: "ellipsis",
@@ -602,7 +602,7 @@ export default async function AdvisorDashboardPage({
                                 <div
                                   style={{
                                     fontSize: 11,
-                                    color: "#64748b",
+                                    color: "var(--text-muted)",
                                     whiteSpace: "nowrap",
                                     overflow: "hidden",
                                     textOverflow: "ellipsis",
@@ -617,10 +617,10 @@ export default async function AdvisorDashboardPage({
                           <td style={{ padding: "12px", textAlign: "right", fontWeight: 600 }}>
                             {post._count.reactions}
                           </td>
-                          <td style={{ padding: "12px", textAlign: "right", color: "#475569" }}>
+                          <td style={{ padding: "12px", textAlign: "right", color: "var(--text)" }}>
                             {post.targetPrice ? formatINR(Number(post.targetPrice), true) : "—"}
                           </td>
-                          <td style={{ padding: "12px", textAlign: "right", color: "#475569" }}>
+                          <td style={{ padding: "12px", textAlign: "right", color: "var(--text)" }}>
                             {post._count.comments}
                           </td>
                           <td
@@ -650,7 +650,7 @@ export default async function AdvisorDashboardPage({
                           >
                             {post.riskLevel}
                           </td>
-                          <td style={{ padding: "12px 0", textAlign: "right", color: "#94a3b8", fontSize: 11 }}>
+                          <td style={{ padding: "12px 0", textAlign: "right", color: "var(--text-muted)", fontSize: 11 }}>
                             {relTime(post.createdAt)}
                           </td>
                         </tr>
@@ -678,7 +678,7 @@ export default async function AdvisorDashboardPage({
                   margin: 0,
                   textAlign: "center",
                   fontSize: 12,
-                  color: "#94a3b8",
+                  color: "var(--text-muted)",
                   padding: "20px 0",
                 }}
               >
@@ -690,12 +690,12 @@ export default async function AdvisorDashboardPage({
                   display: "grid",
                   gridTemplateColumns: "1fr auto auto",
                   fontSize: 11,
-                  color: "#64748b",
+                  color: "var(--text-muted)",
                   fontWeight: 600,
                   textTransform: "uppercase",
                   letterSpacing: 0.5,
                   padding: "0 0 8px",
-                  borderBottom: "1px solid #eef0f4",
+                  borderBottom: "1px solid var(--border)",
                 }}
               >
                 <span>Stock</span>
@@ -731,7 +731,7 @@ export default async function AdvisorDashboardPage({
                     gridTemplateColumns: "1fr auto auto",
                     alignItems: "center",
                     padding: "10px 0",
-                    borderBottom: "1px solid #f1f5f9",
+                    borderBottom: "1px solid var(--border)",
                   }}
                 >
                   <div style={{ display: "flex", gap: 8, alignItems: "center", minWidth: 0 }}>
@@ -756,7 +756,7 @@ export default async function AdvisorDashboardPage({
                         style={{
                           fontSize: 12,
                           fontWeight: 700,
-                          color: "#0f172a",
+                          color: "var(--text)",
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -767,7 +767,7 @@ export default async function AdvisorDashboardPage({
                       <div
                         style={{
                           fontSize: 10,
-                          color: "#94a3b8",
+                          color: "var(--text-muted)",
                           textTransform: "capitalize",
                         }}
                       >
@@ -781,7 +781,7 @@ export default async function AdvisorDashboardPage({
                       paddingRight: 12,
                       fontSize: 12,
                       fontWeight: 700,
-                      color: "#0f172a",
+                      color: "var(--text)",
                     }}
                   >
                     {row.total}
@@ -822,7 +822,7 @@ export default async function AdvisorDashboardPage({
                   margin: 0,
                   textAlign: "center",
                   fontSize: 12,
-                  color: "#94a3b8",
+                  color: "var(--text-muted)",
                   padding: "20px 0",
                 }}
               >
@@ -834,14 +834,14 @@ export default async function AdvisorDashboardPage({
                   key={n.id}
                   style={{
                     padding: "10px 0",
-                    borderBottom: "1px solid #f1f5f9",
+                    borderBottom: "1px solid var(--border)",
                   }}
                 >
                   <div
                     style={{
                       fontSize: 12,
                       fontWeight: 700,
-                      color: "#0f172a",
+                      color: "var(--text)",
                       marginBottom: 2,
                       display: "flex",
                       gap: 6,
@@ -863,7 +863,7 @@ export default async function AdvisorDashboardPage({
                   <div
                     style={{
                       fontSize: 11,
-                      color: "#64748b",
+                      color: "var(--text-muted)",
                       lineHeight: 1.5,
                       whiteSpace: "nowrap",
                       overflow: "hidden",
@@ -872,7 +872,7 @@ export default async function AdvisorDashboardPage({
                   >
                     {n.message}
                   </div>
-                  <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 4 }}>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>
                     {relTime(n.createdAt)}
                   </div>
                 </div>

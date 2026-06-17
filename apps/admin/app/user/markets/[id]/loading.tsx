@@ -9,8 +9,8 @@ export default function PostDetailLoading() {
 
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 24,
               marginBottom: 16,
@@ -39,8 +39,8 @@ export default function PostDetailLoading() {
               style={{
                 marginTop: 18,
                 padding: 14,
-                background: "#fffbeb",
-                border: "1px solid #fde68a",
+                background: "rgba(245,158,11,0.12)",
+                border: "1px solid rgba(245,158,11,0.30)",
                 borderRadius: 10,
               }}
             >
@@ -51,7 +51,7 @@ export default function PostDetailLoading() {
               style={{
                 marginTop: 18,
                 paddingTop: 16,
-                borderTop: "1px solid #eef0f4",
+                borderTop: "1px solid var(--border)",
                 display: "flex",
                 gap: 16,
               }}
@@ -65,8 +65,8 @@ export default function PostDetailLoading() {
 
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 24,
             }}
@@ -77,7 +77,7 @@ export default function PostDetailLoading() {
                 key={i}
                 style={{
                   padding: 12,
-                  background: "#f8fafc",
+                  background: "var(--surface-2)",
                   borderRadius: 10,
                   marginBottom: 8,
                 }}
@@ -95,8 +95,8 @@ export default function PostDetailLoading() {
         <aside>
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 18,
             }}

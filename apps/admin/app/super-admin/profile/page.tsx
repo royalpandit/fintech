@@ -110,7 +110,7 @@ export default async function ProfilePage() {
                   return (
                     <tr key={feature.key}>
                       <td>{feature.label}</td>
-                      <td style={{ textTransform: "capitalize", fontSize: 12, color: "#61708b" }}>
+                      <td style={{ textTransform: "capitalize", fontSize: 12, color: "var(--text-muted)" }}>
                         {actions.length === 0 ? "None" : actions.join(", ")}
                       </td>
                     </tr>
@@ -138,7 +138,7 @@ export default async function ProfilePage() {
             <tbody>
               {recentSessions.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ color: "#61708b" }}>
+                  <td colSpan={4} style={{ color: "var(--text-muted)" }}>
                     No active sessions.
                   </td>
                 </tr>

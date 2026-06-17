@@ -96,7 +96,7 @@ export default function BoostButton({
       ) : (
         <div style={{ marginTop: 12 }}>
           <BoostPicker selected={tier} onSelect={setTier} includeNone={false} />
-          <p style={{ margin: "8px 0 0", fontSize: 11, color: "#94a3b8" }}>
+          <p style={{ margin: "8px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
             No payment is taken — selecting a plan promotes the post immediately.
           </p>
           {error && <div style={{ marginTop: 10, fontSize: 13, color: "#b91c1c" }}>{error}</div>}

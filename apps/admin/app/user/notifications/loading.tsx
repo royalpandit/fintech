@@ -13,8 +13,8 @@ export default function NotificationsLoading() {
 
       <article
         style={{
-          background: "#fff",
-          border: "1px solid #eef0f4",
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
           borderRadius: 14,
           padding: 0,
           overflow: "hidden",
@@ -25,11 +25,11 @@ export default function NotificationsLoading() {
             key={i}
             style={{
               padding: "14px 18px",
-              borderBottom: i === 7 ? "none" : "1px solid #eef0f4",
+              borderBottom: i === 7 ? "none" : "1px solid var(--border)",
               display: "flex",
               gap: 12,
               alignItems: "flex-start",
-              background: i < 3 ? "#f0f9ff" : "transparent",
+              background: i < 3 ? "var(--primary-soft)" : "transparent",
             }}
           >
             <span
