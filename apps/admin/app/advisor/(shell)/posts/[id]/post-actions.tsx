@@ -60,8 +60,8 @@ export default function PostActions({
           style={{
             padding: "10px 16px",
             borderRadius: 10,
-            border: "1px solid #fecaca",
-            background: "#fff",
+            border: "1px solid rgba(239,68,68,0.30)",
+            background: "var(--surface)",
             color: "#dc2626",
             fontWeight: 600,
             cursor: "pointer",
@@ -75,8 +75,8 @@ export default function PostActions({
         <div
           style={{
             padding: 12,
-            border: "1px solid #fecaca",
-            background: "#fef2f2",
+            border: "1px solid rgba(239,68,68,0.30)",
+            background: "rgba(239,68,68,0.12)",
             borderRadius: 10,
             width: 300,
           }}

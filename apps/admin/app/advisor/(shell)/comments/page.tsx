@@ -73,7 +73,7 @@ export default async function AdvisorCommentsPage({ searchParams }: { searchPara
               padding: "10px 16px",
               borderRadius: 10,
               border: "1px solid var(--border)",
-              background: filter === tab.key ? "#047857" : "#fff",
+              background: filter === tab.key ? "#047857" : "var(--surface)",
               color: filter === tab.key ? "#fff" : "var(--text)",
               textDecoration: "none",
               fontWeight: 600,
@@ -98,7 +98,7 @@ export default async function AdvisorCommentsPage({ searchParams }: { searchPara
             {comments.map((c) => {
               const toxicity = c.toxicityScore ? Number(c.toxicityScore) : 0;
               const toxicityColor =
-                toxicity >= 7 ? "#dc2626" : toxicity >= 5 ? "#f59e0b" : "#64748b";
+                toxicity >= 7 ? "#dc2626" : toxicity >= 5 ? "#f59e0b" : "var(--text-muted)";
 
               return (
                 <div
@@ -106,8 +106,8 @@ export default async function AdvisorCommentsPage({ searchParams }: { searchPara
                   style={{
                     padding: 14,
                     borderRadius: 10,
-                    border: `1px solid ${toxicity >= 5 ? "#fecaca" : "var(--border)"}`,
-                    background: toxicity >= 7 ? "#fef2f2" : "#fff",
+                    border: `1px solid ${toxicity >= 5 ? "rgba(239,68,68,0.30)" : "var(--border)"}`,
+                    background: toxicity >= 7 ? "rgba(239,68,68,0.12)" : "var(--surface)",
                   }}
                 >
                   <div
@@ -120,7 +120,7 @@ export default async function AdvisorCommentsPage({ searchParams }: { searchPara
                   >
                     <div>
                       <strong style={{ fontSize: 14 }}>{c.user.fullName}</strong>
-                      <span style={{ fontSize: 12, color: "#64748b", marginLeft: 8 }}>
+                      <span style={{ fontSize: 12, color: "var(--text-muted)", marginLeft: 8 }}>
                         on{" "}
                         <Link
                           href={`/advisor/posts/${c.post.id}`}
@@ -145,7 +145,7 @@ export default async function AdvisorCommentsPage({ searchParams }: { searchPara
                           toxicity {toxicity.toFixed(1)}
                         </span>
                       )}
-                      <span style={{ fontSize: 12, color: "#64748b" }}>
+                      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
                         {c.createdAt.toLocaleString()}
                       </span>
                     </div>

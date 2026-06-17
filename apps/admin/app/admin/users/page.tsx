@@ -74,13 +74,13 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
               margin: 0,
               fontSize: 26,
               fontWeight: 800,
-              color: "#0f172a",
+              color: "var(--text)",
               letterSpacing: -0.6,
             }}
           >
             Users
           </h1>
-          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
             Read-only directory · only super admins can modify accounts
           </p>
         </div>
@@ -108,7 +108,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
           <p className="stat-card-label">Suspended</p>
           <p
             className="stat-card-value"
-            style={{ color: suspendedCount > 0 ? "#dc2626" : "#94a3b8" }}
+            style={{ color: suspendedCount > 0 ? "#dc2626" : "var(--text-muted)" }}
           >
             {suspendedCount.toLocaleString()}
           </p>
@@ -133,8 +133,8 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
                 height: 40,
                 padding: "0 14px",
                 borderRadius: 10,
-                border: "1px solid #eef0f4",
-                background: "#f8fafc",
+                border: "1px solid var(--border)",
+                background: "var(--surface-2)",
                 fontSize: 13,
                 outline: "none",
               }}
@@ -146,8 +146,8 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
                 height: 40,
                 padding: "0 14px",
                 borderRadius: 10,
-                border: "1px solid #eef0f4",
-                background: "#f8fafc",
+                border: "1px solid var(--border)",
+                background: "var(--surface-2)",
                 fontSize: 13,
                 outline: "none",
               }}
@@ -163,8 +163,8 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
                 height: 40,
                 padding: "0 14px",
                 borderRadius: 10,
-                border: "1px solid #eef0f4",
-                background: "#f8fafc",
+                border: "1px solid var(--border)",
+                background: "var(--surface-2)",
                 fontSize: 13,
                 outline: "none",
               }}
@@ -201,7 +201,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
               margin: 0,
               padding: 48,
               textAlign: "center",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               fontSize: 13,
             }}
           >
@@ -211,7 +211,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f8fafc" }}>
+                <tr style={{ background: "var(--surface-2)" }}>
                   {["User", "Role", "Status", "Email Verified", "Last Login", "Joined"].map((h) => (
                     <th
                       key={h}
@@ -220,10 +220,10 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
                         padding: "12px 18px",
                         fontWeight: 600,
                         fontSize: 11,
-                        color: "#64748b",
+                        color: "var(--text-muted)",
                         textTransform: "uppercase",
                         letterSpacing: 0.6,
-                        borderBottom: "1px solid #eef0f4",
+                        borderBottom: "1px solid var(--border)",
                       }}
                     >
                       {h}
@@ -242,7 +242,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
                   const sc = STATUS_COLORS[user.status] ?? STATUS_COLORS.active;
                   const roleColor = ROLE_COLORS[user.role] ?? "#94a3b8";
                   return (
-                    <tr key={user.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <tr key={user.id} style={{ borderBottom: "1px solid var(--border)" }}>
                       <td style={{ padding: "14px 18px" }}>
                         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                           <div
@@ -263,7 +263,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
                           </div>
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 700 }}>{user.fullName}</div>
-                            <div style={{ fontSize: 11, color: "#64748b" }}>{user.email}</div>
+                            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{user.email}</div>
                           </div>
                         </div>
                       </td>
@@ -297,13 +297,13 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
                           {user.status}
                         </span>
                       </td>
-                      <td style={{ padding: "14px 18px", color: "#475569" }}>
+                      <td style={{ padding: "14px 18px", color: "var(--text)" }}>
                         {user.emailVerifiedAt ? "✓" : "—"}
                       </td>
-                      <td style={{ padding: "14px 18px", color: "#64748b", fontSize: 11 }}>
+                      <td style={{ padding: "14px 18px", color: "var(--text-muted)", fontSize: 11 }}>
                         {user.lastLoginAt ? user.lastLoginAt.toLocaleDateString() : "Never"}
                       </td>
-                      <td style={{ padding: "14px 18px", color: "#64748b", fontSize: 11 }}>
+                      <td style={{ padding: "14px 18px", color: "var(--text-muted)", fontSize: 11 }}>
                         {user.createdAt.toLocaleDateString()}
                       </td>
                     </tr>
@@ -313,7 +313,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
             </table>
           </div>
         )}
-        <p style={{ margin: 0, padding: 12, fontSize: 11, color: "#94a3b8", textAlign: "center" }}>
+        <p style={{ margin: 0, padding: 12, fontSize: 11, color: "var(--text-muted)", textAlign: "center" }}>
           Showing {users.length} of {total.toLocaleString()} matching users
         </p>
       </article>

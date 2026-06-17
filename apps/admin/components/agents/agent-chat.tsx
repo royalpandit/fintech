@@ -45,7 +45,7 @@ function MarkdownText({ text }: { text: string }) {
         // Bold **text**
         content = String(content).replace(/\*\*(.*?)\*\*/g, (_, t) => `<strong>${t}</strong>`);
         // Inline code `code`
-        content = String(content).replace(/`([^`]+)`/g, (_, t) => `<code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:0.9em;font-family:monospace">${t}</code>`);
+        content = String(content).replace(/`([^`]+)`/g, (_, t) => `<code style="background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:0.9em;font-family:monospace">${t}</code>`);
         // Bullet
         const isBullet = line.startsWith("- ") || line.startsWith("• ");
         return (
@@ -188,25 +188,25 @@ export default function AgentChat({ agent }: { agent: Agent }) {
   const modelLabel = agent.model.replace("gemini-", "Gemini ").replace(/-/g, " ");
 
   return (
-    <div style={{ display: "flex", height: "calc(100vh - 60px)", background: "#f8fafc", overflow: "hidden", position: "relative" }}>
+    <div style={{ display: "flex", height: "calc(100vh - 60px)", background: "var(--surface-2)", overflow: "hidden", position: "relative" }}>
 
       {/* Sidebar — chat history */}
       {sidebarOpen && (
         <div style={{ position: "absolute", inset: 0, zIndex: 50 }} onClick={() => setSidebarOpen(false)}>
-          <div style={{ width: 280, height: "100%", background: "#fff", borderRight: "1px solid #e2e8f0", overflowY: "auto", padding: "16px 0" }} onClick={e => e.stopPropagation()}>
-            <div style={{ padding: "0 16px 12px", borderBottom: "1px solid #f1f5f9" }}>
+          <div style={{ width: 280, height: "100%", background: "var(--surface)", borderRight: "1px solid var(--border)", overflowY: "auto", padding: "16px 0" }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: "0 16px 12px", borderBottom: "1px solid var(--border)" }}>
               <button onClick={newChat} style={{ width: "100%", padding: "10px 14px", background: "linear-gradient(135deg,#6366f1,#4f46e5)", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
                 + New Chat
               </button>
             </div>
             <div style={{ padding: "12px 8px 0" }}>
               {sessions.length === 0 ? (
-                <p style={{ fontSize: 12, color: "#94a3b8", textAlign: "center", padding: "20px 0" }}>No previous chats</p>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "20px 0" }}>No previous chats</p>
               ) : sessions.map(s => (
                 <button key={s.id} onClick={() => loadSession(s.id)}
-                  style={{ width: "100%", textAlign: "left", padding: "10px 12px", background: s.id === sessionId ? "#f0f9ff" : "transparent", border: "none", borderRadius: 8, cursor: "pointer", marginBottom: 2 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: s.id === sessionId ? "#0ea5e9" : "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
-                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{s._count.messages} messages</div>
+                  style={{ width: "100%", textAlign: "left", padding: "10px 12px", background: s.id === sessionId ? "rgba(14,165,233,0.12)" : "transparent", border: "none", borderRadius: 8, cursor: "pointer", marginBottom: 2 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: s.id === sessionId ? "#0ea5e9" : "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{s._count.messages} messages</div>
                 </button>
               ))}
             </div>
@@ -218,22 +218,22 @@ export default function AgentChat({ agent }: { agent: Agent }) {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
         {/* Top bar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", background: "#fff", borderBottom: "1px solid #e2e8f0", flexShrink: 0 }}>
-          <Link href="/user/lab/agents" style={{ display: "flex", alignItems: "center", color: "#94a3b8", textDecoration: "none" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", background: "var(--surface)", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+          <Link href="/user/lab/agents" style={{ display: "flex", alignItems: "center", color: "var(--text-muted)", textDecoration: "none" }}>
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
           </Link>
-          <button onClick={() => setSidebarOpen(v => !v)} style={{ border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "#64748b" }}>
+          <button onClick={() => setSidebarOpen(v => !v)} style={{ border: "1px solid var(--border)", background: "var(--surface-2)", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>
             ☰ History
           </button>
           <div style={{ width: 38, height: 38, borderRadius: 10, background: "linear-gradient(135deg,#ede9fe,#c7d2fe)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
             {agent.avatar}
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 15, color: "#0f172a" }}>{agent.name}</div>
-            <div style={{ fontSize: 11, color: "#94a3b8" }}>{modelLabel}</div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: "var(--text)" }}>{agent.name}</div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{modelLabel}</div>
           </div>
           <div style={{ marginLeft: "auto" }}>
-            <button onClick={newChat} style={{ border: "1px solid #e2e8f0", background: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#374151" }}>
+            <button onClick={newChat} style={{ border: "1px solid var(--border)", background: "var(--surface)", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--text)" }}>
               New Chat
             </button>
           </div>
@@ -246,9 +246,9 @@ export default function AgentChat({ agent }: { agent: Agent }) {
               <div style={{ width: 72, height: 72, borderRadius: 20, background: "linear-gradient(135deg,#ede9fe,#c7d2fe)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36 }}>
                 {agent.avatar}
               </div>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#0f172a" }}>{agent.name}</h2>
-              <p style={{ margin: 0, fontSize: 14, color: "#64748b", maxWidth: 380, lineHeight: 1.6 }}>{agent.description}</p>
-              <p style={{ margin: "8px 0 0", fontSize: 12, color: "#94a3b8" }}>Ask me anything below to get started</p>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "var(--text)" }}>{agent.name}</h2>
+              <p style={{ margin: 0, fontSize: 14, color: "var(--text-muted)", maxWidth: 380, lineHeight: 1.6 }}>{agent.description}</p>
+              <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--text-muted)" }}>Ask me anything below to get started</p>
             </div>
           ) : (
             <div style={{ maxWidth: 740, margin: "0 auto", display: "flex", flexDirection: "column", gap: 18 }}>
@@ -259,7 +259,7 @@ export default function AgentChat({ agent }: { agent: Agent }) {
                     {m.role === "user" ? "U" : agent.avatar}
                   </div>
                   {/* Bubble */}
-                  <div style={{ maxWidth: "75%", padding: "12px 16px", borderRadius: m.role === "user" ? "16px 4px 16px 16px" : "4px 16px 16px 16px", background: m.role === "user" ? "linear-gradient(135deg,#6366f1,#4f46e5)" : "#fff", color: m.role === "user" ? "#fff" : "#0f172a", fontSize: 14, border: m.role === "model" ? "1px solid #e2e8f0" : "none", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ maxWidth: "75%", padding: "12px 16px", borderRadius: m.role === "user" ? "16px 4px 16px 16px" : "4px 16px 16px 16px", background: m.role === "user" ? "linear-gradient(135deg,#6366f1,#4f46e5)" : "var(--surface)", color: m.role === "user" ? "#fff" : "var(--text)", fontSize: 14, border: m.role === "model" ? "1px solid var(--border)" : "none", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                     {m.role === "model" ? (
                       <>
                         <MarkdownText text={m.content || "…"} />

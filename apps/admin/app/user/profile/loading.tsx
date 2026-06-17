@@ -49,8 +49,8 @@ export default function ProfileLoading() {
       <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 14 }}>
         <article
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             padding: 18,
           }}
@@ -70,8 +70,8 @@ export default function ProfileLoading() {
         <div style={{ display: "grid", gap: 14 }}>
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 18,
             }}
@@ -86,7 +86,7 @@ export default function ProfileLoading() {
                   alignItems: "center",
                   padding: "10px 12px",
                   borderRadius: 10,
-                  background: "#f8fafc",
+                  background: "var(--surface-2)",
                   marginBottom: 8,
                 }}
               >
@@ -99,8 +99,8 @@ export default function ProfileLoading() {
 
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 18,
             }}

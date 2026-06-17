@@ -129,7 +129,7 @@ export default function CourseEditor({ courseId, initial }: { courseId: number; 
                 <FiGlobe size={12} /> Live
               </span>
             ) : (
-              <span style={{ fontSize: 12, color: "#61708b", display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 12, color: "var(--text-muted)", display: "inline-flex", alignItems: "center", gap: 4 }}>
                 <FiEdit3 size={12} /> Draft
               </span>
             )}
@@ -143,8 +143,8 @@ export default function CourseEditor({ courseId, initial }: { courseId: number; 
           style={{
             padding: "10px 16px",
             borderRadius: 10,
-            border: "1px solid #fecaca",
-            background: "#fff",
+            border: "1px solid rgba(239,68,68,0.30)",
+            background: "var(--surface)",
             color: "#dc2626",
             fontWeight: 600,
             cursor: deleting ? "not-allowed" : "pointer",
@@ -227,7 +227,7 @@ export default function CourseEditor({ courseId, initial }: { courseId: number; 
                 />
                 <div>
                   <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>Publish live</p>
-                  <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>
+                  <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
                     {approved ? "Accept new enrollments" : "Available after admin approval"}
                   </p>
                 </div>
@@ -238,8 +238,8 @@ export default function CourseEditor({ courseId, initial }: { courseId: number; 
                   style={{
                     marginTop: 12,
                     padding: 10,
-                    background: "#fffbeb",
-                    border: "1px solid #fde68a",
+                    background: "rgba(245,158,11,0.12)",
+                    border: "1px solid rgba(245,158,11,0.30)",
                     borderRadius: 8,
                     fontSize: 12,
                     color: "#713f12",
@@ -256,7 +256,7 @@ export default function CourseEditor({ courseId, initial }: { courseId: number; 
               style={{
                 marginTop: 16,
                 padding: "10px 12px",
-                background: "#fef2f2",
+                background: "rgba(239,68,68,0.12)",
                 color: "#b91c1c",
                 borderRadius: 10,
                 fontSize: 14,
@@ -270,7 +270,7 @@ export default function CourseEditor({ courseId, initial }: { courseId: number; 
               style={{
                 marginTop: 16,
                 padding: "10px 12px",
-                background: "#f0fdf4",
+                background: "rgba(34,197,94,0.12)",
                 color: "#047857",
                 borderRadius: 10,
                 fontSize: 14,

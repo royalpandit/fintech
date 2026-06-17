@@ -111,7 +111,7 @@ export default function NewCoursePage() {
                 style={{
                   marginTop: 16,
                   padding: "10px 12px",
-                  background: "#fef2f2",
+                  background: "rgba(239,68,68,0.12)",
                   color: "#b91c1c",
                   borderRadius: 10,
                   fontSize: 14,
@@ -137,7 +137,7 @@ export default function NewCoursePage() {
 
           <article className="card">
             <h3 style={{ marginTop: 0 }}>What's next</h3>
-            <ol style={{ paddingLeft: 18, margin: 0, fontSize: 13, lineHeight: 1.8, color: "#334155" }}>
+            <ol style={{ paddingLeft: 18, margin: 0, fontSize: 13, lineHeight: 1.8, color: "var(--text)" }}>
               <li>Course is created in draft mode</li>
               <li>Add lessons and video content</li>
               <li>Submit for admin compliance review</li>

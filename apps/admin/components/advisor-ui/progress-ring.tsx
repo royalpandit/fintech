@@ -13,7 +13,7 @@ export default function ProgressRing({
   size = 120,
   stroke = 10,
   color = "#10b981",
-  trackColor = "#e2e8f0",
+  trackColor = "var(--border)",
   label,
   sublabel,
 }: Props) {
@@ -65,11 +65,11 @@ export default function ProgressRing({
         }}
       >
         <div>
-          <div style={{ fontSize: size > 100 ? 26 : 20, fontWeight: 800, color: "#0f172a", letterSpacing: -0.5 }}>
+          <div style={{ fontSize: size > 100 ? 26 : 20, fontWeight: 800, color: "var(--text)", letterSpacing: -0.5 }}>
             {label ?? `${Math.round(clamped)}%`}
           </div>
           {sublabel && (
-            <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600, marginTop: 2, letterSpacing: 0.4 }}>
+            <div style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, marginTop: 2, letterSpacing: 0.4 }}>
               {sublabel}
             </div>
           )}
