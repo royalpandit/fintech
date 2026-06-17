@@ -168,7 +168,7 @@ export default function LessonsManager({
             padding: 14,
             border: "1px dashed var(--border)",
             borderRadius: 10,
-            background: "#f8fafc",
+            background: "var(--surface-2)",
           }}
         >
           <div className="grid" style={{ gridTemplateColumns: "2fr 2fr 100px", gap: 10 }}>
@@ -209,7 +209,7 @@ export default function LessonsManager({
           style={{
             marginBottom: 12,
             padding: "8px 12px",
-            background: "#fef2f2",
+            background: "rgba(239,68,68,0.12)",
             color: "#b91c1c",
             borderRadius: 8,
             fontSize: 13,
@@ -238,7 +238,7 @@ export default function LessonsManager({
             <tbody>
               {initialLessons.map((lesson) =>
                 editingId === lesson.id ? (
-                  <tr key={lesson.id} style={{ background: "#f0fdf4" }}>
+                  <tr key={lesson.id} style={{ background: "rgba(34,197,94,0.12)" }}>
                     <td>{lesson.position}</td>
                     <td>
                       <input
@@ -287,9 +287,9 @@ export default function LessonsManager({
                   </tr>
                 ) : (
                   <tr key={lesson.id}>
-                    <td style={{ fontWeight: 700, color: "#64748b" }}>{lesson.position}</td>
+                    <td style={{ fontWeight: 700, color: "var(--text-muted)" }}>{lesson.position}</td>
                     <td style={{ fontWeight: 600 }}>{lesson.title}</td>
-                    <td style={{ fontSize: 12, color: "#64748b" }}>
+                    <td style={{ fontSize: 12, color: "var(--text-muted)" }}>
                       {lesson.videoUrl ? (
                         <a
                           href={lesson.videoUrl}
@@ -320,8 +320,8 @@ export default function LessonsManager({
                           style={{
                             padding: "6px 10px",
                             borderRadius: 8,
-                            border: "1px solid #fecaca",
-                            background: "#fff",
+                            border: "1px solid rgba(239,68,68,0.30)",
+                            background: "var(--surface)",
                             color: "#dc2626",
                             fontSize: 12,
                             fontWeight: 600,

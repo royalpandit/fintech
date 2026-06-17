@@ -66,7 +66,7 @@ export default function QuickCreateUser() {
   const labelStyle: React.CSSProperties = {
     fontSize: 11,
     fontWeight: 600,
-    color: "#64748b",
+    color: "var(--text-muted)",
     display: "block",
     marginBottom: 4,
   };
@@ -76,10 +76,10 @@ export default function QuickCreateUser() {
     height: 36,
     padding: "0 10px",
     borderRadius: 8,
-    border: "1px solid #eef0f4",
-    background: "#fff",
+    border: "1px solid var(--border)",
+    background: "var(--surface)",
     fontSize: 12,
-    color: "#334155",
+    color: "var(--text)",
     outline: "none",
     marginBottom: 10,
     boxSizing: "border-box",
@@ -158,8 +158,8 @@ export default function QuickCreateUser() {
         <div
           style={{
             padding: "8px 10px",
-            background: "#fffbeb",
-            border: "1px solid #fde68a",
+            background: "rgba(245,158,11,0.12)",
+            border: "1px solid rgba(245,158,11,0.30)",
             borderRadius: 8,
             fontSize: 11,
             color: "#92400e",
@@ -181,7 +181,7 @@ export default function QuickCreateUser() {
         <div
           style={{
             padding: "8px 10px",
-            background: "#fef2f2",
+            background: "rgba(239,68,68,0.12)",
             color: "#b91c1c",
             borderRadius: 8,
             fontSize: 11,
@@ -196,7 +196,7 @@ export default function QuickCreateUser() {
         <div
           style={{
             padding: "8px 10px",
-            background: "#f0fdf4",
+            background: "rgba(34,197,94,0.12)",
             color: "#047857",
             borderRadius: 8,
             fontSize: 11,

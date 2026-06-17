@@ -185,7 +185,7 @@ export default function ProfileEditor({ initial }: { initial: Initial }) {
         </div>
 
         <div style={{ marginTop: 8 }}>
-          <p style={{ margin: 0, fontSize: 11, color: "#64748b", marginBottom: 6 }}>Suggested:</p>
+          <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", marginBottom: 6 }}>Suggested:</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
             {SUGGESTED_TAGS.filter((t) => !tags.includes(t))
               .slice(0, 10)
@@ -197,7 +197,7 @@ export default function ProfileEditor({ initial }: { initial: Initial }) {
                   style={{
                     padding: "3px 8px",
                     borderRadius: 999,
-                    background: "#f1f5f9",
+                    background: "var(--surface-2)",
                     border: "1px dashed var(--border)",
                     fontSize: 11,
                     cursor: "pointer",
@@ -238,7 +238,7 @@ export default function ProfileEditor({ initial }: { initial: Initial }) {
             style={{
               marginTop: 16,
               padding: "10px 12px",
-              background: "#fef2f2",
+              background: "rgba(239,68,68,0.12)",
               color: "#b91c1c",
               borderRadius: 10,
               fontSize: 14,
@@ -252,7 +252,7 @@ export default function ProfileEditor({ initial }: { initial: Initial }) {
             style={{
               marginTop: 16,
               padding: "10px 12px",
-              background: "#f0fdf4",
+              background: "rgba(34,197,94,0.12)",
               color: "#047857",
               borderRadius: 10,
               fontSize: 14,
