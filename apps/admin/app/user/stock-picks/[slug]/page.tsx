@@ -84,7 +84,7 @@ export default async function StockPickGroupDetailPage({ params }: Params) {
                 style={{
                   margin: "8px 0 0",
                   fontSize: 12,
-                  color: "#475569",
+                  color: "var(--text)",
                   lineHeight: 1.5,
                   maxWidth: 640,
                 }}
@@ -105,7 +105,7 @@ export default async function StockPickGroupDetailPage({ params }: Params) {
             </div>
             <div>
               <p className="stock-pick-detail-metric-label">Benchmark</p>
-              <p className="stock-pick-detail-metric-value" style={{ color: "#64748b" }}>
+              <p className="stock-pick-detail-metric-value" style={{ color: "var(--text-muted)" }}>
                 {fmtPct(data.benchmarkPct)}
               </p>
             </div>
@@ -133,7 +133,7 @@ export default async function StockPickGroupDetailPage({ params }: Params) {
           margin: "0 0 14px",
           fontSize: 14,
           fontWeight: 700,
-          color: "#0f172a",
+          color: "var(--text)",
         }}
       >
         Stocks in this group
@@ -145,12 +145,12 @@ export default async function StockPickGroupDetailPage({ params }: Params) {
             <article key={stock.id} className="stock-pick-stock-card">
               <div style={{ marginBottom: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: "var(--text)" }}>
                     {stock.symbol}
                   </span>
                   <RecommendationBadge recommendation={stock.recommendation} />
                 </div>
-                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--text-muted)" }}>
                   {stock.stockName}
                 </p>
               </div>
@@ -161,22 +161,22 @@ export default async function StockPickGroupDetailPage({ params }: Params) {
                   gridTemplateColumns: "repeat(3, 1fr)",
                   gap: 8,
                   paddingTop: 10,
-                  borderTop: "1px solid #f1f5f9",
+                  borderTop: "1px solid var(--border)",
                   fontSize: 11,
                 }}
               >
                 <div>
-                  <p style={{ margin: 0, color: "#94a3b8", fontWeight: 600 }}>CMP</p>
+                  <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>CMP</p>
                   <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 800 }}>{formatINR(stock.cmp)}</p>
                 </div>
                 <div>
-                  <p style={{ margin: 0, color: "#94a3b8", fontWeight: 600 }}>Target</p>
+                  <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>Target</p>
                   <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 800, color: "#16a34a" }}>
                     {formatINR(stock.targetPrice)}
                   </p>
                 </div>
                 <div>
-                  <p style={{ margin: 0, color: "#94a3b8", fontWeight: 600 }}>SL</p>
+                  <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>SL</p>
                   <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 800, color: "#dc2626" }}>
                     {formatINR(stock.stopLoss)}
                   </p>
@@ -188,7 +188,7 @@ export default async function StockPickGroupDetailPage({ params }: Params) {
           ))}
         </div>
       ) : (
-        <p style={{ color: "#64748b", fontSize: 12 }}>No published stocks in this group yet.</p>
+        <p style={{ color: "var(--text-muted)", fontSize: 12 }}>No published stocks in this group yet.</p>
       )}
     </UserPageSection>
   );

@@ -23,7 +23,7 @@ export default function AreaChart({
           height,
           display: "grid",
           placeItems: "center",
-          color: "#94a3b8",
+          color: "var(--text-muted)",
           fontSize: 13,
         }}
       >
@@ -78,8 +78,8 @@ export default function AreaChart({
 
       {gridLines.map((g, i) => (
         <g key={i}>
-          <line x1={padLeft} x2={width - padRight} y1={g.y} y2={g.y} stroke="#e2e8f0" strokeDasharray="2 4" />
-          <text x={padLeft - 6} y={g.y + 4} fontSize="10" fill="#94a3b8" textAnchor="end">
+          <line x1={padLeft} x2={width - padRight} y1={g.y} y2={g.y} stroke="var(--border)" strokeDasharray="2 4" />
+          <text x={padLeft - 6} y={g.y + 4} fontSize="10" fill="var(--text-muted)" textAnchor="end">
             {valueFormatter(g.value)}
           </text>
         </g>
@@ -101,7 +101,7 @@ export default function AreaChart({
           x={points[i]?.x ?? padLeft}
           y={height - 6}
           fontSize="10"
-          fill="#94a3b8"
+          fill="var(--text-muted)"
           textAnchor={i === 0 ? "start" : i === data.length - 1 ? "end" : "middle"}
         >
           {data[i].label}

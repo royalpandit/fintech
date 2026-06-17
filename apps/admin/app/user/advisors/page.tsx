@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
+import FollowToggle from "@/components/FollowToggle";
 import { CheckCircle } from "@/components/advisor-ui/icons";
 
 export const dynamic = "force-dynamic";
@@ -63,6 +64,19 @@ export default async function UserAdvisorsPage() {
     ]),
   );
 
+  // Current user's real follow state for the listed advisors
+  const followingSet = new Set<number>();
+  if (auth) {
+    const follows = await prisma.userFollow.findMany({
+      where: {
+        followerUserId: auth.userId,
+        followingUserId: { in: advisors.map((a) => a.id) },
+      },
+      select: { followingUserId: true },
+    });
+    follows.forEach((f) => followingSet.add(f.followingUserId));
+  }
+
   return (
     <section>
       <div style={{ marginBottom: 20 }}>
@@ -71,13 +85,13 @@ export default async function UserAdvisorsPage() {
             margin: 0,
             fontSize: 22,
             fontWeight: 800,
-            color: "#0f172a",
+            color: "var(--text)",
             letterSpacing: -0.5,
           }}
         >
           SEBI Advisors
         </h1>
-        <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+        <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
           {totalAdvisors.toLocaleString()} verified financial advisors
         </p>
       </div>
@@ -100,13 +114,13 @@ export default async function UserAdvisorsPage() {
           <article
             key={s.label}
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 16,
             }}
           >
-            <p style={{ margin: 0, fontSize: 11, color: "#64748b", fontWeight: 500, marginBottom: 6 }}>
+            <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", fontWeight: 500, marginBottom: 6 }}>
               {s.label}
             </p>
             <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: -0.5 }}>
@@ -128,12 +142,12 @@ export default async function UserAdvisorsPage() {
           <article
             style={{
               gridColumn: "1 / -1",
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 32,
               textAlign: "center",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               fontSize: 13,
             }}
           >
@@ -152,8 +166,8 @@ export default async function UserAdvisorsPage() {
               <article
                 key={adv.id}
                 style={{
-                  background: "#fff",
-                  border: "1px solid #eef0f4",
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
                   borderRadius: 14,
                   padding: 18,
                 }}
@@ -190,7 +204,7 @@ export default async function UserAdvisorsPage() {
                       style={{
                         fontSize: 14,
                         fontWeight: 800,
-                        color: "#0f172a",
+                        color: "var(--text)",
                         display: "flex",
                         gap: 4,
                         alignItems: "center",
@@ -202,7 +216,7 @@ export default async function UserAdvisorsPage() {
                       {adv.fullName}
                       <CheckCircle size={12} style={{ color: "#10b981", flexShrink: 0 }} />
                     </div>
-                    <div style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace" }}>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "monospace" }}>
                       {adv.advisorProfile?.sebiRegistrationNo}
                     </div>
                   </div>
@@ -213,7 +227,7 @@ export default async function UserAdvisorsPage() {
                     style={{
                       margin: "0 0 12px",
                       fontSize: 12,
-                      color: "#475569",
+                      color: "var(--text)",
                       lineHeight: 1.5,
                       display: "-webkit-box",
                       WebkitLineClamp: 2,
@@ -231,25 +245,25 @@ export default async function UserAdvisorsPage() {
                     gridTemplateColumns: "repeat(3, 1fr)",
                     gap: 8,
                     paddingTop: 12,
-                    borderTop: "1px solid #f1f5f9",
+                    borderTop: "1px solid var(--border)",
                     fontSize: 11,
                   }}
                 >
                   <div>
-                    <p style={{ margin: 0, color: "#94a3b8", fontWeight: 600 }}>Posts</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 800, color: "#0f172a" }}>
+                    <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>Posts</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 800, color: "var(--text)" }}>
                       {m?.posts ?? 0}
                     </p>
                   </div>
                   <div>
-                    <p style={{ margin: 0, color: "#94a3b8", fontWeight: 600 }}>Subs</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 800, color: "#0f172a" }}>
+                    <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>Subs</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 800, color: "var(--text)" }}>
                       {m?.subs ?? 0}
                     </p>
                   </div>
                   <div>
-                    <p style={{ margin: 0, color: "#94a3b8", fontWeight: 600 }}>Exp</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 800, color: "#0f172a" }}>
+                    <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>Exp</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 800, color: "var(--text)" }}>
                       {adv.advisorProfile?.experienceYears
                         ? `${adv.advisorProfile.experienceYears}y`
                         : "—"}
@@ -265,8 +279,8 @@ export default async function UserAdvisorsPage() {
                       textAlign: "center",
                       padding: "8px 14px",
                       borderRadius: 8,
-                      background: "#f8fafc",
-                      color: "#0f172a",
+                      background: "var(--surface-2)",
+                      color: "var(--text)",
                       fontWeight: 700,
                       fontSize: 12,
                       textDecoration: "none",
@@ -279,22 +293,14 @@ export default async function UserAdvisorsPage() {
                     promptTitle="Sign in to follow"
                     promptDescription="Follow advisors to see their posts in your feed."
                   >
-                    <button
-                      type="button"
-                      style={{
-                        flex: 1,
-                        padding: "8px 14px",
-                        borderRadius: 8,
-                        background: "linear-gradient(135deg, #0ea5e9, #10b981)",
-                        color: "#fff",
-                        fontWeight: 700,
-                        fontSize: 12,
-                        border: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      + Follow
-                    </button>
+                    <div style={{ flex: 1, display: "flex" }}>
+                      <FollowToggle
+                        advisorId={adv.id}
+                        initialFollowing={followingSet.has(adv.id)}
+                        size="sm"
+                        fullWidth
+                      />
+                    </div>
                   </AuthGate>
                 </div>
               </article>

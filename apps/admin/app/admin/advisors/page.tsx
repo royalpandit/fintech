@@ -90,13 +90,13 @@ export default async function AdminAdvisorsPage({
               margin: 0,
               fontSize: 26,
               fontWeight: 800,
-              color: "#0f172a",
+              color: "var(--text)",
               letterSpacing: -0.6,
             }}
           >
             Verification Queue
           </h1>
-          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
             Review and act on advisor SEBI verifications
           </p>
         </div>
@@ -123,7 +123,7 @@ export default async function AdminAdvisorsPage({
                 className="stat-card"
                 style={{
                   cursor: "pointer",
-                  borderColor: status === t.key ? t.color : "#eef0f4",
+                  borderColor: status === t.key ? t.color : "var(--border)",
                 }}
               >
                 <p className="stat-card-label">{t.label.split(" (")[0]}</p>
@@ -132,7 +132,7 @@ export default async function AdminAdvisorsPage({
                 </p>
                 <span
                   className="stat-card-delta"
-                  style={{ color: status === t.key ? t.color : "#94a3b8" }}
+                  style={{ color: status === t.key ? t.color : "var(--text-muted)" }}
                 >
                   {status === t.key ? "● Active filter" : "Click to filter"}
                 </span>
@@ -152,9 +152,9 @@ export default async function AdminAdvisorsPage({
               borderRadius: 8,
               fontSize: 13,
               fontWeight: 600,
-              color: status === t.key ? "#fff" : "#64748b",
-              background: status === t.key ? "#2563eb" : "#fff",
-              border: "1px solid #eef0f4",
+              color: status === t.key ? "#fff" : "var(--text-muted)",
+              background: status === t.key ? "#2563eb" : "var(--surface)",
+              border: "1px solid var(--border)",
               textDecoration: "none",
             }}
           >
@@ -170,7 +170,7 @@ export default async function AdminAdvisorsPage({
               margin: 0,
               padding: 48,
               textAlign: "center",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               fontSize: 13,
             }}
           >
@@ -180,7 +180,7 @@ export default async function AdminAdvisorsPage({
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f8fafc" }}>
+                <tr style={{ background: "var(--surface-2)" }}>
                   {["Advisor", "SEBI ID", "Experience", "Submitted", "Status", "Reviewed By", ""].map(
                     (h) => (
                       <th
@@ -190,10 +190,10 @@ export default async function AdminAdvisorsPage({
                           padding: "12px 18px",
                           fontWeight: 600,
                           fontSize: 11,
-                          color: "#64748b",
+                          color: "var(--text-muted)",
                           textTransform: "uppercase",
                           letterSpacing: 0.6,
-                          borderBottom: "1px solid #eef0f4",
+                          borderBottom: "1px solid var(--border)",
                         }}
                       >
                         {h}
@@ -211,7 +211,7 @@ export default async function AdminAdvisorsPage({
                     .join("")
                     .toUpperCase();
                   return (
-                    <tr key={adv.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <tr key={adv.id} style={{ borderBottom: "1px solid var(--border)" }}>
                       <td style={{ padding: "14px 18px" }}>
                         <Link
                           href={`/admin/advisors/${adv.user?.id}`}
@@ -219,7 +219,7 @@ export default async function AdminAdvisorsPage({
                             display: "flex",
                             gap: 10,
                             alignItems: "center",
-                            color: "#0f172a",
+                            color: "var(--text)",
                             textDecoration: "none",
                           }}
                         >
@@ -243,7 +243,7 @@ export default async function AdminAdvisorsPage({
                             <div style={{ fontSize: 13, fontWeight: 700 }}>
                               {adv.user?.fullName ?? "Advisor"}
                             </div>
-                            <div style={{ fontSize: 11, color: "#64748b" }}>{adv.user?.email}</div>
+                            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{adv.user?.email}</div>
                           </div>
                         </Link>
                       </td>
@@ -252,7 +252,7 @@ export default async function AdminAdvisorsPage({
                           padding: "14px 18px",
                           fontFamily: "monospace",
                           fontSize: 11,
-                          color: "#475569",
+                          color: "var(--text)",
                         }}
                       >
                         {adv.sebiRegistrationNo}
@@ -260,11 +260,11 @@ export default async function AdminAdvisorsPage({
                       <td style={{ padding: "14px 18px" }}>
                         {adv.experienceYears ? `${adv.experienceYears}y` : "—"}
                       </td>
-                      <td style={{ padding: "14px 18px", color: "#64748b", fontSize: 12 }}>
+                      <td style={{ padding: "14px 18px", color: "var(--text-muted)", fontSize: 12 }}>
                         {relTime(adv.createdAt)}
                       </td>
                       <td style={{ padding: "14px 18px" }}>{statusPill(adv.verificationStatus)}</td>
-                      <td style={{ padding: "14px 18px", color: "#64748b", fontSize: 12 }}>
+                      <td style={{ padding: "14px 18px", color: "var(--text-muted)", fontSize: 12 }}>
                         {adv.verifiedBy?.fullName ?? "—"}
                       </td>
                       <td style={{ padding: "14px 18px", textAlign: "right" }}>

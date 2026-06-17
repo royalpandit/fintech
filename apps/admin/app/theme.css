@@ -1014,3 +1014,35 @@ html[data-theme="dark"] .page-subtitle {
   color: var(--text-muted);
 }
 
+/* Advisor tab switcher (Overview / Performance / Analytics) — dark.
+   The base .active uses var(--surface); on a dark track that neither pops
+   nor reliably renders dark, so force an elevated slate with visible text. */
+html[data-theme="dark"] .tab-switcher {
+  background: #0f172a;
+}
+
+html[data-theme="dark"] .tab-switcher-item {
+  color: var(--text-muted);
+}
+
+html[data-theme="dark"] .tab-switcher-item.active {
+  background: #334155;
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Time-range pills (1D / 1W / 1M / 3M / 1Y / All) — dark.
+   Force the track + inactive label colors so they don't stay light. */
+html[data-theme="dark"] .time-range {
+  background: #1e293b;
+}
+
+html[data-theme="dark"] .time-range-item {
+  color: var(--text-muted);
+}
+
+html[data-theme="dark"] .time-range-item.active {
+  background: var(--brand-primary);
+  color: #fff;
+}
+

@@ -94,7 +94,7 @@ export default function QuickPost() {
           style={{
             fontSize: 11,
             fontWeight: 600,
-            color: "#64748b",
+            color: "var(--text-muted)",
             display: "block",
             marginBottom: 4,
           }}
@@ -111,10 +111,10 @@ export default function QuickPost() {
             height: 38,
             padding: "0 12px",
             borderRadius: 8,
-            border: "1px solid #eef0f4",
-            background: "#fff",
+            border: "1px solid var(--border)",
+            background: "var(--surface)",
             fontSize: 12,
-            color: "#334155",
+            color: "var(--text)",
             outline: "none",
             marginBottom: 12,
             textTransform: "uppercase",
@@ -127,7 +127,7 @@ export default function QuickPost() {
           style={{
             fontSize: 11,
             fontWeight: 600,
-            color: "#64748b",
+            color: "var(--text-muted)",
             display: "block",
             marginBottom: 4,
           }}
@@ -155,7 +155,7 @@ export default function QuickPost() {
           style={{
             fontSize: 11,
             fontWeight: 600,
-            color: "#64748b",
+            color: "var(--text-muted)",
             display: "block",
             marginBottom: 4,
           }}
@@ -174,10 +174,10 @@ export default function QuickPost() {
             height: 38,
             padding: "0 12px",
             borderRadius: 8,
-            border: "1px solid #eef0f4",
-            background: "#fff",
+            border: "1px solid var(--border)",
+            background: "var(--surface)",
             fontSize: 12,
-            color: "#334155",
+            color: "var(--text)",
             outline: "none",
             marginBottom: 12,
           }}
@@ -187,12 +187,12 @@ export default function QuickPost() {
           style={{
             fontSize: 11,
             fontWeight: 600,
-            color: "#64748b",
+            color: "var(--text-muted)",
             display: "block",
             marginBottom: 4,
           }}
         >
-          Reasoning <span style={{ color: "#94a3b8" }}>· min 20 chars</span>
+          Reasoning <span style={{ color: "var(--text-muted)" }}>· min 20 chars</span>
         </label>
         <textarea
           value={note}
@@ -204,10 +204,10 @@ export default function QuickPost() {
             width: "100%",
             padding: 10,
             borderRadius: 8,
-            border: "1px solid #eef0f4",
-            background: "#fff",
+            border: "1px solid var(--border)",
+            background: "var(--surface)",
             fontSize: 12,
-            color: "#334155",
+            color: "var(--text)",
             outline: "none",
             marginBottom: 4,
             resize: "vertical",
@@ -217,7 +217,7 @@ export default function QuickPost() {
         <div
           style={{
             fontSize: 10,
-            color: note.length >= 20 ? "#16a34a" : "#94a3b8",
+            color: note.length >= 20 ? "#16a34a" : "var(--text-muted)",
             textAlign: "right",
             marginBottom: 12,
           }}
@@ -229,7 +229,7 @@ export default function QuickPost() {
           <div
             style={{
               padding: "8px 10px",
-              background: "#fef2f2",
+              background: "rgba(239,68,68,0.12)",
               color: "#b91c1c",
               borderRadius: 8,
               fontSize: 11,
@@ -244,7 +244,7 @@ export default function QuickPost() {
           <div
             style={{
               padding: "8px 10px",
-              background: "#f0fdf4",
+              background: "rgba(34,197,94,0.12)",
               color: "#047857",
               borderRadius: 8,
               fontSize: 11,
@@ -269,7 +269,7 @@ export default function QuickPost() {
           style={{
             margin: "8px 0 0",
             fontSize: 10,
-            color: "#94a3b8",
+            color: "var(--text-muted)",
             textAlign: "center",
             lineHeight: 1.5,
           }}

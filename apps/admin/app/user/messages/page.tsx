@@ -54,13 +54,13 @@ export default async function MessagesPage() {
             margin: 0,
             fontSize: 22,
             fontWeight: 800,
-            color: "#0f172a",
+            color: "var(--text)",
             letterSpacing: -0.5,
           }}
         >
           Messages
         </h1>
-        <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+        <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
           Direct conversations with advisors and other users
         </p>
       </div>
@@ -68,8 +68,8 @@ export default async function MessagesPage() {
       {threads.length === 0 ? (
         <article
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             padding: 48,
             textAlign: "center",
@@ -80,15 +80,15 @@ export default async function MessagesPage() {
               display: "flex",
               justifyContent: "center",
               marginBottom: 14,
-              color: "#94a3b8",
+              color: "var(--text-muted)",
             }}
           >
             <FiMessageCircle size={40} />
           </div>
-          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>
+          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "var(--text)" }}>
             No messages yet
           </h2>
-          <p style={{ margin: "0 0 18px", fontSize: 13, color: "#64748b" }}>
+          <p style={{ margin: "0 0 18px", fontSize: 13, color: "var(--text-muted)" }}>
             Message an advisor or a friend by visiting their profile and clicking{" "}
             <strong>Message</strong>.
           </p>
@@ -111,13 +111,13 @@ export default async function MessagesPage() {
       ) : (
         <article
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             overflow: "hidden",
           }}
         >
-          <style>{`.msg-thread-link:hover { background: #f8fafc !important; }`}</style>
+          <style>{`.msg-thread-link:hover { background: var(--hover) !important; }`}</style>
           {threads.map((t, i) => {
             const partner = t.participants.find((p) => p.userId !== userId)?.user;
             const lastMsg = t.messages[0];
@@ -132,7 +132,7 @@ export default async function MessagesPage() {
                   gap: 14,
                   padding: "14px 18px",
                   borderBottom:
-                    i === threads.length - 1 ? "none" : "1px solid #f1f5f9",
+                    i === threads.length - 1 ? "none" : "1px solid var(--border)",
                   textDecoration: "none",
                   transition: "background 0.15s",
                 }}
@@ -160,7 +160,7 @@ export default async function MessagesPage() {
                     style={{
                       fontSize: 14,
                       fontWeight: 700,
-                      color: "#0f172a",
+                      color: "var(--text)",
                       marginBottom: 3,
                     }}
                   >
@@ -169,7 +169,7 @@ export default async function MessagesPage() {
                   <div
                     style={{
                       fontSize: 12,
-                      color: "#64748b",
+                      color: "var(--text-muted)",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
@@ -184,7 +184,7 @@ export default async function MessagesPage() {
                 </div>
 
                 {lastMsg && (
-                  <span style={{ fontSize: 11, color: "#94a3b8", flexShrink: 0 }}>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>
                     {relTime(lastMsg.createdAt)}
                   </span>
                 )}

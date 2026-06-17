@@ -210,13 +210,13 @@ export default async function AdminDashboardPage({
                   margin: 0,
                   fontSize: 26,
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text)",
                   letterSpacing: -0.6,
                 }}
               >
                 Moderation Dashboard
               </h1>
-              <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+              <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
                 Review verifications, moderate market posts, and act on community reports
               </p>
             </div>
@@ -240,7 +240,7 @@ export default async function AdminDashboardPage({
                 <p className="stat-card-label">Pending Advisor Verifications</p>
                 <p
                   className="stat-card-value"
-                  style={{ color: pendingAdvisors > 0 ? "#0f172a" : "#94a3b8" }}
+                  style={{ color: pendingAdvisors > 0 ? "var(--text)" : "var(--text-muted)" }}
                 >
                   {pendingAdvisors}
                 </p>
@@ -270,7 +270,7 @@ export default async function AdminDashboardPage({
                 <p className="stat-card-label">Posts Awaiting Review</p>
                 <p
                   className="stat-card-value"
-                  style={{ color: pendingPosts > 0 ? "#0f172a" : "#94a3b8" }}
+                  style={{ color: pendingPosts > 0 ? "var(--text)" : "var(--text-muted)" }}
                 >
                   {pendingPosts}
                 </p>
@@ -300,7 +300,7 @@ export default async function AdminDashboardPage({
                 <p className="stat-card-label">Flagged Market Posts</p>
                 <p
                   className="stat-card-value"
-                  style={{ color: totalFlagged > 0 ? "#dc2626" : "#94a3b8" }}
+                  style={{ color: totalFlagged > 0 ? "#dc2626" : "var(--text-muted)" }}
                 >
                   {totalFlagged}
                 </p>
@@ -327,7 +327,7 @@ export default async function AdminDashboardPage({
                 <p className="stat-card-label">Open Content Reports</p>
                 <p
                   className="stat-card-value"
-                  style={{ color: openReports > 0 ? "#0f172a" : "#94a3b8" }}
+                  style={{ color: openReports > 0 ? "var(--text)" : "var(--text-muted)" }}
                 >
                   {openReports}
                 </p>
@@ -362,16 +362,16 @@ export default async function AdminDashboardPage({
                   gap: 16,
                   marginTop: 10,
                   paddingTop: 10,
-                  borderTop: "1px solid #eef0f4",
+                  borderTop: "1px solid var(--border)",
                   fontSize: 12,
                 }}
               >
                 <span>
-                  <span style={{ color: "#64748b" }}>Last 7d:</span>{" "}
+                  <span style={{ color: "var(--text-muted)" }}>Last 7d:</span>{" "}
                   <strong>{auditLast7}</strong>
                 </span>
                 <span>
-                  <span style={{ color: "#64748b" }}>Prev 7d:</span>{" "}
+                  <span style={{ color: "var(--text-muted)" }}>Prev 7d:</span>{" "}
                   <strong>{auditPrev7}</strong>
                 </span>
                 <span
@@ -398,7 +398,7 @@ export default async function AdminDashboardPage({
                     height: 240,
                     display: "grid",
                     placeItems: "center",
-                    color: "#94a3b8",
+                    color: "var(--text-muted)",
                     fontSize: 13,
                   }}
                 >
@@ -428,7 +428,7 @@ export default async function AdminDashboardPage({
                 style={{
                   textAlign: "center",
                   padding: 32,
-                  color: "#94a3b8",
+                  color: "var(--text-muted)",
                   fontSize: 13,
                   margin: 0,
                 }}
@@ -445,7 +445,7 @@ export default async function AdminDashboardPage({
               >
                 <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
                   <thead>
-                    <tr style={{ color: "#64748b" }}>
+                    <tr style={{ color: "var(--text-muted)" }}>
                       {[
                         "Advisor",
                         "SEBI ID",
@@ -463,7 +463,7 @@ export default async function AdminDashboardPage({
                             fontSize: 11,
                             textTransform: "uppercase",
                             letterSpacing: 0.6,
-                            borderBottom: "1px solid #eef0f4",
+                            borderBottom: "1px solid var(--border)",
                           }}
                         >
                           {h}
@@ -477,7 +477,7 @@ export default async function AdminDashboardPage({
                       const waitDays = Math.floor(waitMs / (1000 * 60 * 60 * 24));
                       const isStale = waitDays >= 2;
                       return (
-                        <tr key={adv.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <tr key={adv.id} style={{ borderBottom: "1px solid var(--border)" }}>
                           <td style={{ padding: "12px 12px 12px 0" }}>
                             <Link
                               href={`/admin/advisors/${adv.user?.id}`}
@@ -485,7 +485,7 @@ export default async function AdminDashboardPage({
                                 display: "flex",
                                 gap: 10,
                                 alignItems: "center",
-                                color: "#0f172a",
+                                color: "var(--text)",
                                 textDecoration: "none",
                               }}
                             >
@@ -517,7 +517,7 @@ export default async function AdminDashboardPage({
                               padding: "12px 12px 12px 0",
                               fontFamily: "monospace",
                               fontSize: 11,
-                              color: "#475569",
+                              color: "var(--text)",
                             }}
                           >
                             {adv.sebiRegistrationNo}
@@ -526,7 +526,7 @@ export default async function AdminDashboardPage({
                             {adv.experienceYears ? `${adv.experienceYears}y` : "—"}
                           </td>
                           <td
-                            style={{ padding: "12px 12px 12px 0", color: "#64748b", fontSize: 11 }}
+                            style={{ padding: "12px 12px 12px 0", color: "var(--text-muted)", fontSize: 11 }}
                           >
                             {adv.createdAt.toLocaleDateString()}
                           </td>
@@ -585,7 +585,7 @@ export default async function AdminDashboardPage({
                   margin: 0,
                   textAlign: "center",
                   fontSize: 12,
-                  color: "#94a3b8",
+                  color: "var(--text-muted)",
                   padding: "20px 0",
                 }}
               >
@@ -602,7 +602,7 @@ export default async function AdminDashboardPage({
                       display: "flex",
                       gap: 10,
                       padding: "10px 0",
-                      borderBottom: "1px solid #f1f5f9",
+                      borderBottom: "1px solid var(--border)",
                       textDecoration: "none",
                       color: "inherit",
                       alignItems: "center",
@@ -629,7 +629,7 @@ export default async function AdminDashboardPage({
                         style={{
                           fontSize: 12,
                           fontWeight: 700,
-                          color: "#0f172a",
+                          color: "var(--text)",
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -640,7 +640,7 @@ export default async function AdminDashboardPage({
                       <div
                         style={{
                           fontSize: 10,
-                          color: "#64748b",
+                          color: "var(--text-muted)",
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -687,7 +687,7 @@ export default async function AdminDashboardPage({
                   margin: 0,
                   textAlign: "center",
                   fontSize: 12,
-                  color: "#94a3b8",
+                  color: "var(--text-muted)",
                   padding: "20px 0",
                 }}
               >
@@ -706,7 +706,7 @@ export default async function AdminDashboardPage({
                     key={log.id}
                     style={{
                       padding: "10px 0",
-                      borderBottom: "1px solid #f1f5f9",
+                      borderBottom: "1px solid var(--border)",
                     }}
                   >
                     <div
@@ -729,14 +729,14 @@ export default async function AdminDashboardPage({
                         style={{
                           fontSize: 12,
                           fontWeight: 700,
-                          color: "#0f172a",
+                          color: "var(--text)",
                           textTransform: "capitalize",
                         }}
                       >
                         {log.action.replace(/_/g, " ")}
                       </div>
                     </div>
-                    <div style={{ fontSize: 11, color: "#64748b" }}>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
                       {log.actor?.fullName ?? "System"} · {log.module} ·{" "}
                       {relTime(log.createdAt)}
                     </div>

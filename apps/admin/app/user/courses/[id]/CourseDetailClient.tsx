@@ -72,14 +72,14 @@ export default function CourseDetailClient({
     <div>
       {/* Progress bar (enrolled only) */}
       {isEnrolled && (
-        <div style={{ padding: "14px 20px", borderBottom: "1px solid #f1f5f9" }}>
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               fontSize: 12,
               fontWeight: 600,
-              color: "#64748b",
+              color: "var(--text-muted)",
               marginBottom: 8,
             }}
           >
@@ -122,8 +122,8 @@ export default function CourseDetailClient({
               alignItems: "center",
               gap: 12,
               padding: "13px 20px",
-              borderBottom: idx < lessons.length - 1 ? "1px solid #f1f5f9" : "none",
-              background: isDone ? "#f0fdf4" : "transparent",
+              borderBottom: idx < lessons.length - 1 ? "1px solid var(--border)" : "none",
+              background: isDone ? "rgba(34,197,94,0.12)" : "transparent",
               transition: "background 0.15s",
             }}
           >
@@ -153,7 +153,7 @@ export default function CourseDetailClient({
                 width: 22,
                 fontSize: 12,
                 fontWeight: 700,
-                color: "#94a3b8",
+                color: "var(--text-muted)",
                 flexShrink: 0,
                 textAlign: "center",
               }}
@@ -167,13 +167,13 @@ export default function CourseDetailClient({
                 style={{
                   fontSize: 14,
                   fontWeight: 600,
-                  color: isLocked ? "#94a3b8" : "#0f172a",
+                  color: isLocked ? "var(--text-muted)" : "var(--text)",
                   display: "flex",
                   alignItems: "center",
                   gap: 6,
                 }}
               >
-                {isLocked && <FiLock size={12} style={{ color: "#94a3b8" }} />}
+                {isLocked && <FiLock size={12} style={{ color: "var(--text-muted)" }} />}
                 {lesson.title}
               </span>
             </div>
@@ -183,7 +183,7 @@ export default function CourseDetailClient({
               <span
                 style={{
                   fontSize: 11,
-                  color: "#94a3b8",
+                  color: "var(--text-muted)",
                   display: "flex",
                   alignItems: "center",
                   gap: 4,

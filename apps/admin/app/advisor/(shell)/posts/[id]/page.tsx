@@ -111,8 +111,8 @@ export default async function AdvisorPostDetailPage({ params }: { params: { id: 
                 borderRadius: 999,
                 fontSize: 12,
                 fontWeight: 700,
-                background: post.audience === "public" ? "#f1f5f9" : "#ede9fe",
-                color: post.audience === "public" ? "#475569" : "#6d28d9",
+                background: post.audience === "public" ? "var(--surface-2)" : "#ede9fe",
+                color: post.audience === "public" ? "var(--text)" : "#6d28d9",
                 textTransform: "uppercase",
                 letterSpacing: 0.5,
               }}
@@ -123,7 +123,7 @@ export default async function AdvisorPostDetailPage({ params }: { params: { id: 
                   ? `Specific people (${post._count.recipients})`
                   : "Public"}
             </span>
-            <span style={{ fontSize: 12, color: "#61708b" }}>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
               {post.publishedAt
                 ? `Published ${post.publishedAt.toLocaleString()}`
                 : `Created ${post.createdAt.toLocaleString()}`}
@@ -141,7 +141,7 @@ export default async function AdvisorPostDetailPage({ params }: { params: { id: 
                 display: "flex",
                 gap: 16,
                 padding: "12px 16px",
-                background: "#f8fafc",
+                background: "var(--surface-2)",
                 borderRadius: 12,
                 marginTop: 16,
                 fontSize: 13,
@@ -171,8 +171,8 @@ export default async function AdvisorPostDetailPage({ params }: { params: { id: 
               style={{
                 marginTop: 16,
                 padding: 12,
-                background: "#fffbeb",
-                border: "1px solid #fde68a",
+                background: "rgba(245,158,11,0.12)",
+                border: "1px solid rgba(245,158,11,0.30)",
                 borderRadius: 10,
                 fontSize: 12,
                 fontStyle: "italic",
@@ -231,7 +231,7 @@ export default async function AdvisorPostDetailPage({ params }: { params: { id: 
                   </p>
                   <p style={{ margin: 0, fontWeight: 700, fontSize: 18 }}>
                     {Number(latestComplianceLog.riskScore).toFixed(1)}
-                    <span style={{ fontSize: 12, color: "#61708b", fontWeight: 400 }}> / 10</span>
+                    <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 400 }}> / 10</span>
                   </p>
                 </div>
               )}
@@ -240,12 +240,12 @@ export default async function AdvisorPostDetailPage({ params }: { params: { id: 
                   <p className="metric-label" style={{ marginBottom: 4 }}>
                     Notes
                   </p>
-                  <p style={{ margin: 0, fontSize: 13, color: "#334155" }}>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--text)" }}>
                     {latestComplianceLog.notes}
                   </p>
                 </div>
               )}
-              <p style={{ margin: 0, fontSize: 11, color: "#61708b" }}>
+              <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
                 {latestComplianceLog.createdAt.toLocaleString()} · by{" "}
                 {latestComplianceLog.createdBy}
               </p>
@@ -261,8 +261,8 @@ export default async function AdvisorPostDetailPage({ params }: { params: { id: 
               style={{
                 marginTop: 16,
                 padding: 10,
-                background: "#f0fdf4",
-                border: "1px solid #bbf7d0",
+                background: "rgba(34,197,94,0.12)",
+                border: "1px solid rgba(34,197,94,0.30)",
                 borderRadius: 8,
                 fontSize: 12,
                 color: "#065f46",
@@ -295,7 +295,7 @@ export default async function AdvisorPostDetailPage({ params }: { params: { id: 
               >
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                   <strong>{comment.user.fullName}</strong>
-                  <span style={{ color: "#61708b", fontSize: 12 }}>
+                  <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
                     {comment.createdAt.toLocaleString()}
                   </span>
                 </div>
