@@ -145,7 +145,7 @@ export default async function AdvisorPostsPage({
               padding: "10px 16px",
               borderRadius: 10,
               border: "1px solid var(--border)",
-              background: activeKey === tab.key ? "#047857" : "#fff",
+              background: activeKey === tab.key ? "#047857" : "var(--surface)",
               color: activeKey === tab.key ? "#fff" : "var(--text)",
               textDecoration: "none",
               fontWeight: 600,
@@ -179,7 +179,7 @@ export default async function AdvisorPostsPage({
                     style={{
                       padding: 24,
                       textAlign: "center",
-                      color: "#61708b",
+                      color: "var(--text-muted)",
                     }}
                   >
                     No posts in this bucket.{" "}

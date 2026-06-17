@@ -51,9 +51,9 @@ export default function HistoryFilters() {
               borderRadius: 8,
               fontSize: 13,
               fontWeight: 600,
-              color: type === t.key ? "#fff" : "#64748b",
-              background: type === t.key ? "#0ea5e9" : "#fff",
-              border: "1px solid #eef0f4",
+              color: type === t.key ? "#fff" : "var(--text-muted)",
+              background: type === t.key ? "#0ea5e9" : "var(--surface)",
+              border: "1px solid var(--border)",
               textDecoration: "none",
             }}
           >
@@ -69,13 +69,13 @@ export default function HistoryFilters() {
           flexWrap: "wrap",
           alignItems: "flex-end",
           padding: 14,
-          background: "#f8fafc",
+          background: "var(--surface-2)",
           borderRadius: 12,
-          border: "1px solid #eef0f4",
+          border: "1px solid var(--border)",
         }}
       >
         <div>
-          <label style={{ fontSize: 10, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 4 }}>
+          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
             Month
           </label>
           <select
@@ -85,7 +85,7 @@ export default function HistoryFilters() {
               height: 36,
               padding: "0 10px",
               borderRadius: 8,
-              border: "1px solid #eef0f4",
+              border: "1px solid var(--border)",
               fontSize: 12,
               minWidth: 140,
             }}
@@ -99,7 +99,7 @@ export default function HistoryFilters() {
           </select>
         </div>
         <div>
-          <label style={{ fontSize: 10, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 4 }}>
+          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
             From
           </label>
           <input
@@ -112,13 +112,13 @@ export default function HistoryFilters() {
               height: 36,
               padding: "0 10px",
               borderRadius: 8,
-              border: "1px solid #eef0f4",
+              border: "1px solid var(--border)",
               fontSize: 12,
             }}
           />
         </div>
         <div>
-          <label style={{ fontSize: 10, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 4 }}>
+          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
             To
           </label>
           <input
@@ -129,7 +129,7 @@ export default function HistoryFilters() {
               height: 36,
               padding: "0 10px",
               borderRadius: 8,
-              border: "1px solid #eef0f4",
+              border: "1px solid var(--border)",
               fontSize: 12,
             }}
           />
@@ -142,10 +142,10 @@ export default function HistoryFilters() {
               borderRadius: 8,
               fontSize: 12,
               fontWeight: 600,
-              color: "#64748b",
+              color: "var(--text-muted)",
               textDecoration: "none",
-              border: "1px solid #eef0f4",
-              background: "#fff",
+              border: "1px solid var(--border)",
+              background: "var(--surface)",
             }}
           >
             Clear dates

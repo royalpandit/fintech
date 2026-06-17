@@ -139,24 +139,24 @@ function CommentBubble({
       <div style={{ flex: 1 }}>
         <div
           style={{
-            background: "#f8fafc",
+            background: "var(--surface-2)",
             borderRadius: "0 10px 10px 10px",
             padding: "8px 12px",
           }}
         >
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#0f172a" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)" }}>
             {comment.user.fullName}
           </span>
-          <p style={{ margin: "3px 0 0", fontSize: 13, color: "#334155", lineHeight: 1.45 }}>
+          <p style={{ margin: "3px 0 0", fontSize: 13, color: "var(--text)", lineHeight: 1.45 }}>
             {comment.deletedAt ? (
-              <em style={{ color: "#94a3b8" }}>Comment removed</em>
+              <em style={{ color: "var(--text-muted)" }}>Comment removed</em>
             ) : (
               comment.content
             )}
           </p>
         </div>
         <div style={{ display: "flex", gap: 10, marginTop: 4, paddingLeft: 4 }}>
-          <span style={{ fontSize: 10, color: "#94a3b8" }}>
+          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
             {formatRelativeTime(comment.createdAt)}
           </span>
           {"_count" in comment === false && (
@@ -274,8 +274,8 @@ function PostCard({
   return (
     <article
       style={{
-        background: "#fff",
-        border: "1px solid #eef0f4",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
         borderRadius: 14,
         padding: 18,
         position: "relative",
@@ -306,13 +306,13 @@ function PostCard({
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <Link
               href={`/user/advisors/${post.advisor?.id}`}
-              style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", textDecoration: "none" }}
+              style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", textDecoration: "none" }}
             >
               {post.advisor?.fullName}
             </Link>
             <CheckCircle size={12} style={{ color: "#10b981" }} />
           </div>
-          <div style={{ fontSize: 11, color: "#64748b" }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
             {post.advisor?.advisorProfile?.sebiRegistrationNo} · {formatRelativeTime(when)}
           </div>
         </div>
@@ -330,9 +330,9 @@ function PostCard({
               gap: 4,
               padding: "5px 12px",
               borderRadius: 8,
-              border: following ? "1px solid #e2e8f0" : "1px solid #0ea5e9",
-              background: following ? "#f8fafc" : "rgba(14,165,233,0.08)",
-              color: following ? "#64748b" : "#0ea5e9",
+              border: following ? "1px solid var(--border)" : "1px solid #0ea5e9",
+              background: following ? "var(--surface-2)" : "rgba(14,165,233,0.08)",
+              color: following ? "var(--text-muted)" : "#0ea5e9",
               fontSize: 11,
               fontWeight: 700,
               cursor: followLoading ? "wait" : "pointer",
@@ -370,7 +370,7 @@ function PostCard({
               background: "none",
               border: "none",
               cursor: "pointer",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               display: "flex",
               alignItems: "center",
               padding: 4,
@@ -386,8 +386,8 @@ function PostCard({
                 position: "absolute",
                 right: 0,
                 top: "calc(100% + 4px)",
-                background: "#fff",
-                border: "1px solid #eef0f4",
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 10,
                 boxShadow: "0 8px 32px rgba(15,23,42,0.12)",
                 zIndex: 20,
@@ -417,7 +417,7 @@ function PostCard({
                 </button>
               )}
               {reported && (
-                <div style={{ padding: "10px 14px", fontSize: 12, color: "#94a3b8" }}>
+                <div style={{ padding: "10px 14px", fontSize: 12, color: "var(--text-muted)" }}>
                   Reported — thanks
                 </div>
               )}
@@ -434,10 +434,10 @@ function PostCard({
                     background: "none",
                     border: "none",
                     fontSize: 13,
-                    color: "#475569",
+                    color: "var(--text)",
                     cursor: "pointer",
                     textAlign: "left",
-                    borderTop: "1px solid #f1f5f9",
+                    borderTop: "1px solid var(--border)",
                   }}
                 >
                   <FiSlash size={13} /> Block advisor
@@ -457,7 +457,7 @@ function PostCard({
                 margin: "0 0 8px",
                 fontSize: 17,
                 fontWeight: 700,
-                color: "#0f172a",
+                color: "var(--text)",
                 letterSpacing: -0.2,
               }}
             >
@@ -468,7 +468,7 @@ function PostCard({
               style={{
                 margin: 0,
                 fontSize: 14,
-                color: "#334155",
+                color: "var(--text)",
                 lineHeight: 1.55,
                 display: "-webkit-box",
                 WebkitLineClamp: 3,
@@ -489,7 +489,7 @@ function PostCard({
                 margin: "0 0 8px",
                 fontSize: 17,
                 fontWeight: 700,
-                color: "#0f172a",
+                color: "var(--text)",
                 letterSpacing: -0.2,
               }}
             >
@@ -499,7 +499,7 @@ function PostCard({
               style={{
                 margin: 0,
                 fontSize: 14,
-                color: "#334155",
+                color: "var(--text)",
                 lineHeight: 1.55,
                 display: "-webkit-box",
                 WebkitLineClamp: 3,
@@ -521,8 +521,8 @@ function PostCard({
             style={{
               padding: "4px 10px",
               borderRadius: 999,
-              background: "#f1f5f9",
-              color: "#334155",
+              background: "var(--surface-2)",
+              color: "var(--text)",
               fontSize: 11,
               fontWeight: 700,
             }}
@@ -534,8 +534,8 @@ function PostCard({
           style={{
             padding: "4px 10px",
             borderRadius: 999,
-            background: "#f1f5f9",
-            color: "#334155",
+            background: "var(--surface-2)",
+            color: "var(--text)",
             fontSize: 11,
             fontWeight: 600,
           }}
@@ -579,7 +579,7 @@ function PostCard({
         style={{
           marginTop: 14,
           paddingTop: 14,
-          borderTop: "1px solid #eef0f4",
+          borderTop: "1px solid var(--border)",
           display: "flex",
           gap: 16,
           alignItems: "center",
@@ -596,7 +596,7 @@ function PostCard({
             display: "flex",
             alignItems: "center",
             gap: 6,
-            color: liked ? "#e11d48" : "#64748b",
+            color: liked ? "#e11d48" : "var(--text-muted)",
             fontSize: 12,
             fontWeight: 600,
             cursor: isAuthed ? "pointer" : "default",
@@ -605,7 +605,7 @@ function PostCard({
         >
           <FiHeart
             size={13}
-            style={{ fill: liked ? "#e11d48" : "none", color: liked ? "#e11d48" : "#64748b" }}
+            style={{ fill: liked ? "#e11d48" : "none", color: liked ? "#e11d48" : "var(--text-muted)" }}
           />
           {likeCount}
         </button>
@@ -620,7 +620,7 @@ function PostCard({
             display: "flex",
             alignItems: "center",
             gap: 6,
-            color: expanded ? "#0ea5e9" : "#64748b",
+            color: expanded ? "#0ea5e9" : "var(--text-muted)",
             fontSize: 12,
             fontWeight: 600,
             cursor: "pointer",
@@ -640,11 +640,11 @@ function PostCard({
 
       {/* Comment section */}
       {expanded && (
-        <div style={{ marginTop: 14, borderTop: "1px solid #f1f5f9", paddingTop: 14 }}>
+        <div style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
           {commentsLoading ? (
-            <p style={{ margin: 0, fontSize: 12, color: "#94a3b8" }}>Loading comments…</p>
+            <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>Loading comments…</p>
           ) : comments.length === 0 ? (
-            <p style={{ margin: "0 0 12px", fontSize: 12, color: "#94a3b8" }}>
+            <p style={{ margin: "0 0 12px", fontSize: 12, color: "var(--text-muted)" }}>
               No comments yet — be the first.
             </p>
           ) : (
@@ -693,7 +693,7 @@ function PostCard({
                         placeholder={`Reply to ${c.user.fullName}…`}
                         style={{
                           flex: 1,
-                          border: "1px solid #e2e8f0",
+                          border: "1px solid var(--border)",
                           borderRadius: 8,
                           padding: "7px 11px",
                           fontSize: 12,
@@ -723,7 +723,7 @@ function PostCard({
                         style={{
                           background: "none",
                           border: "none",
-                          color: "#94a3b8",
+                          color: "var(--text-muted)",
                           cursor: "pointer",
                           display: "flex",
                           alignItems: "center",
@@ -753,7 +753,7 @@ function PostCard({
                 placeholder="Write a comment…"
                 style={{
                   flex: 1,
-                  border: "1px solid #e2e8f0",
+                  border: "1px solid var(--border)",
                   borderRadius: 8,
                   padding: "8px 12px",
                   fontSize: 13,
@@ -782,7 +782,7 @@ function PostCard({
               </button>
             </div>
           ) : (
-            <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>
+            <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
               <Link href="/login" style={{ color: "#0ea5e9", fontWeight: 600 }}>
                 Sign in
               </Link>{" "}
@@ -843,7 +843,7 @@ function ReportModal({
         style={{
           width: "100%",
           maxWidth: 420,
-          background: "#fff",
+          background: "var(--surface)",
           borderRadius: 18,
           padding: 28,
           boxShadow: "0 24px 80px rgba(15,23,42,0.18)",
@@ -852,26 +852,26 @@ function ReportModal({
         {done ? (
           <div style={{ textAlign: "center", padding: "16px 0" }}>
             <div style={{ fontSize: 32, marginBottom: 10 }}>✓</div>
-            <p style={{ margin: 0, fontWeight: 700, color: "#0f172a" }}>Report submitted</p>
-            <p style={{ margin: "6px 0 0", fontSize: 13, color: "#64748b" }}>
+            <p style={{ margin: 0, fontWeight: 700, color: "var(--text)" }}>Report submitted</p>
+            <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--text-muted)" }}>
               Our team will review it shortly.
             </p>
           </div>
         ) : (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 18 }}>
-              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "var(--text)" }}>
                 Report this post
               </h3>
               <button
                 type="button"
                 onClick={onClose}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
               >
                 <FiX size={18} />
               </button>
             </div>
-            <p style={{ margin: "0 0 14px", fontSize: 13, color: "#64748b" }}>
+            <p style={{ margin: "0 0 14px", fontSize: 13, color: "var(--text-muted)" }}>
               Why are you reporting this post?
             </p>
             <div style={{ display: "grid", gap: 8, marginBottom: 20 }}>
@@ -884,12 +884,12 @@ function ReportModal({
                     gap: 10,
                     padding: "10px 14px",
                     borderRadius: 8,
-                    border: `1px solid ${reason === r ? "#0ea5e9" : "#e2e8f0"}`,
-                    background: reason === r ? "rgba(14,165,233,0.06)" : "#fff",
+                    border: `1px solid ${reason === r ? "#0ea5e9" : "var(--border)"}`,
+                    background: reason === r ? "rgba(14,165,233,0.06)" : "var(--surface)",
                     cursor: "pointer",
                     fontSize: 13,
                     fontWeight: 500,
-                    color: "#334155",
+                    color: "var(--text)",
                   }}
                 >
                   <input
@@ -913,8 +913,8 @@ function ReportModal({
                 padding: "12px",
                 borderRadius: 10,
                 border: "none",
-                background: reason ? "#dc2626" : "#e2e8f0",
-                color: reason ? "#fff" : "#94a3b8",
+                background: reason ? "#dc2626" : "var(--border)",
+                color: reason ? "#fff" : "var(--text-muted)",
                 fontWeight: 700,
                 fontSize: 14,
                 cursor: reason ? "pointer" : "default",
@@ -938,7 +938,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
         margin: "0 0 10px",
         fontSize: 11,
         fontWeight: 700,
-        color: "#94a3b8",
+        color: "var(--text-muted)",
         textTransform: "uppercase",
         letterSpacing: 1,
       }}
@@ -1272,7 +1272,7 @@ export default function FeedClient({
                 margin: 0,
                 fontSize: 11,
                 fontWeight: 700,
-                color: "#94a3b8",
+                color: "var(--text-muted)",
                 textTransform: "uppercase",
                 letterSpacing: 1,
               }}
@@ -1297,12 +1297,12 @@ export default function FeedClient({
             {filteredDiscover.length === 0 && !loadingMore ? (
               <article
                 style={{
-                  background: "#fff",
-                  border: "1px solid #eef0f4",
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
                   borderRadius: 14,
                   padding: 32,
                   textAlign: "center",
-                  color: "#94a3b8",
+                  color: "var(--text-muted)",
                   fontSize: 13,
                 }}
               >
@@ -1323,7 +1323,7 @@ export default function FeedClient({
               style={{
                 textAlign: "center",
                 padding: "20px 0",
-                color: "#94a3b8",
+                color: "var(--text-muted)",
                 fontSize: 13,
                 display: "flex",
                 justifyContent: "center",
@@ -1336,7 +1336,7 @@ export default function FeedClient({
                   width: 16,
                   height: 16,
                   borderRadius: "50%",
-                  border: "2px solid #e2e8f0",
+                  border: "2px solid var(--border)",
                   borderTopColor: "#0ea5e9",
                   animation: "spin 0.7s linear infinite",
                   display: "inline-block",
@@ -1351,7 +1351,7 @@ export default function FeedClient({
               style={{
                 textAlign: "center",
                 padding: "20px 0",
-                color: "#94a3b8",
+                color: "var(--text-muted)",
                 fontSize: 12,
               }}
             >
@@ -1365,17 +1365,17 @@ export default function FeedClient({
           {/* Suggested advisors */}
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 16,
             }}
           >
-            <h3 style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
               Suggested advisors
             </h3>
             {suggestedAdvisors.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 12, color: "#94a3b8" }}>No suggestions right now.</p>
+              <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>No suggestions right now.</p>
             ) : (
               <div style={{ display: "grid", gap: 10 }}>
                 {suggestedAdvisors.map((sa) => {
@@ -1407,12 +1407,12 @@ export default function FeedClient({
                       </Link>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div
-                          style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 700, color: "#0f172a" }}
+                          style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 700, color: "var(--text)" }}
                         >
                           {sa.user?.fullName}
                           <CheckCircle size={11} style={{ color: "#10b981" }} />
                         </div>
-                        <div style={{ fontSize: 10, color: "#64748b" }}>
+                        <div style={{ fontSize: 10, color: "var(--text-muted)" }}>
                           {sa.user?._count.followers ?? 0} followers
                         </div>
                       </div>
@@ -1424,9 +1424,9 @@ export default function FeedClient({
                           style={{
                             padding: "4px 10px",
                             borderRadius: 8,
-                            border: isFollowing ? "1px solid #e2e8f0" : "1px solid #0ea5e9",
-                            background: isFollowing ? "#f8fafc" : "rgba(14,165,233,0.08)",
-                            color: isFollowing ? "#64748b" : "#0ea5e9",
+                            border: isFollowing ? "1px solid var(--border)" : "1px solid #0ea5e9",
+                            background: isFollowing ? "var(--surface-2)" : "rgba(14,165,233,0.08)",
+                            color: isFollowing ? "var(--text-muted)" : "#0ea5e9",
                             fontSize: 11,
                             fontWeight: 700,
                             cursor: "pointer",
@@ -1448,8 +1448,8 @@ export default function FeedClient({
                 marginTop: 14,
                 padding: "8px 12px",
                 borderRadius: 8,
-                background: "#f1f5f9",
-                color: "#0f172a",
+                background: "var(--surface-2)",
+                color: "var(--text)",
                 fontSize: 12,
                 fontWeight: 700,
                 textDecoration: "none",
@@ -1462,8 +1462,8 @@ export default function FeedClient({
           {/* Trending */}
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 16,
             }}
@@ -1473,7 +1473,7 @@ export default function FeedClient({
                 margin: "0 0 12px",
                 fontSize: 13,
                 fontWeight: 700,
-                color: "#0f172a",
+                color: "var(--text)",
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
@@ -1482,7 +1482,7 @@ export default function FeedClient({
               <FiTrendingUp size={14} /> Trending this week
             </h3>
             {trendingSymbols.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 12, color: "#94a3b8" }}>Nothing trending yet.</p>
+              <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>Nothing trending yet.</p>
             ) : (
               <div style={{ display: "grid", gap: 8 }}>
                 {trendingSymbols.map((s) => (
@@ -1495,14 +1495,14 @@ export default function FeedClient({
                       alignItems: "center",
                       padding: "8px 12px",
                       borderRadius: 8,
-                      background: "#f8fafc",
+                      background: "var(--surface-2)",
                       textDecoration: "none",
                     }}
                   >
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>
                       {s.marketSymbol}
                     </span>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#64748b" }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)" }}>
                       {s._count._all} posts
                     </span>
                   </Link>
@@ -1547,7 +1547,7 @@ export default function FeedClient({
                   display: "inline-block",
                   padding: "8px 16px",
                   borderRadius: 8,
-                  background: "#fff",
+                  background: "var(--surface)",
                   color: "#064e3b",
                   fontWeight: 800,
                   fontSize: 12,

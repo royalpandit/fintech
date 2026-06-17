@@ -112,13 +112,13 @@ export default async function PortfolioPage() {
             margin: 0,
             fontSize: 22,
             fontWeight: 800,
-            color: "#0f172a",
+            color: "var(--text)",
             letterSpacing: -0.5,
           }}
         >
           Portfolio
         </h1>
-        <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+        <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
           {isAuthed
             ? "Paper holdings + connected broker portfolio"
             : "Connect your broker for AI-powered portfolio insights"}
@@ -236,7 +236,7 @@ export default async function PortfolioPage() {
           {/* Stats strip */}
           <div className="user-stat-grid" style={{ marginBottom: 18 }}>
             {[
-              { label: "Total Value", value: formatINR(totalValue, true), color: "#0f172a" },
+              { label: "Total Value", value: formatINR(totalValue, true), color: "var(--text)" },
               {
                 label: "Day Change",
                 value: `${dayChange >= 0 ? "+" : ""}${formatINR(dayChange, true)}`,
@@ -256,13 +256,13 @@ export default async function PortfolioPage() {
               <article
                 key={s.label}
                 style={{
-                  background: "#fff",
-                  border: "1px solid #eef0f4",
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
                   borderRadius: 14,
                   padding: 16,
                 }}
               >
-                <p style={{ margin: 0, fontSize: 11, color: "#64748b", fontWeight: 500, marginBottom: 6 }}>
+                <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", fontWeight: 500, marginBottom: 6 }}>
                   {s.label}
                 </p>
                 <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: -0.5 }}>
@@ -273,8 +273,8 @@ export default async function PortfolioPage() {
           </div>
 
           <div className="user-split-chart">
-            <article style={{ background: "#fff", border: "1px solid #eef0f4", borderRadius: 14, padding: 18 }}>
-              <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+            <article style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: 18 }}>
+              <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
                 Portfolio Value — 90 days
               </h3>
               <AreaChart
@@ -285,8 +285,8 @@ export default async function PortfolioPage() {
               />
             </article>
 
-            <article style={{ background: "#fff", border: "1px solid #eef0f4", borderRadius: 14, padding: 18 }}>
-              <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+            <article style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: 18 }}>
+              <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
                 Sector Allocation
               </h3>
               {sectorTotal === 0 ? (
@@ -296,7 +296,7 @@ export default async function PortfolioPage() {
                     height: 220,
                     display: "grid",
                     placeItems: "center",
-                    color: "#94a3b8",
+                    color: "var(--text-muted)",
                     fontSize: 12,
                   }}
                 >
@@ -317,27 +317,27 @@ export default async function PortfolioPage() {
           {/* Holdings table */}
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 0,
               overflow: "hidden",
             }}
           >
-            <div style={{ padding: "16px 18px", borderBottom: "1px solid #eef0f4" }}>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+            <div style={{ padding: "16px 18px", borderBottom: "1px solid var(--border)" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
                 Holdings ({holdings.length})
               </h3>
             </div>
             {holdings.length === 0 ? (
-              <p style={{ margin: 0, padding: 32, textAlign: "center", color: "#94a3b8" }}>
+              <p style={{ margin: 0, padding: 32, textAlign: "center", color: "var(--text-muted)" }}>
                 No holdings synced yet.
               </p>
             ) : (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
                   <thead>
-                    <tr style={{ background: "#f8fafc" }}>
+                    <tr style={{ background: "var(--surface-2)" }}>
                       {["Symbol", "Sector", "Qty", "Avg Price", "Current", "Value", "P&L", "P&L %"].map(
                         (h) => (
                           <th
@@ -347,10 +347,10 @@ export default async function PortfolioPage() {
                               padding: "10px 18px",
                               fontWeight: 600,
                               fontSize: 10,
-                              color: "#64748b",
+                              color: "var(--text-muted)",
                               textTransform: "uppercase",
                               letterSpacing: 0.6,
-                              borderBottom: "1px solid #eef0f4",
+                              borderBottom: "1px solid var(--border)",
                             }}
                           >
                             {h}
@@ -370,7 +370,7 @@ export default async function PortfolioPage() {
                       const positive = pnl >= 0;
                       const color = SYMBOL_COLORS[h.symbol] ?? "#64748b";
                       return (
-                        <tr key={h.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <tr key={h.id} style={{ borderBottom: "1px solid var(--border)" }}>
                           <td style={{ padding: "12px 18px" }}>
                             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                               <div
@@ -391,7 +391,7 @@ export default async function PortfolioPage() {
                               <strong>{h.symbol}</strong>
                             </div>
                           </td>
-                          <td style={{ padding: "12px 18px", color: "#64748b" }}>
+                          <td style={{ padding: "12px 18px", color: "var(--text-muted)" }}>
                             {h.sector ?? "—"}
                           </td>
                           <td style={{ padding: "12px 18px", textAlign: "right" }}>{qty}</td>
@@ -438,15 +438,15 @@ export default async function PortfolioPage() {
           {/* ── Live Market Chart ── */}
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 18,
               marginTop: 14,
             }}
           >
             <h3
-              style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}
+              style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "var(--text)" }}
             >
               Live Chart — OHLCV
             </h3>
@@ -457,8 +457,8 @@ export default async function PortfolioPage() {
           {liveHoldings.length > 0 && (
             <article
               style={{
-                background: "#fff",
-                border: "1px solid #eef0f4",
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 14,
                 padding: 0,
                 overflow: "hidden",
@@ -468,20 +468,20 @@ export default async function PortfolioPage() {
               <div
                 style={{
                   padding: "16px 18px",
-                  borderBottom: "1px solid #eef0f4",
+                  borderBottom: "1px solid var(--border)",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
                 }}
               >
-                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
                   Angel One Holdings — Live ({liveHoldings.length})
                 </h3>
                 <span
                   style={{
                     padding: "3px 9px",
                     borderRadius: 999,
-                    background: "#dcfce7",
+                    background: "rgba(34,197,94,0.12)",
                     color: "#16a34a",
                     fontSize: 10,
                     fontWeight: 700,
@@ -493,7 +493,7 @@ export default async function PortfolioPage() {
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
                   <thead>
-                    <tr style={{ background: "#f8fafc" }}>
+                    <tr style={{ background: "var(--surface-2)" }}>
                       {["Symbol", "Qty", "Avg Price", "LTP", "P&L", "P&L %"].map((h) => (
                         <th
                           key={h}
@@ -502,10 +502,10 @@ export default async function PortfolioPage() {
                             padding: "10px 18px",
                             fontWeight: 600,
                             fontSize: 10,
-                            color: "#64748b",
+                            color: "var(--text-muted)",
                             textTransform: "uppercase",
                             letterSpacing: 0.6,
-                            borderBottom: "1px solid #eef0f4",
+                            borderBottom: "1px solid var(--border)",
                           }}
                         >
                           {h}
@@ -517,10 +517,10 @@ export default async function PortfolioPage() {
                     {liveHoldings.map((h) => {
                       const positive = h.profitandloss >= 0;
                       return (
-                        <tr key={h.isin} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <tr key={h.isin} style={{ borderBottom: "1px solid var(--border)" }}>
                           <td style={{ padding: "12px 18px" }}>
                             <strong>{h.symbolname || h.tradingsymbol}</strong>
-                            <div style={{ fontSize: 10, color: "#94a3b8" }}>{h.exchange}</div>
+                            <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{h.exchange}</div>
                           </td>
                           <td style={{ padding: "12px 18px", textAlign: "right" }}>
                             {h.quantity}

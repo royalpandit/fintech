@@ -143,11 +143,11 @@ export default function StockPicksAdminPage() {
   const f = (k: string, v: string | number | boolean) => setForm((p) => ({ ...p, [k]: v }));
 
   return (
-    <div style={{ padding: "28px 32px", minHeight: "100vh", background: "#f8fafc" }}>
+    <div style={{ padding: "28px 32px", minHeight: "100vh", background: "var(--surface-2)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#0f172a" }}>AI Stock Picks</h1>
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "var(--text)" }}>AI Stock Picks</h1>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-muted)" }}>
             Create strategy groups, add stocks, and publish to the mobile app
           </p>
         </div>
@@ -170,7 +170,7 @@ export default function StockPicksAdminPage() {
       </div>
 
       {loading ? (
-        <div style={{ color: "#94a3b8", padding: 40 }}>Loading…</div>
+        <div style={{ color: "var(--text-muted)", padding: 40 }}>Loading…</div>
       ) : groups.length === 0 ? (
         <div style={{ textAlign: "center", padding: "80px 0" }}>
           <div
@@ -188,10 +188,10 @@ export default function StockPicksAdminPage() {
           >
             📊
           </div>
-          <p style={{ fontSize: 15, fontWeight: 600, color: "#3c4043", margin: "0 0 6px" }}>
+          <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", margin: "0 0 6px" }}>
             No stock pick groups yet
           </p>
-          <p style={{ fontSize: 13, color: "#5f6368", margin: 0 }}>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>
             Create your first group (e.g. Tech Titans, Dividend Kings)
           </p>
         </div>
@@ -201,9 +201,9 @@ export default function StockPicksAdminPage() {
             <div
               key={g.id}
               style={{
-                background: "#fff",
+                background: "var(--surface)",
                 borderRadius: 12,
-                border: "1px solid #e8eaed",
+                border: "1px solid var(--border)",
                 padding: "18px 22px",
                 display: "flex",
                 alignItems: "center",
@@ -214,7 +214,7 @@ export default function StockPicksAdminPage() {
               <span style={{ fontSize: 28 }}>{g.iconEmoji}</span>
               <div style={{ flex: 1, minWidth: 200 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontWeight: 700, fontSize: 15, color: "#202124" }}>{g.name}</span>
+                  <span style={{ fontWeight: 700, fontSize: 15, color: "var(--text)" }}>{g.name}</span>
                   {!g.isPublished && (
                     <span
                       style={{
@@ -244,7 +244,7 @@ export default function StockPicksAdminPage() {
                     </span>
                   )}
                 </div>
-                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#5f6368" }}>
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--text-muted)" }}>
                   {g.category || "Uncategorized"} · {g.stockCount} stocks ·{" "}
                   {g.performancePct != null ? `${g.performancePct >= 0 ? "+" : ""}${g.performancePct}%` : "—"} vs
                   bench {g.benchmarkPct != null ? `${g.benchmarkPct}%` : "—"}
@@ -256,9 +256,9 @@ export default function StockPicksAdminPage() {
                   style={{
                     fontSize: 12,
                     padding: "6px 14px",
-                    border: "1px solid #dadce0",
+                    border: "1px solid var(--border)",
                     borderRadius: 20,
-                    background: "#fff",
+                    background: "var(--surface)",
                     fontWeight: 600,
                     color: "#1a73e8",
                     textDecoration: "none",
@@ -272,12 +272,12 @@ export default function StockPicksAdminPage() {
                   style={{
                     fontSize: 12,
                     padding: "6px 14px",
-                    border: "1px solid #dadce0",
+                    border: "1px solid var(--border)",
                     borderRadius: 20,
-                    background: "#fff",
+                    background: "var(--surface)",
                     cursor: "pointer",
                     fontWeight: 600,
-                    color: g.isPublished ? "#1e8e3e" : "#5f6368",
+                    color: g.isPublished ? "#1e8e3e" : "var(--text-muted)",
                   }}
                 >
                   {g.isPublished ? "Unpublish" : "Publish"}
@@ -288,9 +288,9 @@ export default function StockPicksAdminPage() {
                   style={{
                     fontSize: 12,
                     padding: "6px 14px",
-                    border: "1px solid #dadce0",
+                    border: "1px solid var(--border)",
                     borderRadius: 20,
-                    background: "#fff",
+                    background: "var(--surface)",
                     cursor: "pointer",
                     fontWeight: 600,
                     color: "#1a73e8",
@@ -306,7 +306,7 @@ export default function StockPicksAdminPage() {
                     padding: "6px 14px",
                     border: "1px solid #fad2cf",
                     borderRadius: 20,
-                    background: "#fff",
+                    background: "var(--surface)",
                     cursor: "pointer",
                     fontWeight: 600,
                     color: "#c5221f",
@@ -336,7 +336,7 @@ export default function StockPicksAdminPage() {
               width: "100%",
               maxWidth: 480,
               height: "100%",
-              background: "#fff",
+              background: "var(--surface)",
               overflowY: "auto",
               padding: 24,
             }}
@@ -354,7 +354,7 @@ export default function StockPicksAdminPage() {
               { key: "description", label: "Description", placeholder: "Top tech large caps…", multiline: true },
             ].map((field) => (
               <label key={field.key} style={{ display: "block", marginBottom: 14 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#5f6368" }}>{field.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>{field.label}</span>
                 {field.multiline ? (
                   <textarea
                     value={(form as unknown as Record<string, string>)[field.key]}
@@ -365,7 +365,7 @@ export default function StockPicksAdminPage() {
                       marginTop: 6,
                       padding: 10,
                       borderRadius: 8,
-                      border: "1px solid #dadce0",
+                      border: "1px solid var(--border)",
                       fontSize: 14,
                       boxSizing: "border-box",
                     }}
@@ -380,7 +380,7 @@ export default function StockPicksAdminPage() {
                       marginTop: 6,
                       padding: 10,
                       borderRadius: 8,
-                      border: "1px solid #dadce0",
+                      border: "1px solid var(--border)",
                       fontSize: 14,
                       boxSizing: "border-box",
                     }}
@@ -390,7 +390,7 @@ export default function StockPicksAdminPage() {
             ))}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
               <label style={{ display: "block" }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#5f6368" }}>Performance %</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>Performance %</span>
                 <input
                   type="number"
                   step="0.01"
@@ -401,12 +401,12 @@ export default function StockPicksAdminPage() {
                     marginTop: 6,
                     padding: 10,
                     borderRadius: 8,
-                    border: "1px solid #dadce0",
+                    border: "1px solid var(--border)",
                   }}
                 />
               </label>
               <label style={{ display: "block" }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#5f6368" }}>Benchmark %</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>Benchmark %</span>
                 <input
                   type="number"
                   step="0.01"
@@ -417,13 +417,13 @@ export default function StockPicksAdminPage() {
                     marginTop: 6,
                     padding: 10,
                     borderRadius: 8,
-                    border: "1px solid #dadce0",
+                    border: "1px solid var(--border)",
                   }}
                 />
               </label>
             </div>
             <label style={{ display: "block", marginBottom: 14 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#5f6368" }}>Sort Order</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>Sort Order</span>
               <input
                 type="number"
                 value={form.sortOrder}
@@ -433,7 +433,7 @@ export default function StockPicksAdminPage() {
                   marginTop: 6,
                   padding: 10,
                   borderRadius: 8,
-                  border: "1px solid #dadce0",
+                  border: "1px solid var(--border)",
                 }}
               />
             </label>
@@ -453,8 +453,8 @@ export default function StockPicksAdminPage() {
                   flex: 1,
                   padding: 12,
                   borderRadius: 8,
-                  border: "1px solid #dadce0",
-                  background: "#fff",
+                  border: "1px solid var(--border)",
+                  background: "var(--surface)",
                   cursor: "pointer",
                 }}
               >
@@ -493,7 +493,7 @@ export default function StockPicksAdminPage() {
             placeItems: "center",
           }}
         >
-          <div style={{ background: "#fff", borderRadius: 12, padding: 24, maxWidth: 360 }}>
+          <div style={{ background: "var(--surface)", borderRadius: 12, padding: 24, maxWidth: 360 }}>
             <p style={{ margin: "0 0 16px", fontWeight: 600 }}>Delete this group and all its stocks?</p>
             <div style={{ display: "flex", gap: 10 }}>
               <button type="button" onClick={() => setDeleteId(null)} style={{ flex: 1, padding: 10 }}>

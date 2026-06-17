@@ -142,7 +142,7 @@ export default async function AdvisorCoursesPage() {
                   style={{
                     margin: 0,
                     fontSize: 13,
-                    color: "#64748b",
+                    color: "var(--text-muted)",
                     display: "-webkit-box",
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: "vertical",
@@ -159,7 +159,7 @@ export default async function AdvisorCoursesPage() {
                     display: "flex",
                     justifyContent: "space-between",
                     fontSize: 12,
-                    color: "#475569",
+                    color: "var(--text)",
                   }}
                 >
                   <span>
@@ -171,7 +171,7 @@ export default async function AdvisorCoursesPage() {
                     {course._count.lessons} lessons · {course._count.enrollments} enrolled
                   </span>
                 </div>
-                <div style={{ marginTop: 6, fontSize: 11, color: "#64748b", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <div style={{ marginTop: 6, fontSize: 11, color: "var(--text-muted)", display: "inline-flex", alignItems: "center", gap: 4 }}>
                   {course.isPublished ? (
                     <>
                       <FiGlobe size={11} /> Live

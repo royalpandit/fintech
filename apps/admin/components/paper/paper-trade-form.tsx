@@ -59,7 +59,7 @@ export default function PaperTradeForm({ defaultSymbol = "", compact = false }: 
     height: compact ? 36 : 40,
     padding: "0 10px",
     borderRadius: 8,
-    border: "1px solid #eef0f4",
+    border: "1px solid var(--border)",
     fontSize: 12,
     fontWeight: 600,
     boxSizing: "border-box",

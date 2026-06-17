@@ -4,8 +4,8 @@ function SettingsCard() {
   return (
     <article
       style={{
-        background: "#fff",
-        border: "1px solid #eef0f4",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
         borderRadius: 14,
         padding: 20,
       }}

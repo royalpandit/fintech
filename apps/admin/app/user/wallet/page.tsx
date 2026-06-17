@@ -55,10 +55,10 @@ export default async function WalletPage() {
   return (
     <section>
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#0f172a", letterSpacing: -0.5 }}>
+        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "var(--text)", letterSpacing: -0.5 }}>
           Paper Wallet
         </h1>
-        <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+        <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
           Demo funds only — add virtual balance and place paper trades
         </p>
       </div>
@@ -66,16 +66,16 @@ export default async function WalletPage() {
       {!isAuthed ? (
         <article
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             padding: 48,
             textAlign: "center",
           }}
         >
-          <FiCreditCard size={36} style={{ color: "#94a3b8", marginBottom: 12 }} />
+          <FiCreditCard size={36} style={{ color: "var(--text-muted)", marginBottom: 12 }} />
           <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800 }}>Sign in for your paper wallet</h2>
-          <p style={{ margin: "0 0 18px", fontSize: 13, color: "#64748b" }}>
+          <p style={{ margin: "0 0 18px", fontSize: 13, color: "var(--text-muted)" }}>
             Practice trading with virtual money — no broker account required.
           </p>
           <Link
@@ -111,7 +111,7 @@ export default async function WalletPage() {
               {
                 label: "Total equity",
                 value: formatINR(summary?.totalEquity ?? Number(wallet?.balance ?? 0)),
-                color: "#0f172a",
+                color: "var(--text)",
               },
               {
                 label: "Total P&L",
@@ -122,13 +122,13 @@ export default async function WalletPage() {
               <article
                 key={s.label}
                 style={{
-                  background: "#fff",
-                  border: "1px solid #eef0f4",
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
                   borderRadius: 14,
                   padding: 16,
                 }}
               >
-                <p style={{ margin: 0, fontSize: 11, color: "#64748b", marginBottom: 6 }}>{s.label}</p>
+                <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", marginBottom: 6 }}>{s.label}</p>
                 <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</p>
               </article>
             ))}
@@ -138,13 +138,13 @@ export default async function WalletPage() {
             <WalletActions hasWallet={Boolean(wallet)} balance={Number(wallet?.balance ?? 0)} />
             <article
               style={{
-                background: "#fff",
-                border: "1px solid #eef0f4",
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 14,
                 padding: 20,
               }}
             >
-              <h2 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 800, color: "#0f172a" }}>
+              <h2 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 800, color: "var(--text)" }}>
                 Quick paper trade
               </h2>
               <PaperTradeForm />
@@ -168,8 +168,8 @@ export default async function WalletPage() {
 
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 0,
               overflow: "hidden",
@@ -178,26 +178,26 @@ export default async function WalletPage() {
             <div
               style={{
                 padding: "14px 18px",
-                borderBottom: "1px solid #eef0f4",
+                borderBottom: "1px solid var(--border)",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
               }}
             >
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: "#0f172a" }}>Recent activity</h3>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: "var(--text)" }}>Recent activity</h3>
               <Link href="/user/history?type=virtual" style={{ fontSize: 12, fontWeight: 700, color: "#0ea5e9" }}>
                 Full history →
               </Link>
             </div>
             {trades.length === 0 ? (
-              <p style={{ margin: 0, padding: 32, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+              <p style={{ margin: 0, padding: 32, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>
                 No trades yet. Add funds and place your first paper trade.
               </p>
             ) : (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
                   <thead>
-                    <tr style={{ background: "#f8fafc" }}>
+                    <tr style={{ background: "var(--surface-2)" }}>
                       {["Symbol", "Side", "Qty", "Price", "Value", "P&L", "When"].map((h) => (
                         <th
                           key={h}
@@ -205,7 +205,7 @@ export default async function WalletPage() {
                             textAlign: "left",
                             padding: "10px 18px",
                             fontSize: 10,
-                            color: "#64748b",
+                            color: "var(--text-muted)",
                             fontWeight: 600,
                             textTransform: "uppercase",
                           }}
@@ -220,7 +220,7 @@ export default async function WalletPage() {
                       .reverse()
                       .slice(0, 15)
                       .map((row) => (
-                        <tr key={row.id} style={{ borderTop: "1px solid #f1f5f9" }}>
+                        <tr key={row.id} style={{ borderTop: "1px solid var(--border)" }}>
                           <td style={{ padding: "12px 18px", fontWeight: 700 }}>{row.symbol}</td>
                           <td style={{ padding: "12px 18px", textTransform: "uppercase", fontSize: 10, fontWeight: 700 }}>
                             {row.side}
@@ -234,7 +234,7 @@ export default async function WalletPage() {
                               fontWeight: 700,
                               color:
                                 row.realizedPnL == null
-                                  ? "#94a3b8"
+                                  ? "var(--text-muted)"
                                   : row.realizedPnL >= 0
                                     ? "#16a34a"
                                     : "#dc2626",
@@ -244,7 +244,7 @@ export default async function WalletPage() {
                               ? `${row.realizedPnL >= 0 ? "+" : ""}${formatINR(row.realizedPnL)}`
                               : "—"}
                           </td>
-                          <td style={{ padding: "12px 18px", color: "#64748b", fontSize: 11 }}>
+                          <td style={{ padding: "12px 18px", color: "var(--text-muted)", fontSize: 11 }}>
                             {row.tradedAt.toLocaleString()}
                           </td>
                         </tr>

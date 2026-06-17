@@ -93,7 +93,7 @@ export default async function AdvisorProfilePage() {
               {profile?.verifiedAt && (
                 <div>
                   <p className="metric-label">Verified</p>
-                  <p style={{ margin: 0, fontSize: 13, color: "#334155" }}>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--text)" }}>
                     {profile.verifiedAt.toLocaleDateString()}
                     {profile.verifiedBy?.fullName ? ` by ${profile.verifiedBy.fullName}` : ""}
                   </p>
@@ -143,7 +143,7 @@ export default async function AdvisorProfilePage() {
             <tbody>
               {sessions.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ padding: 24, textAlign: "center", color: "#61708b" }}>
+                  <td colSpan={4} style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}>
                     No active sessions.
                   </td>
                 </tr>

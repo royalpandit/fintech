@@ -148,7 +148,7 @@ export default function PayoutRequestForm({
             style={{
               marginTop: 12,
               padding: "8px 10px",
-              background: "#fef2f2",
+              background: "rgba(239,68,68,0.12)",
               color: "#b91c1c",
               borderRadius: 8,
               fontSize: 13,
@@ -162,7 +162,7 @@ export default function PayoutRequestForm({
             style={{
               marginTop: 12,
               padding: "8px 10px",
-              background: "#f0fdf4",
+              background: "rgba(34,197,94,0.12)",
               color: "#047857",
               borderRadius: 8,
               fontSize: 13,

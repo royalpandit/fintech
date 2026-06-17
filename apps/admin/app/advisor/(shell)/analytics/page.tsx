@@ -153,8 +153,8 @@ export default async function AdvisorAnalyticsPage() {
                   const y = 180 - (tick / maxAccuracy) * 160;
                   return (
                     <g key={tick}>
-                      <line x1={10} x2={890} y1={y} y2={y} stroke="#e2e8f0" strokeDasharray="2 3" />
-                      <text x={0} y={y + 3} fontSize="10" fill="#94a3b8">
+                      <line x1={10} x2={890} y1={y} y2={y} stroke="var(--border)" strokeDasharray="2 3" />
+                      <text x={0} y={y + 3} fontSize="10" fill="var(--text-muted)">
                         {tick}%
                       </text>
                     </g>
@@ -186,7 +186,7 @@ export default async function AdvisorAnalyticsPage() {
                         {row._count._all} ({pct.toFixed(0)}%)
                       </span>
                     </div>
-                    <div style={{ height: 8, borderRadius: 999, background: "#eef2f7", overflow: "hidden" }}>
+                    <div style={{ height: 8, borderRadius: 999, background: "var(--surface-2)", overflow: "hidden" }}>
                       <div
                         style={{
                           width: `${pct}%`,
@@ -221,7 +221,7 @@ export default async function AdvisorAnalyticsPage() {
                       <span style={{ textTransform: "uppercase", fontWeight: 600 }}>{row.assetType}</span>
                       <span>{row._count._all}</span>
                     </div>
-                    <div style={{ height: 8, borderRadius: 999, background: "#eef2f7", overflow: "hidden" }}>
+                    <div style={{ height: 8, borderRadius: 999, background: "var(--surface-2)", overflow: "hidden" }}>
                       <div style={{ width: `${pct}%`, height: "100%", background: "#2563eb" }} />
                     </div>
                   </div>
@@ -277,7 +277,7 @@ export default async function AdvisorAnalyticsPage() {
             <tbody>
               {ranked.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: 24, textAlign: "center", color: "#61708b" }}>
+                  <td colSpan={6} style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}>
                     No approved posts yet.
                   </td>
                 </tr>

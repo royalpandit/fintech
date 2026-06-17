@@ -39,8 +39,8 @@ export default function HideCommentButton({ commentId }: { commentId: number }) 
         style={{
           padding: "6px 12px",
           borderRadius: 8,
-          border: "1px solid #fecaca",
-          background: "#fff",
+          border: "1px solid rgba(239,68,68,0.30)",
+          background: "var(--surface)",
           color: "#dc2626",
           fontSize: 12,
           fontWeight: 600,

@@ -83,7 +83,7 @@ export default async function AdvisorReportsPage() {
                     width: 44,
                     height: 44,
                     borderRadius: 10,
-                    background: "#eff6ff",
+                    background: "rgba(14,165,233,0.12)",
                     color: "#2563eb",
                     display: "grid",
                     placeItems: "center",
@@ -116,7 +116,7 @@ export default async function AdvisorReportsPage() {
                   style={{
                     margin: "12px 0 0",
                     fontSize: 13,
-                    color: "#64748b",
+                    color: "var(--text-muted)",
                     display: "-webkit-box",
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: "vertical",
@@ -136,7 +136,7 @@ export default async function AdvisorReportsPage() {
                   justifyContent: "space-between",
                   alignItems: "center",
                   fontSize: 12,
-                  color: "#475569",
+                  color: "var(--text-muted)",
                 }}
               >
                 <a

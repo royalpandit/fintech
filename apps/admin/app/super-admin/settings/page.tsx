@@ -96,7 +96,7 @@ export default async function SettingsPage() {
           <h3 style={{ marginTop: 0 }}>Live System Health</h3>
           <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
             {healthRows.map((item) => (
-              <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 12, border: "1px solid var(--border)", background: "#fbfdff" }}>
+              <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 12, border: "1px solid var(--border)", background: "var(--surface-2)" }}>
                 <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{item.key}</span>
                 <span className={`tag ${item.tone === "danger" ? "danger" : "success"}`}>{item.value}</span>
               </div>

@@ -170,13 +170,13 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
             margin: 0,
             fontSize: 22,
             fontWeight: 800,
-            color: "#0f172a",
+            color: "var(--text)",
             letterSpacing: -0.5,
           }}
         >
           Trade History
         </h1>
-        <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+        <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
           {isAuthed
             ? "Paper trades with per-trade P&L · filter by date or month"
             : "Sign up to track every paper and broker trade"}
@@ -186,17 +186,17 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
       {!isAuthed ? (
         <article
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             padding: 48,
             textAlign: "center",
           }}
         >
-          <div style={{ fontSize: 36, marginBottom: 12, color: "#94a3b8", display: "flex", justifyContent: "center" }}>
+          <div style={{ fontSize: 36, marginBottom: 12, color: "var(--text-muted)", display: "flex", justifyContent: "center" }}>
             <FiClock size={36} />
           </div>
-          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>
+          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "var(--text)" }}>
             Sign in to see your trade history
           </h2>
           <Link
@@ -219,7 +219,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
         <>
           <div className="user-stat-grid" style={{ marginBottom: 18 }}>
             {[
-              { label: "Trades (view)", value: filtered.length.toLocaleString(), color: "#0f172a" },
+              { label: "Trades (view)", value: filtered.length.toLocaleString(), color: "var(--text)" },
               {
                 label: "Total P&L (all time)",
                 value: `${summary && summary.totalPnL >= 0 ? "+" : ""}${formatINR(summary?.totalPnL ?? 0)}`,
@@ -239,13 +239,13 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
               <article
                 key={s.label}
                 style={{
-                  background: "#fff",
-                  border: "1px solid #eef0f4",
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
                   borderRadius: 14,
                   padding: 16,
                 }}
               >
-                <p style={{ margin: 0, fontSize: 11, color: "#64748b", marginBottom: 6 }}>{s.label}</p>
+                <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", marginBottom: 6 }}>{s.label}</p>
                 <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</p>
               </article>
             ))}
@@ -258,22 +258,22 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
           <article
             className="user-page-table-wrap"
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 0,
               overflow: "hidden",
             }}
           >
             {filtered.length === 0 ? (
-              <p style={{ margin: 0, padding: 48, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+              <p style={{ margin: 0, padding: 48, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>
                 No trades match these filters.
               </p>
             ) : (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
                   <thead>
-                    <tr style={{ background: "#f8fafc" }}>
+                    <tr style={{ background: "var(--surface-2)" }}>
                       {["Type", "Date", "Symbol", "Side", "Qty", "Price", "Value", "P&L", "When"].map((h) => (
                         <th
                           key={h}
@@ -281,7 +281,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
                             textAlign: "left",
                             padding: "10px 18px",
                             fontSize: 10,
-                            color: "#64748b",
+                            color: "var(--text-muted)",
                             fontWeight: 600,
                             textTransform: "uppercase",
                           }}
@@ -293,7 +293,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
                   </thead>
                   <tbody>
                     {filtered.map((row) => (
-                      <tr key={row.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <tr key={row.id} style={{ borderBottom: "1px solid var(--border)" }}>
                         <td style={{ padding: "12px 18px" }}>
                           <span
                             style={{
@@ -308,7 +308,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
                             {row.kind}
                           </span>
                         </td>
-                        <td style={{ padding: "12px 18px", fontSize: 11, color: "#64748b" }}>
+                        <td style={{ padding: "12px 18px", fontSize: 11, color: "var(--text-muted)" }}>
                           {row.at.toLocaleDateString("en-IN")}
                         </td>
                         <td style={{ padding: "12px 18px", fontWeight: 700 }}>{row.symbol}</td>
@@ -335,7 +335,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
                             fontWeight: 700,
                             color:
                               row.realizedPnL == null
-                                ? "#94a3b8"
+                                ? "var(--text-muted)"
                                 : row.realizedPnL >= 0
                                   ? "#16a34a"
                                   : "#dc2626",
@@ -345,7 +345,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
                             ? `${row.realizedPnL >= 0 ? "+" : ""}${formatINR(row.realizedPnL)}`
                             : "—"}
                         </td>
-                        <td style={{ padding: "12px 18px", color: "#64748b", fontSize: 11 }}>
+                        <td style={{ padding: "12px 18px", color: "var(--text-muted)", fontSize: 11 }}>
                           {relTime(row.at)}
                         </td>
                       </tr>

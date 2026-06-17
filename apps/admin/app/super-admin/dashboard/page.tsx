@@ -296,13 +296,13 @@ export default async function SuperAdminDashboardPage({
                   margin: 0,
                   fontSize: 26,
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text)",
                   letterSpacing: -0.6,
                 }}
               >
                 Control Tower
               </h1>
-              <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+              <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
                 Live operational intelligence across growth, revenue, and compliance
               </p>
             </div>
@@ -411,7 +411,7 @@ export default async function SuperAdminDashboardPage({
                     height: 240,
                     display: "grid",
                     placeItems: "center",
-                    color: "#94a3b8",
+                    color: "var(--text-muted)",
                     fontSize: 13,
                   }}
                 >
@@ -441,7 +441,7 @@ export default async function SuperAdminDashboardPage({
                 style={{
                   textAlign: "center",
                   padding: 32,
-                  color: "#94a3b8",
+                  color: "var(--text-muted)",
                   fontSize: 13,
                   margin: 0,
                 }}
@@ -458,7 +458,7 @@ export default async function SuperAdminDashboardPage({
               >
                 <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
                   <thead>
-                    <tr style={{ color: "#64748b" }}>
+                    <tr style={{ color: "var(--text-muted)" }}>
                       {["Advisor", "SEBI ID", "Subscribers", "30d Earnings", ""].map((h) => (
                         <th
                           key={h}
@@ -469,7 +469,7 @@ export default async function SuperAdminDashboardPage({
                             fontSize: 11,
                             textTransform: "uppercase",
                             letterSpacing: 0.6,
-                            borderBottom: "1px solid #eef0f4",
+                            borderBottom: "1px solid var(--border)",
                           }}
                         >
                           {h}
@@ -485,7 +485,7 @@ export default async function SuperAdminDashboardPage({
                       return (
                         <tr
                           key={row.advisorUserId}
-                          style={{ borderBottom: "1px solid #f1f5f9" }}
+                          style={{ borderBottom: "1px solid var(--border)" }}
                         >
                           <td style={{ padding: "12px 12px 12px 0" }}>
                             <Link
@@ -494,7 +494,7 @@ export default async function SuperAdminDashboardPage({
                                 display: "flex",
                                 gap: 10,
                                 alignItems: "center",
-                                color: "#0f172a",
+                                color: "var(--text)",
                                 textDecoration: "none",
                               }}
                             >
@@ -526,7 +526,7 @@ export default async function SuperAdminDashboardPage({
                               padding: "12px 12px 12px 0",
                               fontFamily: "monospace",
                               fontSize: 11,
-                              color: "#475569",
+                              color: "var(--text-muted)",
                             }}
                           >
                             {u?.advisorProfile?.sebiRegistrationNo ?? "—"}
@@ -584,7 +584,7 @@ export default async function SuperAdminDashboardPage({
                   margin: 0,
                   textAlign: "center",
                   fontSize: 12,
-                  color: "#94a3b8",
+                  color: "var(--text-muted)",
                   padding: "20px 0",
                 }}
               >
@@ -607,7 +607,7 @@ export default async function SuperAdminDashboardPage({
                       gap: 10,
                       alignItems: "center",
                       padding: "10px 0",
-                      borderBottom: "1px solid #f1f5f9",
+                      borderBottom: "1px solid var(--border)",
                     }}
                   >
                     <div
@@ -631,7 +631,7 @@ export default async function SuperAdminDashboardPage({
                         style={{
                           fontSize: 12,
                           fontWeight: 700,
-                          color: "#0f172a",
+                          color: "var(--text)",
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -639,7 +639,7 @@ export default async function SuperAdminDashboardPage({
                       >
                         {u.fullName}
                       </div>
-                      <div style={{ fontSize: 10, color: "#64748b" }}>
+                      <div style={{ fontSize: 10, color: "var(--text-muted)" }}>
                         {u.role} · {relTime(u.createdAt)}
                       </div>
                     </div>
@@ -665,7 +665,7 @@ export default async function SuperAdminDashboardPage({
                   margin: 0,
                   textAlign: "center",
                   fontSize: 12,
-                  color: "#94a3b8",
+                  color: "var(--text-muted)",
                   padding: "20px 0",
                 }}
               >
@@ -684,7 +684,7 @@ export default async function SuperAdminDashboardPage({
                     key={log.id}
                     style={{
                       padding: "10px 0",
-                      borderBottom: "1px solid #f1f5f9",
+                      borderBottom: "1px solid var(--border)",
                     }}
                   >
                     <div
@@ -707,14 +707,14 @@ export default async function SuperAdminDashboardPage({
                         style={{
                           fontSize: 12,
                           fontWeight: 700,
-                          color: "#0f172a",
+                          color: "var(--text)",
                           textTransform: "capitalize",
                         }}
                       >
                         {log.action.replace(/_/g, " ")}
                       </div>
                     </div>
-                    <div style={{ fontSize: 11, color: "#64748b" }}>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
                       {log.actor?.fullName ?? "System"} · {log.module} ·{" "}
                       {relTime(log.createdAt)}
                     </div>

@@ -98,13 +98,13 @@ export default async function SuperAdminMarketPostsPage({
               margin: 0,
               fontSize: 26,
               fontWeight: 800,
-              color: "#0f172a",
+              color: "var(--text)",
               letterSpacing: -0.6,
             }}
           >
             Market Posts
           </h1>
-          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
             Platform-wide moderation of advisor sentiment posts
           </p>
         </div>
@@ -139,7 +139,7 @@ export default async function SuperAdminMarketPostsPage({
                 className="stat-card"
                 style={{
                   cursor: "pointer",
-                  borderColor: status === t.key ? t.color : "#eef0f4",
+                  borderColor: status === t.key ? t.color : "var(--border)",
                 }}
               >
                 <p className="stat-card-label">{t.label.split(" (")[0]}</p>
@@ -157,7 +157,7 @@ export default async function SuperAdminMarketPostsPage({
           <h3>Open Reports on Posts</h3>
           <Link href="/super-admin/market-posts">View flagged</Link>
         </div>
-        <p style={{ margin: 0, fontSize: 13, color: "#64748b" }}>
+        <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }}>
           {reportsCount > 0 ? (
             <>
               <strong style={{ color: "#dc2626" }}>{reportsCount}</strong> active community
@@ -172,7 +172,7 @@ export default async function SuperAdminMarketPostsPage({
       <article className="widget" style={{ padding: 0, overflow: "hidden" }}>
         {posts.length === 0 ? (
           <p
-            style={{ margin: 0, padding: 48, textAlign: "center", color: "#94a3b8", fontSize: 13 }}
+            style={{ margin: 0, padding: 48, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}
           >
             No posts match this filter.
           </p>
@@ -180,7 +180,7 @@ export default async function SuperAdminMarketPostsPage({
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f8fafc" }}>
+                <tr style={{ background: "var(--surface-2)" }}>
                   {["Post", "Advisor", "Sentiment", "Risk", "Engagement", "Status", ""].map((h) => (
                     <th
                       key={h}
@@ -189,10 +189,10 @@ export default async function SuperAdminMarketPostsPage({
                         padding: "12px 18px",
                         fontWeight: 600,
                         fontSize: 11,
-                        color: "#64748b",
+                        color: "var(--text-muted)",
                         textTransform: "uppercase",
                         letterSpacing: 0.6,
-                        borderBottom: "1px solid #eef0f4",
+                        borderBottom: "1px solid var(--border)",
                       }}
                     >
                       {h}
@@ -207,7 +207,7 @@ export default async function SuperAdminMarketPostsPage({
                     ? Number(post.complianceRiskScore)
                     : null;
                   return (
-                    <tr key={post.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <tr key={post.id} style={{ borderBottom: "1px solid var(--border)" }}>
                       <td style={{ padding: "14px 18px" }}>
                         <Link
                           href={`/super-admin/market-posts/${post.id}`}
@@ -215,7 +215,7 @@ export default async function SuperAdminMarketPostsPage({
                             display: "flex",
                             gap: 10,
                             alignItems: "center",
-                            color: "#0f172a",
+                            color: "var(--text)",
                             textDecoration: "none",
                           }}
                         >
@@ -247,7 +247,7 @@ export default async function SuperAdminMarketPostsPage({
                             >
                               {post.title}
                             </div>
-                            <div style={{ fontSize: 11, color: "#64748b" }}>
+                            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
                               {post.assetType.toUpperCase()} · {relTime(post.createdAt)}
                             </div>
                           </div>
@@ -256,7 +256,7 @@ export default async function SuperAdminMarketPostsPage({
                       <td style={{ padding: "14px 18px" }}>
                         <Link
                           href={`/super-admin/advisors/${post.advisor?.id}`}
-                          style={{ color: "#0f172a", textDecoration: "none" }}
+                          style={{ color: "var(--text)", textDecoration: "none" }}
                         >
                           <div style={{ fontSize: 12, fontWeight: 600 }}>
                             {post.advisor?.fullName ?? "—"}
@@ -264,7 +264,7 @@ export default async function SuperAdminMarketPostsPage({
                           <div
                             style={{
                               fontSize: 10,
-                              color: "#64748b",
+                              color: "var(--text-muted)",
                               fontFamily: "monospace",
                             }}
                           >
@@ -298,10 +298,10 @@ export default async function SuperAdminMarketPostsPage({
                             {score.toFixed(1)}
                           </span>
                         ) : (
-                          <span style={{ color: "#94a3b8" }}>—</span>
+                          <span style={{ color: "var(--text-muted)" }}>—</span>
                         )}
                       </td>
-                      <td style={{ padding: "14px 18px", fontSize: 11, color: "#475569" }}>
+                      <td style={{ padding: "14px 18px", fontSize: 11, color: "var(--text-muted)" }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                           {post._count.reactions} <FiHeart size={11} />
                         </span>{" "}

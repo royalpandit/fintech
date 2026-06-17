@@ -26,21 +26,21 @@ export default async function NotificationsPage({
               margin: 0,
               fontSize: 22,
               fontWeight: 800,
-              color: "#0f172a",
+              color: "var(--text)",
               letterSpacing: -0.5,
             }}
           >
             Notifications
           </h1>
-          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
             Stay updated on advisor sentiment, comments, and your activity
           </p>
         </div>
 
         <article
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             padding: 48,
             textAlign: "center",
@@ -50,17 +50,17 @@ export default async function NotificationsPage({
             style={{
               fontSize: 36,
               marginBottom: 12,
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               display: "flex",
               justifyContent: "center",
             }}
           >
             <FiBell size={36} />
           </div>
-          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>
+          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "var(--text)" }}>
             Sign in to see notifications
           </h2>
-          <p style={{ margin: "0 0 18px", fontSize: 13, color: "#64748b" }}>
+          <p style={{ margin: "0 0 18px", fontSize: 13, color: "var(--text-muted)" }}>
             Get alerts when advisors post sentiment, when your comments get replies, and more.
           </p>
           <Link

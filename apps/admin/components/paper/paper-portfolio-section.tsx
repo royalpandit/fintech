@@ -94,7 +94,7 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
           >
             Paper trading
           </span>
-          <h2 style={{ margin: "4px 0 0", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>
+          <h2 style={{ margin: "4px 0 0", fontSize: 18, fontWeight: 800, color: "var(--text)" }}>
             Virtual holdings
           </h2>
         </div>
@@ -109,7 +109,7 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
       >
         {[
           { label: "Cash", value: formatINR(summary.cashBalance), color: "#0ea5e9" },
-          { label: "Invested", value: formatINR(summary.investedCost), color: "#64748b" },
+          { label: "Invested", value: formatINR(summary.investedCost), color: "var(--text-muted)" },
           { label: "Holdings", value: formatINR(summary.holdingsValue), color: "#7c3aed" },
           {
             label: "Unrealized P&L",
@@ -125,13 +125,13 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
           <article
             key={s.label}
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 12,
               padding: 12,
             }}
           >
-            <p style={{ margin: 0, fontSize: 10, color: "#64748b" }}>{s.label}</p>
+            <p style={{ margin: 0, fontSize: 10, color: "var(--text-muted)" }}>{s.label}</p>
             <p style={{ margin: "4px 0 0", fontSize: 14, fontWeight: 800, color: s.color }}>{s.value}</p>
           </article>
         ))}
@@ -139,8 +139,8 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
 
       <article
         style={{
-          background: "#fff",
-          border: "1px solid #eef0f4",
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
           borderRadius: 14,
           padding: 0,
           overflow: "hidden",
@@ -148,14 +148,14 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
         }}
       >
         {positions.length === 0 ? (
-          <p style={{ margin: 0, padding: 32, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+          <p style={{ margin: 0, padding: 32, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>
             No open positions. Buy stocks or options from Markets or use the form below.
           </p>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f8fafc" }}>
+                <tr style={{ background: "var(--surface-2)" }}>
                   {["Symbol", "Qty", "Avg cost", "LTP", "Value", "P&L", "P&L %"].map((h) => (
                     <th
                       key={h}
@@ -163,7 +163,7 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
                         textAlign: "left",
                         padding: "10px 16px",
                         fontSize: 10,
-                        color: "#64748b",
+                        color: "var(--text-muted)",
                         fontWeight: 600,
                         textTransform: "uppercase",
                       }}
@@ -175,7 +175,7 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
               </thead>
               <tbody>
                 {positions.map((p) => (
-                  <tr key={p.symbol} style={{ borderTop: "1px solid #f1f5f9" }}>
+                  <tr key={p.symbol} style={{ borderTop: "1px solid var(--border)" }}>
                     <td style={{ padding: "12px 16px", fontWeight: 800 }}>{p.symbol}</td>
                     <td style={{ padding: "12px 16px" }}>{p.quantity}</td>
                     <td style={{ padding: "12px 16px" }}>{formatINR(p.avgPrice)}</td>
@@ -211,8 +211,8 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
 
       <article
         style={{
-          background: "#fff",
-          border: "1px solid #eef0f4",
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
           borderRadius: 14,
           padding: 16,
         }}
