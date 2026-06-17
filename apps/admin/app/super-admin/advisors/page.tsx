@@ -113,13 +113,13 @@ export default async function SuperAdminAdvisorsPage() {
               margin: 0,
               fontSize: 26,
               fontWeight: 800,
-              color: "#0f172a",
+              color: "var(--text)",
               letterSpacing: -0.6,
             }}
           >
             Advisor Overview
           </h1>
-          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
             Approval monitoring, verification queue, and advisor quality analytics
           </p>
         </div>
@@ -150,7 +150,7 @@ export default async function SuperAdminAdvisorsPage() {
           <div
             style={{
               padding: "16px 18px",
-              borderBottom: "1px solid #eef0f4",
+              borderBottom: "1px solid var(--border)",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -167,7 +167,7 @@ export default async function SuperAdminAdvisorsPage() {
 
           {topAdvisorMetrics.length === 0 ? (
             <p
-              style={{ margin: 0, padding: 32, textAlign: "center", color: "#94a3b8", fontSize: 13 }}
+              style={{ margin: 0, padding: 32, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}
             >
               No advisor earnings yet.
             </p>
@@ -175,7 +175,7 @@ export default async function SuperAdminAdvisorsPage() {
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
                 <thead>
-                  <tr style={{ background: "#f8fafc" }}>
+                  <tr style={{ background: "var(--surface-2)" }}>
                     {["#", "Advisor", "SEBI ID", "Subscribers", "30d Earnings", ""].map((h) => (
                       <th
                         key={h}
@@ -185,10 +185,10 @@ export default async function SuperAdminAdvisorsPage() {
                           padding: "12px 16px",
                           fontWeight: 600,
                           fontSize: 11,
-                          color: "#64748b",
+                          color: "var(--text-muted)",
                           textTransform: "uppercase",
                           letterSpacing: 0.6,
-                          borderBottom: "1px solid #eef0f4",
+                          borderBottom: "1px solid var(--border)",
                         }}
                       >
                         {h}
@@ -200,12 +200,12 @@ export default async function SuperAdminAdvisorsPage() {
                   {topAdvisorMetrics.map((row, i) => {
                     const u = userById.get(row.advisorUserId);
                     return (
-                      <tr key={row.advisorUserId} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <tr key={row.advisorUserId} style={{ borderBottom: "1px solid var(--border)" }}>
                         <td
                           style={{
                             padding: "12px 16px",
                             fontWeight: 700,
-                            color: i < 3 ? "#7c3aed" : "#94a3b8",
+                            color: i < 3 ? "#7c3aed" : "var(--text-muted)",
                           }}
                         >
                           {i + 1}
@@ -214,7 +214,7 @@ export default async function SuperAdminAdvisorsPage() {
                           <Link
                             href={`/super-admin/advisors/${row.advisorUserId}`}
                             style={{
-                              color: "#0f172a",
+                              color: "var(--text)",
                               fontWeight: 700,
                               textDecoration: "none",
                             }}
@@ -227,7 +227,7 @@ export default async function SuperAdminAdvisorsPage() {
                             padding: "12px 16px",
                             fontFamily: "monospace",
                             fontSize: 11,
-                            color: "#475569",
+                            color: "var(--text-muted)",
                           }}
                         >
                           {u?.advisorProfile?.sebiRegistrationNo ?? "—"}
@@ -274,7 +274,7 @@ export default async function SuperAdminAdvisorsPage() {
           </div>
           {recentApprovals.length === 0 ? (
             <p
-              style={{ margin: 0, padding: 24, textAlign: "center", color: "#94a3b8", fontSize: 12 }}
+              style={{ margin: 0, padding: 24, textAlign: "center", color: "var(--text-muted)", fontSize: 12 }}
             >
               No recent approvals.
             </p>
@@ -287,7 +287,7 @@ export default async function SuperAdminAdvisorsPage() {
                   display: "flex",
                   gap: 10,
                   padding: "10px 0",
-                  borderBottom: "1px solid #f1f5f9",
+                  borderBottom: "1px solid var(--border)",
                   textDecoration: "none",
                   color: "inherit",
                 }}
@@ -309,10 +309,10 @@ export default async function SuperAdminAdvisorsPage() {
                   ✓
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>
                     {adv.user?.fullName ?? "Advisor"}
                   </div>
-                  <div style={{ fontSize: 10, color: "#64748b" }}>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)" }}>
                     {adv.sebiRegistrationNo} ·{" "}
                     {adv.verifiedAt?.toLocaleDateString() ?? ""}
                   </div>
@@ -327,7 +327,7 @@ export default async function SuperAdminAdvisorsPage() {
         <div
           style={{
             padding: "16px 18px",
-            borderBottom: "1px solid #eef0f4",
+            borderBottom: "1px solid var(--border)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -346,7 +346,7 @@ export default async function SuperAdminAdvisorsPage() {
 
         {pendingVerification.length === 0 ? (
           <p
-            style={{ margin: 0, padding: 32, textAlign: "center", color: "#94a3b8", fontSize: 13 }}
+            style={{ margin: 0, padding: 32, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}
           >
             ✓ No advisors awaiting verification.
           </p>
@@ -354,7 +354,7 @@ export default async function SuperAdminAdvisorsPage() {
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f8fafc" }}>
+                <tr style={{ background: "var(--surface-2)" }}>
                   {["Advisor", "SEBI ID", "Submitted", "Status", ""].map((h) => (
                     <th
                       key={h}
@@ -363,10 +363,10 @@ export default async function SuperAdminAdvisorsPage() {
                         padding: "12px 18px",
                         fontWeight: 600,
                         fontSize: 11,
-                        color: "#64748b",
+                        color: "var(--text-muted)",
                         textTransform: "uppercase",
                         letterSpacing: 0.6,
-                        borderBottom: "1px solid #eef0f4",
+                        borderBottom: "1px solid var(--border)",
                       }}
                     >
                       {h}
@@ -384,7 +384,7 @@ export default async function SuperAdminAdvisorsPage() {
                     .join("")
                     .toUpperCase();
                   return (
-                    <tr key={adv.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <tr key={adv.id} style={{ borderBottom: "1px solid var(--border)" }}>
                       <td style={{ padding: "12px 18px" }}>
                         <Link
                           href={`/super-admin/advisors/${adv.user?.id}`}
@@ -392,7 +392,7 @@ export default async function SuperAdminAdvisorsPage() {
                             display: "flex",
                             gap: 10,
                             alignItems: "center",
-                            color: "#0f172a",
+                            color: "var(--text)",
                             textDecoration: "none",
                           }}
                         >
@@ -416,7 +416,7 @@ export default async function SuperAdminAdvisorsPage() {
                             <div style={{ fontSize: 13, fontWeight: 700 }}>
                               {adv.user?.fullName}
                             </div>
-                            <div style={{ fontSize: 11, color: "#64748b" }}>{adv.user?.email}</div>
+                            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{adv.user?.email}</div>
                           </div>
                         </Link>
                       </td>
@@ -425,12 +425,12 @@ export default async function SuperAdminAdvisorsPage() {
                           padding: "12px 18px",
                           fontFamily: "monospace",
                           fontSize: 11,
-                          color: "#475569",
+                          color: "var(--text-muted)",
                         }}
                       >
                         {adv.sebiRegistrationNo}
                       </td>
-                      <td style={{ padding: "12px 18px", color: "#64748b", fontSize: 12 }}>
+                      <td style={{ padding: "12px 18px", color: "var(--text-muted)", fontSize: 12 }}>
                         {adv.createdAt.toLocaleDateString()}
                       </td>
                       <td style={{ padding: "12px 18px" }}>

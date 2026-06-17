@@ -48,19 +48,19 @@ export default async function AdvisorMessagesPage() {
 
       {threads.length === 0 ? (
         <article className="card" style={{ padding: 48, textAlign: "center" }}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, color: "#94a3b8" }}>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, color: "var(--text-muted)" }}>
             <FiMessageCircle size={40} />
           </div>
-          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>
+          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "var(--text)" }}>
             No messages yet
           </h2>
-          <p style={{ margin: 0, fontSize: 13, color: "#64748b" }}>
+          <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }}>
             When a subscriber messages you, the conversation will appear here.
           </p>
         </article>
       ) : (
         <article className="card" style={{ padding: 0, overflow: "hidden" }}>
-          <style>{`.msg-thread-link:hover { background: #f8fafc !important; }`}</style>
+          <style>{`.msg-thread-link:hover { background: var(--hover) !important; }`}</style>
           {threads.map((t, i) => {
             const partner = t.participants.find((p) => p.userId !== userId)?.user;
             const lastMsg = t.messages[0];
@@ -74,7 +74,7 @@ export default async function AdvisorMessagesPage() {
                   alignItems: "center",
                   gap: 14,
                   padding: "14px 18px",
-                  borderBottom: i === threads.length - 1 ? "none" : "1px solid #f1f5f9",
+                  borderBottom: i === threads.length - 1 ? "none" : "1px solid var(--border)",
                   textDecoration: "none",
                   transition: "background 0.15s",
                 }}
@@ -96,13 +96,13 @@ export default async function AdvisorMessagesPage() {
                   {getInitials(partner?.fullName ?? "??")}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 3 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 3 }}>
                     {partner?.fullName ?? "Unknown"}
                   </div>
                   <div
                     style={{
                       fontSize: 12,
-                      color: "#64748b",
+                      color: "var(--text-muted)",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
@@ -116,7 +116,7 @@ export default async function AdvisorMessagesPage() {
                   </div>
                 </div>
                 {lastMsg && (
-                  <span style={{ fontSize: 11, color: "#94a3b8", flexShrink: 0 }}>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>
                     {relTime(lastMsg.createdAt)}
                   </span>
                 )}

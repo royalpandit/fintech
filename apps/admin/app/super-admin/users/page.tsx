@@ -87,13 +87,13 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
               margin: 0,
               fontSize: 26,
               fontWeight: 800,
-              color: "#0f172a",
+              color: "var(--text)",
               letterSpacing: -0.6,
             }}
           >
             Users Management
           </h1>
-          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
             Control identities, roles, and access status across the network
           </p>
         </div>
@@ -129,7 +129,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
           <p className="stat-card-label">Pending Approvals</p>
           <p
             className="stat-card-value"
-            style={{ color: pendingUsers > 0 ? "#f59e0b" : "#94a3b8" }}
+            style={{ color: pendingUsers > 0 ? "#f59e0b" : "var(--text-muted)" }}
           >
             {pendingUsers.toLocaleString()}
           </p>
@@ -138,7 +138,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
           <p className="stat-card-label">Suspended</p>
           <p
             className="stat-card-value"
-            style={{ color: suspendedUsers > 0 ? "#dc2626" : "#94a3b8" }}
+            style={{ color: suspendedUsers > 0 ? "#dc2626" : "var(--text-muted)" }}
           >
             {suspendedUsers.toLocaleString()}
           </p>
@@ -160,7 +160,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
               margin: 0,
               padding: 48,
               textAlign: "center",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               fontSize: 13,
             }}
           >
@@ -170,7 +170,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f8fafc" }}>
+                <tr style={{ background: "var(--surface-2)" }}>
                   {["User", "Phone", "Role", "Status", "Verified", "Last Login", "Joined", "Actions"].map((h) => (
                     <th
                       key={h}
@@ -179,10 +179,10 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
                         padding: "12px 18px",
                         fontWeight: 600,
                         fontSize: 11,
-                        color: "#64748b",
+                        color: "var(--text-muted)",
                         textTransform: "uppercase",
                         letterSpacing: 0.6,
-                        borderBottom: "1px solid #eef0f4",
+                        borderBottom: "1px solid var(--border)",
                       }}
                     >
                       {h}
@@ -201,7 +201,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
                   const sc = STATUS_COLORS[user.status] ?? STATUS_COLORS.active;
                   const roleColor = ROLE_COLORS[user.role] ?? "#94a3b8";
                   return (
-                    <tr key={user.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <tr key={user.id} style={{ borderBottom: "1px solid var(--border)" }}>
                       <td style={{ padding: "14px 18px" }}>
                         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                           <div
@@ -222,7 +222,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
                           </div>
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 700 }}>{user.fullName}</div>
-                            <div style={{ fontSize: 11, color: "#64748b" }}>{user.email}</div>
+                            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{user.email}</div>
                           </div>
                         </div>
                       </td>
@@ -275,10 +275,10 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
                           {user.emailVerifiedAt ? "Yes" : "No"}
                         </span>
                       </td>
-                      <td style={{ padding: "14px 18px", color: "#64748b", fontSize: 11 }}>
+                      <td style={{ padding: "14px 18px", color: "var(--text-muted)", fontSize: 11 }}>
                         {user.lastLoginAt ? user.lastLoginAt.toLocaleDateString() : "Never"}
                       </td>
-                      <td style={{ padding: "14px 18px", color: "#64748b", fontSize: 11 }}>
+                      <td style={{ padding: "14px 18px", color: "var(--text-muted)", fontSize: 11 }}>
                         {user.createdAt.toLocaleDateString()}
                       </td>
                       <td style={{ padding: "14px 18px" }}>
@@ -289,7 +289,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
                             emailVerified={Boolean(user.emailVerifiedAt)}
                           />
                         ) : (
-                          <span style={{ fontSize: 11, color: "#94a3b8" }}>—</span>
+                          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>—</span>
                         )}
                       </td>
                     </tr>
@@ -304,14 +304,14 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
           <div
             style={{
               padding: 14,
-              borderTop: "1px solid #eef0f4",
+              borderTop: "1px solid var(--border)",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               fontSize: 12,
             }}
           >
-            <span style={{ color: "#64748b" }}>
+            <span style={{ color: "var(--text-muted)" }}>
               Page {page} of {totalPages} · {filteredCount.toLocaleString()} results
             </span>
             <div style={{ display: "flex", gap: 8 }}>
@@ -326,9 +326,9 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
                   style={{
                     padding: "8px 16px",
                     borderRadius: 8,
-                    border: "1px solid #eef0f4",
-                    background: "#fff",
-                    color: "#475569",
+                    border: "1px solid var(--border)",
+                    background: "var(--surface)",
+                    color: "var(--text)",
                     fontWeight: 600,
                     textDecoration: "none",
                   }}

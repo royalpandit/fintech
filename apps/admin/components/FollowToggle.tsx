@@ -7,9 +7,10 @@ type Props = {
   advisorId: number;
   initialFollowing: boolean;
   size?: "sm" | "md" | "lg";
+  fullWidth?: boolean;
 };
 
-export default function FollowToggle({ advisorId, initialFollowing, size = "md" }: Props) {
+export default function FollowToggle({ advisorId, initialFollowing, size = "md", fullWidth = false }: Props) {
   const [following, setFollowing] = useState(initialFollowing);
   const [loading, setLoading] = useState(false);
 
@@ -41,14 +42,16 @@ export default function FollowToggle({ advisorId, initialFollowing, size = "md" 
       onClick={toggle}
       disabled={loading}
       style={{
-        display: "inline-flex",
+        display: fullWidth ? "flex" : "inline-flex",
+        width: fullWidth ? "100%" : undefined,
+        justifyContent: "center",
         alignItems: "center",
         gap: 6,
         padding: pad,
         borderRadius: 10,
-        border: following ? "1px solid #e2e8f0" : "1px solid #0ea5e9",
-        background: following ? "#f8fafc" : "rgba(14,165,233,0.1)",
-        color: following ? "#64748b" : "#0ea5e9",
+        border: following ? "1px solid var(--border)" : "1px solid #0ea5e9",
+        background: following ? "var(--surface-2)" : "rgba(14,165,233,0.1)",
+        color: following ? "var(--text-muted)" : "#0ea5e9",
         fontSize,
         fontWeight: 700,
         cursor: loading ? "wait" : "pointer",

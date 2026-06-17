@@ -99,7 +99,7 @@ export default async function AdvisorNotificationsPage({
               padding: "10px 16px",
               borderRadius: 10,
               border: "1px solid var(--border)",
-              background: current === tab.key ? "#047857" : "#fff",
+              background: current === tab.key ? "#047857" : "var(--surface)",
               color: current === tab.key ? "#fff" : "var(--text)",
               textDecoration: "none",
               fontWeight: 600,
@@ -113,7 +113,7 @@ export default async function AdvisorNotificationsPage({
 
       <article className="card" style={{ marginTop: 16, padding: 0 }}>
         {notifications.length === 0 ? (
-          <div style={{ padding: 40, textAlign: "center", color: "#61708b" }}>
+          <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>
             No notifications here.
           </div>
         ) : (
@@ -125,7 +125,7 @@ export default async function AdvisorNotificationsPage({
                   padding: "16px 20px",
                   borderBottom:
                     i === notifications.length - 1 ? "none" : "1px solid var(--border)",
-                  background: n.readAt ? "transparent" : "#f0fdf4",
+                  background: n.readAt ? "transparent" : "rgba(34,197,94,0.12)",
                   display: "flex",
                   justifyContent: "space-between",
                   gap: 16,
@@ -153,11 +153,11 @@ export default async function AdvisorNotificationsPage({
                     <p style={{ margin: 0, fontWeight: 700, fontSize: 14 }}>{n.title}</p>
                     {channelTag(n.channel)}
                   </div>
-                  <p style={{ margin: 0, fontSize: 13, color: "#475569", lineHeight: 1.5 }}>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5 }}>
                     {n.message}
                   </p>
                 </div>
-                <span style={{ fontSize: 12, color: "#64748b", whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: 12, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                   {relTime(n.createdAt)}
                 </span>
               </div>

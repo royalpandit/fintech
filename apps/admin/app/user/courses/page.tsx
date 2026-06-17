@@ -64,13 +64,13 @@ export default async function CoursesPage() {
             margin: 0,
             fontSize: 22,
             fontWeight: 800,
-            color: "#0f172a",
+            color: "var(--text)",
             letterSpacing: -0.5,
           }}
         >
           Courses
         </h1>
-        <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+        <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
           Learn from SEBI-verified advisors at your own pace
         </p>
       </div>
@@ -78,8 +78,8 @@ export default async function CoursesPage() {
       {courses.length === 0 ? (
         <article
           style={{
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
             padding: 48,
             textAlign: "center",
@@ -90,12 +90,12 @@ export default async function CoursesPage() {
               display: "flex",
               justifyContent: "center",
               marginBottom: 12,
-              color: "#94a3b8",
+              color: "var(--text-muted)",
             }}
           >
             <FiBookOpen size={40} />
           </div>
-          <p style={{ margin: 0, fontSize: 14, color: "#64748b" }}>
+          <p style={{ margin: 0, fontSize: 14, color: "var(--text-muted)" }}>
             No courses published yet — check back soon.
           </p>
         </article>
@@ -122,8 +122,8 @@ export default async function CoursesPage() {
                 <article
                   className="course-card"
                   style={{
-                    background: "#fff",
-                    border: "1px solid #eef0f4",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     borderRadius: 14,
                     overflow: "hidden",
                     height: "100%",
@@ -159,7 +159,7 @@ export default async function CoursesPage() {
                         margin: "0 0 8px",
                         fontSize: 15,
                         fontWeight: 700,
-                        color: "#0f172a",
+                        color: "var(--text)",
                         lineHeight: 1.35,
                         display: "-webkit-box",
                         WebkitLineClamp: 2,
@@ -195,7 +195,7 @@ export default async function CoursesPage() {
                       >
                         {getInitials(c.advisor.fullName)}
                       </div>
-                      <span style={{ fontSize: 12, color: "#64748b" }}>{c.advisor.fullName}</span>
+                      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{c.advisor.fullName}</span>
                     </div>
 
                     {/* Stats */}
@@ -204,7 +204,7 @@ export default async function CoursesPage() {
                         display: "flex",
                         gap: 14,
                         fontSize: 11,
-                        color: "#64748b",
+                        color: "var(--text-muted)",
                         marginBottom: 12,
                       }}
                     >
@@ -226,7 +226,7 @@ export default async function CoursesPage() {
                         style={{
                           fontSize: 18,
                           fontWeight: 800,
-                          color: price === 0 ? "#10b981" : "#0f172a",
+                          color: price === 0 ? "#10b981" : "var(--text)",
                           letterSpacing: -0.3,
                         }}
                       >

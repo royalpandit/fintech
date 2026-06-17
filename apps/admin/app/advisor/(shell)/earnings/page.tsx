@@ -87,7 +87,7 @@ export default async function AdvisorEarningsPage() {
         <article className="card">
           <p className="metric-label">Platform Fee</p>
           <p className="metric-value" style={{ fontSize: 34 }}>20%</p>
-          <p style={{ margin: 0, fontSize: 12, color: "#61708b" }}>Advisor keeps 80%</p>
+          <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>Advisor keeps 80%</p>
         </article>
       </div>
 
@@ -125,7 +125,7 @@ export default async function AdvisorEarningsPage() {
                   justifyContent: "space-between",
                   marginTop: 8,
                   fontSize: 11,
-                  color: "#61708b",
+                  color: "var(--text-muted)",
                 }}
               >
                 <span>{dailyMetrics[0]?.day.toLocaleDateString()}</span>
@@ -158,7 +158,7 @@ export default async function AdvisorEarningsPage() {
             <tbody>
               {payouts.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "#61708b" }}>
+                  <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}>
                     No payouts yet. Request your first payout when your wallet has a balance.
                   </td>
                 </tr>
@@ -183,7 +183,7 @@ export default async function AdvisorEarningsPage() {
                       </span>
                     </td>
                     <td>{p.updatedAt.toLocaleDateString()}</td>
-                    <td style={{ fontSize: 12, color: "#61708b" }}>{p.reviewNote ?? "—"}</td>
+                    <td style={{ fontSize: 12, color: "var(--text-muted)" }}>{p.reviewNote ?? "—"}</td>
                   </tr>
                 ))
               )}

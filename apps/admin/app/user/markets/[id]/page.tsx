@@ -97,15 +97,15 @@ export default async function PostDetailPage({ params }: { params: { id: string 
         <div>
           <Link
             href="/user/markets"
-            style={{ fontSize: 12, color: "#64748b", marginBottom: 12, display: "inline-block" }}
+            style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12, display: "inline-block" }}
           >
             ← Markets
           </Link>
 
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 24,
             }}
@@ -139,14 +139,14 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                     alignItems: "center",
                     fontSize: 15,
                     fontWeight: 700,
-                    color: "#0f172a",
+                    color: "var(--text)",
                     textDecoration: "none",
                   }}
                 >
                   {post.advisor?.fullName}
                   <CheckCircle size={14} style={{ color: "#10b981" }} />
                 </Link>
-                <div style={{ fontSize: 12, color: "#64748b" }}>
+                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
                   {post.advisor?.advisorProfile?.sebiRegistrationNo} ·{" "}
                   {post.publishedAt ? relTime(post.publishedAt) : relTime(post.createdAt)}
                 </div>
@@ -184,8 +184,8 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                   style={{
                     padding: "5px 12px",
                     borderRadius: 999,
-                    background: "#f1f5f9",
-                    color: "#334155",
+                    background: "var(--surface-2)",
+                    color: "var(--text)",
                     fontSize: 12,
                     fontWeight: 700,
                   }}
@@ -197,8 +197,8 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                 style={{
                   padding: "5px 12px",
                   borderRadius: 999,
-                  background: "#f1f5f9",
-                  color: "#334155",
+                  background: "var(--surface-2)",
+                  color: "var(--text)",
                   fontSize: 12,
                   fontWeight: 600,
                 }}
@@ -233,8 +233,8 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                   style={{
                     padding: "5px 12px",
                     borderRadius: 999,
-                    background: "#f1f5f9",
-                    color: "#334155",
+                    background: "var(--surface-2)",
+                    color: "var(--text)",
                     fontSize: 12,
                     fontWeight: 600,
                   }}
@@ -250,7 +250,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                   display: "flex",
                   gap: 16,
                   padding: "14px 16px",
-                  background: "#f8fafc",
+                  background: "var(--surface-2)",
                   borderRadius: 10,
                   marginBottom: 16,
                   fontSize: 13,
@@ -278,8 +278,8 @@ export default async function PostDetailPage({ params }: { params: { id: string 
             <div
               style={{
                 padding: 14,
-                background: "#fffbeb",
-                border: "1px solid #fde68a",
+                background: "rgba(245,158,11,0.12)",
+                border: "1px solid rgba(245,158,11,0.30)",
                 borderRadius: 10,
                 fontSize: 12,
                 color: "#713f12",
@@ -295,7 +295,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
             <div
               style={{
                 paddingTop: 16,
-                borderTop: "1px solid #eef0f4",
+                borderTop: "1px solid var(--border)",
                 display: "flex",
                 gap: 16,
                 alignItems: "center",
@@ -311,8 +311,8 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                   style={{
                     padding: "8px 14px",
                     borderRadius: 8,
-                    background: "#f1f5f9",
-                    color: "#0f172a",
+                    background: "var(--surface-2)",
+                    color: "var(--text)",
                     border: "none",
                     fontSize: 12,
                     fontWeight: 700,
@@ -325,7 +325,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                   <FiHeart size={13} /> {post._count.reactions} Like
                 </button>
               </AuthGate>
-              <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6 }}>
                 <FiMessageSquare size={13} /> {post._count.comments} comments
               </span>
               <span style={{ flex: 1 }} />
@@ -356,14 +356,14 @@ export default async function PostDetailPage({ params }: { params: { id: string 
           {/* Comments */}
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 24,
               marginTop: 16,
             }}
           >
-            <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
+            <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
               Comments ({post._count.comments})
             </h3>
 
@@ -371,11 +371,11 @@ export default async function PostDetailPage({ params }: { params: { id: string 
               <div
                 style={{
                   padding: 14,
-                  background: "#f0f9ff",
-                  border: "1px dashed #7dd3fc",
+                  background: "rgba(14,165,233,0.12)",
+                  border: "1px dashed rgba(14,165,233,0.45)",
                   borderRadius: 10,
                   fontSize: 12,
-                  color: "#0c4a6e",
+                  color: "var(--text)",
                   textAlign: "center",
                   marginBottom: 16,
                 }}
@@ -391,7 +391,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
             )}
 
             {post.comments.length === 0 ? (
-              <p style={{ margin: 0, color: "#94a3b8", fontSize: 13, textAlign: "center", padding: "16px 0" }}>
+              <p style={{ margin: 0, color: "var(--text-muted)", fontSize: 13, textAlign: "center", padding: "16px 0" }}>
                 No comments yet — be the first.
               </p>
             ) : (
@@ -402,8 +402,8 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                     style={{
                       padding: 12,
                       borderRadius: 10,
-                      border: "1px solid #f1f5f9",
-                      background: "#f8fafc",
+                      border: "1px solid var(--border)",
+                      background: "var(--surface-2)",
                     }}
                   >
                     <div
@@ -413,12 +413,12 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                         marginBottom: 6,
                       }}
                     >
-                      <strong style={{ fontSize: 13, color: "#0f172a" }}>{c.user.fullName}</strong>
-                      <span style={{ fontSize: 11, color: "#64748b" }}>
+                      <strong style={{ fontSize: 13, color: "var(--text)" }}>{c.user.fullName}</strong>
+                      <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
                         {relTime(c.createdAt)}
                       </span>
                     </div>
-                    <p style={{ margin: 0, fontSize: 13, color: "#334155", lineHeight: 1.5 }}>
+                    <p style={{ margin: 0, fontSize: 13, color: "var(--text)", lineHeight: 1.5 }}>
                       {c.content}
                     </p>
                   </div>
@@ -432,8 +432,8 @@ export default async function PostDetailPage({ params }: { params: { id: string 
         <aside style={{ position: "sticky", top: 80 }}>
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 18,
             }}
@@ -459,7 +459,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                 margin: 0,
                 fontSize: 16,
                 fontWeight: 800,
-                color: "#0f172a",
+                color: "var(--text)",
                 display: "flex",
                 gap: 6,
                 alignItems: "center",
@@ -468,7 +468,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
               {post.advisor?.fullName}
               <CheckCircle size={14} style={{ color: "#10b981" }} />
             </h3>
-            <p style={{ margin: "4px 0 12px", fontSize: 11, color: "#64748b", fontFamily: "monospace" }}>
+            <p style={{ margin: "4px 0 12px", fontSize: 11, color: "var(--text-muted)", fontFamily: "monospace" }}>
               {post.advisor?.advisorProfile?.sebiRegistrationNo}
             </p>
 
@@ -477,7 +477,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                 style={{
                   margin: "0 0 12px",
                   fontSize: 12,
-                  color: "#475569",
+                  color: "var(--text)",
                   lineHeight: 1.55,
                 }}
               >
@@ -512,8 +512,8 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                 textAlign: "center",
                 padding: "10px 14px",
                 borderRadius: 10,
-                background: "#f8fafc",
-                color: "#0f172a",
+                background: "var(--surface-2)",
+                color: "var(--text)",
                 fontWeight: 700,
                 fontSize: 12,
                 textDecoration: "none",

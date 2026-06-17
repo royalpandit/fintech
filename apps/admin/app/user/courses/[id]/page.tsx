@@ -94,8 +94,8 @@ export default async function CourseDetailPage({
           {/* Header */}
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               overflow: "hidden",
               marginBottom: 16,
@@ -127,7 +127,7 @@ export default async function CourseDetailPage({
                   margin: "0 0 10px",
                   fontSize: 22,
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text)",
                   letterSpacing: -0.3,
                 }}
               >
@@ -160,18 +160,18 @@ export default async function CourseDetailPage({
                 >
                   {getInitials(course.advisor.fullName)}
                 </div>
-                <span style={{ fontSize: 13, color: "#475569", fontWeight: 600 }}>
+                <span style={{ fontSize: 13, color: "var(--text)", fontWeight: 600 }}>
                   {course.advisor.fullName}
                 </span>
                 {course.advisor.advisorProfile?.sebiRegistrationNo && (
-                  <span style={{ fontSize: 10, color: "#94a3b8" }}>
+                  <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
                     · {course.advisor.advisorProfile.sebiRegistrationNo}
                   </span>
                 )}
               </div>
 
               {/* Meta chips */}
-              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12, color: "#64748b", marginBottom: 14 }}>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12, color: "var(--text-muted)", marginBottom: 14 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <FiBookOpen size={13} /> {course.lessons.length} lessons
                 </span>
@@ -191,7 +191,7 @@ export default async function CourseDetailPage({
               </div>
 
               {course.description && (
-                <p style={{ margin: 0, fontSize: 14, color: "#475569", lineHeight: 1.65 }}>
+                <p style={{ margin: 0, fontSize: 14, color: "var(--text)", lineHeight: 1.65 }}>
                   {course.description}
                 </p>
               )}
@@ -201,20 +201,20 @@ export default async function CourseDetailPage({
           {/* Lessons list */}
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               overflow: "hidden",
             }}
           >
-            <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9" }}>
-              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
                 Course content
               </h2>
             </div>
 
             {course.lessons.length === 0 ? (
-              <p style={{ margin: 0, padding: 24, color: "#94a3b8", fontSize: 13 }}>
+              <p style={{ margin: 0, padding: 24, color: "var(--text-muted)", fontSize: 13 }}>
                 Lessons coming soon.
               </p>
             ) : (
@@ -233,8 +233,8 @@ export default async function CourseDetailPage({
         <aside style={{ position: "sticky", top: 20 }}>
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 20,
             }}
@@ -243,7 +243,7 @@ export default async function CourseDetailPage({
               style={{
                 fontSize: 28,
                 fontWeight: 800,
-                color: price === 0 ? "#10b981" : "#0f172a",
+                color: price === 0 ? "#10b981" : "var(--text)",
                 letterSpacing: -0.5,
                 marginBottom: 16,
               }}
@@ -286,21 +286,21 @@ export default async function CourseDetailPage({
                 display: "grid",
                 gap: 8,
                 fontSize: 13,
-                color: "#475569",
+                color: "var(--text)",
               }}
             >
               <div style={{ display: "flex", gap: 8 }}>
-                <FiBookOpen size={14} style={{ marginTop: 1, color: "#94a3b8" }} />
+                <FiBookOpen size={14} style={{ marginTop: 1, color: "var(--text-muted)" }} />
                 {course.lessons.length} on-demand lessons
               </div>
               {totalSecs > 0 && (
                 <div style={{ display: "flex", gap: 8 }}>
-                  <FiClock size={14} style={{ marginTop: 1, color: "#94a3b8" }} />
+                  <FiClock size={14} style={{ marginTop: 1, color: "var(--text-muted)" }} />
                   {fmtDuration(totalSecs)} of content
                 </div>
               )}
               <div style={{ display: "flex", gap: 8 }}>
-                <FiCheckCircle size={14} style={{ marginTop: 1, color: "#94a3b8" }} />
+                <FiCheckCircle size={14} style={{ marginTop: 1, color: "var(--text-muted)" }} />
                 Certificate on completion
               </div>
             </div>
@@ -335,7 +335,7 @@ function CourseEnrollButton({
           background: isAuthed
             ? "linear-gradient(135deg, #0ea5e9, #0284c7)"
             : "#e2e8f0",
-          color: isAuthed ? "#fff" : "#94a3b8",
+          color: isAuthed ? "#fff" : "var(--text-muted)",
           fontWeight: 700,
           fontSize: 15,
           cursor: isAuthed ? "pointer" : "default",

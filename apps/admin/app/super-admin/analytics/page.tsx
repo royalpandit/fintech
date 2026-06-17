@@ -224,13 +224,13 @@ export default async function SuperAdminAnalyticsPage({
               margin: 0,
               fontSize: 26,
               fontWeight: 800,
-              color: "#0f172a",
+              color: "var(--text)",
               letterSpacing: -0.6,
             }}
           >
             Platform Analytics
           </h1>
-          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
             Strategic insights across users, revenue, and compliance
           </p>
         </div>
@@ -285,7 +285,7 @@ export default async function SuperAdminAnalyticsPage({
         <article className="widget">
           <div className="widget-title">
             <h3>Platform Revenue</h3>
-            <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
               Total {formatINR(totalRevenue, true)}
             </span>
           </div>
@@ -307,7 +307,7 @@ export default async function SuperAdminAnalyticsPage({
                 height: 220,
                 display: "grid",
                 placeItems: "center",
-                color: "#94a3b8",
+                color: "var(--text-muted)",
                 fontSize: 13,
               }}
             >
@@ -337,7 +337,7 @@ export default async function SuperAdminAnalyticsPage({
         <article className="widget">
           <div className="widget-title">
             <h3>User Registrations</h3>
-            <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
               {registrationsRange.length} new in window
             </span>
           </div>
@@ -347,7 +347,7 @@ export default async function SuperAdminAnalyticsPage({
         <article className="widget">
           <div className="widget-title">
             <h3>Sentiment Mix</h3>
-            <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
               Approved posts
             </span>
           </div>
@@ -357,7 +357,7 @@ export default async function SuperAdminAnalyticsPage({
                 height: 220,
                 display: "grid",
                 placeItems: "center",
-                color: "#94a3b8",
+                color: "var(--text-muted)",
                 fontSize: 13,
               }}
             >
@@ -386,7 +386,7 @@ export default async function SuperAdminAnalyticsPage({
         <article className="widget">
           <div className="widget-title">
             <h3>Compliance Mix</h3>
-            <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
               {complianceTotal} posts
             </span>
           </div>
@@ -423,17 +423,17 @@ export default async function SuperAdminAnalyticsPage({
                         background: s.color,
                       }}
                     />
-                    <span style={{ fontSize: 13, color: "#334155", fontWeight: 600 }}>
+                    <span style={{ fontSize: 13, color: "var(--text)", fontWeight: 600 }}>
                       {s.label}
                     </span>
                   </div>
                   <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                    <span style={{ fontSize: 12, color: "#64748b" }}>{pct.toFixed(0)}%</span>
+                    <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{pct.toFixed(0)}%</span>
                     <span
                       style={{
                         fontSize: 14,
                         fontWeight: 800,
-                        color: "#0f172a",
+                        color: "var(--text)",
                         minWidth: 30,
                         textAlign: "right",
                       }}
@@ -450,7 +450,7 @@ export default async function SuperAdminAnalyticsPage({
         <article className="widget">
           <div className="widget-title">
             <h3>Payment Providers (30d)</h3>
-            <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
               {providers.length} providers
             </span>
           </div>
@@ -459,7 +459,7 @@ export default async function SuperAdminAnalyticsPage({
               style={{
                 padding: 32,
                 textAlign: "center",
-                color: "#94a3b8",
+                color: "var(--text-muted)",
                 fontSize: 13,
               }}
             >
@@ -498,7 +498,7 @@ export default async function SuperAdminAnalyticsPage({
                         style={{
                           height: 8,
                           borderRadius: 999,
-                          background: "#eef0f4",
+                          background: "var(--surface-2)",
                           overflow: "hidden",
                         }}
                       >
@@ -510,7 +510,7 @@ export default async function SuperAdminAnalyticsPage({
                           }}
                         />
                       </div>
-                      <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>
+                      <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>
                         {p._count._all} transactions · {pct.toFixed(0)}% of revenue
                       </div>
                     </div>

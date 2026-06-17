@@ -171,7 +171,7 @@ export default async function MarketPostDetailView({
                 display: "flex",
                 gap: 16,
                 padding: "12px 16px",
-                background: "#f8fafc",
+                background: "var(--surface-2)",
                 borderRadius: 12,
                 marginBottom: 12,
                 fontSize: 13,
@@ -255,7 +255,7 @@ export default async function MarketPostDetailView({
                 style={{
                   marginTop: 12,
                   padding: 10,
-                  background: "#f8fafc",
+                  background: "var(--surface-2)",
                   borderRadius: 10,
                   fontSize: 12,
                 }}

@@ -93,13 +93,13 @@ export default async function AdminMarketPostsPage({
               margin: 0,
               fontSize: 26,
               fontWeight: 800,
-              color: "#0f172a",
+              color: "var(--text)",
               letterSpacing: -0.6,
             }}
           >
             Post Moderation
           </h1>
-          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
             Approve, flag, or reject advisor sentiment posts
           </p>
         </div>
@@ -132,7 +132,7 @@ export default async function AdminMarketPostsPage({
                 className="stat-card"
                 style={{
                   cursor: "pointer",
-                  borderColor: status === t.key ? t.color : "#eef0f4",
+                  borderColor: status === t.key ? t.color : "var(--border)",
                 }}
               >
                 <p className="stat-card-label">{t.label.split(" (")[0]}</p>
@@ -155,9 +155,9 @@ export default async function AdminMarketPostsPage({
               borderRadius: 8,
               fontSize: 13,
               fontWeight: 600,
-              color: status === t.key ? "#fff" : "#64748b",
-              background: status === t.key ? "#2563eb" : "#fff",
-              border: "1px solid #eef0f4",
+              color: status === t.key ? "#fff" : "var(--text-muted)",
+              background: status === t.key ? "#2563eb" : "var(--surface)",
+              border: "1px solid var(--border)",
               textDecoration: "none",
             }}
           >
@@ -173,7 +173,7 @@ export default async function AdminMarketPostsPage({
               margin: 0,
               padding: 48,
               textAlign: "center",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               fontSize: 13,
             }}
           >
@@ -183,7 +183,7 @@ export default async function AdminMarketPostsPage({
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f8fafc" }}>
+                <tr style={{ background: "var(--surface-2)" }}>
                   {["Post", "Advisor", "Sentiment", "Risk Score", "Engagement", "Status", ""].map(
                     (h) => (
                       <th
@@ -193,10 +193,10 @@ export default async function AdminMarketPostsPage({
                           padding: "12px 18px",
                           fontWeight: 600,
                           fontSize: 11,
-                          color: "#64748b",
+                          color: "var(--text-muted)",
                           textTransform: "uppercase",
                           letterSpacing: 0.6,
-                          borderBottom: "1px solid #eef0f4",
+                          borderBottom: "1px solid var(--border)",
                         }}
                       >
                         {h}
@@ -212,7 +212,7 @@ export default async function AdminMarketPostsPage({
                     ? Number(post.complianceRiskScore)
                     : null;
                   return (
-                    <tr key={post.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <tr key={post.id} style={{ borderBottom: "1px solid var(--border)" }}>
                       <td style={{ padding: "14px 18px" }}>
                         <Link
                           href={`/admin/market-posts/${post.id}`}
@@ -220,7 +220,7 @@ export default async function AdminMarketPostsPage({
                             display: "flex",
                             gap: 10,
                             alignItems: "center",
-                            color: "#0f172a",
+                            color: "var(--text)",
                             textDecoration: "none",
                           }}
                         >
@@ -252,7 +252,7 @@ export default async function AdminMarketPostsPage({
                             >
                               {post.title}
                             </div>
-                            <div style={{ fontSize: 11, color: "#64748b" }}>
+                            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
                               {post.assetType.toUpperCase()} ·{" "}
                               {post.publishedAt
                                 ? `Pub ${relTime(post.publishedAt)}`
@@ -268,7 +268,7 @@ export default async function AdminMarketPostsPage({
                         <div
                           style={{
                             fontSize: 10,
-                            color: "#64748b",
+                            color: "var(--text-muted)",
                             fontFamily: "monospace",
                           }}
                         >
@@ -300,10 +300,10 @@ export default async function AdminMarketPostsPage({
                             {score.toFixed(1)}
                           </span>
                         ) : (
-                          <span style={{ color: "#94a3b8" }}>—</span>
+                          <span style={{ color: "var(--text-muted)" }}>—</span>
                         )}
                       </td>
-                      <td style={{ padding: "14px 18px", fontSize: 11, color: "#475569" }}>
+                      <td style={{ padding: "14px 18px", fontSize: 11, color: "var(--text)" }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                           {post._count.reactions} <FiHeart size={11} />
                         </span>{" "}

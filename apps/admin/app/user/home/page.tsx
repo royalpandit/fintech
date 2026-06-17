@@ -293,13 +293,13 @@ export default async function UserDashboardPage({
                   margin: 0,
                   fontSize: 22,
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text)",
                   letterSpacing: -0.5,
                 }}
               >
                 Trading Dashboard
               </h1>
-              <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+              <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
                 Track your portfolio, watch markets &amp; trade virtually
               </p>
             </div>
@@ -312,8 +312,8 @@ export default async function UserDashboardPage({
           <div className="user-stat-grid" style={{ marginBottom: 18 }}>
             <article
               style={{
-                background: "#fff",
-                border: "1px solid #eef0f4",
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 14,
                 padding: 16,
                 position: "relative",
@@ -324,7 +324,7 @@ export default async function UserDashboardPage({
                 style={{
                   margin: 0,
                   fontSize: 11,
-                  color: "#64748b",
+                  color: "var(--text-muted)",
                   fontWeight: 500,
                   marginBottom: 8,
                 }}
@@ -337,7 +337,7 @@ export default async function UserDashboardPage({
                     margin: 0,
                     fontSize: 22,
                     fontWeight: 800,
-                    color: "#0f172a",
+                    color: "var(--text)",
                     letterSpacing: -0.6,
                   }}
                 >
@@ -388,8 +388,8 @@ export default async function UserDashboardPage({
 
             <article
               style={{
-                background: "#fff",
-                border: "1px solid #eef0f4",
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 14,
                 padding: 16,
               }}
@@ -398,7 +398,7 @@ export default async function UserDashboardPage({
                 style={{
                   margin: 0,
                   fontSize: 11,
-                  color: "#64748b",
+                  color: "var(--text-muted)",
                   fontWeight: 500,
                   marginBottom: 8,
                 }}
@@ -410,7 +410,7 @@ export default async function UserDashboardPage({
                   margin: 0,
                   fontSize: 22,
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text)",
                   letterSpacing: -0.6,
                 }}
               >
@@ -420,8 +420,8 @@ export default async function UserDashboardPage({
 
             <article
               style={{
-                background: "#fff",
-                border: "1px solid #eef0f4",
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 14,
                 padding: 16,
               }}
@@ -430,7 +430,7 @@ export default async function UserDashboardPage({
                 style={{
                   margin: 0,
                   fontSize: 11,
-                  color: "#64748b",
+                  color: "var(--text-muted)",
                   fontWeight: 500,
                   marginBottom: 8,
                 }}
@@ -464,8 +464,8 @@ export default async function UserDashboardPage({
 
             <article
               style={{
-                background: "#fff",
-                border: "1px solid #eef0f4",
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 14,
                 padding: 16,
               }}
@@ -474,20 +474,20 @@ export default async function UserDashboardPage({
                 style={{
                   margin: 0,
                   fontSize: 11,
-                  color: "#64748b",
+                  color: "var(--text-muted)",
                   fontWeight: 500,
                   marginBottom: 8,
                 }}
               >
                 Buying Power
-                <span style={{ marginLeft: 4, color: "#94a3b8" }}>ⓘ</span>
+                <span style={{ marginLeft: 4, color: "var(--text-muted)" }}>ⓘ</span>
               </p>
               <p
                 style={{
                   margin: 0,
                   fontSize: 22,
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text)",
                   letterSpacing: -0.6,
                 }}
               >
@@ -500,8 +500,8 @@ export default async function UserDashboardPage({
           <div className="user-split-chart">
             <article
               style={{
-                background: "#fff",
-                border: "1px solid #eef0f4",
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 14,
                 padding: 18,
               }}
@@ -514,7 +514,7 @@ export default async function UserDashboardPage({
                   marginBottom: 14,
                 }}
               >
-                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
                   Portfolio Performance
                 </h3>
                 <TimeRange baseHref="/user/home" activeKey={range} />
@@ -529,8 +529,8 @@ export default async function UserDashboardPage({
 
             <article
               style={{
-                background: "#fff",
-                border: "1px solid #eef0f4",
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 14,
                 padding: 18,
               }}
@@ -543,7 +543,7 @@ export default async function UserDashboardPage({
                   marginBottom: 14,
                 }}
               >
-                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
                   Holdings
                 </h3>
                 <Link
@@ -559,7 +559,7 @@ export default async function UserDashboardPage({
                     height: 220,
                     display: "grid",
                     placeItems: "center",
-                    color: "#94a3b8",
+                    color: "var(--text-muted)",
                     fontSize: 12,
                     textAlign: "center",
                   }}
@@ -583,22 +583,22 @@ export default async function UserDashboardPage({
           {/* Top Holdings table */}
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 0,
               overflow: "hidden",
             }}
           >
-            <div style={{ padding: "16px 18px", borderBottom: "1px solid #eef0f4" }}>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+            <div style={{ padding: "16px 18px", borderBottom: "1px solid var(--border)" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
                 Top Holdings
               </h3>
             </div>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
                 <thead>
-                  <tr style={{ background: "#f8fafc" }}>
+                  <tr style={{ background: "var(--surface-2)" }}>
                     {[
                       { label: "Stock", align: "left" },
                       { label: "Shares", align: "right" },
@@ -615,10 +615,10 @@ export default async function UserDashboardPage({
                           padding: "10px 18px",
                           fontWeight: 600,
                           fontSize: 10,
-                          color: "#64748b",
+                          color: "var(--text-muted)",
                           textTransform: "uppercase",
                           letterSpacing: 0.6,
-                          borderBottom: "1px solid #eef0f4",
+                          borderBottom: "1px solid var(--border)",
                         }}
                       >
                         {h.label}
@@ -693,7 +693,7 @@ export default async function UserDashboardPage({
                     const positive = row.pnl >= 0;
                     const color = SYMBOL_COLORS[row.symbol] ?? "#64748b";
                     return (
-                      <tr key={row.symbol} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <tr key={row.symbol} style={{ borderBottom: "1px solid var(--border)" }}>
                         <td style={{ padding: "12px 18px" }}>
                           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                             <div
@@ -712,10 +712,10 @@ export default async function UserDashboardPage({
                               {row.symbol.slice(0, 1)}
                             </div>
                             <div>
-                              <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>
                                 {row.symbol}
                               </div>
-                              <div style={{ fontSize: 10, color: "#64748b" }}>{row.company}</div>
+                              <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{row.company}</div>
                             </div>
                           </div>
                         </td>
@@ -767,8 +767,8 @@ export default async function UserDashboardPage({
           {/* Watchlist */}
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 16,
             }}
@@ -781,7 +781,7 @@ export default async function UserDashboardPage({
                 marginBottom: 12,
               }}
             >
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
                 Watchlist
               </h3>
               <Link
@@ -797,12 +797,12 @@ export default async function UserDashboardPage({
                 display: "grid",
                 gridTemplateColumns: "1fr 80px 60px",
                 fontSize: 10,
-                color: "#94a3b8",
+                color: "var(--text-muted)",
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: 0.5,
                 paddingBottom: 8,
-                borderBottom: "1px solid #eef0f4",
+                borderBottom: "1px solid var(--border)",
               }}
             >
               <span>Stock</span>
@@ -821,7 +821,7 @@ export default async function UserDashboardPage({
                     gridTemplateColumns: "1fr 80px 60px",
                     alignItems: "center",
                     padding: "10px 0",
-                    borderBottom: "1px solid #f1f5f9",
+                    borderBottom: "1px solid var(--border)",
                   }}
                 >
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -841,10 +841,10 @@ export default async function UserDashboardPage({
                       {row.symbol.slice(0, 1)}
                     </div>
                     <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#0f172a" }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text)" }}>
                         {row.symbol}
                       </div>
-                      <div style={{ fontSize: 9, color: "#64748b" }}>{row.company}</div>
+                      <div style={{ fontSize: 9, color: "var(--text-muted)" }}>{row.company}</div>
                     </div>
                   </div>
                   <span
@@ -852,7 +852,7 @@ export default async function UserDashboardPage({
                       textAlign: "right",
                       fontSize: 12,
                       fontWeight: 700,
-                      color: "#0f172a",
+                      color: "var(--text)",
                     }}
                   >
                     ₹{row.price.toFixed(2)}
@@ -881,8 +881,8 @@ export default async function UserDashboardPage({
           {/* Virtual Trade */}
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 16,
             }}
@@ -895,7 +895,7 @@ export default async function UserDashboardPage({
                 marginBottom: 12,
               }}
             >
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
                 Virtual Trade
               </h3>
               <Link href="/user/lab" style={{ fontSize: 11, color: "#0ea5e9", fontWeight: 600 }}>
@@ -907,7 +907,7 @@ export default async function UserDashboardPage({
               style={{
                 fontSize: 11,
                 fontWeight: 600,
-                color: "#64748b",
+                color: "var(--text-muted)",
                 display: "block",
                 marginBottom: 4,
               }}
@@ -921,8 +921,8 @@ export default async function UserDashboardPage({
                 height: 36,
                 padding: "0 12px",
                 borderRadius: 8,
-                border: "1px solid #eef0f4",
-                background: "#fff",
+                border: "1px solid var(--border)",
+                background: "var(--surface)",
                 fontSize: 12,
                 outline: "none",
                 marginBottom: 10,
@@ -934,7 +934,7 @@ export default async function UserDashboardPage({
               style={{
                 fontSize: 11,
                 fontWeight: 600,
-                color: "#64748b",
+                color: "var(--text-muted)",
                 display: "block",
                 marginBottom: 4,
               }}
@@ -946,7 +946,7 @@ export default async function UserDashboardPage({
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
                 gap: 4,
-                background: "#f8fafc",
+                background: "var(--surface-2)",
                 borderRadius: 8,
                 padding: 3,
                 marginBottom: 10,
@@ -974,7 +974,7 @@ export default async function UserDashboardPage({
                   borderRadius: 6,
                   border: "none",
                   background: "transparent",
-                  color: "#64748b",
+                  color: "var(--text-muted)",
                   fontSize: 12,
                   fontWeight: 700,
                   cursor: "pointer",
@@ -988,7 +988,7 @@ export default async function UserDashboardPage({
               style={{
                 fontSize: 11,
                 fontWeight: 600,
-                color: "#64748b",
+                color: "var(--text-muted)",
                 display: "block",
                 marginBottom: 4,
               }}
@@ -1003,8 +1003,8 @@ export default async function UserDashboardPage({
                 height: 36,
                 padding: "0 12px",
                 borderRadius: 8,
-                border: "1px solid #eef0f4",
-                background: "#fff",
+                border: "1px solid var(--border)",
+                background: "var(--surface)",
                 fontSize: 12,
                 outline: "none",
                 marginBottom: 10,
@@ -1016,7 +1016,7 @@ export default async function UserDashboardPage({
               style={{
                 fontSize: 11,
                 fontWeight: 600,
-                color: "#64748b",
+                color: "var(--text-muted)",
                 display: "block",
                 marginBottom: 4,
               }}
@@ -1029,8 +1029,8 @@ export default async function UserDashboardPage({
                 height: 36,
                 padding: "0 12px",
                 borderRadius: 8,
-                border: "1px solid #eef0f4",
-                background: "#fff",
+                border: "1px solid var(--border)",
+                background: "var(--surface)",
                 fontSize: 12,
                 outline: "none",
                 marginBottom: 14,
@@ -1068,8 +1068,8 @@ export default async function UserDashboardPage({
           {/* Market News */}
           <article
             style={{
-              background: "#fff",
-              border: "1px solid #eef0f4",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 14,
               padding: 16,
             }}
@@ -1082,7 +1082,7 @@ export default async function UserDashboardPage({
                 marginBottom: 12,
               }}
             >
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
                 Market News
               </h3>
               <Link href="/user/markets" style={{ fontSize: 11, color: "#0ea5e9", fontWeight: 600 }}>
@@ -1116,7 +1116,7 @@ export default async function UserDashboardPage({
                 key={i}
                 style={{
                   padding: "10px 0",
-                  borderBottom: "1px solid #f1f5f9",
+                  borderBottom: "1px solid var(--border)",
                 }}
               >
                 <p
@@ -1124,14 +1124,14 @@ export default async function UserDashboardPage({
                     margin: 0,
                     fontSize: 12,
                     fontWeight: 700,
-                    color: "#0f172a",
+                    color: "var(--text)",
                     lineHeight: 1.4,
                     marginBottom: 4,
                   }}
                 >
                   {news.title}
                 </p>
-                <p style={{ margin: 0, fontSize: 10, color: "#94a3b8" }}>
+                <p style={{ margin: 0, fontSize: 10, color: "var(--text-muted)" }}>
                   {news.time} · {news.source}
                 </p>
               </div>
@@ -1141,8 +1141,8 @@ export default async function UserDashboardPage({
           {!isAuthed && (
             <article
               style={{
-                background: "linear-gradient(135deg, #f0fdf4, #ecfeff)",
-                border: "1px solid #bbf7d0",
+                background: "linear-gradient(135deg, rgba(34,197,94,0.12), rgba(14,165,233,0.10))",
+                border: "1px solid rgba(34,197,94,0.30)",
                 borderRadius: 14,
                 padding: 16,
               }}
@@ -1151,7 +1151,7 @@ export default async function UserDashboardPage({
                 <CheckCircle size={18} style={{ color: "#16a34a" }} />
                 <h3 style={{ margin: 0, fontSize: 13, fontWeight: 800 }}>You&apos;re browsing as guest</h3>
               </div>
-              <p style={{ margin: "0 0 12px", fontSize: 11, color: "#475569", lineHeight: 1.5 }}>
+              <p style={{ margin: "0 0 12px", fontSize: 11, color: "var(--text)", lineHeight: 1.5 }}>
                 Sign up to track real portfolio, follow advisors, trade in the lab, and unlock
                 personalized insights.
               </p>

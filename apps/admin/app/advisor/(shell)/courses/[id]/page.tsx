@@ -95,7 +95,7 @@ export default async function AdvisorCourseDetailPage({ params }: { params: { id
               "—"
             )}
           </p>
-          <p style={{ margin: 0, fontSize: 12, color: "#61708b" }}>
+          <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
             {course._count.reviews} reviews
           </p>
         </article>
@@ -126,7 +126,7 @@ export default async function AdvisorCourseDetailPage({ params }: { params: { id
             <tbody>
               {course.enrollments.length === 0 ? (
                 <tr>
-                  <td colSpan={3} style={{ padding: 24, textAlign: "center", color: "#61708b" }}>
+                  <td colSpan={3} style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}>
                     No enrollments yet.
                   </td>
                 </tr>

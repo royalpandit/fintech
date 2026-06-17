@@ -565,16 +565,16 @@ export default function ChartWidget({
 
       const chartOpts = {
         layout: {
-          background: { type: lc.ColorType.Solid, color: "#ffffff" },
-          textColor: "#64748b", fontSize: 11,
+          background: { type: lc.ColorType.Solid, color: "var(--surface)" },
+          textColor: "var(--text-muted)", fontSize: 11,
           fontFamily: "Inter, system-ui, sans-serif",
         },
         localization: nseChartLocalization,
-        grid:      { vertLines: { color: "#f1f5f9" }, horzLines: { color: "#f1f5f9" } },
+        grid:      { vertLines: { color: "var(--border)" }, horzLines: { color: "var(--border)" } },
         crosshair: { mode: lc.CrosshairMode.Normal },
-        rightPriceScale: { borderColor: "#eef0f4" },
+        rightPriceScale: { borderColor: "var(--border)" },
         timeScale: {
-          borderColor: "#eef0f4",
+          borderColor: "var(--border)",
           timeVisible: !hasLowerPanes,
           secondsVisible: false,
           rightOffset: 8,
@@ -806,7 +806,7 @@ export default function ChartWidget({
 
   if (rawCandles.length === 0) {
     return (
-      <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "#94a3b8", fontSize: 13, background: "#fafafa" }}>
+      <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "var(--text-muted)", fontSize: 13, background: "#fafafa" }}>
         Loading chart…
       </div>
     );

@@ -87,7 +87,7 @@ export default function PostModerationActions({
           style={{
             padding: 12,
             border: "1px solid var(--border)",
-            background: "#fff",
+            background: "var(--surface)",
             borderRadius: 12,
             width: 360,
             boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
