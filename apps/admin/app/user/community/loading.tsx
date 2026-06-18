@@ -3,7 +3,7 @@ import { SkeletonFeed, SkeletonPageHeader, SkeletonWidget } from "@/components/s
 export default function CommunityLoading() {
   return (
     <section>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 18, alignItems: "start" }}>
+      <div className="user-layout-rail">
         <div>
           <SkeletonPageHeader titleWidth={140} showAction />
           <SkeletonFeed count={5} />

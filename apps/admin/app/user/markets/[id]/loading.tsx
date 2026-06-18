@@ -3,7 +3,7 @@ import { Skeleton, SkeletonAvatar, SkeletonText } from "@/components/skeleton";
 export default function PostDetailLoading() {
   return (
     <section>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 18, alignItems: "start" }}>
+      <div className="user-layout-rail">
         <div>
           <Skeleton width={80} height={11} style={{ marginBottom: 12 }} />
 

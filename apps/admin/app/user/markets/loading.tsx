@@ -9,7 +9,7 @@ import {
 export default function UserMarketsLoading() {
   return (
     <section>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 18, alignItems: "start" }}>
+      <div className="user-layout-rail">
         <div>
           <SkeletonPageHeader titleWidth={140} />
 
