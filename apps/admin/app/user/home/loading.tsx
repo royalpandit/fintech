@@ -10,7 +10,7 @@ import {
 export default function UserHomeLoading() {
   return (
     <section>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 18, alignItems: "start" }}>
+      <div className="user-layout-rail">
         <div>
           <div
             style={{
