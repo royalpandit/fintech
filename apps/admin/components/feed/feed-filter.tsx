@@ -111,9 +111,9 @@ export default function FeedFilter({
           gap: 7,
           padding: "9px 14px",
           borderRadius: 10,
-          border: "1px solid #eef0f4",
-          background: active ? "rgba(14,165,233,0.08)" : "#fff",
-          color: active ? "#0369a1" : "#334155",
+          border: "1px solid var(--border)",
+          background: active ? "rgba(14,165,233,0.08)" : "var(--surface)",
+          color: active ? "var(--primary)" : "var(--text)",
           fontSize: 13,
           fontWeight: 700,
           cursor: "pointer",
@@ -147,16 +147,16 @@ export default function FeedFilter({
             top: "calc(100% + 8px)",
             width: 300,
             maxWidth: "90vw",
-            background: "#fff",
-            border: "1px solid #eef0f4",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
-            boxShadow: "0 16px 48px rgba(15,23,42,0.16)",
+            boxShadow: "0 16px 48px rgba(0,0,0,0.5)",
             zIndex: 50,
             padding: 16,
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <strong style={{ fontSize: 14, color: "#0f172a" }}>Filter feed</strong>
+            <strong style={{ fontSize: 14, color: "var(--text)" }}>Filter feed</strong>
             <button
               type="button"
               onClick={() => onChange(DEFAULT_FEED_FILTERS)}
@@ -169,7 +169,7 @@ export default function FeedFilter({
           <div style={{ display: "grid", gap: 14, maxHeight: "60vh", overflowY: "auto" }}>
             {GROUPS.map((g) => (
               <div key={g.key}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
                   {g.label}
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -183,9 +183,9 @@ export default function FeedFilter({
                         style={{
                           padding: "6px 12px",
                           borderRadius: 999,
-                          border: sel ? "1px solid #0ea5e9" : "1px solid #e2e8f0",
-                          background: sel ? "rgba(14,165,233,0.1)" : "#fff",
-                          color: sel ? "#0369a1" : "#475569",
+                          border: sel ? "1px solid #0ea5e9" : "1px solid var(--border)",
+                          background: sel ? "rgba(14,165,233,0.1)" : "var(--surface)",
+                          color: sel ? "var(--primary)" : "var(--text)",
                           fontSize: 12,
                           fontWeight: 600,
                           cursor: "pointer",

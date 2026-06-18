@@ -109,6 +109,14 @@ export default function UserShell({
   const [searchOpen, setSearchOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [search, setSearch] = useState("");
+
+  function submitSearch() {
+    const q = search.trim();
+    if (!q) return;
+    router.push(`/user/search?q=${encodeURIComponent(q)}`);
+    setSearchOpen(false);
+  }
   const menuRef = useRef<HTMLDivElement>(null);
 
   const initials = currentUser ? getInitials(currentUser.fullName) : "G";
@@ -257,13 +265,21 @@ export default function UserShell({
 
           {/* Center zone — search */}
           <div className={`us-search-wrap ${searchOpen ? "us-search-open" : ""}`}>
-            <div className="us-search-inner">
+            <form
+              className="us-search-inner"
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitSearch();
+              }}
+            >
               <FiSearch size={14} className="us-search-icon" />
               <input
                 className="us-search-input"
                 placeholder="Search advisors, symbols, courses…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
               />
-            </div>
+            </form>
           </div>
 
           {/* Right zone — actions */}
@@ -365,14 +381,22 @@ export default function UserShell({
         {/* Mobile search bar (expands below header) */}
         {searchOpen && (
           <div className="us-mobile-search">
-            <div className="us-search-inner">
+            <form
+              className="us-search-inner"
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitSearch();
+              }}
+            >
               <FiSearch size={14} className="us-search-icon" />
               <input
                 className="us-search-input"
                 placeholder="Search advisors, symbols, courses…"
                 autoFocus
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
               />
-            </div>
+            </form>
           </div>
         )}
       </header>
