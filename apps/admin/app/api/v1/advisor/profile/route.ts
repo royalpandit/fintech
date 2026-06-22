@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
+import { isProfessionalType } from "@/lib/professional-types";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,7 @@ export async function PATCH(req: NextRequest) {
     profileImageUrl?: string | null;
     experienceYears?: number;
     fullName?: string;
+    professionalType?: string;
   }>(req);
 
   const profileData: Record<string, unknown> = {};
@@ -68,6 +70,9 @@ export async function PATCH(req: NextRequest) {
   }
   if (typeof body.experienceYears === "number" && body.experienceYears >= 0) {
     profileData.experienceYears = body.experienceYears;
+  }
+  if (isProfessionalType(body.professionalType)) {
+    profileData.professionalType = body.professionalType;
   }
   if (typeof body.fullName === "string") {
     const trimmed = body.fullName.trim();

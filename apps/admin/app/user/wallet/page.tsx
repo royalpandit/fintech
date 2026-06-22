@@ -11,10 +11,16 @@ import {
   lastPricesFromTrades,
   type VirtualTradeRow,
 } from "@/lib/virtual-trading";
+import {
+  computeFinuerScore,
+  FREE_BALANCE_CAP,
+  UNLOCK_SCORE,
+} from "@/lib/finuer-score";
+import FinuerScoreCard from "@/components/paper/finuer-score-card";
 
 export const dynamic = "force-dynamic";
 
-const INITIAL_BALANCE = 1_000_000;
+const INITIAL_BALANCE = 5_00_000;
 
 function formatINR(n: number) {
   return `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
@@ -51,6 +57,8 @@ export default async function WalletPage() {
   const summary = wallet
     ? computePortfolioSummary(Number(wallet.balance), allTrades, priceBySymbol, INITIAL_BALANCE)
     : null;
+
+  const finuer = userId ? await computeFinuerScore(userId) : null;
 
   return (
     <section>
@@ -134,8 +142,27 @@ export default async function WalletPage() {
             ))}
           </div>
 
+          {finuer && (
+            <div style={{ marginBottom: 18 }}>
+              <FinuerScoreCard
+                score={finuer.score}
+                unlocked={finuer.unlocked}
+                unlockScore={UNLOCK_SCORE}
+                freeCap={FREE_BALANCE_CAP}
+                breakdown={finuer.breakdown}
+              />
+            </div>
+          )}
+
           <div className="user-split-2" style={{ marginBottom: 18 }}>
-            <WalletActions hasWallet={Boolean(wallet)} balance={Number(wallet?.balance ?? 0)} />
+            <WalletActions
+              hasWallet={Boolean(wallet)}
+              balance={Number(wallet?.balance ?? 0)}
+              score={finuer?.score ?? 0}
+              unlocked={finuer?.unlocked ?? false}
+              freeCap={FREE_BALANCE_CAP}
+              unlockScore={UNLOCK_SCORE}
+            />
             <article
               style={{
                 background: "var(--surface)",

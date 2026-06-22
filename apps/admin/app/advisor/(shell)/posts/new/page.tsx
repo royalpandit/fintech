@@ -28,6 +28,8 @@ export default function NewPostPage() {
   const [stopLossPrice, setStopLossPrice] = useState("");
   const [postAccessType, setPostAccessType] = useState<PostAccessType>("free");
   const [boostTier, setBoostTier] = useState<BoostTierId | null>(null);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState("");
   // Two top-level choices. When "subscribers" is picked, shareAll=true sends to
   // all subscribers; shareAll=false sends only to the picked recipients.
   const [audienceTop, setAudienceTop] = useState<"public" | "subscribers">("public");
@@ -51,6 +53,16 @@ export default function NewPostPage() {
       setError("Pick at least one person to send this post to.");
       return;
     }
+    if (scheduleEnabled) {
+      if (!scheduledAt) {
+        setError("Pick a date and time to schedule this post.");
+        return;
+      }
+      if (new Date(scheduledAt).getTime() <= Date.now()) {
+        setError("Scheduled time must be in the future.");
+        return;
+      }
+    }
     setLoading(true);
 
     try {
@@ -72,6 +84,7 @@ export default function NewPostPage() {
           boostTier: boostTier || undefined,
           audience,
           recipientUserIds: audience === "custom" ? recipientIds : undefined,
+          scheduledAt: scheduleEnabled && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
         }),
       });
       const data = await response.json();
@@ -319,6 +332,40 @@ export default function NewPostPage() {
               <BoostPicker selected={boostTier} onSelect={setBoostTier} includeNone />
             </div>
 
+            <div style={{ marginTop: 20 }}>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "var(--text)",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={scheduleEnabled}
+                  onChange={(e) => setScheduleEnabled(e.target.checked)}
+                />
+                Schedule for later
+              </label>
+              <p style={{ margin: "2px 0 8px", fontSize: 12, color: "var(--text-muted)" }}>
+                Pick a future date and time. The post publishes automatically once approved and the
+                time arrives.
+              </p>
+              {scheduleEnabled && (
+                <input
+                  className="input"
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                  style={{ maxWidth: 280 }}
+                />
+              )}
+            </div>
+
             <label className="metric-label" style={{ marginTop: 16 }}>
               Disclaimer * <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(required by SEBI)</span>
             </label>
@@ -356,7 +403,11 @@ export default function NewPostPage() {
                 Cancel
               </Link>
               <button type="submit" className="btn-primary" disabled={loading}>
-                {loading ? "Submitting..." : "Submit for Review"}
+                {loading
+                  ? "Submitting..."
+                  : scheduleEnabled
+                    ? "Schedule Post"
+                    : "Submit for Review"}
               </button>
             </div>
           </article>

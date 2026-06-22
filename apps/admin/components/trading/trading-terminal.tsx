@@ -345,15 +345,19 @@ function OverviewPanel({
 
 // ── Main Terminal ─────────────────────────────────────────────────────────────
 
-export default function TradingTerminal() {
-  return <TradingTerminalInner />;
+export default function TradingTerminal({ initialSymbol }: { initialSymbol?: WatchlistItem } = {}) {
+  return <TradingTerminalInner initialSymbol={initialSymbol} />;
 }
 
-function TradingTerminalInner() {
+function TradingTerminalInner({ initialSymbol }: { initialSymbol?: WatchlistItem }) {
   const router = useRouter();
   const { lists: storeLists, version: storeVersion } = useWatchlistStore();
-  const [watchlist,       setWatchlist]       = useState<WatchlistItem[]>(DEFAULT_WATCHLIST);
-  const [selected,        setSelected]        = useState<WatchlistItem>(DEFAULT_WATCHLIST[0]);
+  const [watchlist,       setWatchlist]       = useState<WatchlistItem[]>(
+    initialSymbol && !DEFAULT_WATCHLIST.some(w => w.token === initialSymbol.token)
+      ? [initialSymbol, ...DEFAULT_WATCHLIST]
+      : DEFAULT_WATCHLIST,
+  );
+  const [selected,        setSelected]        = useState<WatchlistItem>(initialSymbol ?? DEFAULT_WATCHLIST[0]);
   const [timeframe,       setTimeframe]       = useState<TimeframeOption>(DEFAULT_TIMEFRAME);
   const [period,          setPeriod]          = useState(() => defaultPeriodForTimeframe(DEFAULT_TIMEFRAME));
   const [showTfMenu,      setShowTfMenu]      = useState(false);

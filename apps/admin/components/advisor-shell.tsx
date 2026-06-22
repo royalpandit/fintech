@@ -15,6 +15,7 @@ type AdvisorShellProps = {
     fullName: string;
     email: string;
     sebiRegistrationNo: string | null;
+    profileImageUrl?: string | null;
   };
   badges?: Partial<Record<string, number>>;
   walletBalance: number;
@@ -71,6 +72,7 @@ export default function AdvisorShell({
     needsVerification && target !== "/advisor/dashboard" ? "/advisor/verify" : target;
 
   const initials = getInitials(currentUser.fullName);
+  const avatarUrl = currentUser.profileImageUrl;
   const todayDeltaPct = deltaPct(todayDelta.current, todayDelta.previous);
   const todayDeltaSign = todayDeltaPct >= 0 ? "+" : "";
 
@@ -101,7 +103,9 @@ export default function AdvisorShell({
                 width: 40,
                 height: 40,
                 borderRadius: 999,
-                background: "linear-gradient(135deg, #2563eb, #10b981)",
+                background: avatarUrl
+                  ? `var(--surface-2) url(${avatarUrl}) center/cover no-repeat`
+                  : "linear-gradient(135deg, #2563eb, #10b981)",
                 color: "#fff",
                 display: "grid",
                 placeItems: "center",
@@ -110,7 +114,7 @@ export default function AdvisorShell({
                 flexShrink: 0,
               }}
             >
-              {initials}
+              {!avatarUrl && initials}
             </div>
             <div style={{ minWidth: 0 }}>
               <div
@@ -370,7 +374,9 @@ export default function AdvisorShell({
                 width: 38,
                 height: 38,
                 borderRadius: 999,
-                background: "linear-gradient(135deg, #2563eb, #10b981)",
+                background: avatarUrl
+                  ? `var(--surface-2) url(${avatarUrl}) center/cover no-repeat`
+                  : "linear-gradient(135deg, #2563eb, #10b981)",
                 color: "#fff",
                 display: "grid",
                 placeItems: "center",
@@ -380,7 +386,7 @@ export default function AdvisorShell({
                 cursor: "pointer",
               }}
             >
-              {initials}
+              {!avatarUrl && initials}
             </button>
 
             {menuOpen && (

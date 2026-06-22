@@ -9,6 +9,7 @@ import { CheckCircle } from "@/components/advisor-ui/icons";
 import FollowToggle from "@/components/FollowToggle";
 import SubscribeButton from "@/components/subscribe-button";
 import { marketPostAudienceWhere } from "@/lib/post-visibility";
+import { professionalTypeLabel } from "@/lib/professional-types";
 import MessageAdvisorButton from "./MessageAdvisorButton";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
       advisorProfile: {
         select: {
           sebiRegistrationNo: true,
+          professionalType: true,
           experienceYears: true,
           bio: true,
           expertiseTags: true,
@@ -145,7 +147,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
         href="/user/advisors"
         style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12, display: "inline-block" }}
       >
-        ← All Advisors
+        ← All Finance Professionals
       </Link>
 
       {/* Hero */}
@@ -190,6 +192,20 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
               {advisor.fullName}
               <CheckCircle size={18} style={{ color: "#a7f3d0" }} />
             </h1>
+            <span
+              style={{
+                display: "inline-block",
+                margin: "8px 0 0",
+                padding: "3px 12px",
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.15)",
+                color: "#fff",
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              {professionalTypeLabel(advisor.advisorProfile.professionalType)}
+            </span>
             <p
               style={{
                 margin: "4px 0 12px",

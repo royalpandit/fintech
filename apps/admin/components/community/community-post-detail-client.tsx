@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FiHeart, FiShare2, FiArrowLeft } from "react-icons/fi";
-import CommentThread from "@/components/community/comment-thread";
+// import CommentThread from "@/components/community/comment-thread"; // comments hidden for now
 import {
   likeCommunityPost,
   shareCommunityPost,
@@ -88,7 +88,9 @@ export default function CommunityPostDetailClient({
           >
             <FiHeart size={16} /> {post.like_count}
           </button>
+          {/* Comments hidden for now
           <span className="comm-action-btn">{post.comment_count} comments</span>
+          */}
           <button type="button" className="comm-action-btn" onClick={() => void onShare()} disabled={!canInteract}>
             <FiShare2 size={16} /> Share
           </button>
@@ -100,12 +102,14 @@ export default function CommunityPostDetailClient({
         </div>
       </article>
 
+      {/* Comments section hidden for now
       <CommentThread
         slug={slug}
         postId={post.id}
         initialComments={initialComments}
         canInteract={canInteract}
       />
+      */}
     </div>
   );
 }

@@ -8,13 +8,24 @@ const PRESETS = [50_000, 1_00_000, 5_00_000, 10_00_000];
 type Props = {
   hasWallet: boolean;
   balance: number;
+  score: number;
+  unlocked: boolean;
+  freeCap: number;
+  unlockScore: number;
 };
 
 function formatINR(n: number) {
   return `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 }
 
-export default function WalletActions({ hasWallet, balance }: Props) {
+export default function WalletActions({
+  hasWallet,
+  balance,
+  score,
+  unlocked,
+  freeCap,
+  unlockScore,
+}: Props) {
   const router = useRouter();
   const [amount, setAmount] = useState("100000");
   const [loading, setLoading] = useState(false);
@@ -65,7 +76,7 @@ export default function WalletActions({ hasWallet, balance }: Props) {
     try {
       const data = await ensureWallet();
       setSuccess(
-        `Paper wallet ready with ${formatINR(data.virtual_balance ?? 1_000_000)} starting balance.`,
+        `Paper wallet ready with ${formatINR(data.virtual_balance ?? freeCap)} starting balance.`,
       );
       router.refresh();
     } catch (e) {
@@ -102,7 +113,7 @@ export default function WalletActions({ hasWallet, balance }: Props) {
       <p style={{ margin: "0 0 16px", fontSize: 12, color: "var(--text-muted)" }}>
         {hasWallet
           ? `Current balance: ${formatINR(balance)}. Top up for more paper trades.`
-          : "Start with ₹10,00,000 demo balance — no real money."}
+          : `Start with ${formatINR(freeCap)} demo balance — no real money.`}
       </p>
 
       {!hasWallet ? (
@@ -123,7 +134,7 @@ export default function WalletActions({ hasWallet, balance }: Props) {
             opacity: loading ? 0.7 : 1,
           }}
         >
-          {loading ? "Creating…" : "Create wallet (₹10L)"}
+          {loading ? "Creating…" : `Create wallet (${formatINR(freeCap)})`}
         </button>
       ) : (
         <>
@@ -137,27 +148,41 @@ export default function WalletActions({ hasWallet, balance }: Props) {
             onChange={(e) => setAmount(e.target.value)}
             style={inputStyle}
           />
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "10px 0 14px" }}>
-            {PRESETS.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setAmount(String(p))}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 8,
-                  border: "1px solid var(--border)",
-                  background: Number(amount) === p ? "rgba(14,165,233,0.12)" : "var(--surface-2)",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "#2563eb",
-                  cursor: "pointer",
-                }}
-              >
-                +{formatINR(p)}
-              </button>
-            ))}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "10px 0 10px" }}>
+            {PRESETS.map((p) => {
+              const exceedsCap = !unlocked && balance + p > freeCap;
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setAmount(String(p))}
+                  disabled={exceedsCap}
+                  title={exceedsCap ? `Reach Finuer score ${unlockScore} to unlock` : undefined}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 8,
+                    border: "1px solid var(--border)",
+                    background: Number(amount) === p ? "rgba(14,165,233,0.12)" : "var(--surface-2)",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: exceedsCap ? "var(--text-muted)" : "#2563eb",
+                    cursor: exceedsCap ? "not-allowed" : "pointer",
+                    opacity: exceedsCap ? 0.5 : 1,
+                  }}
+                >
+                  +{formatINR(p)}
+                </button>
+              );
+            })}
           </div>
+
+          {!unlocked && (
+            <p style={{ margin: "0 0 14px", fontSize: 11, color: "var(--text-muted)", lineHeight: 1.5 }}>
+              Balance is capped at <strong>{formatINR(freeCap)}</strong> until you reach a Finuer
+              score of <strong>{unlockScore}</strong> (you&apos;re at <strong>{score}</strong>). Post
+              and interact on Finuer to unlock higher balances.
+            </p>
+          )}
           <button
             type="button"
             onClick={addFunds}

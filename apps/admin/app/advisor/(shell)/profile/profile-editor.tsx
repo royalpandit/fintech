@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PROFESSIONAL_TYPES, type ProfessionalType } from "@/lib/professional-types";
 
 type Initial = {
   fullName: string;
@@ -9,6 +10,7 @@ type Initial = {
   expertiseTags: string[];
   profileImageUrl: string;
   experienceYears: number;
+  professionalType: ProfessionalType;
 };
 
 const SUGGESTED_TAGS = [
@@ -37,9 +39,35 @@ export default function ProfileEditor({ initial }: { initial: Initial }) {
   const [newTag, setNewTag] = useState("");
   const [profileImageUrl, setProfileImageUrl] = useState(initial.profileImageUrl);
   const [experienceYears, setExperienceYears] = useState(String(initial.experienceYears));
+  const [professionalType, setProfessionalType] = useState<ProfessionalType>(initial.professionalType);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const uploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setError("");
+    setUploadingImage(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("kind", "image");
+      const res = await fetch("/api/v1/uploads/social", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok || data.status === false) {
+        setError(data.error || "Image upload failed");
+        return;
+      }
+      setProfileImageUrl(data.url);
+    } catch {
+      setError("Image upload failed");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const addTag = (value: string) => {
     const t = value.trim();
@@ -70,6 +98,7 @@ export default function ProfileEditor({ initial }: { initial: Initial }) {
           expertiseTags: tags,
           profileImageUrl: profileImageUrl.trim() || null,
           experienceYears: Number(experienceYears) || 0,
+          professionalType,
         }),
       });
       const data = await response.json();
@@ -95,6 +124,70 @@ export default function ProfileEditor({ initial }: { initial: Initial }) {
       </p>
 
       <form onSubmit={submit}>
+        <label className="metric-label">Profile Image</label>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+          <div
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: "50%",
+              flexShrink: 0,
+              border: "1px solid var(--border)",
+              background: "var(--surface-2)",
+              backgroundImage: profileImageUrl ? `url(${profileImageUrl})` : undefined,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              display: "grid",
+              placeItems: "center",
+              color: "var(--text-muted)",
+              fontSize: 11,
+              overflow: "hidden",
+            }}
+          >
+            {!profileImageUrl && "No image"}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <label
+              className="input"
+              style={{
+                width: "auto",
+                padding: "8px 14px",
+                cursor: uploadingImage ? "wait" : "pointer",
+                textAlign: "center",
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+            >
+              {uploadingImage ? "Uploading…" : profileImageUrl ? "Change image" : "Upload image"}
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                hidden
+                disabled={uploadingImage}
+                onChange={uploadImage}
+              />
+            </label>
+            {profileImageUrl && (
+              <button
+                type="button"
+                onClick={() => setProfileImageUrl("")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#dc2626",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  padding: 0,
+                  textAlign: "left",
+                }}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
+
         <label className="metric-label">Display Name</label>
         <input
           className="input"
@@ -103,6 +196,24 @@ export default function ProfileEditor({ initial }: { initial: Initial }) {
           required
           minLength={2}
         />
+
+        <label className="metric-label" style={{ marginTop: 16 }}>
+          Professional Type
+        </label>
+        <select
+          className="input"
+          value={professionalType}
+          onChange={(e) => setProfessionalType(e.target.value as ProfessionalType)}
+        >
+          {PROFESSIONAL_TYPES.map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+        <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
+          How you appear when users filter finance professionals.
+        </p>
 
         <label className="metric-label" style={{ marginTop: 16 }}>
           Bio
@@ -209,29 +320,17 @@ export default function ProfileEditor({ initial }: { initial: Initial }) {
           </div>
         </div>
 
-        <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16 }}>
-          <div>
-            <label className="metric-label">Years of Experience</label>
-            <input
-              className="input"
-              type="number"
-              min={0}
-              max={60}
-              value={experienceYears}
-              onChange={(e) => setExperienceYears(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="metric-label">Profile Image URL</label>
-            <input
-              className="input"
-              type="url"
-              value={profileImageUrl}
-              onChange={(e) => setProfileImageUrl(e.target.value)}
-              placeholder="https://..."
-            />
-          </div>
-        </div>
+        <label className="metric-label" style={{ marginTop: 16 }}>
+          Years of Experience
+        </label>
+        <input
+          className="input"
+          type="number"
+          min={0}
+          max={60}
+          value={experienceYears}
+          onChange={(e) => setExperienceYears(e.target.value)}
+        />
 
         {error && (
           <div

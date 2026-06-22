@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ok, err } from "@/lib/api-helpers";
 import { requireAuth, requireRole } from "@/lib/auth";
 
-const INITIAL_BALANCE = 1_000_000;
+const INITIAL_BALANCE = 5_00_000; // ₹5 lakh free cap (see lib/finuer-score)
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req);

@@ -28,7 +28,7 @@ import {
   FiSearch,
   FiChevronRight,
 } from "react-icons/fi";
-import { TbFlask } from "react-icons/tb";
+import { TbRobot } from "react-icons/tb";
 import WatchlistStoreProvider from "@/components/watchlist/watchlist-store-provider";
 
 type UserShellProps = {
@@ -49,7 +49,7 @@ type NavItem = {
 
 const MAIN_NAV: NavItem[] = [
   { label: "Feed", href: "/user/feed", Icon: FiHome },
-  { label: "Advisors", href: "/user/advisors", Icon: FiUsers },
+  { label: "Finance Professionals", href: "/user/advisors", Icon: FiUsers },
   { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
   { label: "Messages", href: "/user/messages", Icon: FiMessageCircle },
   { label: "Community", href: "/user/community", Icon: FiMessageSquare },
@@ -64,13 +64,13 @@ const INVESTING_NAV: NavItem[] = [
   { label: "Watchlist", href: "/user/watchlist", Icon: FiStar },
   { label: "Portfolio", href: "/user/portfolio", Icon: FiBriefcase },
   { label: "Courses", href: "/user/courses", Icon: FiBookOpen },
-  { label: "Virtual Lab", href: "/user/lab", Icon: TbFlask, badge: "Paper" },
+  { label: "Financial AI Agents", href: "/user/lab/agents", Icon: TbRobot, badge: "AI" },
   { label: "Trade History", href: "/user/history", Icon: FiClock },
 ];
 
 const BOTTOM_NAV: NavItem[] = [
   { label: "Feed", href: "/user/feed", Icon: FiHome },
-  { label: "Advisors", href: "/user/advisors", Icon: FiUsers },
+  { label: "Pros", href: "/user/advisors", Icon: FiUsers },
   { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
   { label: "Messages", href: "/user/messages", Icon: FiMessageCircle },
   { label: "Alerts", href: "/user/notifications", Icon: FiBell },

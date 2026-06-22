@@ -3,12 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { ok } from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/auth";
 import { serializeMarketFeedPosts } from "@/lib/market-feed-serialize";
+import { publishDueScheduledPosts } from "@/lib/scheduled-posts";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req);
   const userId = auth?.userId ?? null;
+
+  // Publish any scheduled posts whose time has arrived.
+  await publishDueScheduledPosts();
 
   const { searchParams } = new URL(req.url);
   const cursor = searchParams.get("cursor") ? Number(searchParams.get("cursor")) : undefined;

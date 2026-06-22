@@ -59,14 +59,32 @@ export async function POST(
   const threadId = Number(params.threadId);
   if (!await assertParticipant(threadId, auth.userId)) return err("Forbidden", 403);
 
-  const body = await parseBody<{ content?: string }>(req);
-  if (!body.content?.trim()) return err("content is required");
+  const body = await parseBody<{
+    content?: string;
+    attachmentUrl?: string;
+    attachmentType?: string;
+    attachmentName?: string;
+  }>(req);
+
+  const content = body.content?.trim() ?? "";
+  const attachmentUrl = body.attachmentUrl?.trim() || null;
+  // A message must have either text or an attachment.
+  if (!content && !attachmentUrl) return err("content or an attachment is required");
+
+  const attachmentType = attachmentUrl
+    ? body.attachmentType === "image"
+      ? "image"
+      : "file"
+    : null;
 
   const message = await prisma.dmMessage.create({
     data: {
       threadId,
       senderUserId: auth.userId,
-      contentEnc: body.content.trim(),
+      contentEnc: content,
+      attachmentUrl,
+      attachmentType,
+      attachmentName: attachmentUrl ? body.attachmentName?.slice(0, 255) ?? null : null,
     },
     include: {
       sender: { select: { id: true, fullName: true } },
