@@ -93,6 +93,16 @@ enum PostAccessType {
   @@map("post_access_type")
 }
 
+enum ProfessionalType {
+  investment_advisor
+  research_analyst
+  portfolio_manager
+  advisory_firm
+  wealth_manager
+
+  @@map("professional_type")
+}
+
 enum PostPaymentStatus {
   none
   pending
@@ -425,6 +435,7 @@ model AdvisorProfile {
   id                 Int                @id @default(autoincrement())
   userId             Int                @unique @map("user_id")
   sebiRegistrationNo String             @unique @map("sebi_registration_no") @db.VarChar(100)
+  professionalType   ProfessionalType   @default(investment_advisor) @map("professional_type")
   experienceYears    Int?               @map("experience_years")
   bio                String?
   expertiseTags      String[]           @default([]) @map("expertise_tags")
@@ -490,6 +501,7 @@ model MarketPost {
   // String (not enum) so a "group" audience can be added later without a migration.
   audience            String           @default("public") @db.VarChar(20)
   publishedAt         DateTime?        @map("published_at")
+  scheduledAt         DateTime?        @map("scheduled_at")
   editedAt            DateTime?        @map("edited_at")
   boostedUntil        DateTime?        @map("boosted_until")
   boostTier           String?          @map("boost_tier") @db.VarChar(20)
@@ -926,12 +938,15 @@ model DmThreadParticipant {
 }
 
 model DmMessage {
-  id           Int       @id @default(autoincrement())
-  threadId     Int       @map("thread_id")
-  senderUserId Int       @map("sender_user_id")
-  contentEnc   String    @map("content_enc")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  deletedAt    DateTime? @map("deleted_at")
+  id             Int       @id @default(autoincrement())
+  threadId       Int       @map("thread_id")
+  senderUserId   Int       @map("sender_user_id")
+  contentEnc     String    @map("content_enc")
+  attachmentUrl  String?   @map("attachment_url")
+  attachmentType String?   @map("attachment_type") @db.VarChar(20) // "image" | "file"
+  attachmentName String?   @map("attachment_name")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  deletedAt      DateTime? @map("deleted_at")
 
   thread DmThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   sender User     @relation(fields: [senderUserId], references: [id], onDelete: Cascade)

@@ -74,7 +74,17 @@ export async function POST(req: NextRequest) {
     boostTier?: string;
     audience?: string;
     recipientUserIds?: number[];
+    scheduledAt?: string;
   }>(req);
+
+  // Optional scheduled publish time. Only honoured if it's a valid future date.
+  let scheduledAt: Date | null = null;
+  if (body.scheduledAt) {
+    const d = new Date(body.scheduledAt);
+    if (!Number.isNaN(d.getTime()) && d.getTime() > Date.now()) {
+      scheduledAt = d;
+    }
+  }
 
   const audience = parseAudience(body.audience);
 
@@ -165,7 +175,10 @@ export async function POST(req: NextRequest) {
         postAccessType === "paid" && typeof body.unlockPrice === "number"
           ? body.unlockPrice
           : null,
-      publishedAt: matchedPhrase ? null : new Date(),
+      // Flagged → unpublished (awaits review). Scheduled → unpublished until due.
+      // Otherwise publish now.
+      publishedAt: matchedPhrase || scheduledAt ? null : new Date(),
+      scheduledAt: matchedPhrase ? null : scheduledAt,
       boostedUntil,
       boostTier: willBoost && boostTierObj ? boostTierObj.id : null,
       audience,

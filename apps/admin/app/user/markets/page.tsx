@@ -1,7 +1,7 @@
-import TradingTerminal from "@/components/trading/trading-terminal";
+import MarketsOverview from "@/components/trading/markets-overview";
 
 export const dynamic = "force-dynamic";
 
 export default function MarketsPage() {
-  return <TradingTerminal />;
+  return <MarketsOverview />;
 }

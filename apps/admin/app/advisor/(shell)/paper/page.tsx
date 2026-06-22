@@ -6,6 +6,7 @@ import WalletActions from "@/components/paper/wallet-actions";
 import PaperPortfolioSection from "@/components/paper/paper-portfolio-section";
 import PaperTradeForm from "@/components/paper/paper-trade-form";
 import { prisma } from "@/lib/prisma";
+import { computeFinuerScore, FREE_BALANCE_CAP, UNLOCK_SCORE } from "@/lib/finuer-score";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export default async function AdvisorPaperPage() {
   if (!auth || auth.role !== "advisor") redirect("/login");
 
   const wallet = await prisma.virtualWallet.findUnique({ where: { userId: auth.userId } });
+  const finuer = await computeFinuerScore(auth.userId);
 
   return (
     <section>
@@ -26,7 +28,14 @@ export default async function AdvisorPaperPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>
-        <WalletActions hasWallet={Boolean(wallet)} balance={Number(wallet?.balance ?? 0)} />
+        <WalletActions
+          hasWallet={Boolean(wallet)}
+          balance={Number(wallet?.balance ?? 0)}
+          score={finuer.score}
+          unlocked={finuer.unlocked}
+          freeCap={FREE_BALANCE_CAP}
+          unlockScore={UNLOCK_SCORE}
+        />
         <article className="card" style={{ padding: 18 }}>
           <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 600 }}>Quick trade</h3>
           <PaperTradeForm compact />

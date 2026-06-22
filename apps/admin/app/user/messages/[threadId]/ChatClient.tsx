@@ -2,17 +2,30 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { FiArrowLeft, FiSend, FiMessageCircle } from "react-icons/fi";
+import {
+  FiArrowLeft,
+  FiSend,
+  FiMessageCircle,
+  FiPaperclip,
+  FiFile,
+  FiX,
+  FiDownload,
+} from "react-icons/fi";
 
 type Message = {
   id: number;
   threadId: number;
   senderUserId: number;
   contentEnc: string;
+  attachmentUrl?: string | null;
+  attachmentType?: string | null;
+  attachmentName?: string | null;
   createdAt: string;
   deletedAt: string | null;
   sender: { id: number; fullName: string };
 };
+
+type PendingAttachment = { url: string; type: "image" | "file"; name: string };
 
 type Props = {
   threadId: number;
@@ -48,9 +61,36 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [attachment, setAttachment] = useState<PendingAttachment | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastIdRef = useRef<number>(initialMessages[initialMessages.length - 1]?.id ?? 0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file) return;
+    setUploadError("");
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/v1/messages/upload", { method: "POST", body: fd });
+      const json = await res.json();
+      if (!res.ok || json.status === false) {
+        setUploadError(json.error || "Upload failed");
+        return;
+      }
+      setAttachment({ url: json.url, type: json.type, name: json.name });
+    } catch {
+      setUploadError("Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   // Scroll to bottom on load and new messages
   useEffect(() => {
@@ -82,9 +122,11 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
 
   async function sendMessage() {
     const text = input.trim();
-    if (!text || sending) return;
+    if ((!text && !attachment) || sending || uploading) return;
+    const sentAttachment = attachment;
     setSending(true);
     setInput("");
+    setAttachment(null);
 
     // Optimistic message
     const optimistic: Message = {
@@ -92,6 +134,9 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
       threadId,
       senderUserId: userId,
       contentEnc: text,
+      attachmentUrl: sentAttachment?.url ?? null,
+      attachmentType: sentAttachment?.type ?? null,
+      attachmentName: sentAttachment?.name ?? null,
       createdAt: new Date().toISOString(),
       deletedAt: null,
       sender: { id: userId, fullName: "You" },
@@ -102,7 +147,12 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
       const res = await fetch(`/api/v1/messages/threads/${threadId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text }),
+        body: JSON.stringify({
+          content: text,
+          attachmentUrl: sentAttachment?.url,
+          attachmentType: sentAttachment?.type,
+          attachmentName: sentAttachment?.name,
+        }),
       });
       if (res.ok) {
         const json = await res.json();
@@ -117,6 +167,7 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
       // Remove optimistic on failure
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
       setInput(text);
+      setAttachment(sentAttachment);
     } finally {
       setSending(false);
       inputRef.current?.focus();
@@ -136,14 +187,8 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "calc(100vh - 120px)",
-        minHeight: 500,
-      }}
-    >
+    <div className="dm-chat-root">
+
       {/* Header */}
       <div
         style={{
@@ -204,7 +249,9 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
       <div
         style={{
           flex: 1,
+          minHeight: 0,
           overflowY: "auto",
+          scrollBehavior: "smooth",
           padding: "18px",
           background: "var(--surface-2)",
           border: "1px solid var(--border)",
@@ -309,7 +356,61 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
                       {m.deletedAt ? (
                         <em style={{ opacity: 0.6 }}>Message deleted</em>
                       ) : (
-                        m.contentEnc
+                        <>
+                          {m.attachmentUrl && m.attachmentType === "image" && (
+                            <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={m.attachmentUrl}
+                                alt={m.attachmentName ?? "image"}
+                                style={{
+                                  display: "block",
+                                  maxWidth: "100%",
+                                  maxHeight: 240,
+                                  borderRadius: 10,
+                                  marginBottom: m.contentEnc ? 8 : 0,
+                                }}
+                              />
+                            </a>
+                          )}
+                          {m.attachmentUrl && m.attachmentType === "file" && (
+                            <a
+                              href={m.attachmentUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download={m.attachmentName ?? true}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                                padding: "8px 10px",
+                                borderRadius: 10,
+                                background: isMine ? "rgba(255,255,255,0.18)" : "var(--surface-2)",
+                                color: "inherit",
+                                textDecoration: "none",
+                                marginBottom: m.contentEnc ? 8 : 0,
+                                maxWidth: 260,
+                              }}
+                            >
+                              <FiFile size={20} style={{ flexShrink: 0 }} />
+                              <span
+                                style={{
+                                  flex: 1,
+                                  minWidth: 0,
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {m.attachmentName ?? "Document"}
+                              </span>
+                              <FiDownload size={15} style={{ flexShrink: 0, opacity: 0.8 }} />
+                            </a>
+                          )}
+                          {m.contentEnc}
+                        </>
                       )}
                     </div>
                     <div
@@ -336,66 +437,152 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
       {/* Input area */}
       <div
         style={{
-          display: "flex",
-          gap: 10,
           padding: "12px 14px",
           background: "var(--surface)",
           border: "1px solid var(--border)",
           borderRadius: "0 0 14px 14px",
           flexShrink: 0,
-          alignItems: "flex-end",
         }}
       >
-        <textarea
-          ref={inputRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              sendMessage();
-            }
-          }}
-          placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
-          rows={1}
-          style={{
-            flex: 1,
-            resize: "none",
-            border: "1px solid var(--border)",
-            borderRadius: 10,
-            padding: "10px 14px",
-            fontSize: 14,
-            outline: "none",
-            lineHeight: 1.5,
-            maxHeight: 120,
-            overflowY: "auto",
-            fontFamily: "inherit",
-          }}
-        />
-        <button
-          type="button"
-          onClick={sendMessage}
-          disabled={!input.trim() || sending}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 44,
-            height: 44,
-            borderRadius: 10,
-            border: "none",
-            background:
-              input.trim() && !sending
-                ? "linear-gradient(135deg, #0ea5e9, #0284c7)"
-                : "var(--border)",
-            color: input.trim() && !sending ? "#fff" : "var(--text-muted)",
-            cursor: input.trim() && !sending ? "pointer" : "default",
-            flexShrink: 0,
-            transition: "background 0.15s",
-          }}
-        >
-          <FiSend size={16} />
-        </button>
+        {uploadError && (
+          <p style={{ margin: "0 0 8px", fontSize: 12, color: "#dc2626" }}>{uploadError}</p>
+        )}
+
+        {(attachment || uploading) && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "8px 10px",
+              marginBottom: 8,
+              borderRadius: 10,
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            {uploading ? (
+              <span style={{ fontSize: 13, color: "var(--text-muted)" }}>Uploading…</span>
+            ) : attachment?.type === "image" ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={attachment.url}
+                  alt=""
+                  style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 8 }}
+                />
+                <span style={{ flex: 1, fontSize: 13, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {attachment.name}
+                </span>
+              </>
+            ) : (
+              <>
+                <FiFile size={20} style={{ color: "var(--text-muted)" }} />
+                <span style={{ flex: 1, fontSize: 13, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {attachment?.name}
+                </span>
+              </>
+            )}
+            {attachment && (
+              <button
+                type="button"
+                onClick={() => setAttachment(null)}
+                aria-label="Remove attachment"
+                style={{ border: "none", background: "transparent", cursor: "pointer", color: "var(--text-muted)", display: "flex" }}
+              >
+                <FiX size={16} />
+              </button>
+            )}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            hidden
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+            onChange={onPickFile}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || sending}
+            title="Attach image or document"
+            aria-label="Attach file"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 44,
+              height: 44,
+              borderRadius: 10,
+              border: "1px solid var(--border)",
+              background: "var(--surface)",
+              color: "var(--text-muted)",
+              cursor: uploading || sending ? "default" : "pointer",
+              flexShrink: 0,
+            }}
+          >
+            <FiPaperclip size={18} />
+          </button>
+
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
+            rows={1}
+            style={{
+              flex: 1,
+              resize: "none",
+              border: "1px solid var(--border)",
+              borderRadius: 10,
+              padding: "10px 14px",
+              fontSize: 14,
+              outline: "none",
+              lineHeight: 1.5,
+              maxHeight: 120,
+              overflowY: "auto",
+              fontFamily: "inherit",
+            }}
+          />
+
+          {(() => {
+            const canSend = (input.trim() || attachment) && !sending && !uploading;
+            return (
+              <button
+                type="button"
+                onClick={sendMessage}
+                disabled={!canSend}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 44,
+                  height: 44,
+                  borderRadius: 10,
+                  border: "none",
+                  background: canSend
+                    ? "linear-gradient(135deg, #0ea5e9, #0284c7)"
+                    : "var(--border)",
+                  color: canSend ? "#fff" : "var(--text-muted)",
+                  cursor: canSend ? "pointer" : "default",
+                  flexShrink: 0,
+                  transition: "background 0.15s",
+                }}
+              >
+                <FiSend size={16} />
+              </button>
+            );
+          })()}
+        </div>
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { requireAuthToken } from "@/lib/auth";
 import { marketPostAudienceWhere } from "@/lib/post-visibility";
 import FeedClient from "@/components/feed/FeedClient";
 import { serializeMarketFeedPost } from "@/lib/market-feed-serialize";
+import { publishDueScheduledPosts } from "@/lib/scheduled-posts";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,9 @@ export default async function UserFeedPage() {
   const auth = await requireAuthToken(token);
   const isAuthed = Boolean(auth);
   const userId = auth?.userId ?? null;
+
+  // Publish any scheduled posts whose time has come before building the feed.
+  await publishDueScheduledPosts();
 
   const currentUser = userId
     ? await prisma.user.findUnique({

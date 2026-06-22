@@ -13,8 +13,8 @@ export default async function AgentsBrowserPage() {
   return (
     <div style={{ width: "100%", minWidth: 0 }}>
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: "var(--text)" }}>AI Agents</h1>
-        <p style={{ margin: "6px 0 0", fontSize: 14, color: "var(--text-muted)" }}>Chat with expert AI agents powered by Gemini — built for finance, investing & more</p>
+        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: "var(--text)" }}>Financial AI Agents</h1>
+        <p style={{ margin: "6px 0 0", fontSize: 14, color: "var(--text-muted)" }}>Chat with our Gemini-powered financial agents — built for finance, investing &amp; markets</p>
       </div>
 
       {agents.length === 0 ? (
