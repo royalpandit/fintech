@@ -169,7 +169,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
               display: "grid",
               placeItems: "center",
               fontSize: 28,
-              fontWeight: 800,
+              fontWeight: 600,
               flexShrink: 0,
             }}
           >
@@ -180,7 +180,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
               style={{
                 margin: 0,
                 fontSize: 28,
-                fontWeight: 800,
+                fontWeight: 600,
                 letterSpacing: -0.6,
                 display: "flex",
                 gap: 8,
@@ -244,7 +244,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
                     borderRadius: 12,
                     background: "rgba(255,255,255,0.95)",
                     color: "#064e3b",
-                    fontWeight: 800,
+                    fontWeight: 600,
                     fontSize: 14,
                     border: "none",
                     cursor: "pointer",
@@ -321,7 +321,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
             <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", fontWeight: 500, marginBottom: 6 }}>
               {s.label}
             </p>
-            <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: s.color, letterSpacing: -0.5 }}>
+            <p style={{ margin: 0, fontSize: 20, fontWeight: 600, color: s.color, letterSpacing: -0.5 }}>
               {s.value}
             </p>
           </article>
@@ -329,7 +329,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
       </div>
 
       {/* Posts feed */}
-      <h2 style={{ margin: "0 0 14px", fontSize: 18, fontWeight: 800, color: "var(--text)" }}>
+      <h2 style={{ margin: "0 0 14px", fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
         Recent Sentiment ({posts.length})
       </h2>
 
@@ -380,7 +380,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
                         background: `${sColor}1a`,
                         color: sColor,
                         fontSize: 10,
-                        fontWeight: 800,
+                        fontWeight: 600,
                         textTransform: "uppercase",
                         letterSpacing: 0.5,
                       }}
@@ -438,7 +438,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
       {/* Courses */}
       {courses.length > 0 && (
         <>
-          <h2 style={{ margin: "0 0 14px", fontSize: 18, fontWeight: 800, color: "var(--text)" }}>
+          <h2 style={{ margin: "0 0 14px", fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
             Courses ({courses.length})
           </h2>
           <div
@@ -489,7 +489,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
                     alignItems: "center",
                   }}
                 >
-                  <span style={{ fontSize: 16, fontWeight: 800, color: "#0ea5e9" }}>
+                  <span style={{ fontSize: 16, fontWeight: 600, color: "#0ea5e9" }}>
                     {Number(c.price) > 0 ? formatINR(Number(c.price)) : "Free"}
                   </span>
                   <span style={{ fontSize: 11, color: "var(--text-muted)" }}>

@@ -102,7 +102,7 @@ export default function PaperTradeForm({ defaultSymbol = "", compact = false }: 
           border: "none",
           background: side === "buy" ? "#16a34a" : "#dc2626",
           color: "#fff",
-          fontWeight: 800,
+          fontWeight: 600,
           fontSize: 13,
           cursor: loading ? "wait" : "pointer",
         }}

@@ -53,7 +53,7 @@ export default function MarketPostDetailBody({ post: initial, isAuthed, children
           style={{
             margin: "0 0 12px",
             fontSize: 24,
-            fontWeight: 800,
+            fontWeight: 600,
             color: "var(--text)",
             letterSpacing: -0.4,
           }}

@@ -146,7 +146,7 @@ export default function StockPicksAdminPage() {
     <div style={{ padding: "28px 32px", minHeight: "100vh", background: "var(--surface-2)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "var(--text)" }}>AI Stock Picks</h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: "var(--text)" }}>AI Stock Picks</h1>
           <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-muted)" }}>
             Create strategy groups, add stocks, and publish to the mobile app
           </p>
@@ -341,7 +341,7 @@ export default function StockPicksAdminPage() {
               padding: 24,
             }}
           >
-            <h2 style={{ margin: "0 0 20px", fontSize: 18, fontWeight: 800 }}>
+            <h2 style={{ margin: "0 0 20px", fontSize: 18, fontWeight: 600 }}>
               {editId ? "Edit Group" : "Create Group"}
             </h2>
             {error && (

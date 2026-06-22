@@ -118,7 +118,7 @@ export default function LiveCandleChart({
         }}
       >
         <div>
-          <span style={{ fontSize: 20, fontWeight: 800, color: "var(--text)" }}>
+          <span style={{ fontSize: 20, fontWeight: 600, color: "var(--text)" }}>
             {last ? formatPrice(last.close) : "—"}
           </span>
           {pctChange !== null && (

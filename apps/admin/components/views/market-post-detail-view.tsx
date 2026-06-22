@@ -120,14 +120,14 @@ export default async function MarketPostDetailView({
                   color: "#fff",
                   display: "grid",
                   placeItems: "center",
-                  fontWeight: 800,
+                  fontWeight: 600,
                   fontSize: 12,
                 }}
               >
                 {getInitials(post.advisor.fullName)}
               </div>
               <div>
-                <p style={{ margin: 0, fontWeight: 800, fontSize: 22 }}>{post.advisor.fullName}</p>
+                <p style={{ margin: 0, fontWeight: 600, fontSize: 22 }}>{post.advisor.fullName}</p>
                 <p className="page-subtitle" style={{ margin: 0 }}>
                   {post.advisor.advisorProfile?.sebiRegistrationNo ?? "No SEBI on file"} •{" "}
                   <span style={{ color: advisorVerified ? "#0b5bb5" : "#b45309", fontWeight: 700 }}>
@@ -242,7 +242,7 @@ export default async function MarketPostDetailView({
                     padding: 10,
                   }}
                 >
-                  <p style={{ margin: 0, fontWeight: 800 }}>{check.title}</p>
+                  <p style={{ margin: 0, fontWeight: 600 }}>{check.title}</p>
                   <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--text-muted)" }}>
                     {check.detail}
                   </p>
@@ -287,14 +287,14 @@ export default async function MarketPostDetailView({
                   color: "#fff",
                   display: "grid",
                   placeItems: "center",
-                  fontWeight: 800,
+                  fontWeight: 600,
                   fontSize: 12,
                 }}
               >
                 {getInitials(post.advisor.fullName)}
               </div>
               <div>
-                <p style={{ margin: 0, fontWeight: 800 }}>{post.advisor.fullName}</p>
+                <p style={{ margin: 0, fontWeight: 600 }}>{post.advisor.fullName}</p>
                 <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
                   {advisorPostCount} total posts
                 </p>

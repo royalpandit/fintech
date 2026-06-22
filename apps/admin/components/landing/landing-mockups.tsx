@@ -11,17 +11,17 @@ export function DashboardMock() {
         </aside>
         <div style={{ flex: 1, padding: 16 }}>
           <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>Good morning,</div>
-          <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Rohan 👋</div>
+          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Rohan 👋</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
             <div style={{ border: "1px solid #eef0f4", borderRadius: 10, padding: 10 }}>
               <div style={{ fontSize: 9, color: "#64748b" }}>Total Portfolio</div>
-              <div style={{ fontSize: 14, fontWeight: 800 }}>₹12,45,890</div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>₹12,45,890</div>
               <div style={{ fontSize: 9, color: "#16a34a", fontWeight: 700 }}>+2.4%</div>
               <div style={{ height: 24, marginTop: 6, background: "linear-gradient(90deg, #bbf7d0, #86efac)", borderRadius: 4, opacity: 0.7 }} />
             </div>
             <div style={{ border: "1px solid #eef0f4", borderRadius: 10, padding: 10 }}>
               <div style={{ fontSize: 9, color: "#64748b" }}>Today&apos;s P&L</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#16a34a" }}>+₹18,420</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#16a34a" }}>+₹18,420</div>
               <div style={{ height: 24, marginTop: 14, background: "linear-gradient(90deg, #fecaca, #fca5a5)", borderRadius: 4, opacity: 0.5 }} />
             </div>
           </div>
@@ -31,7 +31,7 @@ export function DashboardMock() {
               <div style={{ fontSize: 9, fontWeight: 700 }}>Holdings</div>
             </div>
             <div style={{ border: "1px solid #eef0f4", borderRadius: 10, padding: 8, fontSize: 9 }}>
-              <div style={{ fontWeight: 800, marginBottom: 6 }}>Top Holdings</div>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Top Holdings</div>
               {["RELIANCE", "TCS", "HDFCBANK"].map(s => (
                 <div key={s} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: "1px solid #f8fafc" }}>
                   <span>{s}</span><span style={{ color: "#16a34a" }}>+1.2%</span>
@@ -51,11 +51,11 @@ export function VirtualLabMock() {
       <div style={{ padding: 16, background: "#fafafa", borderBottom: "1px solid #eef0f4", display: "flex", gap: 12 }}>
         <div style={{ flex: 1, background: "#fff", borderRadius: 10, padding: 12, border: "1px solid #eef0f4" }}>
           <div style={{ fontSize: 10, color: "#64748b" }}>Virtual Cash</div>
-          <div style={{ fontSize: 18, fontWeight: 800 }}>₹10,00,000</div>
+          <div style={{ fontSize: 18, fontWeight: 600 }}>₹10,00,000</div>
         </div>
         <div style={{ flex: 1, background: "#fff", borderRadius: 10, padding: 12, border: "1px solid #eef0f4" }}>
           <div style={{ fontSize: 10, color: "#64748b" }}>Today&apos;s P&L</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: "#16a34a" }}>+₹1,71,430</div>
+          <div style={{ fontSize: 18, fontWeight: 600, color: "#16a34a" }}>+₹1,71,430</div>
         </div>
       </div>
       <div style={{ padding: 12, fontSize: 9 }}>
@@ -77,8 +77,8 @@ export function VirtualLabMock() {
         </table>
       </div>
       <div style={{ padding: 12, display: "flex", gap: 8 }}>
-        <button type="button" style={{ flex: 1, padding: 10, background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, fontWeight: 800, fontSize: 11 }}>BUY</button>
-        <button type="button" style={{ flex: 1, padding: 10, background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, fontWeight: 800, fontSize: 11 }}>SELL</button>
+        <button type="button" style={{ flex: 1, padding: 10, background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 11 }}>BUY</button>
+        <button type="button" style={{ flex: 1, padding: 10, background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 11 }}>SELL</button>
       </div>
     </div>
   );
@@ -109,7 +109,7 @@ export function FeedMock() {
           ))}
         </div>
         <aside style={{ borderLeft: "1px solid #eef0f4", padding: 12, fontSize: 10 }}>
-          <div style={{ fontWeight: 800, marginBottom: 8 }}>Trending Topics</div>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Trending Topics</div>
           {["#Nifty", "#BankNifty", "#Options", "#IPO"].map(t => (
             <div key={t} style={{ padding: "6px 0", color: "#2563eb", fontWeight: 600 }}>{t}</div>
           ))}

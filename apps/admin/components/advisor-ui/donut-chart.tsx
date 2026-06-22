@@ -94,7 +94,7 @@ export default function DonutChart({
                 <div
                   style={{
                     fontSize: 18,
-                    fontWeight: 800,
+                    fontWeight: 600,
                     color: "var(--text)",
                     letterSpacing: -0.5,
                     marginTop: 2,

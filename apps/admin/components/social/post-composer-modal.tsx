@@ -19,7 +19,6 @@ import {
   uploadSocialMedia,
 } from "@/lib/social-feed-client";
 import type { FeedSentiment, FeedPostAccessType } from "@/lib/social-feed-types";
-import PostAccessSelector from "@/components/posts/post-access-selector";
 import { useTheme } from "@/components/theme/theme-provider";
 
 type Mode = "post" | "article";
@@ -43,7 +42,7 @@ export default function PostComposerModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onPosted: () => void;
+  onPosted: (post: import("@/lib/social-feed-types").SocialPost) => void;
   userName: string;
   isAuthed: boolean;
 }) {
@@ -170,7 +169,7 @@ export default function PostComposerModal({
         thumbnailUrl = await uploadSocialMedia(thumbnail.file, "image");
       }
 
-      await createSocialPost({
+      const created = await createSocialPost({
         content: mode === "article" ? title : content,
         postAccessType,
         postType: mode === "article" ? "article" : symbols.length ? "chart" : imageUrls.length ? "image" : videoUrls.length ? "video" : "text",
@@ -191,7 +190,7 @@ export default function PostComposerModal({
       });
 
       handleClose();
-      onPosted();
+      onPosted(created);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to publish");
     } finally {
@@ -336,14 +335,6 @@ export default function PostComposerModal({
             )}
           </div>
         )}
-
-        <div className="sf-composer-access-wrap">
-          <PostAccessSelector
-            value={postAccessType}
-            onChange={setPostAccessType}
-            variant="composer"
-          />
-        </div>
 
         <footer className="sf-composer-foot">
           <div className="sf-toolbar">

@@ -80,7 +80,7 @@
   gap: 10px;
   text-decoration: none;
   color: var(--lp-text);
-  font-weight: 800;
+  font-weight: 600;
   font-size: 1.125rem;
   flex-shrink: 0;
 }
@@ -94,7 +94,7 @@
   display: grid;
   place-items: center;
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .lp-nav {
@@ -346,7 +346,7 @@
 .lp-hero h1 {
   margin: 0 0 20px;
   font-size: clamp(2.25rem, 4.5vw, 3.5rem);
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1.08;
   letter-spacing: -0.03em;
 }
@@ -508,7 +508,7 @@
 
 .lp-ticker-price {
   font-size: 1.1rem;
-  font-weight: 800;
+  font-weight: 600;
   margin-bottom: 2px;
 }
 
@@ -554,7 +554,7 @@
 
 .lp-kicker {
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--lp-blue);
@@ -564,7 +564,7 @@
 .lp-section-head h2 {
   margin: 0 0 14px;
   font-size: clamp(1.75rem, 3vw, 2.25rem);
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 
@@ -610,7 +610,7 @@
 .lp-feature-card h3 {
   margin: 0 0 8px;
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .lp-feature-card p {
@@ -635,7 +635,7 @@
   background: #ede9fe;
   color: #6d28d9;
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 600;
   vertical-align: middle;
 }
 
@@ -720,7 +720,7 @@
   display: grid;
   place-items: center;
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--lp-muted);
 }
 
@@ -731,7 +731,7 @@
 .lp-advisor-body h3 {
   margin: 0 0 4px;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .lp-advisor-meta {
@@ -749,7 +749,7 @@
 
 .lp-advisor-return {
   font-size: 1.5rem;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--lp-green);
   margin-bottom: 12px;
 }
@@ -787,7 +787,7 @@
 .lp-stat strong {
   display: block;
   font-size: 1.5rem;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .lp-stat span {
@@ -812,7 +812,7 @@
 .lp-cta-inner h2 {
   margin: 0 0 12px;
   font-size: clamp(1.75rem, 3vw, 2.5rem);
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .lp-cta-inner p {
@@ -882,7 +882,7 @@
 .lp-footer-col h4 {
   margin: 0 0 14px;
   font-size: 0.8rem;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .lp-footer-col a {

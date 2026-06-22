@@ -13,7 +13,7 @@ export default async function AgentsBrowserPage() {
   return (
     <div style={{ width: "100%", minWidth: 0 }}>
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "var(--text)" }}>AI Agents</h1>
+        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: "var(--text)" }}>AI Agents</h1>
         <p style={{ margin: "6px 0 0", fontSize: 14, color: "var(--text-muted)" }}>Chat with expert AI agents powered by Gemini — built for finance, investing & more</p>
       </div>
 
@@ -35,7 +35,7 @@ export default async function AgentsBrowserPage() {
                     {a.avatar}
                   </div>
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: 15, color: "var(--text)" }}>{a.name}</div>
+                    <div style={{ fontWeight: 600, fontSize: 15, color: "var(--text)" }}>{a.name}</div>
                     <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 3, fontWeight: 500 }}>
                       {a.model.replace("gemini-", "Gemini ").replace("-", " ")}
                     </div>

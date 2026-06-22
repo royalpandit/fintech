@@ -112,7 +112,7 @@ export default async function SuperAdminAdvisorsPage() {
             style={{
               margin: 0,
               fontSize: 26,
-              fontWeight: 800,
+              fontWeight: 600,
               color: "var(--text)",
               letterSpacing: -0.6,
             }}
@@ -302,7 +302,7 @@ export default async function SuperAdminAdvisorsPage() {
                     display: "grid",
                     placeItems: "center",
                     fontSize: 11,
-                    fontWeight: 800,
+                    fontWeight: 600,
                     flexShrink: 0,
                   }}
                 >
@@ -406,7 +406,7 @@ export default async function SuperAdminAdvisorsPage() {
                               display: "grid",
                               placeItems: "center",
                               fontSize: 11,
-                              fontWeight: 800,
+                              fontWeight: 600,
                               flexShrink: 0,
                             }}
                           >

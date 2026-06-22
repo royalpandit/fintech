@@ -31,7 +31,7 @@ export default async function UserProfilePage() {
           <div style={{ fontSize: 36, marginBottom: 12, color: "var(--text-muted)", display: "flex", justifyContent: "center" }}>
             <FiUser size={36} />
           </div>
-          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800 }}>
+          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 600 }}>
             Sign in to view your profile
           </h2>
           <Link
@@ -118,7 +118,7 @@ export default async function UserProfilePage() {
           style={{
             margin: 0,
             fontSize: 22,
-            fontWeight: 800,
+            fontWeight: 600,
             color: "var(--text)",
             letterSpacing: -0.5,
           }}
@@ -154,7 +154,7 @@ export default async function UserProfilePage() {
             display: "grid",
             placeItems: "center",
             fontSize: 24,
-            fontWeight: 800,
+            fontWeight: 600,
             flexShrink: 0,
           }}
         >
@@ -165,7 +165,7 @@ export default async function UserProfilePage() {
             style={{
               margin: 0,
               fontSize: 24,
-              fontWeight: 800,
+              fontWeight: 600,
               letterSpacing: -0.5,
             }}
           >
@@ -186,7 +186,7 @@ export default async function UserProfilePage() {
               background: "rgba(167, 243, 208, 0.18)",
               color: "#a7f3d0",
               fontSize: 11,
-              fontWeight: 800,
+              fontWeight: 600,
               display: "inline-flex",
               alignItems: "center",
               gap: 6,
@@ -249,7 +249,7 @@ export default async function UserProfilePage() {
             >
               {s.label}
             </p>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: -0.5 }}>
+            <p style={{ margin: 0, fontSize: 22, fontWeight: 600, color: s.color, letterSpacing: -0.5 }}>
               {s.value}
             </p>
           </article>
@@ -464,7 +464,7 @@ export default async function UserProfilePage() {
                   style={{
                     margin: 0,
                     fontSize: 22,
-                    fontWeight: 800,
+                    fontWeight: 600,
                     color: "#0ea5e9",
                     textTransform: "capitalize",
                     letterSpacing: -0.5,

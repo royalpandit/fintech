@@ -26,7 +26,7 @@ export default async function UserSettingsPage() {
           <div style={{ fontSize: 36, marginBottom: 12, color: "var(--text-muted)", display: "flex", justifyContent: "center" }}>
             <FiSettings size={36} />
           </div>
-          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800 }}>
+          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 600 }}>
             Sign in to manage settings
           </h2>
           <Link
@@ -106,7 +106,7 @@ export default async function UserSettingsPage() {
           style={{
             margin: 0,
             fontSize: 22,
-            fontWeight: 800,
+            fontWeight: 600,
             color: "var(--text)",
             letterSpacing: -0.5,
           }}

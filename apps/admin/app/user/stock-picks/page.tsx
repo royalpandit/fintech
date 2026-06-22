@@ -46,7 +46,7 @@ export default async function UserStockPicksPage() {
   return (
     <UserPageSection>
       <UserPageHeader
-        title="AI Stock Picks"
+        title="Stock Basket"
         subtitle={`${cards.length.toLocaleString()} curated strategy groups`}
       />
 

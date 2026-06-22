@@ -65,7 +65,7 @@ export default function ProgressRing({
         }}
       >
         <div>
-          <div style={{ fontSize: size > 100 ? 26 : 20, fontWeight: 800, color: "var(--text)", letterSpacing: -0.5 }}>
+          <div style={{ fontSize: size > 100 ? 26 : 20, fontWeight: 600, color: "var(--text)", letterSpacing: -0.5 }}>
             {label ?? `${Math.round(clamped)}%`}
           </div>
           {sublabel && (

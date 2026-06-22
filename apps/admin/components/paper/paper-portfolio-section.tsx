@@ -31,7 +31,7 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
           marginBottom: 18,
         }}
       >
-        <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800 }}>Paper portfolio</h2>
+        <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 600 }}>Paper portfolio</h2>
         <p style={{ margin: "0 0 16px", fontSize: 13, opacity: 0.85 }}>
           Create a virtual wallet to hold demo stocks and options.
         </p>
@@ -94,7 +94,7 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
           >
             Paper trading
           </span>
-          <h2 style={{ margin: "4px 0 0", fontSize: 18, fontWeight: 800, color: "var(--text)" }}>
+          <h2 style={{ margin: "4px 0 0", fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
             Virtual holdings
           </h2>
         </div>
@@ -132,7 +132,7 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
             }}
           >
             <p style={{ margin: 0, fontSize: 10, color: "var(--text-muted)" }}>{s.label}</p>
-            <p style={{ margin: "4px 0 0", fontSize: 14, fontWeight: 800, color: s.color }}>{s.value}</p>
+            <p style={{ margin: "4px 0 0", fontSize: 14, fontWeight: 600, color: s.color }}>{s.value}</p>
           </article>
         ))}
       </div>
@@ -176,7 +176,7 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
               <tbody>
                 {positions.map((p) => (
                   <tr key={p.symbol} style={{ borderTop: "1px solid var(--border)" }}>
-                    <td style={{ padding: "12px 16px", fontWeight: 800 }}>{p.symbol}</td>
+                    <td style={{ padding: "12px 16px", fontWeight: 600 }}>{p.symbol}</td>
                     <td style={{ padding: "12px 16px" }}>{p.quantity}</td>
                     <td style={{ padding: "12px 16px" }}>{formatINR(p.avgPrice)}</td>
                     <td style={{ padding: "12px 16px" }}>{formatINR(p.lastPrice)}</td>
@@ -217,7 +217,7 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
           padding: 16,
         }}
       >
-        <h3 style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 800 }}>Place paper trade</h3>
+        <h3 style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 600 }}>Place paper trade</h3>
         <PaperTradeForm compact />
       </article>
     </div>

@@ -30,7 +30,7 @@ export default function BoostPicker({
       {includeNone && (
         <button type="button" onClick={() => onSelect(null)} style={cardStyle(selected === null)}>
           <div style={{ fontWeight: 700, fontSize: 13, color: "var(--text)" }}>No boost</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)", marginTop: 2 }}>Free</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", marginTop: 2 }}>Free</div>
           <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>Standard reach.</div>
         </button>
       )}
@@ -39,7 +39,7 @@ export default function BoostPicker({
         return (
           <button key={t.id} type="button" onClick={() => onSelect(t.id)} style={cardStyle(active)}>
             <div style={{ fontWeight: 700, fontSize: 13, color: "var(--text)" }}>{t.label}</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#0ea5e9", marginTop: 2 }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: "#0ea5e9", marginTop: 2 }}>
               ₹{t.price.toLocaleString("en-IN")}
             </div>
             <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, lineHeight: 1.4 }}>{t.blurb}</div>

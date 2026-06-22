@@ -123,7 +123,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                   display: "grid",
                   placeItems: "center",
                   fontSize: 14,
-                  fontWeight: 800,
+                  fontWeight: 600,
                   flexShrink: 0,
                   textDecoration: "none",
                 }}
@@ -158,7 +158,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                   background: `${sColor}1a`,
                   color: sColor,
                   fontSize: 11,
-                  fontWeight: 800,
+                  fontWeight: 600,
                   letterSpacing: 0.6,
                   textTransform: "uppercase",
                 }}
@@ -448,7 +448,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                 display: "grid",
                 placeItems: "center",
                 fontSize: 18,
-                fontWeight: 800,
+                fontWeight: 600,
                 marginBottom: 12,
               }}
             >
@@ -458,7 +458,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
               style={{
                 margin: 0,
                 fontSize: 16,
-                fontWeight: 800,
+                fontWeight: 600,
                 color: "var(--text)",
                 display: "flex",
                 gap: 6,

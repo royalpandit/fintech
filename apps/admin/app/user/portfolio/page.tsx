@@ -111,7 +111,7 @@ export default async function PortfolioPage() {
           style={{
             margin: 0,
             fontSize: 22,
-            fontWeight: 800,
+            fontWeight: 600,
             color: "var(--text)",
             letterSpacing: -0.5,
           }}
@@ -160,7 +160,7 @@ export default async function PortfolioPage() {
               style={{
                 margin: 0,
                 fontSize: 28,
-                fontWeight: 800,
+                fontWeight: 600,
                 letterSpacing: -0.6,
               }}
             >
@@ -190,7 +190,7 @@ export default async function PortfolioPage() {
                   borderRadius: 12,
                   background: "rgba(255,255,255,0.95)",
                   color: "#064e3b",
-                  fontWeight: 800,
+                  fontWeight: 600,
                   fontSize: 14,
                   border: "none",
                   cursor: "pointer",
@@ -265,7 +265,7 @@ export default async function PortfolioPage() {
                 <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", fontWeight: 500, marginBottom: 6 }}>
                   {s.label}
                 </p>
-                <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: -0.5 }}>
+                <p style={{ margin: 0, fontSize: 22, fontWeight: 600, color: s.color, letterSpacing: -0.5 }}>
                   {s.value}
                 </p>
               </article>
@@ -383,7 +383,7 @@ export default async function PortfolioPage() {
                                   display: "grid",
                                   placeItems: "center",
                                   fontSize: 10,
-                                  fontWeight: 800,
+                                  fontWeight: 600,
                                 }}
                               >
                                 {h.symbol.slice(0, 1)}

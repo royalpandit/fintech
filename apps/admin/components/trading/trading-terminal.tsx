@@ -161,7 +161,7 @@ function AddIndicatorModal({ onAdd, onClose, candles }: {
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#0f172a" }}>Add Custom Indicator</h2>
+          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#0f172a" }}>Add Custom Indicator</h2>
           <button type="button" onClick={onClose}
             style={{ border: "none", background: "transparent", fontSize: 22, lineHeight: 1, cursor: "pointer", color: "#64748b", padding: "0 4px" }}>×</button>
         </div>
@@ -269,7 +269,7 @@ function AddIndicatorModal({ onAdd, onClose, candles }: {
             Cancel
           </button>
           <button type="button" onClick={handleAdd}
-            style={{ padding: "9px 20px", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 800, cursor: "pointer", background: "#0ea5e9", color: "#fff" }}>
+            style={{ padding: "9px 20px", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", background: "#0ea5e9", color: "#fff" }}>
             Add Indicator
           </button>
         </div>
@@ -309,13 +309,13 @@ function OverviewPanel({
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
       <div style={{ marginBottom: 20 }}>
-        <h3 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>{symbol.display}</h3>
+        <h3 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 600, color: "#0f172a" }}>{symbol.display}</h3>
         <div style={{ fontSize: 12, color: "#64748b" }}>
           {symbol.exchange} · {symbol.type} · Token {symbol.token}
         </div>
         {symbol.ltp !== undefined && (
           <div style={{ marginTop: 12, display: "flex", alignItems: "baseline", gap: 10 }}>
-            <span style={{ fontSize: 28, fontWeight: 800, color: "#0f172a" }}>{fmtP(symbol.ltp)}</span>
+            <span style={{ fontSize: 28, fontWeight: 600, color: "#0f172a" }}>{fmtP(symbol.ltp)}</span>
             <span style={{ fontSize: 14, fontWeight: 700, color: up ? "#16a34a" : "#dc2626" }}>
               {up ? "▲" : "▼"} {fmtPct(symbol.changePct ?? dayChange ?? undefined)}
             </span>
@@ -330,7 +330,7 @@ function OverviewPanel({
           {stats.map(s => (
             <div key={s.label} style={{ background: "#f8fafc", border: "1px solid #eef0f4", borderRadius: 10, padding: "12px 14px" }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>{s.label}</div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{s.value}</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{s.value}</div>
             </div>
           ))}
         </div>
@@ -965,12 +965,12 @@ function TradingTerminalInner() {
         {/* Symbol header */}
         <div style={{ background: "#fff", borderBottom: "1px solid #eef0f4", padding: "8px 16px", display: "flex", alignItems: "center", gap: 14, flexShrink: 0, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{selected.display}</span>
+            <span style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{selected.display}</span>
             <span style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, background: "#f1f5f9", padding: "1px 6px", borderRadius: 4 }}>{selected.exchange} · {timeframeLabel(timeframe)}</span>
           </div>
           {selected.ltp !== undefined && (
             <>
-              <span style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.5px" }}>
+              <span style={{ fontSize: 18, fontWeight: 600, color: "#0f172a", letterSpacing: "-0.5px" }}>
                 ₹{selected.ltp.toLocaleString("en-IN")}
               </span>
               <span style={{ fontSize: 12, fontWeight: 700, color: up ? "#16a34a" : "#dc2626" }}>

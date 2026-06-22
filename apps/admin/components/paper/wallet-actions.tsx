@@ -96,7 +96,7 @@ export default function WalletActions({ hasWallet, balance }: Props) {
         padding: 20,
       }}
     >
-      <h2 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 800, color: "var(--text)" }}>
+      <h2 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 600, color: "var(--text)" }}>
         {hasWallet ? "Add virtual funds" : "Create paper wallet"}
       </h2>
       <p style={{ margin: "0 0 16px", fontSize: 12, color: "var(--text-muted)" }}>

@@ -48,32 +48,32 @@ type NavItem = {
 };
 
 const MAIN_NAV: NavItem[] = [
-  { label: "Feed",          href: "/user/feed",          Icon: FiHome },
-  { label: "Advisors",      href: "/user/advisors",      Icon: FiUsers },
-  { label: "Markets",       href: "/user/markets",       Icon: FiTrendingUp },
-  { label: "Messages",      href: "/user/messages",      Icon: FiMessageCircle },
-  { label: "Community",     href: "/user/community",     Icon: FiMessageSquare },
+  { label: "Feed", href: "/user/feed", Icon: FiHome },
+  { label: "Advisors", href: "/user/advisors", Icon: FiUsers },
+  { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
+  { label: "Messages", href: "/user/messages", Icon: FiMessageCircle },
+  { label: "Community", href: "/user/community", Icon: FiMessageSquare },
   { label: "Notifications", href: "/user/notifications", Icon: FiBell },
-  { label: "Settings",      href: "/user/settings",      Icon: FiSettings },
+  { label: "Settings", href: "/user/settings", Icon: FiSettings },
 ];
 
 const INVESTING_NAV: NavItem[] = [
-  { label: "Dashboard",    href: "/user/home",      Icon: FiPieChart },
-  { label: "AI Stock Picks", href: "/user/stock-picks", Icon: FiTarget },
-  { label: "Wallet",       href: "/user/wallet",    Icon: FiCreditCard },
-  { label: "Watchlist",    href: "/user/watchlist", Icon: FiStar },
-  { label: "Portfolio",    href: "/user/portfolio", Icon: FiBriefcase },
-  { label: "Courses",      href: "/user/courses",   Icon: FiBookOpen },
-  { label: "Virtual Lab",  href: "/user/lab",       Icon: TbFlask, badge: "Paper" },
-  { label: "Trade History",href: "/user/history",   Icon: FiClock },
+  { label: "Dashboard", href: "/user/home", Icon: FiPieChart },
+  { label: "Stock Basket", href: "/user/stock-picks", Icon: FiTarget },
+  { label: "Wallet", href: "/user/wallet", Icon: FiCreditCard },
+  { label: "Watchlist", href: "/user/watchlist", Icon: FiStar },
+  { label: "Portfolio", href: "/user/portfolio", Icon: FiBriefcase },
+  { label: "Courses", href: "/user/courses", Icon: FiBookOpen },
+  { label: "Virtual Lab", href: "/user/lab", Icon: TbFlask, badge: "Paper" },
+  { label: "Trade History", href: "/user/history", Icon: FiClock },
 ];
 
 const BOTTOM_NAV: NavItem[] = [
-  { label: "Feed",      href: "/user/feed",          Icon: FiHome },
-  { label: "Advisors",  href: "/user/advisors",      Icon: FiUsers },
-  { label: "Markets",   href: "/user/markets",       Icon: FiTrendingUp },
-  { label: "Messages",  href: "/user/messages",      Icon: FiMessageCircle },
-  { label: "Alerts",    href: "/user/notifications", Icon: FiBell },
+  { label: "Feed", href: "/user/feed", Icon: FiHome },
+  { label: "Advisors", href: "/user/advisors", Icon: FiUsers },
+  { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
+  { label: "Messages", href: "/user/messages", Icon: FiMessageCircle },
+  { label: "Alerts", href: "/user/notifications", Icon: FiBell },
 ];
 
 function getInitials(name: string): string {
@@ -138,7 +138,8 @@ export default function UserShell({
   }, [currentUser, isVerified]);
 
   const bottomNav = useMemo(() => {
-    if (!currentUser || !isVerified) return BOTTOM_NAV.filter((i) => i.href === "/user/feed");
+    if (!currentUser || !isVerified)
+      return BOTTOM_NAV.filter((i) => i.href === "/user/feed");
     return BOTTOM_NAV;
   }, [currentUser, isVerified]);
 
@@ -146,7 +147,11 @@ export default function UserShell({
   useEffect(() => {
     if (!currentUser) return;
     if (isVerified) return;
-    if (pathname.startsWith("/user") && pathname !== "/user/feed" && !pathname.startsWith("/user/feed/")) {
+    if (
+      pathname.startsWith("/user") &&
+      pathname !== "/user/feed" &&
+      !pathname.startsWith("/user/feed/")
+    ) {
       router.replace("/user/feed");
     }
   }, [currentUser, isVerified, pathname, router]);
@@ -191,7 +196,8 @@ export default function UserShell({
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
     const apply = () => {
-      document.body.style.overflow = mq.matches && mobileDrawerOpen ? "hidden" : "";
+      document.body.style.overflow =
+        mq.matches && mobileDrawerOpen ? "hidden" : "";
     };
     apply();
     mq.addEventListener("change", apply);
@@ -211,7 +217,10 @@ export default function UserShell({
   }, []);
 
   const toggleSidebar = () => {
-    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches
+    ) {
       setMobileDrawerOpen((v) => !v);
       return;
     }
@@ -247,24 +256,33 @@ export default function UserShell({
       {/* ── Header ── */}
       <header className="us-header">
         <div className="us-header-inner">
-
           {/* Left zone — logo + hamburger */}
           <div className="us-header-left">
             <button
               className="us-hamburger"
               type="button"
-              aria-label={mobileDrawerOpen ? "Close navigation menu" : "Toggle navigation menu"}
+              aria-label={
+                mobileDrawerOpen
+                  ? "Close navigation menu"
+                  : "Toggle navigation menu"
+              }
               aria-expanded={isMobile ? mobileDrawerOpen : !sidebarCollapsed}
               onClick={toggleSidebar}
             >
               {mobileDrawerOpen ? <FiX size={20} /> : <FiMenu size={20} />}
             </button>
 
-            <FinuerLogo href="/user/home" height={36} className="us-brand-logo" />
+            <FinuerLogo
+              href="/user/home"
+              height={36}
+              className="us-brand-logo"
+            />
           </div>
 
           {/* Center zone — search */}
-          <div className={`us-search-wrap ${searchOpen ? "us-search-open" : ""}`}>
+          <div
+            className={`us-search-wrap ${searchOpen ? "us-search-open" : ""}`}
+          >
             <form
               className="us-search-inner"
               onSubmit={(e) => {
@@ -313,9 +331,7 @@ export default function UserShell({
                   style={{ position: "relative" }}
                 >
                   <FiBell size={18} />
-                  {unreadNotifications > 0 && (
-                    <span className="us-notif-dot" />
-                  )}
+                  {unreadNotifications > 0 && <span className="us-notif-dot" />}
                 </Link>
 
                 <div className="us-avatar-wrap" ref={menuRef}>
@@ -334,8 +350,12 @@ export default function UserShell({
                       <div className="us-dropdown-head">
                         <div className="us-dropdown-avatar">{initials}</div>
                         <div>
-                          <div className="us-dropdown-name">{currentUser.fullName}</div>
-                          <div className="us-dropdown-email">{currentUser.email}</div>
+                          <div className="us-dropdown-name">
+                            {currentUser.fullName}
+                          </div>
+                          <div className="us-dropdown-email">
+                            {currentUser.email}
+                          </div>
                         </div>
                       </div>
                       <div className="us-dropdown-divider" />
@@ -371,8 +391,12 @@ export default function UserShell({
               </>
             ) : (
               <>
-                <Link href="/login" className="us-header-signin">Sign in</Link>
-                <Link href="/register" className="us-header-cta">Get started</Link>
+                <Link href="/login" className="us-header-signin">
+                  Sign in
+                </Link>
+                <Link href="/register" className="us-header-cta">
+                  Get started
+                </Link>
               </>
             )}
           </div>
@@ -403,7 +427,6 @@ export default function UserShell({
 
       {/* ── Body ── */}
       <div className="us-body">
-
         {/* Overlay backdrop (mobile) */}
         {mobileDrawerOpen && (
           <div
@@ -454,15 +477,26 @@ export default function UserShell({
               {currentUser ? (
                 <div className="us-profile-stats">
                   <div className="us-profile-stat">
-                    <span className="us-profile-stat-label">Virtual Balance</span>
-                    <span className="us-profile-stat-val">{formatINR(walletBalance)}</span>
+                    <span className="us-profile-stat-label">
+                      Virtual Balance
+                    </span>
+                    <span className="us-profile-stat-val">
+                      {formatINR(walletBalance)}
+                    </span>
                   </div>
                   <div className="us-profile-stat">
-                    <span className="us-profile-stat-label">Today&rsquo;s P&amp;L</span>
-                    <span className="us-profile-stat-val" style={{ color: pnlColor }}>
-                      {pnlSign}{formatINRCompact(Math.abs(todayPnL))}
+                    <span className="us-profile-stat-label">
+                      Today&rsquo;s P&amp;L
+                    </span>
+                    <span
+                      className="us-profile-stat-val"
+                      style={{ color: pnlColor }}
+                    >
+                      {pnlSign}
+                      {formatINRCompact(Math.abs(todayPnL))}
                       <span style={{ fontSize: 10, marginLeft: 3 }}>
-                        ({pnlSign}{todayPnLPct.toFixed(2)}%)
+                        ({pnlSign}
+                        {todayPnLPct.toFixed(2)}%)
                       </span>
                     </span>
                   </div>
@@ -488,11 +522,16 @@ export default function UserShell({
                     title={showNavTitle ? item.label : undefined}
                     onClick={() => setMobileDrawerOpen(false)}
                   >
-                    <span className="us-nav-icon"><Icon size={18} /></span>
+                    <span className="us-nav-icon">
+                      <Icon size={18} />
+                    </span>
                     <span className="us-nav-label">{item.label}</span>
-                    {item.href === "/user/notifications" && unreadNotifications > 0 && (
-                      <span className="us-nav-badge">{unreadNotifications}</span>
-                    )}
+                    {item.href === "/user/notifications" &&
+                      unreadNotifications > 0 && (
+                        <span className="us-nav-badge">
+                          {unreadNotifications}
+                        </span>
+                      )}
                   </Link>
                 );
               })}
@@ -521,7 +560,9 @@ export default function UserShell({
                         title={showNavTitle ? item.label : undefined}
                         onClick={() => setMobileDrawerOpen(false)}
                       >
-                        <span className="us-nav-icon"><Icon size={18} /></span>
+                        <span className="us-nav-icon">
+                          <Icon size={18} />
+                        </span>
                         <span className="us-nav-label">{item.label}</span>
                         {item.badge && (
                           <span className="us-nav-pill">{item.badge}</span>
@@ -535,11 +576,17 @@ export default function UserShell({
 
             {/* Footer links */}
             <div className="us-sidebar-footer">
-              <Link href="/user/settings" className="us-sidebar-footer-link">Settings</Link>
+              <Link href="/user/settings" className="us-sidebar-footer-link">
+                Settings
+              </Link>
               <span className="us-sidebar-footer-dot">·</span>
-              <Link href="#" className="us-sidebar-footer-link">Privacy</Link>
+              <Link href="#" className="us-sidebar-footer-link">
+                Privacy
+              </Link>
               <span className="us-sidebar-footer-dot">·</span>
-              <span className="us-sidebar-footer-link">© {BRAND_NAME} {new Date().getFullYear()}</span>
+              <span className="us-sidebar-footer-link">
+                © {BRAND_NAME} {new Date().getFullYear()}
+              </span>
             </div>
           </div>
         </aside>
@@ -569,9 +616,13 @@ export default function UserShell({
             >
               <span style={{ position: "relative", display: "flex" }}>
                 <Icon size={22} />
-                {item.href === "/user/notifications" && unreadNotifications > 0 && (
-                  <span className="us-notif-dot" style={{ top: -2, right: -2 }} />
-                )}
+                {item.href === "/user/notifications" &&
+                  unreadNotifications > 0 && (
+                    <span
+                      className="us-notif-dot"
+                      style={{ top: -2, right: -2 }}
+                    />
+                  )}
               </span>
               <span className="us-bottom-label">{item.label}</span>
             </Link>

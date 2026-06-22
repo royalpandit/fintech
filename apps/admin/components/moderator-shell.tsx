@@ -74,7 +74,7 @@ export default function ModeratorShell({
                 color: "#fff",
                 display: "grid",
                 placeItems: "center",
-                fontWeight: 800,
+                fontWeight: 600,
                 fontSize: 13,
                 flexShrink: 0,
               }}
@@ -85,7 +85,7 @@ export default function ModeratorShell({
               <div
                 style={{
                   fontSize: 13,
-                  fontWeight: 800,
+                  fontWeight: 600,
                   color: "var(--text)",
                   letterSpacing: -0.2,
                   whiteSpace: "nowrap",
