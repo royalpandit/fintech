@@ -30,6 +30,7 @@ export default async function AdvisorShellLayout({
             verificationStatus: true,
             sebiRegistrationNo: true,
             verificationFormSubmittedAt: true,
+            profileImageUrl: true,
           },
         },
       },
@@ -64,6 +65,7 @@ export default async function AdvisorShellLayout({
         fullName: user.fullName,
         email: user.email,
         sebiRegistrationNo: user.advisorProfile.sebiRegistrationNo,
+        profileImageUrl: user.advisorProfile.profileImageUrl,
       }}
       badges={{
         Notifications: unreadNotifications,

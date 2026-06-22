@@ -159,6 +159,68 @@ html[data-theme="dark"] .finuer-logo-dark {
   background: var(--bg);
 }
 
+/* Desktop app-shell: lock the layout to the viewport so the sidebar and the
+   main content each scroll independently (each with its own mini scrollbar),
+   instead of the whole page scrolling as one block. Mobile (<=1024px) keeps the
+   stacked block layout defined further below. */
+@media (min-width: 1025px) {
+  .admin-shell {
+    height: 100vh;
+    overflow: hidden;
+  }
+  .admin-sidebar {
+    height: 100vh;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .admin-sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .admin-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .admin-sidebar::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 999px;
+  }
+  .admin-sidebar:hover::-webkit-scrollbar-thumb {
+    background: var(--text-muted, #94a3b8);
+  }
+
+  .admin-content {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .admin-header {
+    flex-shrink: 0;
+  }
+  .admin-main {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .admin-main::-webkit-scrollbar {
+    width: 8px;
+  }
+  .admin-main::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .admin-main::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 999px;
+  }
+  .admin-main:hover::-webkit-scrollbar-thumb {
+    background: var(--text-muted, #94a3b8);
+  }
+}
+
 .page-title {
   margin: 0;
   font-size: 36px;
@@ -1282,7 +1344,10 @@ th {
   gap: 0;
   width: 100%;
   padding-top: var(--us-header-h);
-  min-height: 100vh;
+  /* Lock the layout to the viewport so the sidebar and main content each scroll
+     on their own — the page itself no longer scrolls as one block. */
+  height: 100vh;
+  overflow: hidden;
   max-width: none;
   margin: 0;
   position: relative;
@@ -1301,14 +1366,25 @@ th {
   overflow-x: hidden;
   border-right: 1px solid var(--us-border);
   background: var(--us-sidebar-bg, var(--us-surface));
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--us-border) transparent;
   transition:
     width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
     transform 0.26s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .us-sidebar::-webkit-scrollbar {
-  display: none;
+  width: 6px;
+}
+.us-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.us-sidebar::-webkit-scrollbar-thumb {
+  background: var(--us-border);
+  border-radius: 999px;
+}
+.us-sidebar:hover::-webkit-scrollbar-thumb {
+  background: var(--us-text-muted, #94a3b8);
 }
 
 .us-sidebar-inner {
@@ -1552,6 +1628,38 @@ th {
   box-sizing: border-box;
   background: var(--bg);
   color: var(--text);
+  /* Independent scroll region with its own mini scrollbar. */
+  height: calc(100vh - var(--us-header-h));
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--us-border) transparent;
+}
+.us-main::-webkit-scrollbar {
+  width: 8px;
+}
+.us-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+.us-main::-webkit-scrollbar-thumb {
+  background: var(--us-border);
+  border-radius: 999px;
+}
+.us-main:hover::-webkit-scrollbar-thumb {
+  background: var(--us-text-muted, #94a3b8);
+}
+
+/* Chat fills the main area exactly; the messages list does the scrolling. */
+.us-main:has(.dm-chat-root) {
+  overflow: hidden;
+  padding-bottom: 16px;
+}
+.us-main:has(.dm-chat-root) .us-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.us-main:has(.dm-chat-root) .dm-chat-root {
+  height: 100%;
 }
 
 .us-content {
@@ -6656,11 +6764,12 @@ body.terminal-active .us-content {
 
 .comm-hub-title,
 .comm-form-title {
-  margin: 0;
+  margin: 12px 0 0;
   font-size: 22px;
   font-weight: 600;
   color: var(--text);
   letter-spacing: -0.5px;
+  text-align: center;
 }
 
 .comm-hub-sub {
@@ -6771,8 +6880,7 @@ body.terminal-active .us-content {
 .comm-card-header {
   display: flex;
   gap: 10px;
-  align-items: center;
-  margin-top: -28px;
+  align-items: flex-start;
 }
 
 .comm-card-logo,
@@ -6783,6 +6891,19 @@ body.terminal-active .us-content {
   border: 3px solid var(--surface);
   object-fit: cover;
   flex-shrink: 0;
+}
+
+/* Pull only the logo up over the banner, leaving the name/badge below it. */
+.comm-card-logo {
+  margin-top: -32px;
+}
+
+.comm-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  padding-bottom: 2px;
 }
 
 .comm-card-logo-fallback {
@@ -7108,8 +7229,39 @@ body.terminal-active .us-content {
   padding: 4px;
 }
 
-.comm-vote-active {
+.comm-vote-active,
+.comm-inline-btn.comm-vote-active,
+.comm-action-btn.comm-vote-active {
   color: #ef4444;
+}
+
+/* ── Direct-message chat: fit the conversation to the viewport ───────────────
+   The chat fills the available content area and only the messages list scrolls
+   (smoothly), instead of the whole page scrolling. */
+.dm-chat-root {
+  display: flex;
+  flex-direction: column;
+  /* Fallback when an ancestor can't be height-bounded (e.g. user shell). */
+  height: calc(100dvh - 120px);
+  min-height: 0;
+}
+
+/* Advisor shell: make the content column own the viewport height so the chat
+   fills exactly below the header — no page scroll, no magic offsets. */
+.admin-content:has(.dm-chat-root) {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.admin-content:has(.dm-chat-root) .admin-main {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 16px;
+}
+.admin-content:has(.dm-chat-root) .dm-chat-root {
+  height: 100%;
 }
 
 .comm-post-content {
@@ -7163,13 +7315,27 @@ body.terminal-active .us-content {
 }
 
 .comm-form-wrap {
-  max-width: 640px;
+  max-width: 560px;
+  margin: 0 auto;
 }
 
 .comm-form {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   margin-top: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.comm-form > button[type="submit"] {
+  justify-self: center;
+  justify-content: center;
+  width: auto;
+  min-width: 220px;
+  margin-top: 6px;
+  padding: 11px 32px;
 }
 
 .comm-form label {

@@ -66,20 +66,6 @@ function PostRow({
   return (
     <article className="comm-post-row">
       <Link href={`/user/community/${slug}/post/${p.id}`} className="comm-post-row-main">
-        <div className="comm-post-votes">
-          <button
-            type="button"
-            className={`comm-vote-btn ${p.liked_by_me ? "comm-vote-active" : ""}`}
-            onClick={(e) => {
-              e.preventDefault();
-              void toggleLike();
-            }}
-            disabled={!isAuthed || !canInteract}
-          >
-            <FiHeart size={16} />
-          </button>
-          <span>{p.like_count}</span>
-        </div>
         <div className="comm-post-content">
           <div className="comm-post-meta">
             <span>{p.user.fullName}</span>
@@ -92,7 +78,18 @@ function PostRow({
             <CommunityPostImages images={p.images.map((i) => ({ id: i.id, url: i.url }))} />
           ) : null}
           <div className="comm-post-stats">
-            <span><FiMessageSquare size={12} /> {p.comment_count}</span>
+            <button
+              type="button"
+              className={`comm-inline-btn ${p.liked_by_me ? "comm-vote-active" : ""}`}
+              onClick={(e) => {
+                e.preventDefault();
+                void toggleLike();
+              }}
+              disabled={!isAuthed || !canInteract}
+            >
+              <FiHeart size={15} /> {p.like_count}
+            </button>
+            <span><FiMessageSquare size={15} /> {p.comment_count}</span>
             <button
               type="button"
               className="comm-inline-btn"
@@ -102,7 +99,7 @@ function PostRow({
               }}
               disabled={!isAuthed || !canInteract}
             >
-              <FiShare2 size={12} /> Share
+              <FiShare2 size={15} /> Share
             </button>
           </div>
         </div>
@@ -299,13 +296,6 @@ export default function CommunityDetailClient({
             )}
           </div>
         </>
-      )}
-
-      {community.rules && (
-        <aside className="comm-rules-panel">
-          <h3>Community Rules</h3>
-          <pre>{community.rules}</pre>
-        </aside>
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { FiMessageCircle } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
+import NewChatSearch from "./new-chat-search";
 
 export const dynamic = "force-dynamic";
 
@@ -31,20 +32,33 @@ export default async function MessagesPage() {
 
   const userId = auth.userId;
 
-  const threads = await prisma.dmThread.findMany({
-    where: { participants: { some: { userId } } },
-    orderBy: { createdAt: "desc" },
-    include: {
-      participants: {
-        include: { user: { select: { id: true, fullName: true } } },
+  const [threads, activeSubs] = await Promise.all([
+    prisma.dmThread.findMany({
+      where: { participants: { some: { userId } } },
+      orderBy: { createdAt: "desc" },
+      include: {
+        participants: {
+          include: { user: { select: { id: true, fullName: true } } },
+        },
+        messages: {
+          where: { deletedAt: null },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
       },
-      messages: {
-        where: { deletedAt: null },
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
-    },
-  });
+    }),
+    // Advisors the user "took the service" from = active subscriptions.
+    // These are the only people a user can start a chat with.
+    prisma.subscription.findMany({
+      where: { userId, status: "active", endDate: { gt: new Date() } },
+      orderBy: { startDate: "desc" },
+      select: { advisor: { select: { id: true, fullName: true } } },
+    }),
+  ]);
+
+  const contacts = activeSubs
+    .map((s) => s.advisor)
+    .filter((a): a is { id: number; fullName: string } => Boolean(a));
 
   return (
     <section>
@@ -64,6 +78,8 @@ export default async function MessagesPage() {
           Direct conversations with advisors and other users
         </p>
       </div>
+
+      <NewChatSearch contacts={contacts} />
 
       {threads.length === 0 ? (
         <article

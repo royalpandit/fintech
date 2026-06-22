@@ -22,6 +22,7 @@ export default async function AdvisorProfilePage() {
       advisorProfile: {
         select: {
           sebiRegistrationNo: true,
+          professionalType: true,
           experienceYears: true,
           bio: true,
           expertiseTags: true,
@@ -59,6 +60,7 @@ export default async function AdvisorProfilePage() {
             expertiseTags: profile?.expertiseTags ?? [],
             profileImageUrl: profile?.profileImageUrl ?? "",
             experienceYears: profile?.experienceYears ?? 0,
+            professionalType: profile?.professionalType ?? "investment_advisor",
           }}
         />
 

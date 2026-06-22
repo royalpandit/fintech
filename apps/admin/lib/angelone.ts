@@ -509,6 +509,8 @@ export interface ExtendedQuote extends LTPData {
   opnInterest?: number;
   opnInterestChange?: number;
   opnInterestChangePct?: number;
+  week52High?: number;
+  week52Low?: number;
 }
 
 function mapDepthLevels(arr: unknown): DepthLevel[] {
@@ -614,6 +616,8 @@ function mapExtendedQuote(raw: Record<string, unknown>): ExtendedQuote {
     opnInterest: oi,
     opnInterestChange: num("opnInterestChange", "oiChange"),
     opnInterestChangePct: num("opnInterestChangePct", "oiChangePct"),
+    week52High: num("52WeekHigh", "weekHigh", "week52High"),
+    week52Low: num("52WeekLow", "weekLow", "week52Low"),
   };
 }
 

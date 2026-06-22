@@ -1,28 +1,44 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
 import FollowToggle from "@/components/FollowToggle";
 import { CheckCircle } from "@/components/advisor-ui/icons";
+import { professionalTypeLabel, isProfessionalType } from "@/lib/professional-types";
+import FinanceProSearchBar from "./search-bar";
 
 export const dynamic = "force-dynamic";
 
-export default async function UserAdvisorsPage() {
+export default async function UserAdvisorsPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; type?: string };
+}) {
   const token = cookies().get("access_token")?.value ?? null;
   const auth = await requireAuthToken(token);
   const isAuthed = Boolean(auth);
+
+  const query = (searchParams.q ?? "").trim();
+  const typeFilter = isProfessionalType(searchParams.type) ? searchParams.type : null;
+
+  const where: Prisma.UserWhereInput = {
+    role: "advisor",
+    deletedAt: null,
+    advisorProfile: {
+      verificationStatus: "approved",
+      ...(typeFilter ? { professionalType: typeFilter } : {}),
+    },
+    ...(query ? { fullName: { contains: query, mode: "insensitive" } } : {}),
+  };
 
   const thirty = new Date();
   thirty.setDate(thirty.getDate() - 30);
 
   const [advisors, advisorMetrics, totalAdvisors] = await Promise.all([
     prisma.user.findMany({
-      where: {
-        role: "advisor",
-        deletedAt: null,
-        advisorProfile: { verificationStatus: "approved" },
-      },
+      where,
       orderBy: { createdAt: "desc" },
       take: 24,
       select: {
@@ -31,6 +47,7 @@ export default async function UserAdvisorsPage() {
         advisorProfile: {
           select: {
             sebiRegistrationNo: true,
+            professionalType: true,
             experienceYears: true,
             bio: true,
             expertiseTags: true,
@@ -89,12 +106,14 @@ export default async function UserAdvisorsPage() {
             letterSpacing: -0.5,
           }}
         >
-          SEBI Advisors
+          Finance Professionals
         </h1>
         <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
-          {totalAdvisors.toLocaleString()} verified financial advisors
+          Search verified analysts, portfolio managers, advisory firms and more
         </p>
       </div>
+
+      <FinanceProSearchBar />
 
       {/* Stats strip */}
       <div
@@ -106,7 +125,7 @@ export default async function UserAdvisorsPage() {
         }}
       >
         {[
-          { label: "Verified Advisors", value: totalAdvisors.toLocaleString(), color: "#10b981" },
+          { label: "Verified Professionals", value: totalAdvisors.toLocaleString(), color: "#10b981" },
           { label: "Avg Accuracy", value: "78%", color: "#0ea5e9" },
           { label: "Posts (30d)", value: advisorMetrics.reduce((s, m) => s + (m._sum.postsCount ?? 0), 0).toLocaleString(), color: "#f59e0b" },
           { label: "Total Subscribers", value: advisorMetrics.reduce((s, m) => s + (m._sum.subscribersCount ?? 0), 0).toLocaleString(), color: "#7c3aed" },
@@ -151,7 +170,9 @@ export default async function UserAdvisorsPage() {
               fontSize: 13,
             }}
           >
-            No verified advisors yet.
+            {query || typeFilter
+              ? "No finance professionals match your search."
+              : "No verified finance professionals yet."}
           </article>
         ) : (
           advisors.map((adv) => {
@@ -170,6 +191,9 @@ export default async function UserAdvisorsPage() {
                   border: "1px solid var(--border)",
                   borderRadius: 14,
                   padding: 18,
+                  display: "flex",
+                  flexDirection: "column",
+                  height: "100%",
                 }}
               >
                 <Link
@@ -222,6 +246,22 @@ export default async function UserAdvisorsPage() {
                   </div>
                 </Link>
 
+                <div
+                  style={{
+                    display: "inline-block",
+                    marginBottom: 10,
+                    padding: "3px 10px",
+                    borderRadius: 999,
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text)",
+                    fontSize: 11,
+                    fontWeight: 600,
+                  }}
+                >
+                  {professionalTypeLabel(adv.advisorProfile?.professionalType)}
+                </div>
+
                 {adv.advisorProfile?.bio && (
                   <p
                     style={{
@@ -245,6 +285,7 @@ export default async function UserAdvisorsPage() {
                     gridTemplateColumns: "repeat(3, 1fr)",
                     gap: 8,
                     paddingTop: 12,
+                    marginTop: "auto",
                     borderTop: "1px solid var(--border)",
                     fontSize: 11,
                   }}

@@ -34,6 +34,7 @@ export default function CreateCommunityPostForm({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return; // guard against double-submit
     setLoading(true);
     setError("");
     try {
@@ -44,10 +45,11 @@ export default function CreateCommunityPostForm({
         imageUrls: imageUrls.length ? imageUrls : undefined,
         linkUrl: postType === "link" ? linkUrl : undefined,
       });
+      // Keep the button disabled while we navigate away — do NOT re-enable on
+      // success, otherwise a quick second click posts twice.
       router.push(`/user/community/${slug}/post/${post.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create post");
-    } finally {
       setLoading(false);
     }
   }
