@@ -107,7 +107,7 @@ export default function LiveMarketTicker() {
                 {q.displaySymbol}
               </div>
               <div
-                style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}
+                style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}
               >
                 ₹{Number(q.ltp).toLocaleString("en-IN")}
               </div>

@@ -433,6 +433,10 @@ model AdvisorProfile {
   verifiedByAdminId  Int?               @map("verified_by_admin_id")
   verifiedAt         DateTime?          @map("verified_at")
   rejectionReason    String?            @map("rejection_reason")
+  // Self-service "are you a govt/SEBI-approved advisor?" verification form.
+  // null = advisor still needs to complete the form (popup is shown on login).
+  verificationFormSubmittedAt DateTime? @map("verification_form_submitted_at")
+  verificationDetails         Json?     @map("verification_details")
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
 

@@ -54,7 +54,7 @@ export default async function StockPickGroupDetailPage({ params }: Params) {
 
   return (
     <UserPageSection>
-      <UserPageBackLink href="/user/stock-picks">← All AI Stock Picks</UserPageBackLink>
+      <UserPageBackLink href="/user/stock-picks">← Back to Stock Basket</UserPageBackLink>
 
       <article className="stock-pick-detail-hero">
         <div style={{ display: "flex", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -145,7 +145,7 @@ export default async function StockPickGroupDetailPage({ params }: Params) {
             <article key={stock.id} className="stock-pick-stock-card">
               <div style={{ marginBottom: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: "var(--text)" }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>
                     {stock.symbol}
                   </span>
                   <RecommendationBadge recommendation={stock.recommendation} />
@@ -167,17 +167,17 @@ export default async function StockPickGroupDetailPage({ params }: Params) {
               >
                 <div>
                   <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>CMP</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 800 }}>{formatINR(stock.cmp)}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 600 }}>{formatINR(stock.cmp)}</p>
                 </div>
                 <div>
                   <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>Target</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 800, color: "#16a34a" }}>
+                  <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 600, color: "#16a34a" }}>
                     {formatINR(stock.targetPrice)}
                   </p>
                 </div>
                 <div>
                   <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>SL</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 800, color: "#dc2626" }}>
+                  <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 600, color: "#dc2626" }}>
                     {formatINR(stock.stopLoss)}
                   </p>
                 </div>

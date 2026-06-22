@@ -169,7 +169,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
           style={{
             margin: 0,
             fontSize: 22,
-            fontWeight: 800,
+            fontWeight: 600,
             color: "var(--text)",
             letterSpacing: -0.5,
           }}
@@ -196,7 +196,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
           <div style={{ fontSize: 36, marginBottom: 12, color: "var(--text-muted)", display: "flex", justifyContent: "center" }}>
             <FiClock size={36} />
           </div>
-          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "var(--text)" }}>
+          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
             Sign in to see your trade history
           </h2>
           <Link
@@ -246,7 +246,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
                 }}
               >
                 <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", marginBottom: 6 }}>{s.label}</p>
-                <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</p>
+                <p style={{ margin: 0, fontSize: 18, fontWeight: 600, color: s.color }}>{s.value}</p>
               </article>
             ))}
           </div>

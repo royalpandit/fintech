@@ -51,7 +51,7 @@ export default async function AdvisorMessagesPage() {
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, color: "var(--text-muted)" }}>
             <FiMessageCircle size={40} />
           </div>
-          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "var(--text)" }}>
+          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
             No messages yet
           </h2>
           <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }}>
@@ -89,7 +89,7 @@ export default async function AdvisorMessagesPage() {
                     display: "grid",
                     placeItems: "center",
                     fontSize: 13,
-                    fontWeight: 800,
+                    fontWeight: 600,
                     flexShrink: 0,
                   }}
                 >

@@ -130,7 +130,7 @@ function CommentBubble({
           display: "grid",
           placeItems: "center",
           fontSize: 9,
-          fontWeight: 800,
+          fontWeight: 600,
           flexShrink: 0,
         }}
       >
@@ -294,7 +294,7 @@ function PostCard({
             display: "grid",
             placeItems: "center",
             fontSize: 12,
-            fontWeight: 800,
+            fontWeight: 600,
             flexShrink: 0,
             textDecoration: "none",
           }}
@@ -352,7 +352,7 @@ function PostCard({
             background: `${sColor}1a`,
             color: sColor,
             fontSize: 10,
-            fontWeight: 800,
+            fontWeight: 600,
             letterSpacing: 0.5,
             textTransform: "uppercase",
             flexShrink: 0,
@@ -860,7 +860,7 @@ function ReportModal({
         ) : (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 18 }}>
-              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "var(--text)" }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: "var(--text)" }}>
                 Report this post
               </h3>
               <button
@@ -1398,7 +1398,7 @@ export default function FeedClient({
                           display: "grid",
                           placeItems: "center",
                           fontSize: 11,
-                          fontWeight: 800,
+                          fontWeight: 600,
                           flexShrink: 0,
                           textDecoration: "none",
                         }}
@@ -1533,7 +1533,7 @@ export default function FeedClient({
               >
                 Free account
               </div>
-              <h4 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 800, letterSpacing: -0.3 }}>
+              <h4 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 600, letterSpacing: -0.3 }}>
                 Personalize your feed
               </h4>
               <p
@@ -1549,7 +1549,7 @@ export default function FeedClient({
                   borderRadius: 8,
                   background: "var(--surface)",
                   color: "#064e3b",
-                  fontWeight: 800,
+                  fontWeight: 600,
                   fontSize: 12,
                   textDecoration: "none",
                 }}

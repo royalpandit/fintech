@@ -167,7 +167,7 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
           <div className="lp-split surface">
             <div>
               <div className="lp-kicker">Practice. Learn. Master.</div>
-              <h2 style={{ fontSize: "2rem", fontWeight: 800, margin: "0 0 12px" }}>Virtual Lab</h2>
+              <h2 style={{ fontSize: "2rem", fontWeight: 600, margin: "0 0 12px" }}>Virtual Lab</h2>
               <p style={{ color: "var(--lp-muted)", lineHeight: 1.65, margin: 0 }}>
                 Trade with real-time simulated markets using unlimited virtual cash. Perfect your
                 strategies before risking real capital.
@@ -232,7 +232,7 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
         <div className="landing-container lp-split">
           <div>
             <div className="lp-kicker">A Community That Grows Together</div>
-            <h2 style={{ fontSize: "2rem", fontWeight: 800, margin: "0 0 12px", letterSpacing: "-0.02em" }}>
+            <h2 style={{ fontSize: "2rem", fontWeight: 600, margin: "0 0 12px", letterSpacing: "-0.02em" }}>
               Learn, share and grow with investors like you
             </h2>
             <p style={{ color: "var(--lp-muted)", lineHeight: 1.65, margin: 0 }}>

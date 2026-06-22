@@ -55,7 +55,7 @@ export default async function WalletPage() {
   return (
     <section>
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "var(--text)", letterSpacing: -0.5 }}>
+        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: "var(--text)", letterSpacing: -0.5 }}>
           Paper Wallet
         </h1>
         <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
@@ -74,7 +74,7 @@ export default async function WalletPage() {
           }}
         >
           <FiCreditCard size={36} style={{ color: "var(--text-muted)", marginBottom: 12 }} />
-          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800 }}>Sign in for your paper wallet</h2>
+          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 600 }}>Sign in for your paper wallet</h2>
           <p style={{ margin: "0 0 18px", fontSize: 13, color: "var(--text-muted)" }}>
             Practice trading with virtual money — no broker account required.
           </p>
@@ -129,7 +129,7 @@ export default async function WalletPage() {
                 }}
               >
                 <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", marginBottom: 6 }}>{s.label}</p>
-                <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</p>
+                <p style={{ margin: 0, fontSize: 20, fontWeight: 600, color: s.color }}>{s.value}</p>
               </article>
             ))}
           </div>
@@ -144,7 +144,7 @@ export default async function WalletPage() {
                 padding: 20,
               }}
             >
-              <h2 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 800, color: "var(--text)" }}>
+              <h2 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600, color: "var(--text)" }}>
                 Quick paper trade
               </h2>
               <PaperTradeForm />
@@ -184,7 +184,7 @@ export default async function WalletPage() {
                 alignItems: "center",
               }}
             >
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: "var(--text)" }}>Recent activity</h3>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Recent activity</h3>
               <Link href="/user/history?type=virtual" style={{ fontSize: 12, fontWeight: 700, color: "#0ea5e9" }}>
                 Full history →
               </Link>

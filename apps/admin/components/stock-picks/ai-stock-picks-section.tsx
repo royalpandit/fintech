@@ -34,7 +34,7 @@ export default async function AiStockPicksSection() {
     <section className="stock-pick-home-section">
       <div className="stock-pick-home-header">
         <div>
-          <h2 className="stock-pick-home-title">AI Stock Picks</h2>
+          <h2 className="stock-pick-home-title">Stock Basket</h2>
           <p className="stock-pick-home-subtitle">Curated strategy groups</p>
         </div>
         <Link href="/user/stock-picks" className="stock-pick-home-link">

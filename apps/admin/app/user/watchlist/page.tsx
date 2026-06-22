@@ -14,7 +14,7 @@ export default async function WatchlistPage() {
     return (
       <section>
         <div style={{ marginBottom: 20 }}>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "var(--text)" }}>Watchlist</h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: "var(--text)" }}>Watchlist</h1>
           <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
             Sign in to save your watchlists
           </p>

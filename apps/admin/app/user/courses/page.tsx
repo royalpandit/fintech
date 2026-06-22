@@ -63,7 +63,7 @@ export default async function CoursesPage() {
           style={{
             margin: 0,
             fontSize: 22,
-            fontWeight: 800,
+            fontWeight: 600,
             color: "var(--text)",
             letterSpacing: -0.5,
           }}
@@ -190,7 +190,7 @@ export default async function CoursesPage() {
                           display: "grid",
                           placeItems: "center",
                           fontSize: 8,
-                          fontWeight: 800,
+                          fontWeight: 600,
                         }}
                       >
                         {getInitials(c.advisor.fullName)}
@@ -225,7 +225,7 @@ export default async function CoursesPage() {
                       <span
                         style={{
                           fontSize: 18,
-                          fontWeight: 800,
+                          fontWeight: 600,
                           color: price === 0 ? "#10b981" : "var(--text)",
                           letterSpacing: -0.3,
                         }}

@@ -126,7 +126,7 @@ export default async function CourseDetailPage({
                 style={{
                   margin: "0 0 10px",
                   fontSize: 22,
-                  fontWeight: 800,
+                  fontWeight: 600,
                   color: "var(--text)",
                   letterSpacing: -0.3,
                 }}
@@ -154,7 +154,7 @@ export default async function CourseDetailPage({
                     display: "grid",
                     placeItems: "center",
                     fontSize: 9,
-                    fontWeight: 800,
+                    fontWeight: 600,
                     flexShrink: 0,
                   }}
                 >
@@ -242,7 +242,7 @@ export default async function CourseDetailPage({
             <div
               style={{
                 fontSize: 28,
-                fontWeight: 800,
+                fontWeight: 600,
                 color: price === 0 ? "#10b981" : "var(--text)",
                 letterSpacing: -0.5,
                 marginBottom: 16,

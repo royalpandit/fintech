@@ -53,7 +53,7 @@ export default async function MessagesPage() {
           style={{
             margin: 0,
             fontSize: 22,
-            fontWeight: 800,
+            fontWeight: 600,
             color: "var(--text)",
             letterSpacing: -0.5,
           }}
@@ -85,7 +85,7 @@ export default async function MessagesPage() {
           >
             <FiMessageCircle size={40} />
           </div>
-          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "var(--text)" }}>
+          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
             No messages yet
           </h2>
           <p style={{ margin: "0 0 18px", fontSize: 13, color: "var(--text-muted)" }}>
@@ -148,7 +148,7 @@ export default async function MessagesPage() {
                     display: "grid",
                     placeItems: "center",
                     fontSize: 13,
-                    fontWeight: 800,
+                    fontWeight: 600,
                     flexShrink: 0,
                   }}
                 >

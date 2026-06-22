@@ -112,7 +112,7 @@ export default async function VirtualLabPage() {
           style={{
             margin: 0,
             fontSize: 22,
-            fontWeight: 800,
+            fontWeight: 600,
             color: "var(--text)",
             letterSpacing: -0.5,
           }}
@@ -157,7 +157,7 @@ export default async function VirtualLabPage() {
             style={{
               margin: 0,
               fontSize: 28,
-              fontWeight: 800,
+              fontWeight: 600,
               letterSpacing: -0.6,
             }}
           >
@@ -185,7 +185,7 @@ export default async function VirtualLabPage() {
                   borderRadius: 12,
                   background: "rgba(255,255,255,0.95)",
                   color: "#0c4a6e",
-                  fontWeight: 800,
+                  fontWeight: 600,
                   fontSize: 14,
                   textDecoration: "none",
                 }}
@@ -245,7 +245,7 @@ export default async function VirtualLabPage() {
               <p style={{ margin: 0, fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>
                 {s.label}
               </p>
-              <p style={{ margin: "4px 0 0", fontSize: 18, fontWeight: 800, letterSpacing: -0.5 }}>
+              <p style={{ margin: "4px 0 0", fontSize: 18, fontWeight: 600, letterSpacing: -0.5 }}>
                 {s.value}
               </p>
             </div>
@@ -320,7 +320,7 @@ export default async function VirtualLabPage() {
                     style={{
                       width: 24,
                       fontSize: 13,
-                      fontWeight: 800,
+                      fontWeight: 600,
                       color: i < 3 ? "#0ea5e9" : "var(--text-muted)",
                     }}
                   >
@@ -336,7 +336,7 @@ export default async function VirtualLabPage() {
                       display: "grid",
                       placeItems: "center",
                       fontSize: 10,
-                      fontWeight: 800,
+                      fontWeight: 600,
                     }}
                   >
                     {initials}
@@ -344,7 +344,7 @@ export default async function VirtualLabPage() {
                   <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: "var(--text)" }}>
                     {row.user?.fullName ?? "User"} {isMe ? " (you)" : ""}
                   </span>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: "#16a34a" }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#16a34a" }}>
                     +{Number(row.roiPct).toFixed(2)}%
                   </span>
                 </div>

@@ -84,7 +84,7 @@ export default async function UserAdvisorsPage() {
           style={{
             margin: 0,
             fontSize: 22,
-            fontWeight: 800,
+            fontWeight: 600,
             color: "var(--text)",
             letterSpacing: -0.5,
           }}
@@ -123,7 +123,7 @@ export default async function UserAdvisorsPage() {
             <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", fontWeight: 500, marginBottom: 6 }}>
               {s.label}
             </p>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: -0.5 }}>
+            <p style={{ margin: 0, fontSize: 22, fontWeight: 600, color: s.color, letterSpacing: -0.5 }}>
               {s.value}
             </p>
           </article>
@@ -193,7 +193,7 @@ export default async function UserAdvisorsPage() {
                       display: "grid",
                       placeItems: "center",
                       fontSize: 14,
-                      fontWeight: 800,
+                      fontWeight: 600,
                       flexShrink: 0,
                     }}
                   >
@@ -203,7 +203,7 @@ export default async function UserAdvisorsPage() {
                     <div
                       style={{
                         fontSize: 14,
-                        fontWeight: 800,
+                        fontWeight: 600,
                         color: "var(--text)",
                         display: "flex",
                         gap: 4,
@@ -251,19 +251,19 @@ export default async function UserAdvisorsPage() {
                 >
                   <div>
                     <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>Posts</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 800, color: "var(--text)" }}>
+                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
                       {m?.posts ?? 0}
                     </p>
                   </div>
                   <div>
                     <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>Subs</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 800, color: "var(--text)" }}>
+                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
                       {m?.subs ?? 0}
                     </p>
                   </div>
                   <div>
                     <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>Exp</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 800, color: "var(--text)" }}>
+                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
                       {adv.advisorProfile?.experienceYears
                         ? `${adv.advisorProfile.experienceYears}y`
                         : "—"}

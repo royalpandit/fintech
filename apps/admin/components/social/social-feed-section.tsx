@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import AuthGate from "@/components/auth-gate";
 import PostComposerModal from "./post-composer-modal";
 import PostComposerTrigger from "./post-composer-trigger";
+import PostEditModal from "./post-edit-modal";
 import SocialPostCard from "./social-post-card";
 import {
   deleteSocialPost,
@@ -13,6 +14,7 @@ import {
   reportSocialPost,
   toggleSocialPostLike,
   toggleSocialPostSave,
+  updateSocialPost,
 } from "@/lib/social-feed-client";
 import type { SocialPost } from "@/lib/social-feed-types";
 import type { SocialComment } from "@/lib/social-feed-client";
@@ -25,6 +27,7 @@ export default function SocialFeedSection({
   userName: string;
 }) {
   const [composerOpen, setComposerOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,7 +55,10 @@ export default function SocialFeedSection({
     load();
   }, [load]);
 
-  const refresh = () => load();
+  // Show a freshly created post immediately instead of refetching the whole feed.
+  const handlePosted = (post: SocialPost) => {
+    setPosts(prev => (prev.some(p => p.id === post.id) ? prev : [post, ...prev]));
+  };
 
   const toggleComments = async (postId: number) => {
     setCommentsOpen(prev => {
@@ -136,9 +142,25 @@ export default function SocialFeedSection({
       <PostComposerModal
         open={composerOpen}
         onClose={() => setComposerOpen(false)}
-        onPosted={refresh}
+        onPosted={handlePosted}
         userName={userName}
         isAuthed={isAuthed}
+      />
+
+      <PostEditModal
+        open={editingPost != null}
+        initialValue={editingPost?.content ?? ""}
+        onCancel={() => setEditingPost(null)}
+        onSave={async value => {
+          if (!editingPost) return;
+          const updated = await updateSocialPost(editingPost.id, { content: value });
+          setPosts(prev =>
+            prev.map(p =>
+              p.id === editingPost.id ? { ...p, content: updated.content } : p,
+            ),
+          );
+          setEditingPost(null);
+        }}
       />
 
       {loading && posts.length === 0 && (
@@ -155,14 +177,7 @@ export default function SocialFeedSection({
             onSave={() => handleSave(post)}
             onDelete={() => handleDelete(post)}
             onReport={() => handleReport(post)}
-            onEdit={() => {
-              const next = prompt("Edit post:", post.content);
-              if (next != null && next.trim()) {
-                import("@/lib/social-feed-client").then(({ updateSocialPost }) =>
-                  updateSocialPost(post.id, { content: next.trim() }).then(refresh),
-                );
-              }
-            }}
+            onEdit={() => setEditingPost(post)}
             comments={commentsMap.get(post.id) ?? []}
             commentsOpen={commentsOpen.has(post.id)}
             onToggleComments={() => toggleComments(post.id)}

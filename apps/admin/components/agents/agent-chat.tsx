@@ -229,7 +229,7 @@ export default function AgentChat({ agent }: { agent: Agent }) {
             {agent.avatar}
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 15, color: "var(--text)" }}>{agent.name}</div>
+            <div style={{ fontWeight: 600, fontSize: 15, color: "var(--text)" }}>{agent.name}</div>
             <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{modelLabel}</div>
           </div>
           <div style={{ marginLeft: "auto" }}>
@@ -246,7 +246,7 @@ export default function AgentChat({ agent }: { agent: Agent }) {
               <div style={{ width: 72, height: 72, borderRadius: 20, background: "linear-gradient(135deg,#ede9fe,#c7d2fe)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36 }}>
                 {agent.avatar}
               </div>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "var(--text)" }}>{agent.name}</h2>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--text)" }}>{agent.name}</h2>
               <p style={{ margin: 0, fontSize: 14, color: "var(--text-muted)", maxWidth: 380, lineHeight: 1.6 }}>{agent.description}</p>
               <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--text-muted)" }}>Ask me anything below to get started</p>
             </div>

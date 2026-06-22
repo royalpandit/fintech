@@ -71,7 +71,7 @@ export default function SubscribePlansModal({
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>{title}</h3>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{title}</h3>
           <button
             type="button"
             onClick={onClose}
@@ -102,12 +102,12 @@ export default function SubscribePlansModal({
               }}
             >
               <div>
-                <div style={{ fontWeight: 800, fontSize: 14 }}>{p.label}</div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{p.label}</div>
                 <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
                   {p.id === "yearly" ? "Best value · billed yearly" : "Billed monthly"}
                 </div>
               </div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: "#0ea5e9" }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: "#0ea5e9" }}>
                 {subscribing === p.id ? "…" : `₹${p.price.toLocaleString("en-IN")}`}
               </div>
             </button>
