@@ -396,7 +396,7 @@ th {
 
 .profile-card-stat {
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--advisor-ink);
   letter-spacing: -0.4px;
   line-height: 1.2;
@@ -486,7 +486,7 @@ th {
 
 .stat-card-value {
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--advisor-ink);
   letter-spacing: -0.5px;
   margin: 0;
@@ -536,7 +536,7 @@ th {
 .widget-title h3 {
   margin: 0;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--advisor-ink);
 }
 
@@ -695,7 +695,7 @@ th {
 
 .kpi-value {
   font-size: 34px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: -1px;
   color: var(--text);
   line-height: 1.1;
@@ -1044,14 +1044,14 @@ th {
   color: #fff;
   display: grid;
   place-items: center;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 16px;
   flex-shrink: 0;
 }
 
 .us-brand-name {
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--us-ink);
   letter-spacing: -0.4px;
 }
@@ -1150,7 +1150,7 @@ th {
   background: linear-gradient(135deg, #0ea5e9, #10b981);
   color: #fff;
   border: none;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 13px;
   cursor: pointer;
   display: grid;
@@ -1188,7 +1188,7 @@ th {
   color: #fff;
   display: grid;
   place-items: center;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 14px;
   flex-shrink: 0;
 }
@@ -1347,7 +1347,7 @@ th {
   color: #fff;
   display: grid;
   place-items: center;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 15px;
   flex-shrink: 0;
 }
@@ -1391,7 +1391,7 @@ th {
 
 .us-profile-stat-val {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--us-ink);
   letter-spacing: -0.2px;
 }
@@ -1915,7 +1915,7 @@ body.terminal-active .us-content {
 }
 .oc-symbol {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
 }
 .oc-exchange {
@@ -1925,7 +1925,7 @@ body.terminal-active .us-content {
 }
 .oc-spot {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
 }
 .oc-spot-chg {
@@ -1998,7 +1998,7 @@ body.terminal-active .us-content {
 .oc-head-calls th,
 .oc-head-puts th {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.5px;
 }
 .oc-section.calls {
@@ -2040,7 +2040,7 @@ body.terminal-active .us-content {
 }
 .oc-data-row td.strike {
   text-align: center;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
   background: var(--surface-2);
   border-left: 1px solid var(--border);
@@ -2064,7 +2064,7 @@ body.terminal-active .us-content {
   background: #22c55e;
   color: #fff;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   padding: 2px 8px;
   border-radius: 4px;
   white-space: nowrap;
@@ -2095,7 +2095,7 @@ body.terminal-active .us-content {
   line-height: 1.35;
 }
 .oc-ltp-price {
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
 }
 .oc-ltp-chg {
@@ -2187,7 +2187,7 @@ body.terminal-active .us-content {
   border-bottom: 1px solid rgba(248, 250, 252, 0.12);
 }
 .oi-prof-tip-title {
-  font-weight: 800;
+  font-weight: 600;
   font-size: 12px;
 }
 .oi-prof-tip-exp {
@@ -2238,7 +2238,7 @@ body.terminal-active .us-content {
 }
 .oi-prof-toolbar-label {
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-muted);
 }
 .oi-prof-expiry-select {
@@ -2321,7 +2321,7 @@ body.terminal-active .us-content {
   height: 16px;
   padding: 0 4px;
   font-size: 9px;
-  font-weight: 800;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2371,7 +2371,7 @@ body.terminal-active .us-content {
   border: none;
   background: transparent;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.5px;
   cursor: pointer;
@@ -2463,7 +2463,7 @@ body.terminal-active .us-content {
 .tv-ind-head h3 {
   margin: 0;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
 }
 .tv-ind-close {
@@ -2501,7 +2501,7 @@ body.terminal-active .us-content {
 .tv-ind-cat {
   padding: 10px 12px 6px;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.5px;
 }
@@ -2535,7 +2535,7 @@ body.terminal-active .us-content {
 }
 .tv-ind-badge {
   font-size: 9px;
-  font-weight: 800;
+  font-weight: 600;
   color: #fff;
   background: #dc2626;
   padding: 2px 6px;
@@ -2543,7 +2543,7 @@ body.terminal-active .us-content {
 }
 .tv-ind-check {
   color: #2563eb;
-  font-weight: 800;
+  font-weight: 600;
 }
 .tv-ind-empty {
   padding: 16px;
@@ -2591,7 +2591,7 @@ body.terminal-active .us-content {
   height: 32px;
   border: none;
   border-radius: 6px;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 14px;
   color: #fff;
   cursor: pointer;
@@ -2644,7 +2644,7 @@ body.terminal-active .us-content {
 .md-head h3 {
   margin: 0;
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 600;
 }
 .md-close {
   border: none;
@@ -2661,7 +2661,7 @@ body.terminal-active .us-content {
 }
 .md-symbol-name {
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
 }
 .md-symbol-price {
@@ -2812,7 +2812,7 @@ body.terminal-active .us-content {
 }
 .oos-title {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
   line-height: 1.35;
 }
@@ -2842,7 +2842,7 @@ body.terminal-active .us-content {
   height: 32px;
   border-radius: 50%;
   border: 2px solid var(--border);
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   background: var(--surface);
   color: var(--text-muted);
@@ -2942,7 +2942,7 @@ body.terminal-active .us-content {
   border: none;
   border-radius: 10px;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 600;
   color: #fff;
   cursor: pointer;
 }
@@ -3054,9 +3054,9 @@ body.terminal-active .us-content {
 .user-page-title {
   margin: 0;
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.2px;
 }
 
 .user-page-subtitle {
@@ -3102,7 +3102,7 @@ body.terminal-active .us-content {
 .user-page-stat-value {
   margin: 0;
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: -0.5px;
 }
 
@@ -3161,7 +3161,7 @@ body.terminal-active .us-content {
 .stock-pick-detail-metric-value {
   margin: 4px 0 0;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
 }
 
@@ -3229,7 +3229,7 @@ body.terminal-active .us-content {
 .stock-pick-group-card-title {
   margin: 0;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -3264,7 +3264,7 @@ body.terminal-active .us-content {
 .stock-pick-group-card-stat-value {
   margin: 2px 0 0;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
 }
 
@@ -4069,7 +4069,7 @@ body.terminal-active .us-content {
 .wl-page-title {
   margin: 0;
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
   letter-spacing: -0.5px;
 }
@@ -4406,7 +4406,7 @@ body.terminal-active .us-content {
   flex: 1;
   padding: 10px 0;
   border: none;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 13px;
   cursor: pointer;
   background: var(--surface-2);
@@ -4470,7 +4470,7 @@ body.terminal-active .us-content {
   padding: 11px 0;
   border-radius: 8px;
   border: none;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 14px;
   cursor: pointer;
   color: #fff;
@@ -4518,7 +4518,7 @@ body.terminal-active .us-content {
   justify-content: space-between;
   margin-bottom: 8px;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -4593,7 +4593,7 @@ body.terminal-active .us-content {
 
 .paper-order-book-title {
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -4668,7 +4668,7 @@ body.terminal-active .us-content {
 }
 
 .paper-order-symbol {
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
   flex: 1;
 }
@@ -4684,7 +4684,7 @@ body.terminal-active .us-content {
 
 .paper-order-status {
   font-size: 9px;
-  font-weight: 800;
+  font-weight: 600;
   text-transform: uppercase;
   padding: 2px 5px;
   border-radius: 3px;
@@ -4800,7 +4800,7 @@ body.terminal-active .us-content {
 }
 
 .paper-holding-symbol {
-  font-weight: 800;
+  font-weight: 600;
   font-size: 13px;
   color: var(--text);
 }
@@ -5239,9 +5239,10 @@ body.terminal-active .us-content {
   padding: 16px;
 }
 .sf-composer {
-  width: min(640px, 100%);
-  max-height: min(90vh, 720px);
-  border-radius: 14px;
+  width: min(720px, 100%);
+  min-height: min(560px, 88vh);
+  max-height: min(90vh, 760px);
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -5294,7 +5295,7 @@ body.terminal-active .us-content {
   display: grid;
   place-items: center;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
 }
 .sf-composer-name {
   font-weight: 700;
@@ -5322,20 +5323,23 @@ body.terminal-active .us-content {
   place-items: center;
 }
 .sf-composer-body {
-  padding: 16px 18px;
+  padding: 18px 22px;
   overflow-y: auto;
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .sf-composer-textarea {
   width: 100%;
+  flex: 1;
   border: none;
   background: transparent;
   color: var(--sf-text);
-  font-size: 15px;
-  line-height: 1.55;
-  resize: vertical;
-  min-height: 100px;
+  font-size: 16px;
+  line-height: 1.6;
+  resize: none;
+  min-height: 220px;
   outline: none;
 }
 .sf-composer-textarea.article {
@@ -5451,7 +5455,7 @@ body.terminal-active .us-content {
   border-radius: 999px;
   background: var(--sf-accent);
   color: var(--text);
-  font-weight: 800;
+  font-weight: 600;
   font-size: 13px;
   cursor: pointer;
 }
@@ -5463,6 +5467,107 @@ body.terminal-active .us-content {
   margin: 8px 0 0;
   font-size: 12px;
   color: #dc2626;
+}
+.sf-edit-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  z-index: 5100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.sf-edit-modal {
+  width: min(560px, 100%);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.sf-edit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.sf-edit-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.sf-edit-close {
+  border: none;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.sf-edit-close:hover {
+  color: var(--text);
+}
+.sf-edit-textarea {
+  width: 100%;
+  display: block;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.6;
+  padding: 18px 20px;
+  min-height: 140px;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+.sf-edit-error {
+  margin: 0;
+  padding: 0 20px 8px;
+  font-size: 12px;
+  color: var(--danger);
+}
+.sf-edit-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+.sf-edit-cancel {
+  padding: 8px 18px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.sf-edit-cancel:hover {
+  background: var(--surface-2);
+}
+.sf-edit-save {
+  padding: 8px 22px;
+  border: none;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.sf-edit-save:disabled,
+.sf-edit-cancel:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 .sf-emoji-picker {
   position: absolute;
@@ -5532,12 +5637,13 @@ body.terminal-active .us-content {
   position: absolute;
   bottom: calc(100% + 8px);
   left: 0;
-  width: 280px;
+  width: 320px;
   background: var(--sf-bg2);
   border: 1px solid var(--sf-border);
   border-radius: 12px;
-  padding: 10px;
+  padding: 12px;
   z-index: 10;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
 }
 .sf-symbol-picker-search {
   width: 100%;
@@ -5572,7 +5678,7 @@ body.terminal-active .us-content {
   background: var(--sf-bg);
 }
 .sf-symbol-picker-row .sym {
-  font-weight: 800;
+  font-weight: 600;
   color: var(--sf-accent);
   min-width: 56px;
 }
@@ -5725,7 +5831,7 @@ body.terminal-active .us-content {
   padding: 5px 10px;
   border-radius: 999px;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border: 1px solid transparent;
@@ -5808,7 +5914,7 @@ body.terminal-active .us-content {
   margin: 0;
   padding: 12px 16px 0;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
   letter-spacing: -0.3px;
 }
@@ -5861,7 +5967,7 @@ body.terminal-active .us-content {
   display: grid;
   place-items: center;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 600;
   flex-shrink: 0;
 }
 .sf-symbol-info {
@@ -5871,7 +5977,7 @@ body.terminal-active .us-content {
   min-width: 0;
 }
 .sf-symbol-ticker {
-  font-weight: 800;
+  font-weight: 600;
   font-size: 14px;
   color: #facc15;
   letter-spacing: 0.2px;
@@ -5958,12 +6064,12 @@ body.terminal-active .us-content {
 }
 .sf-level-chip.target .sf-level-value {
   color: #059669;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 14px;
 }
 .sf-level-chip.sl .sf-level-value {
   color: #dc2626;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 14px;
 }
 
@@ -6242,7 +6348,7 @@ body.terminal-active .us-content {
   display: grid;
   place-items: center;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   flex-shrink: 0;
 }
 .sf-comment-body strong {
@@ -6300,7 +6406,7 @@ body.terminal-active .us-content {
 .post-access-badge {
   display: inline-block;
   font-size: 9px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.6px;
   padding: 3px 8px;
   border-radius: 20px;
@@ -6454,7 +6560,7 @@ body.terminal-active .us-content {
 .premium-post-overlay-title {
   margin: 0 0 4px;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 600;
 }
 .premium-post-overlay-msg {
   margin: 0 0 14px;
@@ -6468,7 +6574,7 @@ body.terminal-active .us-content {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #fff;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35);
 }
@@ -6511,7 +6617,7 @@ body.terminal-active .us-content {
 .premium-unlock-modal-title {
   margin: 0 0 12px;
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
 }
 .premium-unlock-modal-body {
@@ -6531,7 +6637,7 @@ body.terminal-active .us-content {
   border-radius: 10px;
   background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #fff;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 14px;
   cursor: pointer;
 }
@@ -6552,7 +6658,7 @@ body.terminal-active .us-content {
 .comm-form-title {
   margin: 0;
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
   letter-spacing: -0.5px;
 }
@@ -6685,13 +6791,13 @@ body.terminal-active .us-content {
   background: linear-gradient(135deg, #94a3b822, #64748b22);
   color: var(--text-muted);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .comm-card-name {
   margin: 0;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
 }
 
@@ -6838,7 +6944,7 @@ body.terminal-active .us-content {
 .comm-detail-info h1 {
   margin: 0;
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .comm-detail-badges {
@@ -6907,7 +7013,7 @@ body.terminal-active .us-content {
 
 .comm-fieldset legend {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
   padding: 0 6px;
 }
@@ -7023,7 +7129,7 @@ body.terminal-active .us-content {
 .comm-post-title {
   margin: 0 0 6px;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text);
 }
 
@@ -7366,7 +7472,7 @@ body.terminal-active .us-content {
   display: grid;
   place-items: center;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-muted);
 }
 
@@ -7385,7 +7491,7 @@ body.terminal-active .us-content {
 
 .comm-role-badge {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
   text-transform: uppercase;
 }
 

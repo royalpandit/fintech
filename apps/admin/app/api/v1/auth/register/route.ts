@@ -158,10 +158,14 @@ export async function POST(req: NextRequest) {
             sebiRegistrationNo,
             experienceYears: typeof body.experienceYears === "number" ? body.experienceYears : null,
             bio: body.bio?.trim() || null,
+            // Advisor accounts start PENDING — they cannot access the console
+            // until an admin approves them. After approval, on first login they
+            // are prompted to complete the self-service verification form
+            // (verificationFormSubmittedAt stays null until then).
             verificationStatus: "pending",
           },
         });
-        log("advisor profile created (pending verification)", { userId: created.id });
+        log("advisor profile created (pending admin approval)", { userId: created.id });
       }
 
       await tx.virtualWallet.create({

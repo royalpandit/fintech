@@ -19,6 +19,7 @@ type AdvisorShellProps = {
   badges?: Partial<Record<string, number>>;
   walletBalance: number;
   todayDelta: { current: number; previous: number };
+  needsVerification?: boolean;
 };
 
 function getInitials(name: string): string {
@@ -50,6 +51,7 @@ export default function AdvisorShell({
   badges = {},
   walletBalance,
   todayDelta,
+  needsVerification = false,
 }: AdvisorShellProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -61,6 +63,12 @@ export default function AdvisorShell({
     const q = search.trim();
     if (q) router.push(`/advisor/search?q=${encodeURIComponent(q)}`);
   }
+
+  // While unverified, every feature link routes to the verification page so the
+  // advisor must "verify first" before opening posts, subscribers, etc. The
+  // dashboard stays reachable so they can still see the alert banner.
+  const lockedHref = (target: string) =>
+    needsVerification && target !== "/advisor/dashboard" ? "/advisor/verify" : target;
 
   const initials = getInitials(currentUser.fullName);
   const todayDeltaPct = deltaPct(todayDelta.current, todayDelta.previous);
@@ -97,7 +105,7 @@ export default function AdvisorShell({
                 color: "#fff",
                 display: "grid",
                 placeItems: "center",
-                fontWeight: 800,
+                fontWeight: 600,
                 fontSize: 13,
                 flexShrink: 0,
               }}
@@ -108,7 +116,7 @@ export default function AdvisorShell({
               <div
                 style={{
                   fontSize: 13,
-                  fontWeight: 800,
+                  fontWeight: 600,
                   color: "var(--text)",
                   letterSpacing: -0.2,
                   whiteSpace: "nowrap",
@@ -187,7 +195,7 @@ export default function AdvisorShell({
             return (
               <Link
                 key={moduleName}
-                href={href}
+                href={lockedHref(href)}
                 className={`admin-nav-link ${active ? "active" : ""}`}
                 style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
               >
@@ -291,7 +299,7 @@ export default function AdvisorShell({
               return (
                 <Link
                   key={nav.href}
-                  href={nav.href}
+                  href={lockedHref(nav.href)}
                   style={{
                     padding: "8px 14px",
                     borderRadius: 8,
@@ -321,7 +329,7 @@ export default function AdvisorShell({
           {/* Right side: notifications + avatar */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
             <Link
-              href="/advisor/notifications"
+              href={lockedHref("/advisor/notifications")}
               aria-label="Notifications"
               style={{
                 width: 36,
@@ -401,7 +409,7 @@ export default function AdvisorShell({
                   <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>{currentUser.email}</p>
                 </div>
                 <Link
-                  href="/advisor/profile"
+                  href={lockedHref("/advisor/profile")}
                   onClick={() => setMenuOpen(false)}
                   style={{
                     display: "block",
@@ -415,7 +423,7 @@ export default function AdvisorShell({
                   Profile
                 </Link>
                 <Link
-                  href="/advisor/earnings"
+                  href={lockedHref("/advisor/earnings")}
                   onClick={() => setMenuOpen(false)}
                   style={{
                     display: "block",
@@ -454,6 +462,53 @@ export default function AdvisorShell({
           </div>
         </header>
         <main className="admin-main theme-page">
+          {needsVerification && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                flexWrap: "wrap",
+                padding: "12px 16px",
+                marginBottom: 16,
+                borderRadius: 12,
+                background: "rgba(239,68,68,0.1)",
+                border: "1px solid rgba(239,68,68,0.35)",
+                position: "sticky",
+                top: 12,
+                zIndex: 20,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 240 }}>
+                <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>⚠️</span>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: "var(--brand-danger)" }}>
+                    Complete your verification
+                  </div>
+                  <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 2 }}>
+                    Verify that you&apos;re a SEBI / government-registered advisor to unlock
+                    posting, subscribers, and earnings.
+                  </div>
+                </div>
+              </div>
+              <Link
+                href="/advisor/verify"
+                style={{
+                  flexShrink: 0,
+                  padding: "10px 18px",
+                  borderRadius: 10,
+                  background: "var(--brand-danger)",
+                  color: "#fff",
+                  fontWeight: 600,
+                  fontSize: 13,
+                  textDecoration: "none",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Complete verification →
+              </Link>
+            </div>
+          )}
           {children}
         </main>
       </section>

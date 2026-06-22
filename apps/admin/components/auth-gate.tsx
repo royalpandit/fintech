@@ -48,7 +48,7 @@ export default function AuthGate({
                 placeItems: "center",
                 color: "#fff",
                 fontSize: 22,
-                fontWeight: 800,
+                fontWeight: 600,
                 marginBottom: 14,
               }}
             >

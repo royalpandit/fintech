@@ -26,7 +26,11 @@ export default async function AdvisorShellLayout({
         email: true,
         status: true,
         advisorProfile: {
-          select: { verificationStatus: true, sebiRegistrationNo: true },
+          select: {
+            verificationStatus: true,
+            sebiRegistrationNo: true,
+            verificationFormSubmittedAt: true,
+          },
         },
       },
     }),
@@ -65,6 +69,7 @@ export default async function AdvisorShellLayout({
         Notifications: unreadNotifications,
         Comments: pendingToxicComments,
       }}
+      needsVerification={!user.advisorProfile.verificationFormSubmittedAt}
       walletBalance={wallet?.balance ? Number(wallet.balance) : 0}
       todayDelta={{
         current: todayMetric?.earningsAmount ? Number(todayMetric.earningsAmount) : 0,

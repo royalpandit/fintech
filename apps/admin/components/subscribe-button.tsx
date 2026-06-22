@@ -41,7 +41,7 @@ export default function SubscribeButton({
           borderRadius: 12,
           background: subscribed ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.95)",
           color: subscribed ? "#fff" : "#064e3b",
-          fontWeight: 800,
+          fontWeight: 600,
           fontSize: 14,
           border: subscribed ? "1px solid rgba(255,255,255,0.5)" : "none",
           cursor: loading ? "not-allowed" : "pointer",

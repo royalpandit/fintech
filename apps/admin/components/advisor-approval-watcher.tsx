@@ -96,7 +96,7 @@ export default function AdvisorApprovalWatcher() {
           display: "grid",
           placeItems: "center",
           fontSize: 15,
-          fontWeight: 800,
+          fontWeight: 600,
           flexShrink: 0,
         }}
       >

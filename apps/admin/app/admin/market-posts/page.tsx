@@ -92,7 +92,7 @@ export default async function AdminMarketPostsPage({
             style={{
               margin: 0,
               fontSize: 26,
-              fontWeight: 800,
+              fontWeight: 600,
               color: "var(--text)",
               letterSpacing: -0.6,
             }}
@@ -234,7 +234,7 @@ export default async function AdminMarketPostsPage({
                               display: "grid",
                               placeItems: "center",
                               fontSize: 10,
-                              fontWeight: 800,
+                              fontWeight: 600,
                               flexShrink: 0,
                             }}
                           >

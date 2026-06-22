@@ -25,7 +25,7 @@ export default async function NotificationsPage({
             style={{
               margin: 0,
               fontSize: 22,
-              fontWeight: 800,
+              fontWeight: 600,
               color: "var(--text)",
               letterSpacing: -0.5,
             }}
@@ -57,7 +57,7 @@ export default async function NotificationsPage({
           >
             <FiBell size={36} />
           </div>
-          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "var(--text)" }}>
+          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
             Sign in to see notifications
           </h2>
           <p style={{ margin: "0 0 18px", fontSize: 13, color: "var(--text-muted)" }}>
