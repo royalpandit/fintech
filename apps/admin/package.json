@@ -18,6 +18,10 @@
     "seed:admin": "tsx scripts/seed-admin.ts",
     "seed:all": "tsx scripts/seed-all.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
+    "seed:finuer-basket": "tsx scripts/seed-finuer-basket.ts",
+    "seed:competition": "tsx scripts/seed-competition.ts",
+    "db:competition": "psql \"${DATABASE_URL:-postgresql://flexi:flexi@localhost:5432/flexi}\" -f scripts/sql/competition-migration.sql",
+    "db:competition-trading": "psql \"${DATABASE_URL:-postgresql://flexi:flexi@localhost:5432/flexi}\" -f scripts/sql/competition-trading-migration.sql",
     "mark-advisors-verified": "tsx scripts/mark-advisors-verified.ts"
   },
   "dependencies": {
