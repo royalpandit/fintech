@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import PostAccessBadge from "./post-access-badge";
 import PremiumPostOverlay from "./premium-post-overlay";
 import PremiumUnlockModal from "./premium-unlock-modal";
 import { usePremiumPostUnlock } from "./use-premium-post-unlock";
@@ -44,10 +43,6 @@ export default function MarketPostDetailBody({ post: initial, isAuthed, children
 
   return (
     <>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
-        <PostAccessBadge type={post.post_access_type} />
-      </div>
-
       <div className={`premium-post-body${locked ? " is-locked" : ""}`}>
         <h1
           style={{

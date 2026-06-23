@@ -217,7 +217,7 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
           padding: 16,
         }}
       >
-        <h3 style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 600 }}>Place paper trade</h3>
+        <h3 style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 600 }}>New Trade</h3>
         <PaperTradeForm compact />
       </article>
     </div>
