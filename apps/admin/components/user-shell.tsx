@@ -21,6 +21,7 @@ import {
   FiClock,
   FiBookOpen,
   FiTarget,
+  FiAward,
   FiMessageSquare,
   FiMenu,
   FiCreditCard,
@@ -60,6 +61,8 @@ const MAIN_NAV: NavItem[] = [
 const INVESTING_NAV: NavItem[] = [
   { label: "Dashboard", href: "/user/home", Icon: FiPieChart },
   { label: "Stock Basket", href: "/user/stock-picks", Icon: FiTarget },
+  { label: "Finuer Basket", href: "/user/finuer-basket", Icon: FiBriefcase },
+  { label: "Competition", href: "/user/competition", Icon: FiAward },
   { label: "Wallet", href: "/user/wallet", Icon: FiCreditCard },
   { label: "Watchlist", href: "/user/watchlist", Icon: FiStar },
   { label: "Portfolio", href: "/user/portfolio", Icon: FiBriefcase },
@@ -71,7 +74,7 @@ const INVESTING_NAV: NavItem[] = [
 const BOTTOM_NAV: NavItem[] = [
   { label: "Feed", href: "/user/feed", Icon: FiHome },
   { label: "Pros", href: "/user/advisors", Icon: FiUsers },
-  { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
+  { label: "Compete", href: "/user/competition", Icon: FiAward },
   { label: "Messages", href: "/user/messages", Icon: FiMessageCircle },
   { label: "Alerts", href: "/user/notifications", Icon: FiBell },
 ];
