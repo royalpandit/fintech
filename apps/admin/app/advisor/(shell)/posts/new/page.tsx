@@ -3,14 +3,8 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PostAccessSelector from "@/components/posts/post-access-selector";
-import BoostPicker from "@/components/posts/boost-picker";
-import RecipientPicker from "@/components/posts/recipient-picker";
-import type { PostAccessType } from "@/lib/post-access";
-import type { BoostTierId } from "@/lib/post-boost";
 
-type Audience = "public" | "subscribers" | "custom";
-
+type Audience = "public" | "subscribers";
 type AssetType = "equity" | "crypto" | "mf" | "commodity" | "other";
 type Sentiment = "bullish" | "bearish" | "neutral";
 type RiskLevel = "low" | "medium" | "high";
@@ -26,33 +20,19 @@ export default function NewPostPage() {
   const [timeframe, setTimeframe] = useState("");
   const [targetPrice, setTargetPrice] = useState("");
   const [stopLossPrice, setStopLossPrice] = useState("");
-  const [postAccessType, setPostAccessType] = useState<PostAccessType>("free");
-  const [boostTier, setBoostTier] = useState<BoostTierId | null>(null);
+  const [audience, setAudience] = useState<Audience>("public");
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
-  // Two top-level choices. When "subscribers" is picked, shareAll=true sends to
-  // all subscribers; shareAll=false sends only to the picked recipients.
-  const [audienceTop, setAudienceTop] = useState<"public" | "subscribers">("public");
-  const [shareAll, setShareAll] = useState(true);
-  const [recipientIds, setRecipientIds] = useState<number[]>([]);
   const [disclaimer, setDisclaimer] = useState(
     "This post is for informational purposes only and does not constitute investment advice. Please consult a qualified financial advisor before making any investment decisions. Past performance is not indicative of future results.",
   );
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Map the UI choices to the backend audience value.
-  const audience: Audience =
-    audienceTop === "public" ? "public" : shareAll ? "subscribers" : "custom";
-
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
 
-    if (audience === "custom" && recipientIds.length === 0) {
-      setError("Pick at least one person to send this post to.");
-      return;
-    }
     if (scheduleEnabled) {
       if (!scheduledAt) {
         setError("Pick a date and time to schedule this post.");
@@ -80,10 +60,7 @@ export default function NewPostPage() {
           targetPrice: targetPrice ? Number(targetPrice) : undefined,
           stopLossPrice: stopLossPrice ? Number(stopLossPrice) : undefined,
           disclaimer: disclaimer.trim(),
-          postAccessType,
-          boostTier: boostTier || undefined,
           audience,
-          recipientUserIds: audience === "custom" ? recipientIds : undefined,
           scheduledAt: scheduleEnabled && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
         }),
       });
@@ -217,50 +194,54 @@ export default function NewPostPage() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 <div>
-                  <label className="metric-label">Target Price</label>
+                  <label className="metric-label">Target Price (₹)</label>
                   <input
                     className="input"
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     value={targetPrice}
                     onChange={(e) => setTargetPrice(e.target.value)}
-                    placeholder="₹"
+                    placeholder="e.g. 2500.00"
                   />
                 </div>
                 <div>
-                  <label className="metric-label">Stop Loss</label>
+                  <label className="metric-label">Stop Loss (₹)</label>
                   <input
                     className="input"
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     value={stopLossPrice}
                     onChange={(e) => setStopLossPrice(e.target.value)}
-                    placeholder="₹"
+                    placeholder="e.g. 2200.00"
                   />
                 </div>
               </div>
             </div>
 
-            <div style={{ marginTop: 16 }}>
-              <PostAccessSelector value={postAccessType} onChange={setPostAccessType} variant="form" />
-            </div>
-
             <div style={{ marginTop: 20 }}>
-              <label className="metric-label">Audience *</label>
+              <label className="metric-label">Visibility *</label>
               <p style={{ margin: "2px 0 8px", fontSize: 12, color: "var(--text-muted)" }}>
                 Who can see this post.
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 {([
-                  { id: "public", title: "Public", blurb: "Visible to everyone." },
-                  { id: "subscribers", title: "Subscribers", blurb: "Send to your subscribers." },
-                ] as const).map((opt) => {
-                  const active = audienceTop === opt.id;
+                  {
+                    id: "public" as const,
+                    title: "Public",
+                    blurb: "Visible to everyone on the platform.",
+                  },
+                  {
+                    id: "subscribers" as const,
+                    title: "Subscribers Only",
+                    blurb: "Only users subscribed to you can see this.",
+                  },
+                ]).map((opt) => {
+                  const active = audience === opt.id;
                   return (
                     <button
                       key={opt.id}
                       type="button"
-                      onClick={() => setAudienceTop(opt.id)}
+                      onClick={() => setAudience(opt.id)}
                       style={{
                         textAlign: "left",
                         padding: "12px 14px",
@@ -276,60 +257,6 @@ export default function NewPostPage() {
                   );
                 })}
               </div>
-
-              {audienceTop === "subscribers" && (
-                <div
-                  style={{
-                    marginTop: 12,
-                    padding: 14,
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    background: "var(--surface-2)",
-                  }}
-                >
-                  {/* Share-all vs pick-specific toggle */}
-                  <div style={{ display: "flex", gap: 8, marginBottom: shareAll ? 0 : 12 }}>
-                    {([
-                      { id: true, label: "Share with all" },
-                      { id: false, label: "Choose specific people" },
-                    ] as const).map((opt) => {
-                      const active = shareAll === opt.id;
-                      return (
-                        <button
-                          key={String(opt.id)}
-                          type="button"
-                          onClick={() => setShareAll(opt.id)}
-                          style={{
-                            flex: 1,
-                            padding: "9px 0",
-                            borderRadius: 8,
-                            border: active ? "2px solid #0ea5e9" : "1px solid var(--border)",
-                            background: active ? "var(--surface)" : "var(--surface)",
-                            color: active ? "var(--primary)" : "var(--text)",
-                            fontWeight: 700,
-                            fontSize: 12.5,
-                            cursor: "pointer",
-                          }}
-                        >
-                          {opt.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {!shareAll && (
-                    <RecipientPicker selected={recipientIds} onChange={setRecipientIds} />
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div style={{ marginTop: 20 }}>
-              <label className="metric-label">Boost this post (optional)</label>
-              <p style={{ margin: "2px 0 8px", fontSize: 12, color: "var(--text-muted)" }}>
-                Promote your post to the top of the feed. Boost activates once the post is approved.
-              </p>
-              <BoostPicker selected={boostTier} onSelect={setBoostTier} includeNone />
             </div>
 
             <div style={{ marginTop: 20 }}>
@@ -429,6 +356,15 @@ export default function NewPostPage() {
               </p>
               <p style={{ margin: "4px 0 0", fontSize: 12, color: "#047857", lineHeight: 1.6 }}>
                 Automated compliance check runs instantly. If the post passes, it moves to admin review (usually under 1 hour). You'll be notified on status change.
+              </p>
+            </div>
+
+            <div style={{ marginTop: 16, padding: 12, background: "rgba(14,165,233,0.08)", border: "1px solid rgba(14,165,233,0.25)", borderRadius: 10 }}>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#0369a1" }}>
+                Subscriber visibility
+              </p>
+              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#0284c7", lineHeight: 1.6 }}>
+                Posts set to "Subscribers Only" are exclusively visible to users who have an active subscription to your profile.
               </p>
             </div>
           </article>

@@ -8,7 +8,6 @@ import { canViewMarketPost } from "@/lib/post-visibility";
 import AuthGate from "@/components/auth-gate";
 import { CheckCircle } from "@/components/advisor-ui/icons";
 import MarketPostDetailBody from "@/components/posts/market-post-detail-body";
-import { isPostLocked, previewText } from "@/lib/post-access";
 
 export const dynamic = "force-dynamic";
 
@@ -70,17 +69,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
   // Subscriber-only posts are hidden from non-subscribers (and guests).
   if (!(await canViewMarketPost(post, auth?.userId ?? null))) notFound();
 
-  const postAccessType = (post.postAccessType ?? "free") as "free" | "paid";
-  const isOwn = auth?.userId === post.advisorUserId;
-  let isUnlocked = isOwn;
-  if (auth && postAccessType === "paid" && !isOwn) {
-    const unlock = await prisma.marketPostUnlock.findUnique({
-      where: { postId_userId: { postId, userId: auth.userId } },
-    });
-    isUnlocked = Boolean(unlock);
-  }
-  const locked = isPostLocked({ postAccessType, isUnlocked, isOwn });
-  const displayContent = locked ? previewText(post.content, 200) : post.content;
+  const displayContent = post.content;
 
   const initials = (post.advisor?.fullName ?? "??")
     .split(" ")
@@ -173,9 +162,9 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                 id: post.id,
                 title: post.title,
                 content: displayContent,
-                post_access_type: postAccessType,
-                is_locked: locked,
-                is_unlocked: isUnlocked,
+                post_access_type: "free",
+                is_locked: false,
+                is_unlocked: true,
               }}
             >
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>

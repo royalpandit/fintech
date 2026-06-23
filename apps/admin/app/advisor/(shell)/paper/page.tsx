@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { requireAuthToken } from "@/lib/auth";
 import WalletActions from "@/components/paper/wallet-actions";
 import PaperPortfolioSection from "@/components/paper/paper-portfolio-section";
-import PaperTradeForm from "@/components/paper/paper-trade-form";
 import { prisma } from "@/lib/prisma";
 import { computeFinuerScore, FREE_BALANCE_CAP, UNLOCK_SCORE } from "@/lib/finuer-score";
 
@@ -37,11 +36,32 @@ export default async function AdvisorPaperPage() {
           unlockScore={UNLOCK_SCORE}
         />
         <article className="card" style={{ padding: 18 }}>
-          <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 600 }}>Quick trade</h3>
-          <PaperTradeForm compact />
-          <p style={{ margin: "12px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
-            Enter any NSE symbol and price to simulate buys and sells.
+          <h3 style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 600, color: "var(--text)" }}>
+            Virtual Fund Limits
+          </h3>
+          <p style={{ margin: "0 0 14px", fontSize: 12, color: "var(--text-muted)" }}>
+            How to increase your paper trading balance.
           </p>
+          <div style={{ display: "grid", gap: 10 }}>
+            <div style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface-2)" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", marginBottom: 2 }}>Free Plan</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#0ea5e9" }}>₹5,00,000</div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>Default limit for all advisors</div>
+            </div>
+            <div style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid rgba(124,58,237,0.3)", background: "rgba(124,58,237,0.06)" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#7c3aed", marginBottom: 2 }}>Earn via Score</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#7c3aed" }}>Unlimited</div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                Reach Finuer score {UNLOCK_SCORE}+ by posting &amp; engaging
+                {" · "}your score: <strong style={{ color: finuer.unlocked ? "#16a34a" : "var(--text)" }}>{finuer.score}</strong>
+              </div>
+            </div>
+            <div style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.06)" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#d97706", marginBottom: 2 }}>Paid Plans</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#d97706" }}>₹25L – ₹1Cr</div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>Upgrade your advisor plan for higher limits</div>
+            </div>
+          </div>
         </article>
       </div>
 

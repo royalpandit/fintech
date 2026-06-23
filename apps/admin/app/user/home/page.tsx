@@ -612,7 +612,7 @@ export default async function UserDashboardPage({
                         key={h.label}
                         style={{
                           textAlign: h.align as any,
-                          padding: "10px 18px",
+                          padding: "8px 12px",
                           fontWeight: 600,
                           fontSize: 10,
                           color: "var(--text-muted)",
@@ -694,7 +694,7 @@ export default async function UserDashboardPage({
                     const color = SYMBOL_COLORS[row.symbol] ?? "#64748b";
                     return (
                       <tr key={row.symbol} style={{ borderBottom: "1px solid var(--border)" }}>
-                        <td style={{ padding: "12px 18px" }}>
+                        <td style={{ padding: "8px 12px" }}>
                           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                             <div
                               style={{
@@ -719,21 +719,21 @@ export default async function UserDashboardPage({
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                        <td style={{ padding: "8px 12px", textAlign: "right" }}>
                           {row.shares}
                         </td>
-                        <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                        <td style={{ padding: "8px 12px", textAlign: "right" }}>
                           {formatINR(row.avg)}
                         </td>
-                        <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                        <td style={{ padding: "8px 12px", textAlign: "right" }}>
                           {formatINR(row.curr)}
                         </td>
-                        <td style={{ padding: "12px 18px", textAlign: "right", fontWeight: 600 }}>
+                        <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 600 }}>
                           {formatINR(row.value, true)}
                         </td>
                         <td
                           style={{
-                            padding: "12px 18px",
+                            padding: "8px 12px",
                             textAlign: "right",
                             fontWeight: 700,
                             color: positive ? "#16a34a" : "#dc2626",
@@ -744,7 +744,7 @@ export default async function UserDashboardPage({
                         </td>
                         <td
                           style={{
-                            padding: "12px 18px",
+                            padding: "8px 12px",
                             textAlign: "right",
                             fontWeight: 700,
                             color: positive ? "#16a34a" : "#dc2626",
