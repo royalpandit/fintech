@@ -1,4 +1,4 @@
-import type { Decimal } from "@prisma/client/runtime/library";
+import { Prisma } from "@prisma/client";
 import type {
   FinuerBasket,
   FinuerBasketPerformance,
@@ -8,6 +8,8 @@ import type {
   FinuerMarket,
   User,
 } from "@prisma/client";
+
+type Decimal = Prisma.Decimal;
 
 export const FINUER_BASKET_TIME_PERIODS = [
   "1_month",

@@ -1,4 +1,4 @@
-import type { Decimal } from "@prisma/client/runtime/library";
+import { Prisma } from "@prisma/client";
 import type {
   Competition,
   CompetitionLeaderboard,
@@ -9,6 +9,8 @@ import type {
   User,
 } from "@prisma/client";
 import type { UserRole } from "@/lib/auth";
+
+type Decimal = Prisma.Decimal;
 
 export const COMPETITION_STATUSES = ["upcoming", "live", "completed", "cancelled"] as const;
 export type CompetitionStatus = (typeof COMPETITION_STATUSES)[number];
@@ -222,7 +224,13 @@ export function serializeParticipant(p: CompetitionParticipant & { user: User })
 
 export function serializeLeaderboardEntry(
   e: CompetitionLeaderboard & {
-    user: (User & { advisorProfile?: { profileImageUrl: string | null } | null }) | null;
+    user: {
+      id: number;
+      fullName: string;
+      email: string;
+      role: User["role"];
+      advisorProfile?: { profileImageUrl: string | null } | null;
+    } | null;
   },
 ) {
   const portfolioValue = toNumber(e.portfolioValue) ?? toNumber(e.points);
@@ -243,7 +251,9 @@ export function serializeLeaderboardEntry(
 }
 
 export function serializeWinner(
-  w: CompetitionWinner & { user: User },
+  w: CompetitionWinner & {
+    user: { id: number; fullName: string; email: string } | null;
+  },
 ) {
   return {
     id: w.id,
