@@ -1,22 +1,37 @@
-import { Prisma } from "@prisma/client";
 import type {
   Competition,
   CompetitionLeaderboard,
+  CompetitionOption,
   CompetitionParticipant,
-  CompetitionPrize,
+  CompetitionPrediction,
   CompetitionRole,
-  CompetitionWinner,
   User,
 } from "@prisma/client";
 import type { UserRole } from "@/lib/auth";
+import { getFinuerLevel, getPredictionAccuracy } from "@/lib/competition-reputation";
 
-type Decimal = Prisma.Decimal;
+export function toNumber(value: { toString(): string } | number | null | undefined): number | null {
+  if (value == null) return null;
+  return typeof value === "number" ? value : Number(value);
+}
 
-export const COMPETITION_STATUSES = ["upcoming", "live", "completed", "cancelled"] as const;
+export const COMPETITION_STATUSES = ["draft", "upcoming", "live", "completed", "cancelled"] as const;
 export type CompetitionStatus = (typeof COMPETITION_STATUSES)[number];
 
-export const COMPETITION_VISIBILITIES = ["public", "hidden"] as const;
+export const COMPETITION_VISIBILITIES = [
+  "public",
+  "hidden",
+  "pro_members",
+  "financial_professionals",
+] as const;
 export type CompetitionVisibility = (typeof COMPETITION_VISIBILITIES)[number];
+
+export const COMPETITION_VISIBILITY_LABELS: Record<CompetitionVisibility, string> = {
+  public: "Public",
+  hidden: "Hidden",
+  pro_members: "Finuer Pro Members",
+  financial_professionals: "Financial Professionals",
+};
 
 export const COMPETITION_ENTRY_TYPES = ["free", "paid"] as const;
 export type CompetitionEntryType = (typeof COMPETITION_ENTRY_TYPES)[number];
@@ -24,28 +39,12 @@ export type CompetitionEntryType = (typeof COMPETITION_ENTRY_TYPES)[number];
 export const COMPETITION_ROLE_KEYS = ["user", "advisor", "creator", "analyst", "all"] as const;
 export type CompetitionRoleKey = (typeof COMPETITION_ROLE_KEYS)[number];
 
-/** Static role_id mapping for API docs (competition_roles.role_id) */
 export const COMPETITION_ROLE_IDS: Record<CompetitionRoleKey, number> = {
   user: 1,
   advisor: 2,
   creator: 3,
   analyst: 4,
   all: 5,
-};
-
-export const COMPETITION_REWARD_TYPES = [
-  "cash",
-  "coin",
-  "premium_subscription",
-  "coupon",
-] as const;
-export type CompetitionRewardType = (typeof COMPETITION_REWARD_TYPES)[number];
-
-export const COMPETITION_REWARD_LABELS: Record<CompetitionRewardType, string> = {
-  cash: "Cash",
-  coin: "Coin",
-  premium_subscription: "Premium Subscription",
-  coupon: "Coupon",
 };
 
 export const COMPETITION_ROLE_LABELS: Record<CompetitionRoleKey, string> = {
@@ -56,46 +55,57 @@ export const COMPETITION_ROLE_LABELS: Record<CompetitionRoleKey, string> = {
   all: "All Roles",
 };
 
+export const COMPETITION_TAGS = [
+  "Stocks",
+  "IPO",
+  "Earnings",
+  "Economy",
+  "Crypto",
+  "Mutual Funds",
+  "Commodities",
+  "Banking",
+  "IT",
+  "Pharma",
+  "Defence",
+] as const;
+export type CompetitionTag = (typeof COMPETITION_TAGS)[number];
+
 export const COMPETITION_USER_TABS = ["live", "upcoming", "completed", "my"] as const;
 export type CompetitionUserTab = (typeof COMPETITION_USER_TABS)[number];
 
 export type CompetitionWithRelations = Competition & {
   allowedRoles?: CompetitionRole[];
-  prizes?: CompetitionPrize[];
+  options?: CompetitionOption[];
+  winningOption?: CompetitionOption | null;
   createdBy?: Pick<User, "id" | "fullName" | "email"> | null;
-  _count?: { participants: number };
+  _count?: { participants?: number; predictions?: number };
 };
 
-export type CompetitionDetail = CompetitionWithRelations & {
-  participantCount: number;
-  daysLeft: number | null;
-  joined?: boolean;
-  rules?: string;
+export type CompetitionDetail = ReturnType<typeof serializeCompetition> & {
+  userPrediction?: ReturnType<typeof serializePrediction> | null;
+  winningOptionLabel?: string | null;
 };
-
-export function toNumber(value: Decimal | number | null | undefined): number | null {
-  if (value == null) return null;
-  return typeof value === "number" ? value : Number(value);
-}
 
 export function formatINR(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return "—";
   return `₹${value.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 }
 
-export function formatRewardValue(rewardType: CompetitionRewardType, value: string): string {
-  if (rewardType === "cash") {
-    const n = Number(value.replace(/[^\d.]/g, ""));
-    if (Number.isFinite(n)) return formatINR(n);
-  }
-  return value;
-}
-
 export function parseCompetitionStatus(value: unknown): CompetitionStatus {
   if (typeof value === "string" && COMPETITION_STATUSES.includes(value as CompetitionStatus)) {
     return value as CompetitionStatus;
   }
-  return "upcoming";
+  return "draft";
+}
+
+export function parseCompetitionVisibility(value: unknown): CompetitionVisibility {
+  if (
+    typeof value === "string" &&
+    COMPETITION_VISIBILITIES.includes(value as CompetitionVisibility)
+  ) {
+    return value as CompetitionVisibility;
+  }
+  return "public";
 }
 
 export function parseCompetitionTab(value: string | null | undefined): CompetitionUserTab {
@@ -122,23 +132,91 @@ export function parseRoleKeys(raw: unknown): CompetitionRoleKey[] {
   return keys.length > 0 ? keys : ["user"];
 }
 
-export function computeDaysLeft(endDate: Date): number | null {
+export function parseTags(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((t) => String(t).trim()).filter(Boolean);
+}
+
+export function parseOptions(raw: unknown): { label: string; sortOrder: number }[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item, index) => {
+      if (typeof item === "string") {
+        const label = item.trim();
+        return label ? { label, sortOrder: index } : null;
+      }
+      if (item && typeof item === "object") {
+        const b = item as Record<string, unknown>;
+        const label = String(b.label ?? "").trim();
+        if (!label) return null;
+        const sortOrder = Number(b.sortOrder ?? b.sort_order ?? index);
+        return { label, sortOrder: Number.isFinite(sortOrder) ? sortOrder : index };
+      }
+      return null;
+    })
+    .filter((v): v is { label: string; sortOrder: number } => v != null);
+}
+
+export function getParticipationStart(c: Pick<Competition, "participationStartDate" | "startDate">) {
+  return c.participationStartDate ?? c.startDate;
+}
+
+export function getParticipationEnd(c: Pick<Competition, "participationEndDate" | "endDate">) {
+  return c.participationEndDate ?? c.endDate;
+}
+
+export function computeTimeLeft(endDate: Date): { days: number; hours: number; label: string } | null {
   const now = new Date();
   const end = new Date(endDate);
-  if (end <= now) return 0;
-  return Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (end <= now) return null;
+  const diffMs = end.getTime() - now.getTime();
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const label =
+    days > 0 ? `${days} Day${days === 1 ? "" : "s"} ${hours} Hour${hours === 1 ? "" : "s"}` : `${hours} Hour${hours === 1 ? "" : "s"}`;
+  return { days, hours, label };
 }
 
 export function deriveEffectiveStatus(
-  status: CompetitionStatus,
-  startDate: Date,
-  endDate: Date,
+  c: Pick<
+    Competition,
+    | "status"
+    | "startDate"
+    | "endDate"
+    | "participationStartDate"
+    | "participationEndDate"
+    | "resultDeclaredAt"
+  >,
 ): CompetitionStatus {
-  if (status === "cancelled" || status === "completed") return status;
+  if (c.status === "cancelled" || c.status === "draft") return c.status;
+  if (c.status === "completed" || c.resultDeclaredAt) return "completed";
+
   const now = new Date();
-  if (now < startDate) return "upcoming";
-  if (now > endDate) return "completed";
-  return "live";
+  const partStart = getParticipationStart(c);
+  const partEnd = getParticipationEnd(c);
+
+  if (now < partStart) return "upcoming";
+  if (now > c.endDate) return "completed";
+  if (now <= partEnd || now <= c.endDate) return "live";
+  return "completed";
+}
+
+export function isParticipationOpen(
+  c: Pick<
+    Competition,
+    | "status"
+    | "participationStartDate"
+    | "participationEndDate"
+    | "startDate"
+    | "endDate"
+    | "resultDeclaredAt"
+  >,
+): boolean {
+  if (c.status === "cancelled" || c.status === "draft" || c.resultDeclaredAt) return false;
+  const now = new Date();
+  const partStart = getParticipationStart(c);
+  const partEnd = getParticipationEnd(c);
+  return now >= partStart && now <= partEnd;
 }
 
 export function serializeRole(role: CompetitionRole) {
@@ -151,32 +229,45 @@ export function serializeRole(role: CompetitionRole) {
   };
 }
 
-export function serializePrize(prize: CompetitionPrize) {
+export function serializeOption(option: CompetitionOption) {
   return {
-    id: prize.id,
-    competitionId: prize.competitionId,
-    fromRank: prize.fromRank,
-    toRank: prize.toRank,
-    rewardType: prize.rewardType,
-    rewardTypeLabel: COMPETITION_REWARD_LABELS[prize.rewardType],
-    rewardValue: prize.rewardValue,
-    displayValue: formatRewardValue(prize.rewardType, prize.rewardValue),
-    rankLabel:
-      prize.fromRank === prize.toRank
-        ? `Rank ${prize.fromRank}`
-        : `Rank ${prize.fromRank}–${prize.toRank}`,
+    id: option.id,
+    competitionId: option.competitionId,
+    label: option.label,
+    sortOrder: option.sortOrder,
+  };
+}
+
+export function serializePrediction(
+  p: CompetitionPrediction & { option?: CompetitionOption | null },
+) {
+  return {
+    id: p.id,
+    competitionId: p.competitionId,
+    userId: p.userId,
+    optionId: p.optionId,
+    optionLabel: p.option?.label ?? null,
+    isCorrect: p.isCorrect,
+    pointsEarned: p.pointsEarned,
+    submittedAt: p.submittedAt.toISOString(),
+    updatedAt: p.updatedAt.toISOString(),
   };
 }
 
 export function serializeCompetition(
   c: CompetitionWithRelations,
-  opts?: { joined?: boolean; userId?: number },
+  opts?: {
+    joined?: boolean;
+    hasPrediction?: boolean;
+    userPrediction?: (CompetitionPrediction & { option?: CompetitionOption | null }) | null;
+  },
 ) {
-  const participantCount = c._count?.participants ?? 0;
-  const effectiveStatus = deriveEffectiveStatus(c.status, c.startDate, c.endDate);
-  const daysLeft =
+  const participantCount = c._count?.predictions ?? c._count?.participants ?? 0;
+  const effectiveStatus = deriveEffectiveStatus(c);
+  const participationEnd = getParticipationEnd(c);
+  const participationTimeLeft =
     effectiveStatus === "live" || effectiveStatus === "upcoming"
-      ? computeDaysLeft(c.endDate)
+      ? computeTimeLeft(participationEnd)
       : null;
 
   return {
@@ -185,21 +276,38 @@ export function serializeCompetition(
     shortDescription: c.shortDescription,
     description: c.description,
     bannerImage: c.bannerImage,
+    tags: c.tags ?? [],
+    question: c.question,
+    participationStartDate: getParticipationStart(c).toISOString(),
+    participationEndDate: participationEnd.toISOString(),
     startDate: c.startDate.toISOString(),
     endDate: c.endDate.toISOString(),
     status: c.status,
     effectiveStatus,
+    participationOpen: isParticipationOpen(c),
     visibility: c.visibility,
+    visibilityLabel: COMPETITION_VISIBILITY_LABELS[c.visibility],
+    reputationPoints: c.reputationPoints,
+    wrongPredictionPoints: c.wrongPredictionPoints,
+    maxPredictionsPerUser: c.maxPredictionsPerUser,
+    allowPredictionChange: c.allowPredictionChange,
+    requireLogin: c.requireLogin,
     entryType: c.entryType,
     entryFee: toNumber(c.entryFee),
     prizePool: toNumber(c.prizePool),
     totalWinners: c.totalWinners,
     maxParticipants: c.maxParticipants,
     participantCount,
-    daysLeft,
-    joined: opts?.joined ?? false,
+    participationTimeLeft,
+    daysLeft: participationTimeLeft?.days ?? null,
+    joined: opts?.joined ?? opts?.hasPrediction ?? false,
+    hasPrediction: opts?.hasPrediction ?? false,
+    userPrediction: opts?.userPrediction ? serializePrediction(opts.userPrediction) : null,
+    winningOptionId: c.winningOptionId,
+    winningOptionLabel: c.winningOption?.label ?? null,
+    resultDeclaredAt: c.resultDeclaredAt?.toISOString() ?? null,
     allowedRoles: (c.allowedRoles ?? []).map(serializeRole),
-    prizes: (c.prizes ?? []).map(serializePrize),
+    options: (c.options ?? []).map(serializeOption),
     createdBy: c.createdBy
       ? { id: c.createdBy.id, fullName: c.createdBy.fullName, email: c.createdBy.email }
       : null,
@@ -224,131 +332,96 @@ export function serializeParticipant(p: CompetitionParticipant & { user: User })
 
 export function serializeLeaderboardEntry(
   e: CompetitionLeaderboard & {
-    user: {
-      id: number;
-      fullName: string;
-      email: string;
-      role: User["role"];
+    user?: {
+      fullName?: string | null;
       advisorProfile?: { profileImageUrl: string | null } | null;
     } | null;
   },
 ) {
-  const portfolioValue = toNumber(e.portfolioValue) ?? toNumber(e.points);
-  const totalReturn = toNumber(e.totalReturn) ?? toNumber(e.score);
+  const reputationPoints = toNumber(e.points) ?? 0;
   return {
     id: e.id,
     competitionId: e.competitionId,
     userId: e.userId,
     userName: e.user?.fullName ?? "Unknown User",
     profileImage: e.user?.advisorProfile?.profileImageUrl ?? null,
-    portfolioValue,
-    totalReturn,
-    points: portfolioValue,
-    score: totalReturn,
+    reputationPoints,
+    points: reputationPoints,
     rank: e.rank,
     updatedAt: e.updatedAt.toISOString(),
   };
 }
 
-export function serializeWinner(
-  w: CompetitionWinner & {
-    user: { id: number; fullName: string; email: string } | null;
-  },
-) {
-  return {
-    id: w.id,
-    competitionId: w.competitionId,
-    userId: w.userId,
-    userName: w.user.fullName,
-    rank: w.rank,
-    rewardType: w.rewardType,
-    rewardTypeLabel: COMPETITION_REWARD_LABELS[w.rewardType],
-    rewardValue: w.rewardValue,
-    displayValue: formatRewardValue(w.rewardType, w.rewardValue),
-    distributed: w.distributed,
-  };
-}
-
-export type PrizeInput = {
-  fromRank: number;
-  toRank: number;
-  rewardType: CompetitionRewardType;
-  rewardValue: string;
-};
-
-export function normalizePrizeInput(raw: unknown): PrizeInput | null {
-  if (!raw || typeof raw !== "object") return null;
-  const b = raw as Record<string, unknown>;
-  const fromRank = Number(b.fromRank ?? b.from_rank);
-  const toRank = Number(b.toRank ?? b.to_rank);
-  const rewardType = String(b.rewardType ?? b.reward_type ?? "cash");
-  const rewardValue = String(b.rewardValue ?? b.reward_value ?? "").trim();
-  if (!Number.isFinite(fromRank) || !Number.isFinite(toRank) || !rewardValue) return null;
-  if (!COMPETITION_REWARD_TYPES.includes(rewardType as CompetitionRewardType)) return null;
-  return {
-    fromRank,
-    toRank,
-    rewardType: rewardType as CompetitionRewardType,
-    rewardValue,
-  };
-}
+export type OptionInput = { label: string; sortOrder?: number };
 
 export type CompetitionCreateInput = {
   title: string;
   shortDescription?: string | null;
   description?: string | null;
   bannerImage?: string | null;
+  tags?: string[];
+  question?: string | null;
+  options?: OptionInput[];
+  participationStartDate?: Date | null;
+  participationEndDate?: Date | null;
   startDate: Date;
   endDate: Date;
   status?: CompetitionStatus;
   visibility?: CompetitionVisibility;
+  reputationPoints?: number;
+  wrongPredictionPoints?: number;
+  maxPredictionsPerUser?: number;
+  allowPredictionChange?: boolean;
+  requireLogin?: boolean;
   entryType?: CompetitionEntryType;
   entryFee?: number;
-  prizePool?: number;
-  totalWinners?: number;
   maxParticipants?: number | null;
   allowedRoles?: CompetitionRoleKey[];
-  prizes?: PrizeInput[];
   createdById?: number;
 };
 
 export function validateCompetitionInput(input: CompetitionCreateInput): string | null {
-  if (!input.title.trim()) return "title is required";
-  if (input.endDate <= input.startDate) return "endDate must be after startDate";
-  if (input.entryType === "paid" && (input.entryFee ?? 0) <= 0) {
-    return "entryFee is required for paid competitions";
-  }
+  if (!input.title.trim()) return "Competition name is required";
+  if (!input.question?.trim()) return "Prediction question is required";
+  if (!input.options || input.options.length < 2) return "At least two answer options are required";
+
+  const partStart = input.participationStartDate ?? input.startDate;
+  const partEnd = input.participationEndDate ?? input.endDate;
+  if (partEnd <= partStart) return "Participation end must be after participation start";
+  if (input.endDate <= input.startDate) return "Competition end must be after competition start";
+  if (partEnd > input.endDate) return "Participation cannot end after competition ends";
+
   if (input.maxParticipants != null && input.maxParticipants < 1) {
     return "maxParticipants must be at least 1";
   }
+  if ((input.reputationPoints ?? 10) < 0) return "Reputation points cannot be negative";
   return null;
 }
 
 export const COMPETITION_API_DOCS = {
   user: {
-    list: "GET /api/v1/competitions?tab=live|upcoming|completed",
+    list: "GET /api/v1/competitions?tab=live|upcoming|completed|my",
     detail: "GET /api/v1/competitions/:id",
-    join: "POST /api/v1/competitions/:id/join",
+    predict: "POST /api/v1/competitions/:id/predict",
     leaderboard: "GET /api/v1/competitions/:id/leaderboard",
+    myPredictions: "GET /api/v1/my-predictions",
     my: "GET /api/v1/my-competitions?tab=live|upcoming|completed",
-    winners: "GET /api/v1/competition-winners?competition_id=",
   },
   admin: {
     list: "GET /api/v1/admin/competitions",
     create: "POST /api/v1/admin/competitions",
     detail: "GET /api/v1/admin/competitions/:id",
-    participants: "GET /api/v1/admin/competitions/participants?competition_id=&search=&page=",
+    declareWinner: "POST /api/v1/admin/competitions/:id/declare-winner",
+    participants: "GET /api/v1/admin/competitions/participants?competition_id=",
     leaderboard: "GET /api/v1/admin/competitions/leaderboard?competition_id=",
-    winners: "GET /api/v1/admin/competitions/winners?competition_id=",
-    prizes: "POST /api/v1/admin/competitions/:id/prizes",
   },
 } as const;
 
-/** Map auth UserRole + profile to competition role keys for eligibility */
 export type UserCompetitionContext = {
   authRole: UserRole;
   isAnalyst: boolean;
   isCreator: boolean;
+  isFinancialProfessional: boolean;
 };
 
 export function resolveEligibleRoleKeys(ctx: UserCompetitionContext): CompetitionRoleKey[] {
@@ -356,7 +429,7 @@ export function resolveEligibleRoleKeys(ctx: UserCompetitionContext): Competitio
   if (ctx.authRole === "user" || ctx.authRole === "admin" || ctx.authRole === "super_admin") {
     keys.push("user");
   }
-  if (ctx.authRole === "advisor") keys.push("advisor");
+  if (ctx.authRole === "advisor" || ctx.isFinancialProfessional) keys.push("advisor");
   if (ctx.isAnalyst) keys.push("analyst");
   if (ctx.isCreator) keys.push("creator");
   return keys;
@@ -380,3 +453,41 @@ export function pickParticipantRoleKey(
   const match = userKeys.find((k) => allowed.includes(k));
   return match ?? "user";
 }
+
+export function canUserAccessCompetition(
+  visibility: CompetitionVisibility,
+  ctx: UserCompetitionContext,
+): boolean {
+  if (visibility === "public" || visibility === "hidden") return visibility === "public";
+  if (visibility === "pro_members") return true;
+  if (visibility === "financial_professionals") {
+    return ctx.authRole === "advisor" || ctx.isFinancialProfessional;
+  }
+  return false;
+}
+
+export function serializeMyPredictionRow(row: {
+  competition: CompetitionWithRelations;
+  prediction: CompetitionPrediction & { option: CompetitionOption };
+}) {
+  const c = serializeCompetition(row.competition, {
+    hasPrediction: true,
+    userPrediction: row.prediction,
+  });
+  let predictionStatus = "Live";
+  if (row.competition.resultDeclaredAt) {
+    predictionStatus = row.prediction.isCorrect ? "Won" : "Lost";
+  } else if (deriveEffectiveStatus(row.competition) === "completed") {
+    predictionStatus = "Completed";
+  } else if (deriveEffectiveStatus(row.competition) === "upcoming") {
+    predictionStatus = "Upcoming";
+  }
+  return {
+    ...c,
+    predictionStatus,
+    predictionLabel: row.prediction.option.label,
+    pointsEarned: row.prediction.pointsEarned,
+  };
+}
+
+export { getFinuerLevel, getPredictionAccuracy };

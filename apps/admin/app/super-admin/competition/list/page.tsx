@@ -7,24 +7,35 @@ import { Btn, Panel, competitionApi, tableStyle, tdStyle, thStyle } from "@/comp
 type Row = {
   id: number;
   title: string;
-  entryType: string;
-  prizePool: number | null;
+  reputationPoints: number;
   participantCount: number;
-  startDate: string;
+  participationEndDate: string;
   endDate: string;
   status: string;
+  effectiveStatus: string;
   visibility: string;
+  resultDeclaredAt?: string | null;
 };
 
 export default function CompetitionListPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   async function load() {
     setLoading(true);
     const r = await competitionApi("/api/v1/admin/competitions");
-    const j = await r.json();
-    if (j.ok) setRows(j.data);
+    const text = await r.text();
+    let j: { ok?: boolean; data?: Row[]; error?: string } = {};
+    try {
+      j = text ? JSON.parse(text) : {};
+    } catch {
+      setError("Server returned an invalid response. Try refreshing the page.");
+      setLoading(false);
+      return;
+    }
+    if (j.ok) setRows(j.data ?? []);
+    else setError(j.error || `Failed to load (${r.status})`);
     setLoading(false);
   }
 
@@ -54,6 +65,7 @@ export default function CompetitionListPage() {
         </Link>
       </div>
       <Panel title="Competition List">
+        {error ? <p style={{ color: "#ef4444", fontSize: 13, marginBottom: 12 }}>{error}</p> : null}
         {loading ? (
           <p>Loading…</p>
         ) : (
@@ -62,11 +74,10 @@ export default function CompetitionListPage() {
               <tr>
                 {[
                   "Competition Name",
-                  "Entry Type",
-                  "Prize Pool",
+                  "Reputation Pts",
                   "Participants",
-                  "Start Date",
-                  "End Date",
+                  "Participation Ends",
+                  "Competition Ends",
                   "Status",
                   "Visibility",
                   "Actions",
@@ -81,14 +92,11 @@ export default function CompetitionListPage() {
               {rows.map((row) => (
                 <tr key={row.id}>
                   <td style={tdStyle}>{row.title}</td>
-                  <td style={tdStyle}>{row.entryType}</td>
-                  <td style={tdStyle}>
-                    {row.prizePool != null ? `₹${row.prizePool.toLocaleString("en-IN")}` : "—"}
-                  </td>
+                  <td style={tdStyle}>+{row.reputationPoints}</td>
                   <td style={tdStyle}>{row.participantCount}</td>
-                  <td style={tdStyle}>{new Date(row.startDate).toLocaleDateString()}</td>
+                  <td style={tdStyle}>{new Date(row.participationEndDate).toLocaleDateString()}</td>
                   <td style={tdStyle}>{new Date(row.endDate).toLocaleDateString()}</td>
-                  <td style={tdStyle}>{row.status}</td>
+                  <td style={tdStyle}>{row.effectiveStatus || row.status}</td>
                   <td style={tdStyle}>{row.visibility}</td>
                   <td style={tdStyle}>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -98,6 +106,11 @@ export default function CompetitionListPage() {
                       <Link href={`/super-admin/competition/${row.id}/edit`}>
                         <Btn variant="ghost">Edit</Btn>
                       </Link>
+                      {!row.resultDeclaredAt ? (
+                        <Link href={`/super-admin/competition/${row.id}/declare`}>
+                          <Btn variant="ghost">Declare Winner</Btn>
+                        </Link>
+                      ) : null}
                       {row.visibility === "public" ? (
                         <Btn variant="ghost" onClick={() => toggle(row.id, "deactivate")}>
                           Deactivate

@@ -9,8 +9,6 @@ const SUBNAV = [
   { label: "Create Competition", href: "/super-admin/competition/create" },
   { label: "Participants", href: "/super-admin/competition/participants" },
   { label: "Leaderboard", href: "/super-admin/competition/leaderboard" },
-  { label: "Winners", href: "/super-admin/competition/winners" },
-  { label: "Prize Distribution", href: "/super-admin/competition/prizes" },
 ];
 
 export default function CompetitionAdminLayout({ children }: { children: ReactNode }) {
@@ -19,9 +17,9 @@ export default function CompetitionAdminLayout({ children }: { children: ReactNo
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900 }}>Competition</h1>
+        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900 }}>Prediction Competitions</h1>
         <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--text-muted)" }}>
-          Create and manage trading competitions, participants, leaderboards, and prizes.
+          Create prediction competitions, declare winners, and manage reputation points.
         </p>
       </div>
       <nav
@@ -37,7 +35,9 @@ export default function CompetitionAdminLayout({ children }: { children: ReactNo
         {SUBNAV.map((item) => {
           const active =
             pathname === item.href ||
-            (item.href.includes("/list") && pathname?.includes("/competition/") && pathname?.includes("/edit"));
+            (item.href.includes("/list") &&
+              pathname?.includes("/competition/") &&
+              (pathname?.includes("/edit") || pathname?.includes("/declare")));
           return (
             <Link
               key={item.href}

@@ -20,7 +20,10 @@
     "seed:demo": "tsx scripts/seed-demo.ts",
     "seed:finuer-basket": "tsx scripts/seed-finuer-basket.ts",
     "seed:competition": "tsx scripts/seed-competition.ts",
+    "db:competition-backfill": "psql \"${DATABASE_URL:-postgresql://flexi:flexi@localhost:5432/flexi}\" -f scripts/sql/competition-prediction-backfill.sql",
     "db:competition": "psql \"${DATABASE_URL:-postgresql://flexi:flexi@localhost:5432/flexi}\" -f scripts/sql/competition-migration.sql",
+    "db:competition-prediction": "psql \"${DATABASE_URL:-postgresql://flexi:flexi@localhost:5432/flexi}\" -f scripts/sql/competition-prediction-migration.sql",
+    "db:finuer-basket-v2": "psql \"${DATABASE_URL:-postgresql://flexi:flexi@localhost:5432/flexi}\" -f scripts/sql/finuer-basket-v2-migration.sql",
     "db:competition-trading": "psql \"${DATABASE_URL:-postgresql://flexi:flexi@localhost:5432/flexi}\" -f scripts/sql/competition-trading-migration.sql",
     "mark-advisors-verified": "tsx scripts/mark-advisors-verified.ts"
   },

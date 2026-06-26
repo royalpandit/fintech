@@ -13,6 +13,7 @@ type Decimal = Prisma.Decimal;
 
 export const FINUER_BASKET_TIME_PERIODS = [
   "1_month",
+  "3_months",
   "6_months",
   "1_year",
   "3_years",
@@ -27,6 +28,7 @@ export type FinuerBasketSortOrder = (typeof FINUER_BASKET_SORT_ORDERS)[number];
 
 export type BasketReturnField =
   | "oneMonthReturn"
+  | "threeMonthReturn"
   | "sixMonthReturn"
   | "oneYearReturn"
   | "threeYearReturn"
@@ -44,6 +46,7 @@ export type BenchmarkReturnField =
 
 const RETURN_FIELD_MAP: Record<FinuerBasketTimePeriod, BasketReturnField> = {
   "1_month": "oneMonthReturn",
+  "3_months": "threeMonthReturn",
   "6_months": "sixMonthReturn",
   "1_year": "oneYearReturn",
   "3_years": "threeYearReturn",
@@ -53,6 +56,7 @@ const RETURN_FIELD_MAP: Record<FinuerBasketTimePeriod, BasketReturnField> = {
 
 const BENCHMARK_FIELD_MAP: Record<FinuerBasketTimePeriod, BenchmarkReturnField> = {
   "1_month": "benchmarkOneMonth",
+  "3_months": "benchmarkThreeMonth",
   "6_months": "benchmarkSixMonth",
   "1_year": "benchmarkOneYear",
   "3_years": "benchmarkThreeYear",
@@ -66,7 +70,8 @@ export type FinuerBasketWithRelations = FinuerBasket & {
   benchmark: FinuerBenchmark;
   performance: FinuerBasketPerformance | null;
   createdBy?: Pick<User, "id" | "fullName" | "email"> | null;
-  stocks?: FinuerBasketStock[];
+  stocks?: FinuerBasketStock[] | Pick<FinuerBasketStock, "symbol" | "stockName">[];
+  rebalanceEvents?: import("@prisma/client").FinuerBasketRebalanceEvent[];
   _count?: { stocks: number };
 };
 
@@ -264,22 +269,53 @@ export function serializeBasketStock(stock: FinuerBasketStock) {
     exchange: stock.exchange,
     weightPct: toNumber(stock.weightPct),
     cmp: toNumber(stock.cmp),
+    entryPrice: toNumber(stock.entryPrice),
     sortOrder: stock.sortOrder,
+  };
+}
+
+export function serializeRebalanceEvent(
+  event: {
+    id: number;
+    action: string;
+    symbol: string;
+    stockName: string | null;
+    oldWeight: Decimal | null;
+    newWeight: Decimal | null;
+    reason: string | null;
+    createdAt: Date;
+  },
+) {
+  return {
+    id: event.id,
+    action: event.action,
+    symbol: event.symbol,
+    stockName: event.stockName,
+    oldWeight: toNumber(event.oldWeight),
+    newWeight: toNumber(event.newWeight),
+    reason: event.reason,
+    createdAt: event.createdAt.toISOString(),
   };
 }
 
 export function serializeBasket(
   basket: FinuerBasketWithRelations,
   timePeriod: FinuerBasketTimePeriod = "1_year",
-  options?: { includeStocks?: boolean },
+  options?: { includeStocks?: boolean; includeRebalance?: boolean },
 ) {
   const stocks = basket.stocks?.filter((s) => !s.deletedAt).map(serializeBasketStock) ?? [];
   const stockCount = basket._count?.stocks ?? stocks.length;
+  const perf = serializePerformance(basket.performance, timePeriod);
+  const alpha =
+    perf.basketReturn != null && perf.benchmarkReturn != null
+      ? Math.round((perf.basketReturn - perf.benchmarkReturn) * 100) / 100
+      : null;
 
   return {
     id: basket.id,
     basketName: basket.basketName,
     shortDescription: basket.shortDescription,
+    methodology: basket.methodology ?? null,
     marketId: basket.marketId,
     market: basket.market.name,
     typeId: basket.typeId,
@@ -290,8 +326,14 @@ export function serializeBasket(
     visibility: basket.visibility,
     rebalanceFrequency: basket.rebalanceFrequency,
     requiredPlan: basket.requiredPlan,
+    lastRebalancedAt: basket.lastRebalancedAt?.toISOString() ?? null,
     stockCount,
     stocks: options?.includeStocks === false ? undefined : stocks,
+    rebalanceEvents:
+      options?.includeRebalance && "rebalanceEvents" in basket
+        ? (basket as FinuerBasketWithRelations & { rebalanceEvents: Parameters<typeof serializeRebalanceEvent>[0][] })
+            .rebalanceEvents?.map(serializeRebalanceEvent)
+        : undefined,
     createdBy: basket.createdBy
       ? {
           id: basket.createdBy.id,
@@ -301,7 +343,7 @@ export function serializeBasket(
       : null,
     createdAt: basket.createdAt.toISOString(),
     updatedAt: basket.updatedAt.toISOString(),
-    performance: serializePerformance(basket.performance, timePeriod),
+    performance: { ...perf, alpha },
   };
 }
 
@@ -342,22 +384,25 @@ export const FINUER_BASKET_API_DOCS = {
       delete: "DELETE /api/v1/admin/benchmarks/:id",
     },
     baskets: {
-      list: "GET /api/v1/admin/baskets?market_id=&type_id=&time_period=&sort_order=",
-      create: "POST /api/v1/admin/baskets { basketName, shortDescription?, marketId, typeId, benchmarkId, status?, visibility?, rebalanceFrequency?, requiredPlan?, performance? }",
+      list: "GET /api/v1/admin/baskets?market_id=&type_id=&time_period=&sort_order=&search=",
+      create:
+        "POST /api/v1/admin/baskets { basketName, shortDescription?, methodology?, marketId, typeId, benchmarkId, status?, visibility?, rebalanceFrequency?, requiredPlan? }",
       get: "GET /api/v1/admin/baskets/:id",
       update: "PUT /api/v1/admin/baskets/:id",
       delete: "DELETE /api/v1/admin/baskets/:id",
       activate: "PATCH /api/v1/admin/baskets/:id { status: 'active' | 'inactive' }",
+      recalculate: "POST /api/v1/admin/baskets/:id/recalculate — auto-calculate performance from holdings",
       stocks: {
         list: "GET /api/v1/admin/baskets/:id/stocks",
-        add: "POST /api/v1/admin/baskets/:id/stocks { symbol, stockName, exchange?, weightPct?, cmp? }",
+        add: "POST /api/v1/admin/baskets/:id/stocks { symbol, stockName, exchange?, weightPct?, reason? }",
         update: "PUT /api/v1/admin/baskets/:id/stocks/:stockId",
         delete: "DELETE /api/v1/admin/baskets/:id/stocks/:stockId",
       },
+      rebalanceHistory: "GET /api/v1/admin/baskets/:id/rebalance-events",
     },
   },
   user: {
-    list: "GET /api/v1/baskets?market_id=&type_id=&time_period=&sort_order= — active + public only",
-    detail: "GET /api/v1/baskets/:id — basket with constituent stocks",
+    list: "GET /api/v1/baskets?market_id=&type_id=&time_period=&sort_order=&search= — active + public only",
+    detail: "GET /api/v1/baskets/:id — basket with stocks + rebalance history",
   },
 } as const;

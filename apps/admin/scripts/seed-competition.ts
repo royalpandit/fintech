@@ -9,6 +9,35 @@ function sslForDb() {
   return { rejectUnauthorized: false };
 }
 
+const PREDICTION_COMPETITIONS = [
+  {
+    title: "Weekly Banking Challenge",
+    shortDescription: "Predict the top banking stock this week.",
+    description:
+      "Predict which banking stock will deliver the highest return during the competition window. Earn Finuer reputation points for correct predictions.",
+    tags: ["Banking", "Stocks"],
+    question: "Which banking stock will perform the best this week?",
+    options: ["SBI", "HDFC Bank", "ICICI Bank", "Axis Bank"],
+    reputationPoints: 25,
+    status: "live" as const,
+    daysUntilParticipationEnds: 28,
+    daysUntilCompetitionEnds: 35,
+  },
+  {
+    title: "Sector Prediction — July",
+    shortDescription: "Which sector will lead the market?",
+    description: "Pick the sector you believe will outperform this month.",
+    tags: ["Economy", "Stocks"],
+    question: "Which sector will outperform this month?",
+    options: ["Banking", "IT", "Pharma", "Defence"],
+    reputationPoints: 25,
+    status: "upcoming" as const,
+    daysUntilParticipationStarts: 7,
+    daysUntilParticipationEnds: 21,
+    daysUntilCompetitionEnds: 30,
+  },
+];
+
 async function main() {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -21,102 +50,78 @@ async function main() {
     select: { id: true },
   });
 
-  const start = new Date();
-  start.setDate(start.getDate() - 3);
-  const end = new Date();
-  end.setDate(end.getDate() + 30);
+  const now = new Date();
 
-  const existing = await prisma.competition.findFirst({
-    where: { title: "Finuer Trading Challenge Q2" },
-  });
+  for (const spec of PREDICTION_COMPETITIONS) {
+    const existing = await prisma.competition.findFirst({
+      where: { title: spec.title },
+      include: { options: true },
+    });
 
-  if (existing) {
-    console.log("Competition seed already exists:", existing.title);
-    await prisma.$disconnect();
-    await pool.end();
-    return;
+    const partStart = new Date(now);
+    if (spec.daysUntilParticipationStarts) {
+      partStart.setDate(partStart.getDate() + spec.daysUntilParticipationStarts);
+    }
+    const partEnd = new Date(now);
+    partEnd.setDate(
+      partEnd.getDate() +
+        (spec.daysUntilParticipationEnds ?? spec.daysUntilCompetitionEnds ?? 30),
+    );
+    const compEnd = new Date(now);
+    compEnd.setDate(compEnd.getDate() + (spec.daysUntilCompetitionEnds ?? 30));
+
+    if (existing) {
+      if (!existing.question || existing.options.length === 0) {
+        await prisma.competitionOption.deleteMany({ where: { competitionId: existing.id } });
+        await prisma.competition.update({
+          where: { id: existing.id },
+          data: {
+            question: spec.question,
+            description: spec.description,
+            shortDescription: spec.shortDescription,
+            tags: spec.tags,
+            participationStartDate: partStart,
+            participationEndDate: partEnd,
+            reputationPoints: spec.reputationPoints,
+            options: {
+              create: spec.options.map((label, i) => ({ label, sortOrder: i })),
+            },
+          },
+        });
+        console.log("Updated competition with prediction data:", spec.title);
+      } else {
+        console.log("Already configured:", spec.title);
+      }
+      continue;
+    }
+
+    await prisma.competition.create({
+      data: {
+        title: spec.title,
+        shortDescription: spec.shortDescription,
+        description: spec.description,
+        tags: spec.tags,
+        question: spec.question,
+        participationStartDate: partStart,
+        participationEndDate: partEnd,
+        startDate: partStart,
+        endDate: compEnd,
+        status: spec.status,
+        visibility: "public",
+        reputationPoints: spec.reputationPoints,
+        allowPredictionChange: false,
+        requireLogin: true,
+        maxParticipants: 500,
+        createdById: superAdmin?.id ?? null,
+        allowedRoles: { create: [{ roleKey: "all" }] },
+        options: {
+          create: spec.options.map((label, i) => ({ label, sortOrder: i })),
+        },
+      },
+    });
+    console.log("Created prediction competition:", spec.title);
   }
 
-  const competition = await prisma.competition.create({
-    data: {
-      title: "Finuer Trading Challenge Q2",
-      shortDescription: "Compete with the best traders and win cash prizes.",
-      description:
-        "Join the quarterly trading challenge. Rankings are based on portfolio returns during the competition window. Top performers win cash rewards.",
-      bannerImage: null,
-      startDate: start,
-      endDate: end,
-      status: "live",
-      visibility: "public",
-      entryType: "free",
-      entryFee: 0,
-      prizePool: 100000,
-      totalWinners: 10,
-      maxParticipants: 500,
-      createdById: superAdmin?.id ?? null,
-      allowedRoles: {
-        create: [{ roleKey: "all" }],
-      },
-      prizes: {
-        create: [
-          { fromRank: 1, toRank: 1, rewardType: "cash", rewardValue: "50000" },
-          { fromRank: 2, toRank: 2, rewardType: "cash", rewardValue: "25000" },
-          { fromRank: 3, toRank: 3, rewardType: "cash", rewardValue: "10000" },
-          { fromRank: 4, toRank: 10, rewardType: "cash", rewardValue: "2000" },
-        ],
-      },
-    },
-  });
-
-  const user = await prisma.user.findFirst({ where: { role: "user" } });
-  const advisor = await prisma.user.findFirst({ where: { role: "advisor" } });
-
-  if (user) {
-    await prisma.competitionParticipant.create({
-      data: { competitionId: competition.id, userId: user.id, roleKey: "user" },
-    });
-    await prisma.competitionLeaderboard.create({
-      data: { competitionId: competition.id, userId: user.id, points: 1250, score: 18.5, rank: 2 },
-    });
-  }
-
-  if (advisor) {
-    await prisma.competitionParticipant.create({
-      data: { competitionId: competition.id, userId: advisor.id, roleKey: "advisor" },
-    });
-    await prisma.competitionLeaderboard.create({
-      data: { competitionId: competition.id, userId: advisor.id, points: 1580, score: 24.2, rank: 1 },
-    });
-  }
-
-  const upcomingStart = new Date();
-  upcomingStart.setDate(upcomingStart.getDate() + 14);
-  const upcomingEnd = new Date(upcomingStart);
-  upcomingEnd.setDate(upcomingEnd.getDate() + 30);
-
-  await prisma.competition.create({
-    data: {
-      title: "Momentum Masters",
-      shortDescription: "Upcoming momentum-based trading competition.",
-      startDate: upcomingStart,
-      endDate: upcomingEnd,
-      status: "upcoming",
-      visibility: "public",
-      entryType: "paid",
-      entryFee: 499,
-      prizePool: 50000,
-      allowedRoles: { create: [{ roleKey: "user" }, { roleKey: "advisor" }] },
-      prizes: {
-        create: [
-          { fromRank: 1, toRank: 1, rewardType: "cash", rewardValue: "25000" },
-          { fromRank: 2, toRank: 3, rewardType: "cash", rewardValue: "5000" },
-        ],
-      },
-      createdById: superAdmin?.id ?? null,
-    },
-  });
-
-  console.log("Seeded competitions:", competition.title);
   await prisma.$disconnect();
   await pool.end();
 }

@@ -4,28 +4,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import {
-  COMPETITION_REWARD_LABELS,
-  COMPETITION_REWARD_TYPES,
   COMPETITION_ROLE_KEYS,
   COMPETITION_ROLE_LABELS,
-  type CompetitionRewardType,
+  COMPETITION_TAGS,
+  COMPETITION_VISIBILITY_LABELS,
+  COMPETITION_VISIBILITIES,
   type CompetitionRoleKey,
+  type CompetitionVisibility,
 } from "@/lib/competition";
 import { Btn, Field, Panel, competitionApi, inputStyle } from "@/components/competition/admin-ui";
-
-type PrizeRow = {
-  fromRank: string;
-  toRank: string;
-  rewardType: CompetitionRewardType;
-  rewardValue: string;
-};
-
-const emptyPrize = (): PrizeRow => ({
-  fromRank: "",
-  toRank: "",
-  rewardType: "cash",
-  rewardValue: "",
-});
 
 type Props = {
   competitionId?: string;
@@ -37,19 +24,24 @@ export default function CompetitionFormPage({ competitionId, viewOnly = false }:
   const isEdit = Boolean(competitionId);
 
   const [title, setTitle] = useState("");
-  const [shortDescription, setShortDescription] = useState("");
   const [description, setDescription] = useState("");
   const [bannerImage, setBannerImage] = useState("");
-  const [entryType, setEntryType] = useState<"free" | "paid">("free");
-  const [entryFee, setEntryFee] = useState("");
-  const [prizePool, setPrizePool] = useState("");
-  const [maxParticipants, setMaxParticipants] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [question, setQuestion] = useState("");
+  const [options, setOptions] = useState<string[]>(["", ""]);
+  const [participationStart, setParticipationStart] = useState("");
+  const [participationEnd, setParticipationEnd] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [visibility, setVisibility] = useState<"public" | "hidden">("public");
-  const [status, setStatus] = useState("upcoming");
+  const [visibility, setVisibility] = useState<CompetitionVisibility>("public");
+  const [status, setStatus] = useState("draft");
+  const [reputationPoints, setReputationPoints] = useState("10");
+  const [wrongPredictionPoints, setWrongPredictionPoints] = useState("0");
+  const [maxPredictionsPerUser, setMaxPredictionsPerUser] = useState("1");
+  const [allowPredictionChange, setAllowPredictionChange] = useState(false);
+  const [requireLogin, setRequireLogin] = useState(true);
+  const [maxParticipants, setMaxParticipants] = useState("");
   const [roles, setRoles] = useState<CompetitionRoleKey[]>(["user"]);
-  const [prizes, setPrizes] = useState<PrizeRow[]>([emptyPrize()]);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -62,28 +54,24 @@ export default function CompetitionFormPage({ competitionId, viewOnly = false }:
       if (j.ok) {
         const c = j.data;
         setTitle(c.title);
-        setShortDescription(c.shortDescription ?? "");
         setDescription(c.description ?? "");
         setBannerImage(c.bannerImage ?? "");
-        setEntryType(c.entryType);
-        setEntryFee(c.entryFee != null ? String(c.entryFee) : "");
-        setPrizePool(c.prizePool != null ? String(c.prizePool) : "");
-        setMaxParticipants(c.maxParticipants != null ? String(c.maxParticipants) : "");
+        setTags(c.tags ?? []);
+        setQuestion(c.question ?? "");
+        setOptions(c.options?.length ? c.options.map((o: { label: string }) => o.label) : ["", ""]);
+        setParticipationStart(c.participationStartDate?.slice(0, 16) ?? "");
+        setParticipationEnd(c.participationEndDate?.slice(0, 16) ?? "");
         setStartDate(c.startDate?.slice(0, 16) ?? "");
         setEndDate(c.endDate?.slice(0, 16) ?? "");
         setVisibility(c.visibility);
         setStatus(c.status);
+        setReputationPoints(String(c.reputationPoints ?? 10));
+        setWrongPredictionPoints(String(c.wrongPredictionPoints ?? 0));
+        setMaxPredictionsPerUser(String(c.maxPredictionsPerUser ?? 1));
+        setAllowPredictionChange(Boolean(c.allowPredictionChange));
+        setRequireLogin(c.requireLogin !== false);
+        setMaxParticipants(c.maxParticipants != null ? String(c.maxParticipants) : "");
         setRoles(c.allowedRoles?.map((r: { roleKey: CompetitionRoleKey }) => r.roleKey) ?? ["user"]);
-        setPrizes(
-          c.prizes?.length
-            ? c.prizes.map((p: PrizeRow & { fromRank: number; toRank: number }) => ({
-                fromRank: String(p.fromRank),
-                toRank: String(p.toRank),
-                rewardType: p.rewardType,
-                rewardValue: p.rewardValue,
-              }))
-            : [emptyPrize()],
-        );
       }
       setLoading(false);
     }
@@ -106,6 +94,11 @@ export default function CompetitionFormPage({ competitionId, viewOnly = false }:
     });
   }
 
+  function toggleTag(tag: string) {
+    if (viewOnly) return;
+    setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (viewOnly) return;
@@ -114,26 +107,24 @@ export default function CompetitionFormPage({ competitionId, viewOnly = false }:
 
     const payload = {
       title,
-      shortDescription,
       description,
       bannerImage,
-      entryType,
-      entryFee: entryType === "paid" ? Number(entryFee) : 0,
-      prizePool: Number(prizePool) || 0,
-      maxParticipants: maxParticipants ? Number(maxParticipants) : null,
+      tags,
+      question,
+      options: options.map((label) => label.trim()).filter(Boolean),
+      participationStartDate: new Date(participationStart).toISOString(),
+      participationEndDate: new Date(participationEnd).toISOString(),
       startDate: new Date(startDate).toISOString(),
       endDate: new Date(endDate).toISOString(),
       visibility,
       status,
+      reputationPoints: Number(reputationPoints) || 10,
+      wrongPredictionPoints: Number(wrongPredictionPoints) || 0,
+      maxPredictionsPerUser: Number(maxPredictionsPerUser) || 1,
+      allowPredictionChange,
+      requireLogin,
+      maxParticipants: maxParticipants ? Number(maxParticipants) : null,
       allowedRoles: roles,
-      prizes: prizes
-        .filter((p) => p.fromRank && p.toRank && p.rewardValue)
-        .map((p) => ({
-          fromRank: Number(p.fromRank),
-          toRank: Number(p.toRank),
-          rewardType: p.rewardType,
-          rewardValue: p.rewardValue,
-        })),
     };
 
     const r = await competitionApi(
@@ -154,103 +145,43 @@ export default function CompetitionFormPage({ competitionId, viewOnly = false }:
   const disabled = viewOnly;
 
   return (
-    <Panel title={isEdit ? (viewOnly ? "View Competition" : "Edit Competition") : "Create Competition"}>
+    <Panel title={isEdit ? (viewOnly ? "View Competition" : "Edit Competition") : "Create Prediction Competition"}>
       <form onSubmit={onSubmit}>
+        <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 800 }}>Section 1 — Basic Information</h3>
         <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
           <Field label="Competition Name *">
             <input style={inputStyle} disabled={disabled} value={title} onChange={(e) => setTitle(e.target.value)} />
           </Field>
-          <Field label="Entry Type">
-            <select
-              style={inputStyle}
-              disabled={disabled}
-              value={entryType}
-              onChange={(e) => setEntryType(e.target.value as "free" | "paid")}
-            >
-              <option value="free">Free</option>
-              <option value="paid">Paid</option>
+          <Field label="Status">
+            <select style={inputStyle} disabled={disabled} value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="draft">Draft</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="live">Active</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
             </select>
-          </Field>
-          <Field label="Entry Fee">
-            <input
-              style={inputStyle}
-              disabled={disabled || entryType === "free"}
-              type="number"
-              value={entryFee}
-              onChange={(e) => setEntryFee(e.target.value)}
-            />
-          </Field>
-          <Field label="Prize Pool (₹)">
-            <input
-              style={inputStyle}
-              disabled={disabled}
-              type="number"
-              value={prizePool}
-              onChange={(e) => setPrizePool(e.target.value)}
-            />
-          </Field>
-          <Field label="Maximum Participants">
-            <input
-              style={inputStyle}
-              disabled={disabled}
-              type="number"
-              value={maxParticipants}
-              onChange={(e) => setMaxParticipants(e.target.value)}
-            />
-          </Field>
-          <Field label="Start Date *">
-            <input
-              style={inputStyle}
-              disabled={disabled}
-              type="datetime-local"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </Field>
-          <Field label="End Date *">
-            <input
-              style={inputStyle}
-              disabled={disabled}
-              type="datetime-local"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
           </Field>
           <Field label="Visibility">
             <select
               style={inputStyle}
               disabled={disabled}
               value={visibility}
-              onChange={(e) => setVisibility(e.target.value as "public" | "hidden")}
+              onChange={(e) => setVisibility(e.target.value as CompetitionVisibility)}
             >
-              <option value="public">Public</option>
+              {COMPETITION_VISIBILITIES.filter((v) => v !== "hidden").map((v) => (
+                <option key={v} value={v}>
+                  {COMPETITION_VISIBILITY_LABELS[v]}
+                </option>
+              ))}
               <option value="hidden">Hidden</option>
-            </select>
-          </Field>
-          <Field label="Status">
-            <select style={inputStyle} disabled={disabled} value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="upcoming">Upcoming</option>
-              <option value="live">Live</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
             </select>
           </Field>
         </div>
 
         <div style={{ marginTop: 12 }}>
-          <Field label="Short Description">
-            <input
-              style={inputStyle}
-              disabled={disabled}
-              value={shortDescription}
-              onChange={(e) => setShortDescription(e.target.value)}
-            />
-          </Field>
-        </div>
-        <div style={{ marginTop: 12 }}>
           <Field label="Description">
             <textarea
-              style={{ ...inputStyle, minHeight: 100 }}
+              style={{ ...inputStyle, minHeight: 80 }}
               disabled={disabled}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -267,6 +198,178 @@ export default function CompetitionFormPage({ competitionId, viewOnly = false }:
               placeholder="https://..."
             />
           </Field>
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+            Tags
+          </span>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+            {COMPETITION_TAGS.map((tag) => (
+              <label key={tag} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                <input
+                  type="checkbox"
+                  disabled={disabled}
+                  checked={tags.includes(tag)}
+                  onChange={() => toggleTag(tag)}
+                />
+                {tag}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <h3 style={{ margin: "24px 0 12px", fontSize: 14, fontWeight: 800 }}>Section 2 — Participation Window</h3>
+        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+          <Field label="Participation Starts At *">
+            <input
+              style={inputStyle}
+              disabled={disabled}
+              type="datetime-local"
+              value={participationStart}
+              onChange={(e) => setParticipationStart(e.target.value)}
+            />
+          </Field>
+          <Field label="Participation Ends At *">
+            <input
+              style={inputStyle}
+              disabled={disabled}
+              type="datetime-local"
+              value={participationEnd}
+              onChange={(e) => setParticipationEnd(e.target.value)}
+            />
+          </Field>
+        </div>
+
+        <h3 style={{ margin: "24px 0 12px", fontSize: 14, fontWeight: 800 }}>Section 3 — Competition Timeline</h3>
+        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+          <Field label="Competition Starts At *">
+            <input
+              style={inputStyle}
+              disabled={disabled}
+              type="datetime-local"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </Field>
+          <Field label="Competition Ends At *">
+            <input
+              style={inputStyle}
+              disabled={disabled}
+              type="datetime-local"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </Field>
+        </div>
+
+        <h3 style={{ margin: "24px 0 12px", fontSize: 14, fontWeight: 800 }}>Section 4 & 5 — Question & Answer Options</h3>
+        <Field label="Prediction Question *">
+          <textarea
+            style={{ ...inputStyle, minHeight: 72 }}
+            disabled={disabled}
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Which sector will perform best this week?"
+          />
+        </Field>
+
+        <div style={{ marginTop: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>Answer Options * (min 2)</span>
+            {!disabled ? (
+              <Btn type="button" variant="ghost" onClick={() => setOptions((o) => [...o, ""])}>
+                + Add Option
+              </Btn>
+            ) : null}
+          </div>
+          {options.map((opt, i) => (
+            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <input
+                style={{ ...inputStyle, flex: 1 }}
+                disabled={disabled}
+                value={opt}
+                onChange={(e) =>
+                  setOptions((rows) => rows.map((r, j) => (j === i ? e.target.value : r)))
+                }
+                placeholder={`Option ${i + 1}`}
+              />
+              {!disabled && options.length > 2 ? (
+                <Btn
+                  type="button"
+                  variant="danger"
+                  onClick={() => setOptions((rows) => rows.filter((_, j) => j !== i))}
+                >
+                  Remove
+                </Btn>
+              ) : null}
+            </div>
+          ))}
+        </div>
+
+        <h3 style={{ margin: "24px 0 12px", fontSize: 14, fontWeight: 800 }}>Section 6 — Scoring Rules</h3>
+        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+          <Field label="Reputation Points (Correct)">
+            <input
+              style={inputStyle}
+              disabled={disabled}
+              type="number"
+              value={reputationPoints}
+              onChange={(e) => setReputationPoints(e.target.value)}
+            />
+          </Field>
+          <Field label="Points (Wrong)">
+            <input
+              style={inputStyle}
+              disabled={disabled}
+              type="number"
+              value={wrongPredictionPoints}
+              onChange={(e) => setWrongPredictionPoints(e.target.value)}
+            />
+          </Field>
+        </div>
+
+        <h3 style={{ margin: "24px 0 12px", fontSize: 14, fontWeight: 800 }}>Section 7 — Participation Rules</h3>
+        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+          <Field label="Max Predictions Per User">
+            <input
+              style={inputStyle}
+              disabled={disabled}
+              type="number"
+              min={1}
+              value={maxPredictionsPerUser}
+              onChange={(e) => setMaxPredictionsPerUser(e.target.value)}
+            />
+          </Field>
+          <Field label="Maximum Participants">
+            <input
+              style={inputStyle}
+              disabled={disabled}
+              type="number"
+              value={maxParticipants}
+              onChange={(e) => setMaxParticipants(e.target.value)}
+            />
+          </Field>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginTop: 12 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+            <input
+              type="checkbox"
+              disabled={disabled}
+              checked={allowPredictionChange}
+              onChange={(e) => setAllowPredictionChange(e.target.checked)}
+            />
+            Allow prediction change before participation ends
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+            <input
+              type="checkbox"
+              disabled={disabled}
+              checked={requireLogin}
+              onChange={(e) => setRequireLogin(e.target.checked)}
+            />
+            Require login
+          </label>
         </div>
 
         <div style={{ marginTop: 16 }}>
@@ -288,83 +391,6 @@ export default function CompetitionFormPage({ competitionId, viewOnly = false }:
           </div>
         </div>
 
-        <div style={{ marginTop: 20 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 800 }}>Prize Distribution</span>
-            {!disabled ? (
-              <Btn type="button" variant="ghost" onClick={() => setPrizes((p) => [...p, emptyPrize()])}>
-                + Add Tier
-              </Btn>
-            ) : null}
-          </div>
-          {prizes.map((p, i) => (
-            <div
-              key={i}
-              style={{
-                display: "grid",
-                gap: 8,
-                gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-                marginBottom: 8,
-                alignItems: "end",
-              }}
-            >
-              <Field label="From Rank">
-                <input
-                  style={inputStyle}
-                  disabled={disabled}
-                  type="number"
-                  value={p.fromRank}
-                  onChange={(e) =>
-                    setPrizes((rows) => rows.map((r, j) => (j === i ? { ...r, fromRank: e.target.value } : r)))
-                  }
-                />
-              </Field>
-              <Field label="To Rank">
-                <input
-                  style={inputStyle}
-                  disabled={disabled}
-                  type="number"
-                  value={p.toRank}
-                  onChange={(e) =>
-                    setPrizes((rows) => rows.map((r, j) => (j === i ? { ...r, toRank: e.target.value } : r)))
-                  }
-                />
-              </Field>
-              <Field label="Reward Type">
-                <select
-                  style={inputStyle}
-                  disabled={disabled}
-                  value={p.rewardType}
-                  onChange={(e) =>
-                    setPrizes((rows) =>
-                      rows.map((r, j) =>
-                        j === i ? { ...r, rewardType: e.target.value as CompetitionRewardType } : r,
-                      ),
-                    )
-                  }
-                >
-                  {COMPETITION_REWARD_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {COMPETITION_REWARD_LABELS[t]}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Reward Value">
-                <input
-                  style={inputStyle}
-                  disabled={disabled}
-                  value={p.rewardValue}
-                  onChange={(e) =>
-                    setPrizes((rows) => rows.map((r, j) => (j === i ? { ...r, rewardValue: e.target.value } : r)))
-                  }
-                  placeholder="50000"
-                />
-              </Field>
-            </div>
-          ))}
-        </div>
-
         {error ? <p style={{ color: "#ef4444", fontSize: 13, marginTop: 12 }}>{error}</p> : null}
 
         <div
@@ -374,9 +400,6 @@ export default function CompetitionFormPage({ competitionId, viewOnly = false }:
             marginTop: 20,
             paddingTop: 16,
             borderTop: "1px solid var(--border)",
-            position: "sticky",
-            bottom: 0,
-            background: "var(--surface)",
           }}
         >
           {!viewOnly ? (

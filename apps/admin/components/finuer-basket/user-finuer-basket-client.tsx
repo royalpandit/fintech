@@ -21,7 +21,14 @@ export default function UserFinuerBasketClient() {
   const [typeId, setTypeId] = useState("");
   const [timePeriod, setTimePeriod] = useState<FinuerBasketTimePeriod>("1_year");
   const [sortOrder, setSortOrder] = useState("");
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   useEffect(() => {
     async function load() {
@@ -31,6 +38,7 @@ export default function UserFinuerBasketClient() {
       if (typeId) params.set("type_id", typeId);
       if (timePeriod) params.set("time_period", timePeriod);
       if (sortOrder) params.set("sort_order", sortOrder);
+      if (search) params.set("search", search);
       const r = await fetch(`/api/v1/baskets?${params}`);
       const j = await r.json();
       if (j.ok) {
@@ -41,7 +49,7 @@ export default function UserFinuerBasketClient() {
       setLoading(false);
     }
     load();
-  }, [marketId, typeId, timePeriod, sortOrder]);
+  }, [marketId, typeId, timePeriod, sortOrder, search]);
 
   const stats = useMemo(() => {
     const outperforming = baskets.filter((b) => b.performance.performanceStatus === "outperforming").length;
@@ -57,7 +65,7 @@ export default function UserFinuerBasketClient() {
     <UserPageSection>
       <UserPageHeader
         title="Finuer Basket"
-        subtitle="Curated investment baskets — compare returns against market benchmarks."
+        subtitle="Curated model portfolios — returns are calculated automatically from holdings vs benchmark."
       />
 
       <UserPageStatsGrid>
@@ -78,6 +86,19 @@ export default function UserFinuerBasketClient() {
         />
         <UserPageStatCard label="Markets" value={loading ? "—" : String(markets.length)} color="#f59e0b" />
       </UserPageStatsGrid>
+
+      <div className="finuer-basket-filters-bar" style={{ marginBottom: 12 }}>
+        <div className="finuer-basket-filter-field" style={{ flex: "1 1 220px" }}>
+          <span className="finuer-basket-filter-label">Search</span>
+          <input
+            className="finuer-basket-filter-select"
+            style={{ width: "100%" }}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Basket name, market, type, or stock…"
+          />
+        </div>
+      </div>
 
       <div className="finuer-basket-filters-bar">
         <div className="finuer-basket-filter-field">
@@ -111,13 +132,14 @@ export default function UserFinuerBasketClient() {
           </select>
         </div>
         <div className="finuer-basket-filter-field">
-          <span className="finuer-basket-filter-label">Time Period</span>
+          <span className="finuer-basket-filter-label">Performance</span>
           <select
             className="finuer-basket-filter-select"
             value={timePeriod}
             onChange={(e) => setTimePeriod(e.target.value as FinuerBasketTimePeriod)}
           >
             <option value="1_month">1 Month</option>
+            <option value="3_months">3 Months</option>
             <option value="6_months">6 Months</option>
             <option value="1_year">1 Year</option>
             <option value="3_years">3 Years</option>
@@ -143,7 +165,7 @@ export default function UserFinuerBasketClient() {
         <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Loading baskets…</p>
       ) : baskets.length === 0 ? (
         <div className="user-page-empty">
-          <p style={{ margin: 0 }}>No baskets match your filters. Try adjusting market or type.</p>
+          <p style={{ margin: 0 }}>No baskets match your filters. Try adjusting search or filters.</p>
         </div>
       ) : (
         <div className="finuer-basket-page-grid">

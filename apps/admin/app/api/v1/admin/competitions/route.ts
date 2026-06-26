@@ -2,9 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireRole } from "@/lib/auth";
 import {
   COMPETITION_API_DOCS,
-  normalizePrizeInput,
   parseCompetitionStatus,
+  parseCompetitionVisibility,
+  parseOptions,
   parseRoleKeys,
+  parseTags,
   serializeCompetition,
   validateCompetitionInput,
   type CompetitionCreateInput,
@@ -16,29 +18,47 @@ export const dynamic = "force-dynamic";
 function parseBody(body: Record<string, unknown>): CompetitionCreateInput {
   const startDate = new Date(String(body.startDate ?? body.start_date ?? ""));
   const endDate = new Date(String(body.endDate ?? body.end_date ?? ""));
-  const prizes = Array.isArray(body.prizes)
-    ? body.prizes.map(normalizePrizeInput).filter((p): p is NonNullable<typeof p> => p != null)
-    : undefined;
+  const participationStartRaw = body.participationStartDate ?? body.participation_start_date;
+  const participationEndRaw = body.participationEndDate ?? body.participation_end_date;
 
   return {
     title: String(body.title ?? "").trim(),
-    shortDescription: body.shortDescription != null ? String(body.shortDescription) : body.short_description != null ? String(body.short_description) : null,
+    shortDescription:
+      body.shortDescription != null
+        ? String(body.shortDescription)
+        : body.short_description != null
+          ? String(body.short_description)
+          : null,
     description: body.description != null ? String(body.description) : null,
-    bannerImage: body.bannerImage != null ? String(body.bannerImage) : body.banner_image != null ? String(body.banner_image) : null,
+    bannerImage:
+      body.bannerImage != null
+        ? String(body.bannerImage)
+        : body.banner_image != null
+          ? String(body.banner_image)
+          : null,
+    tags: parseTags(body.tags),
+    question: body.question != null ? String(body.question) : null,
+    options: parseOptions(body.options ?? body.answerOptions ?? body.answer_options),
+    participationStartDate: participationStartRaw
+      ? new Date(String(participationStartRaw))
+      : startDate,
+    participationEndDate: participationEndRaw ? new Date(String(participationEndRaw)) : endDate,
     startDate,
     endDate,
     status: parseCompetitionStatus(body.status),
-    visibility: body.visibility === "hidden" ? "hidden" : "public",
+    visibility: parseCompetitionVisibility(body.visibility),
+    reputationPoints: Number(body.reputationPoints ?? body.reputation_points ?? 10),
+    wrongPredictionPoints: Number(body.wrongPredictionPoints ?? body.wrong_prediction_points ?? 0),
+    maxPredictionsPerUser: Number(body.maxPredictionsPerUser ?? body.max_predictions_per_user ?? 1),
+    allowPredictionChange: Boolean(body.allowPredictionChange ?? body.allow_prediction_change ?? false),
+    requireLogin: body.requireLogin !== false && body.require_login !== false,
     entryType: body.entryType === "paid" || body.entry_type === "paid" ? "paid" : "free",
     entryFee: Number(body.entryFee ?? body.entry_fee ?? 0),
-    prizePool: Number(body.prizePool ?? body.prize_pool ?? 0),
-    totalWinners: Number(body.totalWinners ?? body.total_winners ?? 0),
     maxParticipants:
       body.maxParticipants != null || body.max_participants != null
         ? Number(body.maxParticipants ?? body.max_participants)
         : null,
     allowedRoles: parseRoleKeys(body.allowedRoles ?? body.allowed_roles ?? body.roleIds ?? body.role_ids),
-    prizes,
   };
 }
 
