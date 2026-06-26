@@ -15,12 +15,22 @@ export class CompetitionTradingRepository {
     return c;
   }
 
-  assertTradingAllowed(competition: { status: string; startDate: Date; endDate: Date }) {
-    const effective = deriveEffectiveStatus(
-      competition.status as "upcoming" | "live" | "completed" | "cancelled",
-      competition.startDate,
-      competition.endDate,
-    );
+  assertTradingAllowed(competition: {
+    status: string;
+    startDate: Date;
+    endDate: Date;
+    participationStartDate?: Date | null;
+    participationEndDate?: Date | null;
+    resultDeclaredAt?: Date | null;
+  }) {
+    const effective = deriveEffectiveStatus({
+      status: competition.status as "draft" | "upcoming" | "live" | "completed" | "cancelled",
+      startDate: competition.startDate,
+      endDate: competition.endDate,
+      participationStartDate: competition.participationStartDate ?? null,
+      participationEndDate: competition.participationEndDate ?? null,
+      resultDeclaredAt: competition.resultDeclaredAt ?? null,
+    });
     if (competition.status === "cancelled") throw new Error("Competition is cancelled");
     if (effective === "completed" || competition.status === "completed") {
       throw new Error("Competition has ended — trading is disabled");

@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
     const basket = await finuerBasketRepository.createBasket({
       basketName,
       shortDescription: body.shortDescription ?? body.short_description ?? null,
+      methodology: body.methodology ?? null,
       marketId,
       typeId,
       benchmarkId,
@@ -57,7 +58,6 @@ export async function POST(req: NextRequest) {
           : "monthly",
       requiredPlan: body.requiredPlan === "premium" || body.required_plan === "premium" ? "premium" : "free",
       createdById: auth.userId,
-      performance: body.performance,
     });
     return NextResponse.json({ ok: true, data: serializeBasket(basket) });
   } catch (e) {

@@ -42,6 +42,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       weightPct: body.weightPct != null ? Number(body.weightPct) : body.weight_pct != null ? Number(body.weight_pct) : null,
       cmp: body.cmp != null ? Number(body.cmp) : null,
       sortOrder: typeof body.sortOrder === "number" ? body.sortOrder : undefined,
+      reason: body.reason ?? null,
     });
     return NextResponse.json({ ok: true, data: serializeBasketStock(stock) });
   } catch (e) {

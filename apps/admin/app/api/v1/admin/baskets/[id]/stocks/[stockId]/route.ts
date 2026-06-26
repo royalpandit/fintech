@@ -28,6 +28,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       weightPct: body.weightPct != null ? Number(body.weightPct) : body.weight_pct != null ? Number(body.weight_pct) : undefined,
       cmp: body.cmp != null ? Number(body.cmp) : undefined,
       sortOrder: typeof body.sortOrder === "number" ? body.sortOrder : undefined,
+      reason: body.reason ?? null,
     });
     return NextResponse.json({ ok: true, data: serializeBasketStock(stock) });
   } catch {
@@ -45,7 +46,8 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   const stockId = Number(sid);
 
   try {
-    await finuerBasketRepository.deleteBasketStock(basketId, stockId);
+    const body = await req.json().catch(() => ({}));
+    await finuerBasketRepository.deleteBasketStock(basketId, stockId, body.reason ?? null);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ ok: false, error: "Stock not found" }, { status: 404 });

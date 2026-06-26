@@ -20,7 +20,7 @@ type Basket = {
   basketName: string;
   market: string;
   type: string;
-  stocks?: Stock[];
+  performance?: { oneYearReturn: number | null };
 };
 
 const emptyStock = () => ({
@@ -28,7 +28,7 @@ const emptyStock = () => ({
   stockName: "",
   exchange: "NSE",
   weightPct: "",
-  cmp: "",
+  reason: "",
 });
 
 export default function BasketStocksAdminPage() {
@@ -42,7 +42,9 @@ export default function BasketStocksAdminPage() {
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyStock());
   const [saving, setSaving] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,7 +76,7 @@ export default function BasketStocksAdminPage() {
       stockName: s.stockName,
       exchange: s.exchange,
       weightPct: s.weightPct != null ? String(s.weightPct) : "",
-      cmp: s.cmp != null ? String(s.cmp) : "",
+      reason: "",
     });
     setEditId(s.id);
     setError("");
@@ -94,7 +96,7 @@ export default function BasketStocksAdminPage() {
       stockName: form.stockName,
       exchange: form.exchange,
       weightPct: form.weightPct !== "" ? Number(form.weightPct) : null,
-      cmp: form.cmp !== "" ? Number(form.cmp) : null,
+      reason: form.reason || null,
     };
     const r = await finuerBasketApi(
       editId
@@ -109,16 +111,42 @@ export default function BasketStocksAdminPage() {
       return;
     }
     setOpen(false);
+    setInfo("Stock updated. Ensure weights total 100%, then recalculate performance.");
     load();
   }
 
   async function remove(stockId: number) {
+    const reason = prompt("Reason for removal (optional):") ?? "";
     if (!confirm("Remove this stock from the basket?")) return;
-    await finuerBasketApi(`/api/v1/admin/baskets/${basketId}/stocks/${stockId}`, { method: "DELETE" });
+    const r = await finuerBasketApi(`/api/v1/admin/baskets/${basketId}/stocks/${stockId}`, {
+      method: "DELETE",
+      body: JSON.stringify({ reason }),
+    });
+    const j = await r.json();
+    if (!j.ok) {
+      alert(j.error || "Failed to remove");
+      return;
+    }
+    load();
+  }
+
+  async function recalculate() {
+    setRecalculating(true);
+    setError("");
+    setInfo("");
+    const r = await finuerBasketApi(`/api/v1/admin/baskets/${basketId}/recalculate`, { method: "POST" });
+    const j = await r.json();
+    setRecalculating(false);
+    if (!j.ok) {
+      setError(j.error || "Recalculation failed");
+      return;
+    }
+    setInfo("Performance recalculated from current holdings.");
     load();
   }
 
   const totalWeight = stocks.reduce((s, x) => s + (x.weightPct ?? 0), 0);
+  const weightsValid = Math.abs(totalWeight - 100) < 0.01;
 
   return (
     <div>
@@ -128,12 +156,14 @@ export default function BasketStocksAdminPage() {
             ← Back to Basket List
           </Link>
           <h2 style={{ margin: "8px 0 4px", fontSize: 18, fontWeight: 800 }}>
-            {basket?.basketName ?? "Basket"} — Constituent Stocks
+            {basket?.basketName ?? "Basket"} — Holdings
           </h2>
           {basket ? (
             <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
-              {basket.market} · {basket.type} · {stocks.length} stocks
-              {totalWeight > 0 ? ` · ${totalWeight.toFixed(1)}% allocated` : ""}
+              {basket.market} · {basket.type} · {stocks.length} stocks ·{" "}
+              <span style={{ color: weightsValid ? "#22c55e" : "#ef4444", fontWeight: 700 }}>
+                {totalWeight.toFixed(1)}% allocated {weightsValid ? "✓" : "(must be 100%)"}
+              </span>
             </p>
           ) : null}
         </div>
@@ -141,11 +171,17 @@ export default function BasketStocksAdminPage() {
           <Link href={`/super-admin/finuer-basket/baskets/${basketId}?edit=1`}>
             <Btn variant="ghost">Edit Basket</Btn>
           </Link>
+          <Btn onClick={recalculate} disabled={recalculating || !weightsValid || stocks.length === 0}>
+            {recalculating ? "Calculating…" : "Recalculate Performance"}
+          </Btn>
           <Btn onClick={openCreate}>+ Add Stock</Btn>
         </div>
       </div>
 
-      <Panel title="Stocks in Basket">
+      {info ? <p style={{ fontSize: 12, color: "#22c55e", marginBottom: 12 }}>{info}</p> : null}
+      {error ? <p style={{ fontSize: 12, color: "#ef4444", marginBottom: 12 }}>{error}</p> : null}
+
+      <Panel title="Holdings (weights must sum to 100%)">
         {loading ? (
           <p>Loading…</p>
         ) : stocks.length === 0 ? (
@@ -234,7 +270,7 @@ export default function BasketStocksAdminPage() {
                     <option value="BSE">BSE</option>
                   </select>
                 </Field>
-                <Field label="Weight %">
+                <Field label="Weight % *">
                   <input
                     style={inputStyle}
                     type="number"
@@ -245,15 +281,17 @@ export default function BasketStocksAdminPage() {
                   />
                 </Field>
               </div>
-              <Field label="CMP (₹)">
+              <Field label="Reason (optional)">
                 <input
                   style={inputStyle}
-                  type="number"
-                  step="0.01"
-                  value={form.cmp}
-                  onChange={(e) => setForm((f) => ({ ...f, cmp: e.target.value }))}
+                  value={form.reason}
+                  onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
+                  placeholder="e.g. Quarterly rebalance — increased IT exposure"
                 />
               </Field>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 8px" }}>
+                CMP is fetched automatically when the stock is added. Returns are calculated by the system.
+              </p>
               {error ? <p style={{ color: "#ef4444", fontSize: 12 }}>{error}</p> : null}
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                 <Btn type="submit" disabled={saving}>{saving ? "Saving…" : editId ? "Update Stock" : "Add Stock"}</Btn>

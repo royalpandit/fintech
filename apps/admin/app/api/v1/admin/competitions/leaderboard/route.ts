@@ -14,8 +14,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "competition_id is required" }, { status: 400 });
   }
 
-  const sortBy = (req.nextUrl.searchParams.get("sort_by") as "rank" | "points" | "score") || "rank";
-  const rows = await competitionRepository.listLeaderboard(competitionId, sortBy);
+  const rows = await competitionRepository.listLeaderboard(competitionId);
 
   return NextResponse.json({
     ok: true,
@@ -29,12 +28,9 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const competitionId = Number(body.competitionId ?? body.competition_id);
-  const userId = Number(body.userId ?? body.user_id);
-  const points = body.points != null ? Number(body.points) : undefined;
-  const score = body.score != null ? Number(body.score) : undefined;
 
-  if (!Number.isFinite(competitionId) || !Number.isFinite(userId)) {
-    return NextResponse.json({ ok: false, error: "competitionId and userId required" }, { status: 400 });
+  if (!Number.isFinite(competitionId)) {
+    return NextResponse.json({ ok: false, error: "competitionId required" }, { status: 400 });
   }
 
   if (body.action === "recalculate") {
@@ -42,16 +38,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, data: rows.map(serializeLeaderboardEntry) });
   }
 
-  const entry = await competitionRepository.upsertLeaderboardEntry(competitionId, userId, {
-    points,
-    score,
-  });
-  await competitionRepository.recalculateRanks(competitionId);
-  const rows = await competitionRepository.listLeaderboard(competitionId);
-
-  return NextResponse.json({
-    ok: true,
-    data: rows.map(serializeLeaderboardEntry),
-    updated: serializeLeaderboardEntry(entry),
-  });
+  return NextResponse.json({ ok: false, error: "Unknown action" }, { status: 400 });
 }

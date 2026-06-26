@@ -17,5 +17,5 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ ok: false, error: "Basket not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ ok: true, data: serializeBasket(basket, timePeriod) });
+  return NextResponse.json({ ok: true, data: serializeBasket(basket, timePeriod, { includeRebalance: true }) });
 }

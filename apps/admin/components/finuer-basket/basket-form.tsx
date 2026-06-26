@@ -8,23 +8,6 @@ type Market = { id: number; name: string };
 type BasketType = { id: number; name: string };
 type Benchmark = { id: number; marketId: number; name: string };
 
-const emptyPerf = () => ({
-  oneMonthReturn: "",
-  threeMonthReturn: "",
-  sixMonthReturn: "",
-  oneYearReturn: "",
-  threeYearReturn: "",
-  fiveYearReturn: "",
-  sinceLaunchReturn: "",
-  benchmarkOneMonth: "",
-  benchmarkThreeMonth: "",
-  benchmarkSixMonth: "",
-  benchmarkOneYear: "",
-  benchmarkThreeYear: "",
-  benchmarkFiveYear: "",
-  benchmarkSinceLaunch: "",
-});
-
 export default function BasketFormPage({ basketId }: { basketId?: number }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -36,6 +19,7 @@ export default function BasketFormPage({ basketId }: { basketId?: number }) {
   const [benchmarks, setBenchmarks] = useState<Benchmark[]>([]);
   const [basketName, setBasketName] = useState("");
   const [shortDescription, setShortDescription] = useState("");
+  const [methodology, setMethodology] = useState("");
   const [marketId, setMarketId] = useState("");
   const [typeId, setTypeId] = useState("");
   const [benchmarkId, setBenchmarkId] = useState("");
@@ -43,7 +27,6 @@ export default function BasketFormPage({ basketId }: { basketId?: number }) {
   const [visibility, setVisibility] = useState("public");
   const [rebalanceFrequency, setRebalanceFrequency] = useState("monthly");
   const [requiredPlan, setRequiredPlan] = useState("free");
-  const [perf, setPerf] = useState(emptyPerf());
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -74,6 +57,7 @@ export default function BasketFormPage({ basketId }: { basketId?: number }) {
     const d = j.data;
     setBasketName(d.basketName);
     setShortDescription(d.shortDescription ?? "");
+    setMethodology(d.methodology ?? "");
     setMarketId(String(d.marketId));
     setTypeId(String(d.typeId));
     setBenchmarkId(String(d.benchmarkId));
@@ -81,35 +65,12 @@ export default function BasketFormPage({ basketId }: { basketId?: number }) {
     setVisibility(d.visibility);
     setRebalanceFrequency(d.rebalanceFrequency);
     setRequiredPlan(d.requiredPlan);
-    const p = d.performance ?? {};
-    setPerf({
-      oneMonthReturn: p.oneMonthReturn ?? "",
-      threeMonthReturn: p.threeMonthReturn ?? "",
-      sixMonthReturn: p.sixMonthReturn ?? "",
-      oneYearReturn: p.oneYearReturn ?? "",
-      threeYearReturn: p.threeYearReturn ?? "",
-      fiveYearReturn: p.fiveYearReturn ?? "",
-      sinceLaunchReturn: p.sinceLaunchReturn ?? "",
-      benchmarkOneMonth: p.benchmarkOneMonth ?? "",
-      benchmarkThreeMonth: p.benchmarkThreeMonth ?? "",
-      benchmarkSixMonth: p.benchmarkSixMonth ?? "",
-      benchmarkOneYear: p.benchmarkOneYear ?? "",
-      benchmarkThreeYear: p.benchmarkThreeYear ?? "",
-      benchmarkFiveYear: p.benchmarkFiveYear ?? "",
-      benchmarkSinceLaunch: p.benchmarkSinceLaunch ?? "",
-    });
   }
 
   useEffect(() => {
     loadMeta();
     loadBasket();
   }, [basketId]);
-
-  function numOrNull(v: string) {
-    if (v === "" || v == null) return null;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
-  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -118,11 +79,16 @@ export default function BasketFormPage({ basketId }: { basketId?: number }) {
       setError("Basket name, market, type, and benchmark are required");
       return;
     }
+    if (!shortDescription.trim()) {
+      setError("Short description is required");
+      return;
+    }
     setSaving(true);
     setError("");
     const payload = {
       basketName,
       shortDescription,
+      methodology,
       marketId: Number(marketId),
       typeId: Number(typeId),
       benchmarkId: Number(benchmarkId),
@@ -130,22 +96,6 @@ export default function BasketFormPage({ basketId }: { basketId?: number }) {
       visibility,
       rebalanceFrequency,
       requiredPlan,
-      performance: {
-        oneMonthReturn: numOrNull(perf.oneMonthReturn),
-        threeMonthReturn: numOrNull(perf.threeMonthReturn),
-        sixMonthReturn: numOrNull(perf.sixMonthReturn),
-        oneYearReturn: numOrNull(perf.oneYearReturn),
-        threeYearReturn: numOrNull(perf.threeYearReturn),
-        fiveYearReturn: numOrNull(perf.fiveYearReturn),
-        sinceLaunchReturn: numOrNull(perf.sinceLaunchReturn),
-        benchmarkOneMonth: numOrNull(perf.benchmarkOneMonth),
-        benchmarkThreeMonth: numOrNull(perf.benchmarkThreeMonth),
-        benchmarkSixMonth: numOrNull(perf.benchmarkSixMonth),
-        benchmarkOneYear: numOrNull(perf.benchmarkOneYear),
-        benchmarkThreeYear: numOrNull(perf.benchmarkThreeYear),
-        benchmarkFiveYear: numOrNull(perf.benchmarkFiveYear),
-        benchmarkSinceLaunch: numOrNull(perf.benchmarkSinceLaunch),
-      },
     };
     const r = await finuerBasketApi(
       isEdit ? `/api/v1/admin/baskets/${basketId}` : "/api/v1/admin/baskets",
@@ -170,7 +120,8 @@ export default function BasketFormPage({ basketId }: { basketId?: number }) {
     <Panel title={isEdit ? (viewOnly ? "View Basket" : "Edit Basket") : "Create Basket"}>
       {!isEdit ? (
         <p style={{ margin: "0 0 14px", fontSize: 12, color: "var(--text-muted)" }}>
-          Step 1 of 2 — After saving, you will add constituent stocks (symbol, weight, CMP).
+          Step 1 of 2 — After saving, add constituent stocks (weights must total 100%). Returns are
+          calculated automatically from holdings.
         </p>
       ) : null}
       <form onSubmit={onSubmit}>
@@ -232,15 +183,15 @@ export default function BasketFormPage({ basketId }: { basketId?: number }) {
               <option value="inactive">Inactive</option>
             </select>
           </Field>
-          <Field label="Visibility">
+          <Field label="Required Plan">
             <select
               style={inputStyle}
               disabled={disabled}
-              value={visibility}
-              onChange={(e) => setVisibility(e.target.value)}
+              value={requiredPlan}
+              onChange={(e) => setRequiredPlan(e.target.value)}
             >
-              <option value="public">Public</option>
-              <option value="hidden">Hidden</option>
+              <option value="free">Free</option>
+              <option value="premium">Premium</option>
             </select>
           </Field>
           <Field label="Rebalance Frequency">
@@ -255,79 +206,34 @@ export default function BasketFormPage({ basketId }: { basketId?: number }) {
               <option value="quarterly">Quarterly</option>
             </select>
           </Field>
-          <Field label="Required Plan">
-            <select
-              style={inputStyle}
-              disabled={disabled}
-              value={requiredPlan}
-              onChange={(e) => setRequiredPlan(e.target.value)}
-            >
-              <option value="free">Free</option>
-              <option value="premium">Premium</option>
-            </select>
-          </Field>
         </div>
 
-        <Field label="Short Description">
+        <Field label="Short Description *">
           <textarea
-            style={{ ...inputStyle, minHeight: 80 }}
+            style={{ ...inputStyle, minHeight: 72 }}
             disabled={disabled}
             value={shortDescription}
             onChange={(e) => setShortDescription(e.target.value)}
+            placeholder="Brief summary shown on basket cards"
           />
         </Field>
 
-        <h3 style={{ fontSize: 14, fontWeight: 800, margin: "16px 0 10px" }}>Performance Returns (%)</h3>
-        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
-          {(
-            [
-              ["oneMonthReturn", "1 Month"],
-              ["threeMonthReturn", "3 Months"],
-              ["sixMonthReturn", "6 Months"],
-              ["oneYearReturn", "1 Year"],
-              ["threeYearReturn", "3 Years"],
-              ["fiveYearReturn", "5 Years"],
-              ["sinceLaunchReturn", "Since Launch"],
-            ] as const
-          ).map(([key, label]) => (
-            <Field key={key} label={`Basket ${label}`}>
-              <input
-                style={inputStyle}
-                disabled={disabled}
-                type="number"
-                step="0.01"
-                value={perf[key]}
-                onChange={(e) => setPerf((p) => ({ ...p, [key]: e.target.value }))}
-              />
-            </Field>
-          ))}
-        </div>
+        <Field label="Methodology">
+          <textarea
+            style={{ ...inputStyle, minHeight: 160 }}
+            disabled={disabled}
+            value={methodology}
+            onChange={(e) => setMethodology(e.target.value)}
+            placeholder="Investment approach, stock selection criteria, risk profile, rebalancing rules…"
+          />
+        </Field>
 
-        <h3 style={{ fontSize: 14, fontWeight: 800, margin: "16px 0 10px" }}>Benchmark Returns (%)</h3>
-        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
-          {(
-            [
-              ["benchmarkOneMonth", "1 Month"],
-              ["benchmarkThreeMonth", "3 Months"],
-              ["benchmarkSixMonth", "6 Months"],
-              ["benchmarkOneYear", "1 Year"],
-              ["benchmarkThreeYear", "3 Years"],
-              ["benchmarkFiveYear", "5 Years"],
-              ["benchmarkSinceLaunch", "Since Launch"],
-            ] as const
-          ).map(([key, label]) => (
-            <Field key={key} label={`Benchmark ${label}`}>
-              <input
-                style={inputStyle}
-                disabled={disabled}
-                type="number"
-                step="0.01"
-                value={perf[key]}
-                onChange={(e) => setPerf((p) => ({ ...p, [key]: e.target.value }))}
-              />
-            </Field>
-          ))}
-        </div>
+        {isEdit && !viewOnly ? (
+          <p style={{ margin: "12px 0 0", fontSize: 12, color: "var(--text-muted)" }}>
+            Performance returns are system-calculated from holdings — use Manage Stocks → Recalculate
+            Performance after updating weights.
+          </p>
+        ) : null}
 
         {error ? <p style={{ color: "#ef4444", fontSize: 12 }}>{error}</p> : null}
 
@@ -347,7 +253,7 @@ export default function BasketFormPage({ basketId }: { basketId?: number }) {
             }}
           >
             <Btn type="submit" disabled={saving}>
-              {saving ? "Saving…" : isEdit ? "Update Basket" : "Save Basket"}
+              {saving ? "Saving…" : isEdit ? "Update Basket" : "Save & Add Stocks"}
             </Btn>
             <Btn type="button" variant="ghost" onClick={() => router.push("/super-admin/finuer-basket/baskets")}>
               Cancel

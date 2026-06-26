@@ -1,10 +1,9 @@
-import { Suspense } from "react";
-import UserCompetitionTradeClient from "@/components/competition/user-competition-trade";
+import { redirect } from "next/navigation";
 
-export default function UserCompetitionTradePage() {
-  return (
-    <Suspense fallback={<p>Loading…</p>}>
-      <UserCompetitionTradeClient />
-    </Suspense>
-  );
+type Props = { params: Promise<{ id: string }> };
+
+/** Legacy trading route — redirect to prediction competition detail */
+export default async function UserCompetitionTradeRedirect({ params }: Props) {
+  const { id } = await params;
+  redirect(`/user/competition/${id}`);
 }

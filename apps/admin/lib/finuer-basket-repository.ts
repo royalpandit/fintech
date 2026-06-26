@@ -1,16 +1,19 @@
-import type { Prisma } from "@prisma/client";
+import type { FinuerRebalanceAction, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
-  computePerformanceStatus,
+  fetchEntryPrice,
+  recalculateBasketPerformance,
+  validateBasketWeights,
+} from "@/lib/finuer-basket-performance";
+import {
   getReturnField,
-  normalizePerformanceInput,
   parseSortOrder,
   parseTimePeriod,
   sortBasketsByReturn,
+  toNumber,
   type FinuerBasketSortOrder,
   type FinuerBasketTimePeriod,
   type FinuerBasketWithRelations,
-  type PerformanceInput,
 } from "@/lib/finuer-basket";
 
 const basketIncludeBase = {
@@ -24,11 +27,13 @@ const basketIncludeBase = {
 const basketIncludeList = {
   ...basketIncludeBase,
   _count: { select: { stocks: { where: { deletedAt: null } } } },
+  stocks: { where: { deletedAt: null }, select: { symbol: true, stockName: true } },
 } satisfies Prisma.FinuerBasketInclude;
 
 const basketIncludeDetail = {
   ...basketIncludeBase,
   stocks: { where: { deletedAt: null }, orderBy: { sortOrder: "asc" as const } },
+  rebalanceEvents: { orderBy: { createdAt: "desc" as const }, take: 50 },
 } satisfies Prisma.FinuerBasketInclude;
 
 export type BasketListFilters = {
@@ -36,33 +41,23 @@ export type BasketListFilters = {
   typeId?: number | null;
   timePeriod?: FinuerBasketTimePeriod;
   sortOrder?: FinuerBasketSortOrder | null;
+  search?: string | null;
   publicOnly?: boolean;
   activeOnly?: boolean;
 };
 
-function performanceData(input: PerformanceInput) {
-  const status = computePerformanceStatus(
-    input.sinceLaunchReturn ?? null,
-    input.benchmarkSinceLaunch ?? null,
-  );
-
-  return {
-    oneMonthReturn: input.oneMonthReturn ?? null,
-    threeMonthReturn: input.threeMonthReturn ?? null,
-    sixMonthReturn: input.sixMonthReturn ?? null,
-    oneYearReturn: input.oneYearReturn ?? null,
-    threeYearReturn: input.threeYearReturn ?? null,
-    fiveYearReturn: input.fiveYearReturn ?? null,
-    sinceLaunchReturn: input.sinceLaunchReturn ?? null,
-    benchmarkOneMonth: input.benchmarkOneMonth ?? null,
-    benchmarkThreeMonth: input.benchmarkThreeMonth ?? null,
-    benchmarkSixMonth: input.benchmarkSixMonth ?? null,
-    benchmarkOneYear: input.benchmarkOneYear ?? null,
-    benchmarkThreeYear: input.benchmarkThreeYear ?? null,
-    benchmarkFiveYear: input.benchmarkFiveYear ?? null,
-    benchmarkSinceLaunch: input.benchmarkSinceLaunch ?? null,
-    performanceStatus: status,
-  };
+function rebalanceAction(
+  oldWeight: number | null,
+  newWeight: number | null,
+  isRemove: boolean,
+  isAdd: boolean,
+): FinuerRebalanceAction {
+  if (isRemove) return "remove";
+  if (isAdd) return "add";
+  if (oldWeight != null && newWeight != null) {
+    return newWeight > oldWeight ? "increase_weight" : "decrease_weight";
+  }
+  return "add";
 }
 
 export class FinuerBasketRepository {
@@ -142,19 +137,24 @@ export class FinuerBasketRepository {
     return prisma.finuerBenchmark.findUnique({ where: { id }, include: { market: true } });
   }
 
-  createBenchmark(marketId: number, name: string) {
+  createBenchmark(marketId: number, name: string, symbol?: string | null) {
     return prisma.finuerBenchmark.create({
-      data: { marketId, name: name.trim() },
+      data: { marketId, name: name.trim(), symbol: symbol?.trim() || null },
       include: { market: true },
     });
   }
 
-  updateBenchmark(id: number, data: { marketId?: number; name?: string }) {
+  updateBenchmark(
+    id: number,
+    data: { marketId?: number; name?: string; symbol?: string | null; exchange?: string },
+  ) {
     return prisma.finuerBenchmark.update({
       where: { id },
       data: {
         ...(data.marketId !== undefined ? { marketId: data.marketId } : {}),
         ...(data.name !== undefined ? { name: data.name.trim() } : {}),
+        ...(data.symbol !== undefined ? { symbol: data.symbol?.trim() || null } : {}),
+        ...(data.exchange !== undefined ? { exchange: data.exchange } : {}),
       },
       include: { market: true },
     });
@@ -171,6 +171,7 @@ export class FinuerBasketRepository {
   async listBaskets(filters: BasketListFilters = {}): Promise<FinuerBasketWithRelations[]> {
     const timePeriod = filters.timePeriod ?? "1_year";
     const sortOrder = filters.sortOrder ?? null;
+    const search = filters.search?.trim().toLowerCase();
 
     const where: Prisma.FinuerBasketWhereInput = {};
     if (filters.marketId) where.marketId = filters.marketId;
@@ -178,10 +179,30 @@ export class FinuerBasketRepository {
     if (filters.activeOnly) where.status = "active";
     if (filters.publicOnly) where.visibility = "public";
 
+    if (search) {
+      where.OR = [
+        { basketName: { contains: search, mode: "insensitive" } },
+        { shortDescription: { contains: search, mode: "insensitive" } },
+        { market: { name: { contains: search, mode: "insensitive" } } },
+        { type: { name: { contains: search, mode: "insensitive" } } },
+        {
+          stocks: {
+            some: {
+              deletedAt: null,
+              OR: [
+                { symbol: { contains: search, mode: "insensitive" } },
+                { stockName: { contains: search, mode: "insensitive" } },
+              ],
+            },
+          },
+        },
+      ];
+    }
+
     const rows = await prisma.finuerBasket.findMany({
       where,
       include: basketIncludeList,
-      orderBy: { createdAt: "desc" },
+      orderBy: { updatedAt: "desc" },
     });
 
     if (sortOrder) {
@@ -197,26 +218,31 @@ export class FinuerBasketRepository {
     });
   }
 
-  async createBasket(
-    data: {
-      basketName: string;
-      shortDescription?: string | null;
-      marketId: number;
-      typeId: number;
-      benchmarkId: number;
-      status?: "active" | "inactive";
-      visibility?: "public" | "hidden";
-      rebalanceFrequency?: "weekly" | "monthly" | "quarterly";
-      requiredPlan?: "free" | "premium";
-      createdById?: number;
-      performance?: PerformanceInput;
-    },
-  ) {
-    const perf = normalizePerformanceInput(data.performance);
+  listRebalanceEvents(basketId: number) {
+    return prisma.finuerBasketRebalanceEvent.findMany({
+      where: { basketId },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async createBasket(data: {
+    basketName: string;
+    shortDescription?: string | null;
+    methodology?: string | null;
+    marketId: number;
+    typeId: number;
+    benchmarkId: number;
+    status?: "active" | "inactive";
+    visibility?: "public" | "hidden";
+    rebalanceFrequency?: "weekly" | "monthly" | "quarterly";
+    requiredPlan?: "free" | "premium";
+    createdById?: number;
+  }) {
     return prisma.finuerBasket.create({
       data: {
         basketName: data.basketName.trim(),
         shortDescription: data.shortDescription?.trim() || null,
+        methodology: data.methodology?.trim() || null,
         marketId: data.marketId,
         typeId: data.typeId,
         benchmarkId: data.benchmarkId,
@@ -225,9 +251,6 @@ export class FinuerBasketRepository {
         rebalanceFrequency: data.rebalanceFrequency ?? "monthly",
         requiredPlan: data.requiredPlan ?? "free",
         createdById: data.createdById ?? null,
-        performance: {
-          create: performanceData(perf),
-        },
       },
       include: basketIncludeDetail,
     });
@@ -249,27 +272,58 @@ export class FinuerBasketRepository {
       weightPct?: number | null;
       cmp?: number | null;
       sortOrder?: number;
+      reason?: string | null;
     },
   ) {
     const basket = await prisma.finuerBasket.findUnique({ where: { id: basketId } });
     if (!basket) throw new Error("Basket not found");
+
+    const exchange = data.exchange?.trim().toUpperCase() || "NSE";
+    const entryPrice =
+      data.cmp ?? (await fetchEntryPrice(data.symbol.trim().toUpperCase(), exchange));
 
     const maxOrder = await prisma.finuerBasketStock.aggregate({
       where: { basketId, deletedAt: null },
       _max: { sortOrder: true },
     });
 
-    return prisma.finuerBasketStock.create({
-      data: {
-        basketId,
-        symbol: data.symbol.trim().toUpperCase(),
-        stockName: data.stockName.trim(),
-        exchange: data.exchange?.trim().toUpperCase() || "NSE",
-        weightPct: data.weightPct ?? null,
-        cmp: data.cmp ?? null,
-        sortOrder: data.sortOrder ?? (maxOrder._max.sortOrder ?? -1) + 1,
-      },
+    const newWeight = data.weightPct ?? null;
+
+    const stock = await prisma.$transaction(async (tx) => {
+      const created = await tx.finuerBasketStock.create({
+        data: {
+          basketId,
+          symbol: data.symbol.trim().toUpperCase(),
+          stockName: data.stockName.trim(),
+          exchange,
+          weightPct: newWeight,
+          cmp: entryPrice,
+          entryPrice,
+          sortOrder: data.sortOrder ?? (maxOrder._max.sortOrder ?? -1) + 1,
+        },
+      });
+
+      await tx.finuerBasketRebalanceEvent.create({
+        data: {
+          basketId,
+          action: "add",
+          symbol: created.symbol,
+          stockName: created.stockName,
+          oldWeight: null,
+          newWeight,
+          reason: data.reason?.trim() || null,
+        },
+      });
+
+      await tx.finuerBasket.update({
+        where: { id: basketId },
+        data: { lastRebalancedAt: new Date() },
+      });
+
+      return created;
     });
+
+    return stock;
   }
 
   async updateBasketStock(
@@ -282,6 +336,7 @@ export class FinuerBasketRepository {
       weightPct?: number | null;
       cmp?: number | null;
       sortOrder?: number;
+      reason?: string | null;
     },
   ) {
     const existing = await prisma.finuerBasketStock.findFirst({
@@ -289,27 +344,73 @@ export class FinuerBasketRepository {
     });
     if (!existing) throw new Error("Stock not found");
 
-    return prisma.finuerBasketStock.update({
-      where: { id: stockId },
-      data: {
-        ...(data.symbol !== undefined ? { symbol: data.symbol.trim().toUpperCase() } : {}),
-        ...(data.stockName !== undefined ? { stockName: data.stockName.trim() } : {}),
-        ...(data.exchange !== undefined ? { exchange: data.exchange.trim().toUpperCase() } : {}),
-        ...(data.weightPct !== undefined ? { weightPct: data.weightPct } : {}),
-        ...(data.cmp !== undefined ? { cmp: data.cmp } : {}),
-        ...(data.sortOrder !== undefined ? { sortOrder: data.sortOrder } : {}),
-      },
+    const oldWeight = toNumber(existing.weightPct);
+    const newWeight = data.weightPct !== undefined ? data.weightPct : oldWeight;
+    const weightChanged = data.weightPct !== undefined && oldWeight !== newWeight;
+
+    return prisma.$transaction(async (tx) => {
+      const updated = await tx.finuerBasketStock.update({
+        where: { id: stockId },
+        data: {
+          ...(data.symbol !== undefined ? { symbol: data.symbol.trim().toUpperCase() } : {}),
+          ...(data.stockName !== undefined ? { stockName: data.stockName.trim() } : {}),
+          ...(data.exchange !== undefined ? { exchange: data.exchange.trim().toUpperCase() } : {}),
+          ...(data.weightPct !== undefined ? { weightPct: data.weightPct } : {}),
+          ...(data.cmp !== undefined ? { cmp: data.cmp } : {}),
+          ...(data.sortOrder !== undefined ? { sortOrder: data.sortOrder } : {}),
+        },
+      });
+
+      if (weightChanged) {
+        await tx.finuerBasketRebalanceEvent.create({
+          data: {
+            basketId,
+            action: rebalanceAction(oldWeight, newWeight, false, false),
+            symbol: updated.symbol,
+            stockName: updated.stockName,
+            oldWeight,
+            newWeight,
+            reason: data.reason?.trim() || null,
+          },
+        });
+        await tx.finuerBasket.update({
+          where: { id: basketId },
+          data: { lastRebalancedAt: new Date() },
+        });
+      }
+
+      return updated;
     });
   }
 
-  async deleteBasketStock(basketId: number, stockId: number) {
+  async deleteBasketStock(basketId: number, stockId: number, reason?: string | null) {
     const existing = await prisma.finuerBasketStock.findFirst({
       where: { id: stockId, basketId, deletedAt: null },
     });
     if (!existing) throw new Error("Stock not found");
-    return prisma.finuerBasketStock.update({
-      where: { id: stockId },
-      data: { deletedAt: new Date() },
+
+    return prisma.$transaction(async (tx) => {
+      await tx.finuerBasketRebalanceEvent.create({
+        data: {
+          basketId,
+          action: "remove",
+          symbol: existing.symbol,
+          stockName: existing.stockName,
+          oldWeight: toNumber(existing.weightPct),
+          newWeight: null,
+          reason: reason?.trim() || null,
+        },
+      });
+
+      await tx.finuerBasket.update({
+        where: { id: basketId },
+        data: { lastRebalancedAt: new Date() },
+      });
+
+      return tx.finuerBasketStock.update({
+        where: { id: stockId },
+        data: { deletedAt: new Date() },
+      });
     });
   }
 
@@ -318,6 +419,7 @@ export class FinuerBasketRepository {
     data: {
       basketName?: string;
       shortDescription?: string | null;
+      methodology?: string | null;
       marketId?: number;
       typeId?: number;
       benchmarkId?: number;
@@ -325,42 +427,39 @@ export class FinuerBasketRepository {
       visibility?: "public" | "hidden";
       rebalanceFrequency?: "weekly" | "monthly" | "quarterly";
       requiredPlan?: "free" | "premium";
-      performance?: PerformanceInput;
     },
   ) {
-    const perf = data.performance ? normalizePerformanceInput(data.performance) : null;
-
-    return prisma.$transaction(async (tx) => {
-      const basket = await tx.finuerBasket.update({
-        where: { id },
-        data: {
-          ...(data.basketName !== undefined ? { basketName: data.basketName.trim() } : {}),
-          ...(data.shortDescription !== undefined
-            ? { shortDescription: data.shortDescription?.trim() || null }
-            : {}),
-          ...(data.marketId !== undefined ? { marketId: data.marketId } : {}),
-          ...(data.typeId !== undefined ? { typeId: data.typeId } : {}),
-          ...(data.benchmarkId !== undefined ? { benchmarkId: data.benchmarkId } : {}),
-          ...(data.status !== undefined ? { status: data.status } : {}),
-          ...(data.visibility !== undefined ? { visibility: data.visibility } : {}),
-          ...(data.rebalanceFrequency !== undefined
-            ? { rebalanceFrequency: data.rebalanceFrequency }
-            : {}),
-          ...(data.requiredPlan !== undefined ? { requiredPlan: data.requiredPlan } : {}),
-        },
-      });
-
-      if (perf) {
-        const perfPayload = performanceData(perf);
-        await tx.finuerBasketPerformance.upsert({
-          where: { basketId: basket.id },
-          create: { basketId: basket.id, ...perfPayload },
-          update: perfPayload,
-        });
-      }
-
-      return tx.finuerBasket.findUniqueOrThrow({ where: { id }, include: basketIncludeDetail });
+    return prisma.finuerBasket.update({
+      where: { id },
+      data: {
+        ...(data.basketName !== undefined ? { basketName: data.basketName.trim() } : {}),
+        ...(data.shortDescription !== undefined
+          ? { shortDescription: data.shortDescription?.trim() || null }
+          : {}),
+        ...(data.methodology !== undefined ? { methodology: data.methodology?.trim() || null } : {}),
+        ...(data.marketId !== undefined ? { marketId: data.marketId } : {}),
+        ...(data.typeId !== undefined ? { typeId: data.typeId } : {}),
+        ...(data.benchmarkId !== undefined ? { benchmarkId: data.benchmarkId } : {}),
+        ...(data.status !== undefined ? { status: data.status } : {}),
+        ...(data.visibility !== undefined ? { visibility: data.visibility } : {}),
+        ...(data.rebalanceFrequency !== undefined
+          ? { rebalanceFrequency: data.rebalanceFrequency }
+          : {}),
+        ...(data.requiredPlan !== undefined ? { requiredPlan: data.requiredPlan } : {}),
+      },
+      include: basketIncludeDetail,
     });
+  }
+
+  async recalculatePerformance(basketId: number) {
+    await recalculateBasketPerformance(basketId);
+    return this.findBasketById(basketId, true);
+  }
+
+  async validateAndRecalculate(basketId: number) {
+    const stocks = await this.listBasketStocks(basketId);
+    validateBasketWeights(stocks.map((s) => toNumber(s.weightPct)));
+    return this.recalculatePerformance(basketId);
   }
 
   async setBasketStatus(id: number, status: "active" | "inactive") {
@@ -378,11 +477,13 @@ export class FinuerBasketRepository {
   parseListQuery(searchParams: URLSearchParams): BasketListFilters {
     const marketId = Number(searchParams.get("market_id"));
     const typeId = Number(searchParams.get("type_id"));
+    const search = searchParams.get("search") || searchParams.get("q");
     return {
       marketId: Number.isFinite(marketId) && marketId > 0 ? marketId : null,
       typeId: Number.isFinite(typeId) && typeId > 0 ? typeId : null,
       timePeriod: parseTimePeriod(searchParams.get("time_period")),
       sortOrder: parseSortOrder(searchParams.get("sort_order")),
+      search: search?.trim() || null,
     };
   }
 

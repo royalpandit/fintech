@@ -6,13 +6,11 @@ import {
   serializeCompetition,
 } from "@/lib/competition";
 import { competitionRepository } from "@/lib/competition-repository";
-import { competitionTradingRepository } from "@/lib/competition-trading-repository";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req);
-  await competitionTradingRepository.completeExpiredCompetitions();
   const tab = parseCompetitionTab(req.nextUrl.searchParams.get("tab"));
 
   const filters = {
@@ -27,19 +25,22 @@ export async function GET(req: NextRequest) {
 
   const rows = await competitionRepository.listCompetitions(filters);
 
-  let joinedSet = new Set<number>();
-  if (auth) {
-    const joined = await Promise.all(
-      rows.map((r) => competitionRepository.hasJoined(r.id, auth.userId)),
-    );
-    joinedSet = new Set(rows.filter((_, i) => joined[i]).map((r) => r.id));
-  }
+  const enriched = await Promise.all(
+    rows.map(async (c) => {
+      const prediction = auth
+        ? await competitionRepository.getUserPrediction(c.id, auth.userId)
+        : null;
+      return serializeCompetition(c, {
+        hasPrediction: Boolean(prediction),
+        userPrediction: prediction,
+        joined: Boolean(prediction),
+      });
+    }),
+  );
 
   return NextResponse.json({
     ok: true,
-    data: rows.map((c) =>
-      serializeCompetition(c, { joined: joinedSet.has(c.id), userId: auth?.userId }),
-    ),
+    data: enriched,
     meta: { tab, docs: COMPETITION_API_DOCS.user.list },
   });
 }
