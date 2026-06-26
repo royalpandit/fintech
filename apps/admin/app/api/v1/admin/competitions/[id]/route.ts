@@ -2,7 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireRole } from "@/lib/auth";
 import {
   parseCompetitionStatus,
+  parseCompetitionVisibility,
+  parseOptions,
   parseRoleKeys,
+  parseTags,
   serializeCompetition,
   validateCompetitionInput,
   type CompetitionCreateInput,
@@ -23,6 +26,21 @@ function parsePartialBody(body: Record<string, unknown>): Partial<CompetitionCre
   if (body.bannerImage != null || body.banner_image != null) {
     out.bannerImage = String(body.bannerImage ?? body.banner_image);
   }
+  if (body.tags != null) out.tags = parseTags(body.tags);
+  if (body.question != null) out.question = String(body.question);
+  if (body.options != null || body.answerOptions != null || body.answer_options != null) {
+    out.options = parseOptions(body.options ?? body.answerOptions ?? body.answer_options);
+  }
+  if (body.participationStartDate != null || body.participation_start_date != null) {
+    out.participationStartDate = new Date(
+      String(body.participationStartDate ?? body.participation_start_date),
+    );
+  }
+  if (body.participationEndDate != null || body.participation_end_date != null) {
+    out.participationEndDate = new Date(
+      String(body.participationEndDate ?? body.participation_end_date),
+    );
+  }
   if (body.startDate != null || body.start_date != null) {
     out.startDate = new Date(String(body.startDate ?? body.start_date));
   }
@@ -30,18 +48,21 @@ function parsePartialBody(body: Record<string, unknown>): Partial<CompetitionCre
     out.endDate = new Date(String(body.endDate ?? body.end_date));
   }
   if (body.status != null) out.status = parseCompetitionStatus(body.status);
-  if (body.visibility != null) out.visibility = body.visibility === "hidden" ? "hidden" : "public";
-  if (body.entryType != null || body.entry_type != null) {
-    out.entryType = body.entryType === "paid" || body.entry_type === "paid" ? "paid" : "free";
+  if (body.visibility != null) out.visibility = parseCompetitionVisibility(body.visibility);
+  if (body.reputationPoints != null || body.reputation_points != null) {
+    out.reputationPoints = Number(body.reputationPoints ?? body.reputation_points);
   }
-  if (body.entryFee != null || body.entry_fee != null) {
-    out.entryFee = Number(body.entryFee ?? body.entry_fee);
+  if (body.wrongPredictionPoints != null || body.wrong_prediction_points != null) {
+    out.wrongPredictionPoints = Number(body.wrongPredictionPoints ?? body.wrong_prediction_points);
   }
-  if (body.prizePool != null || body.prize_pool != null) {
-    out.prizePool = Number(body.prizePool ?? body.prize_pool);
+  if (body.maxPredictionsPerUser != null || body.max_predictions_per_user != null) {
+    out.maxPredictionsPerUser = Number(body.maxPredictionsPerUser ?? body.max_predictions_per_user);
   }
-  if (body.totalWinners != null || body.total_winners != null) {
-    out.totalWinners = Number(body.totalWinners ?? body.total_winners);
+  if (body.allowPredictionChange != null || body.allow_prediction_change != null) {
+    out.allowPredictionChange = Boolean(body.allowPredictionChange ?? body.allow_prediction_change);
+  }
+  if (body.requireLogin != null || body.require_login != null) {
+    out.requireLogin = Boolean(body.requireLogin ?? body.require_login);
   }
   if (body.maxParticipants != null || body.max_participants != null) {
     out.maxParticipants = Number(body.maxParticipants ?? body.max_participants);
@@ -79,16 +100,24 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     shortDescription: input.shortDescription ?? existing.shortDescription,
     description: input.description ?? existing.description,
     bannerImage: input.bannerImage ?? existing.bannerImage,
+    tags: input.tags ?? existing.tags,
+    question: input.question ?? existing.question,
+    options:
+      input.options ??
+      existing.options.map((o) => ({ label: o.label, sortOrder: o.sortOrder })),
+    participationStartDate: input.participationStartDate ?? existing.participationStartDate,
+    participationEndDate: input.participationEndDate ?? existing.participationEndDate,
     startDate: input.startDate ?? existing.startDate,
     endDate: input.endDate ?? existing.endDate,
     status: input.status ?? existing.status,
     visibility: input.visibility ?? existing.visibility,
-    entryType: input.entryType ?? existing.entryType,
-    entryFee: input.entryFee ?? Number(existing.entryFee),
-    prizePool: input.prizePool ?? Number(existing.prizePool),
-    totalWinners: input.totalWinners ?? existing.totalWinners,
+    reputationPoints: input.reputationPoints ?? existing.reputationPoints,
+    wrongPredictionPoints: input.wrongPredictionPoints ?? existing.wrongPredictionPoints,
+    maxPredictionsPerUser: input.maxPredictionsPerUser ?? existing.maxPredictionsPerUser,
+    allowPredictionChange: input.allowPredictionChange ?? existing.allowPredictionChange,
+    requireLogin: input.requireLogin ?? existing.requireLogin,
     maxParticipants: input.maxParticipants ?? existing.maxParticipants,
-    allowedRoles: input.allowedRoles,
+    allowedRoles: input.allowedRoles ?? existing.allowedRoles.map((r) => r.roleKey),
   };
 
   const err = validateCompetitionInput(merged);

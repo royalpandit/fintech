@@ -11,16 +11,17 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   const competitionId = Number(id);
 
   const competition = await competitionRepository.findCompetitionById(competitionId);
-  if (!competition || competition.visibility !== "public" || competition.status === "cancelled") {
+  if (!competition || competition.visibility === "hidden" || competition.status === "cancelled") {
     return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
   }
 
-  const sortBy = (req.nextUrl.searchParams.get("sort_by") as "rank" | "points" | "score") || "rank";
-  const rows = await competitionRepository.listLeaderboard(competitionId, sortBy);
+  const rows = await competitionRepository.listLeaderboard(competitionId);
 
   return NextResponse.json({
     ok: true,
-    data: rows.map(serializeLeaderboardEntry),
+    data: rows
+      .filter((r) => (Number(r.points) ?? 0) > 0 || competition.resultDeclaredAt)
+      .map(serializeLeaderboardEntry),
     meta: { competitionId, title: competition.title },
   });
 }

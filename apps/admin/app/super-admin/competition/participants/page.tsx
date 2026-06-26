@@ -7,11 +7,12 @@ type Competition = { id: number; title: string };
 type Participant = {
   id: number;
   userName: string;
-  roleLabel: string;
   email: string;
-  joinedAt: string;
-  status: string;
   competitionTitle: string;
+  submittedAt: string;
+  prediction: { optionLabel: string | null };
+  isCorrect: boolean | null;
+  pointsEarned: number;
 };
 
 export default function ParticipantsAdminPage() {
@@ -50,7 +51,7 @@ export default function ParticipantsAdminPage() {
   const totalPages = Math.max(1, Math.ceil(total / 20));
 
   return (
-    <Panel title="Participants">
+    <Panel title="Participants & Predictions">
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <Field label="Competition">
           <select style={inputStyle} value={competitionId} onChange={(e) => { setCompetitionId(e.target.value); setPage(1); }}>
@@ -77,7 +78,7 @@ export default function ParticipantsAdminPage() {
           <table style={tableStyle}>
             <thead>
               <tr>
-                {["User Name", "Role", "Email", "Competition", "Joined Date", "Status"].map((h) => (
+                {["User Name", "Email", "Competition", "Prediction", "Submitted", "Result", "Points"].map((h) => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -86,11 +87,14 @@ export default function ParticipantsAdminPage() {
               {rows.map((row) => (
                 <tr key={row.id}>
                   <td style={tdStyle}>{row.userName}</td>
-                  <td style={tdStyle}>{row.roleLabel}</td>
                   <td style={tdStyle}>{row.email}</td>
                   <td style={tdStyle}>{row.competitionTitle}</td>
-                  <td style={tdStyle}>{new Date(row.joinedAt).toLocaleString()}</td>
-                  <td style={tdStyle}>{row.status}</td>
+                  <td style={tdStyle}>{row.prediction.optionLabel ?? "—"}</td>
+                  <td style={tdStyle}>{new Date(row.submittedAt).toLocaleString()}</td>
+                  <td style={tdStyle}>
+                    {row.isCorrect == null ? "Pending" : row.isCorrect ? "Won" : "Lost"}
+                  </td>
+                  <td style={tdStyle}>{row.pointsEarned}</td>
                 </tr>
               ))}
             </tbody>

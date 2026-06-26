@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   const basket = await finuerBasketRepository.findBasketById(id);
   if (!basket) return NextResponse.json({ ok: false, error: "Basket not found" }, { status: 404 });
 
-  return NextResponse.json({ ok: true, data: serializeBasket(basket, timePeriod) });
+  return NextResponse.json({ ok: true, data: serializeBasket(basket, timePeriod, { includeRebalance: true }) });
 }
 
 /** PUT /api/v1/admin/baskets/:id */
@@ -36,6 +36,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     const basket = await finuerBasketRepository.updateBasket(id, {
       basketName: body.basketName ?? body.basket_name,
       shortDescription: body.shortDescription ?? body.short_description,
+      methodology: body.methodology,
       marketId: body.marketId != null ? Number(body.marketId) : body.market_id != null ? Number(body.market_id) : undefined,
       typeId: body.typeId != null ? Number(body.typeId) : body.type_id != null ? Number(body.type_id) : undefined,
       benchmarkId:
@@ -48,7 +49,6 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       visibility: body.visibility,
       rebalanceFrequency: body.rebalanceFrequency ?? body.rebalance_frequency,
       requiredPlan: body.requiredPlan ?? body.required_plan,
-      performance: body.performance,
     });
     return NextResponse.json({ ok: true, data: serializeBasket(basket) });
   } catch {

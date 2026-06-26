@@ -1,17 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import CompetitionCard, { type CompetitionCardData } from "@/components/competition/competition-card";
 import type { CompetitionUserTab } from "@/lib/competition";
 import { UserPageHeader, UserPageSection } from "@/components/user/user-page-layout";
-import Link from "next/link";
 
 const TABS: { id: CompetitionUserTab; label: string }[] = [
   { id: "live", label: "Live" },
   { id: "upcoming", label: "Upcoming" },
   { id: "completed", label: "Completed" },
-  { id: "my", label: "My Competitions" },
+  { id: "my", label: "My Predictions" },
 ];
 
 function getToken() {
@@ -26,11 +26,10 @@ export default function UserCompetitionClient() {
 
   const [competitions, setCompetitions] = useState<CompetitionCardData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [joiningId, setJoiningId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const endpoint = tab === "my" ? `/api/v1/my-competitions?tab=${tab}` : `/api/v1/competitions?tab=${tab}`;
+    const endpoint = `/api/v1/competitions?tab=${tab}`;
     const r = await fetch(endpoint, {
       headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
     });
@@ -44,24 +43,11 @@ export default function UserCompetitionClient() {
     load();
   }, [load]);
 
-  async function handleJoin(id: number) {
-    setJoiningId(id);
-    const t = getToken();
-    const r = await fetch(`/api/v1/competitions/${id}/join`, {
-      method: "POST",
-      headers: t ? { Authorization: `Bearer ${t}` } : {},
-    });
-    const j = await r.json();
-    setJoiningId(null);
-    if (j.ok) window.location.href = `/user/competition/${id}/trade`;
-    else alert(j.error || "Failed to join");
-  }
-
   return (
     <UserPageSection>
       <UserPageHeader
-        title="Competition"
-        subtitle="Join trading competitions, climb the leaderboard, and win prizes."
+        title="Competitions"
+        subtitle="Predict market outcomes, earn reputation points, and climb the Finuer leaderboard."
       />
 
       <div className="competition-tabs">
@@ -86,12 +72,19 @@ export default function UserCompetitionClient() {
             <CompetitionCard
               key={c.id}
               competition={c}
-              onJoin={tab !== "completed" ? handleJoin : undefined}
-              joining={joiningId === c.id}
+              onParticipate={(id) => {
+                window.location.href = `/user/competition/${id}`;
+              }}
             />
           ))}
         </div>
       )}
+
+      <div style={{ marginTop: 24 }}>
+        <Link href="/user/competition/my-predictions" className="competition-card-view-btn">
+          View all my predictions →
+        </Link>
+      </div>
     </UserPageSection>
   );
 }

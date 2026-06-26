@@ -377,6 +377,8 @@ model User {
   competitionPortfolios   CompetitionPortfolio[]
   competitionHoldings     CompetitionHolding[]
   competitionOrders       CompetitionOrder[]
+  competitionPredictions  CompetitionPrediction[]
+  predictionStats         UserPredictionStats?
   communityPostUnlocks CommunityPostUnlock[]
   marketPostUnlocks    MarketPostUnlock[]
 
@@ -2016,6 +2018,8 @@ model FinuerBenchmark {
   id        Int      @id @default(autoincrement())
   marketId  Int      @map("market_id")
   name      String   @db.VarChar(120)
+  symbol    String?  @db.VarChar(30)
+  exchange  String?  @default("NSE") @db.VarChar(10)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -2031,6 +2035,7 @@ model FinuerBasket {
   id                 Int                      @id @default(autoincrement())
   basketName         String                   @map("basket_name") @db.VarChar(160)
   shortDescription   String?                  @map("short_description") @db.Text
+  methodology        String?                  @db.Text
   marketId           Int                      @map("market_id")
   typeId             Int                      @map("type_id")
   benchmarkId        Int                      @map("benchmark_id")
@@ -2038,16 +2043,18 @@ model FinuerBasket {
   visibility         FinuerBasketVisibility   @default(public)
   rebalanceFrequency FinuerRebalanceFrequency @default(monthly) @map("rebalance_frequency")
   requiredPlan       FinuerBasketRequiredPlan @default(free) @map("required_plan")
+  lastRebalancedAt   DateTime?                @map("last_rebalanced_at")
   createdById        Int?                     @map("created_by_id")
   createdAt          DateTime                 @default(now()) @map("created_at")
   updatedAt          DateTime                 @updatedAt @map("updated_at")
 
-  market    FinuerMarket          @relation(fields: [marketId], references: [id], onDelete: Restrict)
-  type      FinuerBasketType      @relation(fields: [typeId], references: [id], onDelete: Restrict)
-  benchmark FinuerBenchmark     @relation(fields: [benchmarkId], references: [id], onDelete: Restrict)
-  createdBy User?                 @relation("FinuerBasketCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  performance FinuerBasketPerformance?
-  stocks      FinuerBasketStock[]
+  market          FinuerMarket                 @relation(fields: [marketId], references: [id], onDelete: Restrict)
+  type            FinuerBasketType             @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  benchmark       FinuerBenchmark              @relation(fields: [benchmarkId], references: [id], onDelete: Restrict)
+  createdBy       User?                        @relation("FinuerBasketCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  performance     FinuerBasketPerformance?
+  stocks          FinuerBasketStock[]
+  rebalanceEvents FinuerBasketRebalanceEvent[]
 
   @@index([status, visibility])
   @@index([marketId])
@@ -2082,17 +2089,18 @@ model FinuerBasketPerformance {
 }
 
 model FinuerBasketStock {
-  id        Int       @id @default(autoincrement())
-  basketId  Int       @map("basket_id")
-  symbol    String    @db.VarChar(30)
-  stockName String    @map("stock_name") @db.VarChar(120)
-  exchange  String    @default("NSE") @db.VarChar(10)
-  weightPct Decimal?  @map("weight_pct") @db.Decimal(6, 2)
-  cmp       Decimal?  @db.Decimal(18, 4)
-  sortOrder Int       @default(0) @map("sort_order")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
+  id         Int       @id @default(autoincrement())
+  basketId   Int       @map("basket_id")
+  symbol     String    @db.VarChar(30)
+  stockName  String    @map("stock_name") @db.VarChar(120)
+  exchange   String    @default("NSE") @db.VarChar(10)
+  weightPct  Decimal?  @map("weight_pct") @db.Decimal(6, 2)
+  cmp        Decimal?  @db.Decimal(18, 4)
+  entryPrice Decimal?  @map("entry_price") @db.Decimal(18, 4)
+  sortOrder  Int       @default(0) @map("sort_order")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
 
   basket FinuerBasket @relation(fields: [basketId], references: [id], onDelete: Cascade)
 
@@ -2101,9 +2109,36 @@ model FinuerBasketStock {
   @@map("finuer_basket_stocks")
 }
 
+enum FinuerRebalanceAction {
+  add
+  remove
+  increase_weight
+  decrease_weight
+
+  @@map("finuer_rebalance_action")
+}
+
+model FinuerBasketRebalanceEvent {
+  id          Int                   @id @default(autoincrement())
+  basketId    Int                   @map("basket_id")
+  action      FinuerRebalanceAction
+  symbol      String                @db.VarChar(30)
+  stockName   String?               @map("stock_name") @db.VarChar(120)
+  oldWeight   Decimal?              @map("old_weight") @db.Decimal(6, 2)
+  newWeight   Decimal?              @map("new_weight") @db.Decimal(6, 2)
+  reason      String?               @db.Text
+  createdAt   DateTime              @default(now()) @map("created_at")
+
+  basket FinuerBasket @relation(fields: [basketId], references: [id], onDelete: Cascade)
+
+  @@index([basketId, createdAt])
+  @@map("finuer_basket_rebalance_events")
+}
+
 // ─── 19d) Competition ───────────────────────────────────
 
 enum CompetitionStatus {
+  draft
   upcoming
   live
   completed
@@ -2115,6 +2150,8 @@ enum CompetitionStatus {
 enum CompetitionVisibility {
   public
   hidden
+  pro_members
+  financial_professionals
 
   @@map("competition_visibility")
 }
@@ -2161,37 +2198,103 @@ enum CompetitionTransactionType {
 }
 
 model Competition {
-  id               Int                    @id @default(autoincrement())
-  title            String                 @db.VarChar(200)
-  shortDescription String?                @map("short_description") @db.VarChar(500)
-  description      String?                @db.Text
-  bannerImage      String?                @map("banner_image") @db.VarChar(500)
-  startDate        DateTime               @map("start_date")
-  endDate          DateTime               @map("end_date")
-  status           CompetitionStatus      @default(upcoming)
-  visibility       CompetitionVisibility  @default(public)
-  entryType        CompetitionEntryType   @default(free) @map("entry_type")
-  entryFee         Decimal                @default(0) @map("entry_fee") @db.Decimal(12, 2)
-  prizePool        Decimal                @default(0) @map("prize_pool") @db.Decimal(14, 2)
-  totalWinners     Int                    @default(0) @map("total_winners")
-  maxParticipants  Int?                   @map("max_participants")
-  createdById      Int?                   @map("created_by")
-  createdAt        DateTime               @default(now()) @map("created_at")
-  updatedAt        DateTime               @updatedAt @map("updated_at")
+  id                    Int                    @id @default(autoincrement())
+  title                 String                 @db.VarChar(200)
+  shortDescription      String?                @map("short_description") @db.VarChar(500)
+  description           String?                @db.Text
+  bannerImage           String?                @map("banner_image") @db.VarChar(500)
+  tags                  String[]               @default([])
+  question              String?                @db.Text
+  participationStartDate DateTime?             @map("participation_start_date")
+  participationEndDate   DateTime?             @map("participation_end_date")
+  startDate             DateTime               @map("start_date")
+  endDate               DateTime               @map("end_date")
+  status                CompetitionStatus      @default(draft)
+  visibility            CompetitionVisibility  @default(public)
+  reputationPoints      Int                    @default(10) @map("reputation_points")
+  wrongPredictionPoints Int                    @default(0) @map("wrong_prediction_points")
+  maxPredictionsPerUser Int                    @default(1) @map("max_predictions_per_user")
+  allowPredictionChange Boolean                @default(false) @map("allow_prediction_change")
+  requireLogin          Boolean                @default(true) @map("require_login")
+  entryType             CompetitionEntryType   @default(free) @map("entry_type")
+  entryFee              Decimal                @default(0) @map("entry_fee") @db.Decimal(12, 2)
+  prizePool             Decimal                @default(0) @map("prize_pool") @db.Decimal(14, 2)
+  totalWinners          Int                    @default(0) @map("total_winners")
+  maxParticipants       Int?                   @map("max_participants")
+  winningOptionId       Int?                   @map("winning_option_id")
+  resultDeclaredAt      DateTime?              @map("result_declared_at")
+  createdById           Int?                   @map("created_by")
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
 
-  createdBy    User?                      @relation("CompetitionCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  allowedRoles CompetitionRole[]
-  participants CompetitionParticipant[]
-  leaderboard  CompetitionLeaderboard[]
-  prizes       CompetitionPrize[]
-  winners      CompetitionWinner[]
-  portfolios   CompetitionPortfolio[]
-  holdings     CompetitionHolding[]
-  orders       CompetitionOrder[]
+  createdBy     User?                      @relation("CompetitionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  winningOption CompetitionOption?         @relation("CompetitionWinningOption", fields: [winningOptionId], references: [id], onDelete: SetNull)
+  allowedRoles  CompetitionRole[]
+  options       CompetitionOption[]
+  predictions   CompetitionPrediction[]
+  participants  CompetitionParticipant[]
+  leaderboard   CompetitionLeaderboard[]
+  prizes        CompetitionPrize[]
+  winners       CompetitionWinner[]
+  portfolios    CompetitionPortfolio[]
+  holdings      CompetitionHolding[]
+  orders        CompetitionOrder[]
 
   @@index([status, visibility])
   @@index([startDate, endDate])
+  @@index([participationStartDate, participationEndDate])
   @@map("competitions")
+}
+
+model CompetitionOption {
+  id            Int      @id @default(autoincrement())
+  competitionId Int      @map("competition_id")
+  label         String   @db.VarChar(200)
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  competition      Competition            @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  predictions      CompetitionPrediction[]
+  winningFor       Competition[]          @relation("CompetitionWinningOption")
+
+  @@index([competitionId, sortOrder])
+  @@map("competition_options")
+}
+
+model CompetitionPrediction {
+  id            Int       @id @default(autoincrement())
+  competitionId Int       @map("competition_id")
+  userId        Int       @map("user_id")
+  optionId      Int       @map("option_id")
+  isCorrect     Boolean?  @map("is_correct")
+  pointsEarned  Int       @default(0) @map("points_earned")
+  submittedAt   DateTime  @default(now()) @map("submitted_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  competition Competition       @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  option      CompetitionOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([competitionId, userId])
+  @@index([competitionId, optionId])
+  @@index([userId, submittedAt])
+  @@map("competition_predictions")
+}
+
+model UserPredictionStats {
+  userId                   Int       @id @map("user_id")
+  finuerScore              Int       @default(0) @map("finuer_score")
+  competitionsParticipated Int       @default(0) @map("competitions_participated")
+  competitionsWon          Int       @default(0) @map("competitions_won")
+  competitionsLost         Int       @default(0) @map("competitions_lost")
+  currentWinningStreak     Int       @default(0) @map("current_winning_streak")
+  bestWinningStreak        Int       @default(0) @map("best_winning_streak")
+  lastCompetitionPlayedAt  DateTime? @map("last_competition_played_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_prediction_stats")
 }
 
 model CompetitionRole {

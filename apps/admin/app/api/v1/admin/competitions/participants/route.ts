@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireRole } from "@/lib/auth";
-import { serializeParticipant } from "@/lib/competition";
+import { serializePrediction } from "@/lib/competition";
 import { competitionRepository } from "@/lib/competition-repository";
 
 export const dynamic = "force-dynamic";
@@ -26,8 +26,15 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     data: rows.map((r) => ({
-      ...serializeParticipant(r),
+      id: r.id,
+      userId: r.userId,
+      userName: r.user.fullName,
+      email: r.user.email,
+      prediction: serializePrediction(r),
       competitionTitle: r.competition.title,
+      submittedAt: r.submittedAt.toISOString(),
+      isCorrect: r.isCorrect,
+      pointsEarned: r.pointsEarned,
     })),
     meta: { total, page, pageSize: 20 },
   });

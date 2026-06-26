@@ -11,8 +11,12 @@ export type FinuerBasketCardData = {
   rebalanceFrequency: string;
   requiredPlan: string;
   stockCount?: number;
+  lastRebalancedAt?: string | null;
+  updatedAt?: string;
+  createdAt?: string;
   performance: {
     oneMonthReturn: number | null;
+    threeMonthReturn: number | null;
     sixMonthReturn: number | null;
     oneYearReturn: number | null;
     threeYearReturn: number | null;
@@ -20,12 +24,14 @@ export type FinuerBasketCardData = {
     sinceLaunchReturn: number | null;
     basketReturn: number | null;
     benchmarkReturn: number | null;
+    alpha?: number | null;
     performanceStatus: "outperforming" | "underperforming";
   };
 };
 
 const RETURN_PERIODS: { key: FinuerBasketTimePeriod; label: string; field: keyof FinuerBasketCardData["performance"] }[] = [
   { key: "1_month", label: "1M", field: "oneMonthReturn" },
+  { key: "3_months", label: "3M", field: "threeMonthReturn" },
   { key: "6_months", label: "6M", field: "sixMonthReturn" },
   { key: "1_year", label: "1Y", field: "oneYearReturn" },
   { key: "3_years", label: "3Y", field: "threeYearReturn" },
@@ -35,6 +41,7 @@ const RETURN_PERIODS: { key: FinuerBasketTimePeriod; label: string; field: keyof
 
 const PERIOD_LABELS: Record<FinuerBasketTimePeriod, string> = {
   "1_month": "1 Month",
+  "3_months": "3 Months",
   "6_months": "6 Months",
   "1_year": "1 Year",
   "3_years": "3 Years",
@@ -143,7 +150,20 @@ export default function FinuerBasketCard({ basket, timePeriod = "1_year", linkab
               {formatReturnPct(p.benchmarkReturn)}
             </span>
           </div>
+          {p.alpha != null ? (
+            <div className="finuer-basket-benchmark-stat">
+              <span className="finuer-basket-benchmark-stat-label">Alpha</span>
+              <span className={`finuer-basket-benchmark-stat-value${fmtClass(p.alpha)}`}>
+                {formatReturnPct(p.alpha)}
+              </span>
+            </div>
+          ) : null}
         </div>
+        {basket.lastRebalancedAt ? (
+          <p style={{ margin: "8px 0 0", fontSize: 10, color: "var(--text-muted)" }}>
+            Last rebalanced {new Date(basket.lastRebalancedAt).toLocaleDateString("en-IN")}
+          </p>
+        ) : null}
       </div>
     </article>
   );
