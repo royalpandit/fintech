@@ -7,7 +7,6 @@ import {
   canViewPosts,
   canInteract,
   canUserCreatePost,
-  notifyUser,
   POST_PERMISSION_DENIED,
 } from "@/lib/community";
 import { serializeSocialPost, socialPostInclude } from "@/lib/social-feed-serialize";
@@ -144,32 +143,48 @@ export async function POST(
       include: socialPostInclude,
     });
 
-    const author = await prisma.user.findUnique({
-      where: { id: auth.userId },
-      select: { fullName: true },
-    });
-
-    const members = await prisma.groupMember.findMany({
-      where: { groupId: group.id, userId: { not: auth.userId } },
-      select: { userId: true },
-    });
-    await Promise.all(
-      members.slice(0, 50).map((m) =>
-        notifyUser(
-          m.userId,
-          `New post in ${group.name}`,
-          `${author?.fullName ?? "Someone"} posted: ${title ?? content.slice(0, 80)}`,
-          { type: "community_post", groupId: group.id, postId: post.id, slug: group.slug },
-        ),
-      ),
-    );
-
     const serialized = serializeSocialPost(post, {
       userId: auth.userId,
       likedIds: new Set(),
       savedIds: new Set(),
       unlockedIds: new Set(),
     });
+
+    // Notify members in the background so publishing feels instant.
+    void (async () => {
+      try {
+        const [author, members] = await Promise.all([
+          prisma.user.findUnique({
+            where: { id: auth.userId },
+            select: { fullName: true },
+          }),
+          prisma.groupMember.findMany({
+            where: { groupId: group.id, userId: { not: auth.userId } },
+            select: { userId: true },
+            take: 50,
+          }),
+        ]);
+        if (!members.length) return;
+        const preview = title ?? content.slice(0, 80);
+        const message = `${author?.fullName ?? "Someone"} posted: ${preview}`;
+        await prisma.notification.createMany({
+          data: members.map((m) => ({
+            userId: m.userId,
+            title: `New post in ${group.name}`,
+            message,
+            channel: "in_app" as const,
+            data: {
+              type: "community_post",
+              groupId: group.id,
+              postId: post.id,
+              slug: group.slug,
+            },
+          })),
+        });
+      } catch (notifyErr) {
+        console.error("[POST /communities/:slug/posts] notify", notifyErr);
+      }
+    })();
 
     return ok({ post: serialized });
   } catch (e) {

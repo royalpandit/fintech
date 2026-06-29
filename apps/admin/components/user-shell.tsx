@@ -31,6 +31,7 @@ import {
 } from "react-icons/fi";
 import { TbRobot } from "react-icons/tb";
 import WatchlistStoreProvider from "@/components/watchlist/watchlist-store-provider";
+import GlobalSearchPanel from "@/components/search/global-search-panel";
 
 type UserShellProps = {
   children: React.ReactNode;
@@ -113,14 +114,66 @@ export default function UserShell({
   const [loggingOut, setLoggingOut] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [search, setSearch] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const desktopSearchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchRef = useRef<HTMLDivElement>(null);
+
+  function openSearchPanel() {
+    setSearchFocused(true);
+  }
 
   function submitSearch() {
     const q = search.trim();
-    if (!q) return;
+    if (!q) {
+      openSearchPanel();
+      return;
+    }
     router.push(`/user/search?q=${encodeURIComponent(q)}`);
+    setSearchOpen(false);
+    setSearchFocused(false);
+  }
+
+  function closeSearchPanel() {
+    setSearchFocused(false);
     setSearchOpen(false);
   }
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (searchOpen) setSearchFocused(true);
+  }, [searchOpen]);
+
+  useEffect(() => {
+    if (!searchFocused) return;
+    let removeListener: (() => void) | undefined;
+    const timer = window.setTimeout(() => {
+      function onDocClick(e: MouseEvent) {
+        const target = e.target as Node;
+        const inside =
+          desktopSearchRef.current?.contains(target) ||
+          mobileSearchRef.current?.contains(target) ||
+          (target instanceof Element && target.closest(".us-global-search-panel"));
+        if (!inside) setSearchFocused(false);
+      }
+      document.addEventListener("mousedown", onDocClick);
+      removeListener = () => document.removeEventListener("mousedown", onDocClick);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      removeListener?.();
+    };
+  }, [searchFocused]);
+
+  useEffect(() => {
+    if (!searchFocused) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setSearchFocused(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [searchFocused]);
+
+  const searchAnchorRef = isMobile && searchOpen ? mobileSearchRef : desktopSearchRef;
 
   const initials = currentUser ? getInitials(currentUser.fullName) : "G";
   const pnlColor = todayPnL >= 0 ? "#16a34a" : "#dc2626";
@@ -284,7 +337,8 @@ export default function UserShell({
 
           {/* Center zone — search */}
           <div
-            className={`us-search-wrap ${searchOpen ? "us-search-open" : ""}`}
+            ref={desktopSearchRef}
+            className={`us-search-wrap ${searchOpen ? "us-search-open" : ""}${searchFocused ? " us-search-focused" : ""}`}
           >
             <form
               className="us-search-inner"
@@ -296,9 +350,13 @@ export default function UserShell({
               <FiSearch size={14} className="us-search-icon" />
               <input
                 className="us-search-input"
-                placeholder="Search advisors, symbols, courses…"
+                placeholder="Search stocks, mutual funds, options, futures…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onFocus={openSearchPanel}
+                onClick={openSearchPanel}
+                aria-expanded={searchFocused}
+                aria-haspopup="listbox"
               />
             </form>
           </div>
@@ -407,7 +465,7 @@ export default function UserShell({
 
         {/* Mobile search bar (expands below header) */}
         {searchOpen && (
-          <div className="us-mobile-search">
+          <div className="us-mobile-search" ref={mobileSearchRef}>
             <form
               className="us-search-inner"
               onSubmit={(e) => {
@@ -418,13 +476,25 @@ export default function UserShell({
               <FiSearch size={14} className="us-search-icon" />
               <input
                 className="us-search-input"
-                placeholder="Search advisors, symbols, courses…"
+                placeholder="Search stocks, mutual funds, options, futures…"
                 autoFocus
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onFocus={openSearchPanel}
+                onClick={openSearchPanel}
+                aria-expanded={searchFocused}
+                aria-haspopup="listbox"
               />
             </form>
           </div>
+        )}
+
+        {searchFocused && (
+          <GlobalSearchPanel
+            query={search}
+            anchorRef={searchAnchorRef}
+            onNavigate={closeSearchPanel}
+          />
         )}
       </header>
 

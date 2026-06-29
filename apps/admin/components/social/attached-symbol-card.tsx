@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FiX } from "react-icons/fi";
+import { fetchLiveQuote } from "@/lib/market-quote-client";
 import MiniSparkline from "./mini-sparkline";
 import type { SocialPostSymbol } from "@/lib/social-feed-types";
 
@@ -10,6 +11,7 @@ export type AttachedSymbol = {
   tradingSymbol: string;
   exchange: string;
   token: string;
+  instrumentType?: string;
 };
 
 type Quote = { ltp: number; changePct: number };
@@ -29,6 +31,10 @@ export default function AttachedSymbolCard({
   const exchange = item.exchange ?? "NSE";
   const tradingSymbol = ("tradingSymbol" in item ? item.tradingSymbol : item.trading_symbol) ?? item.symbol;
   const symbol = item.symbol;
+  const instrumentType =
+    "instrumentType" in item && item.instrumentType
+      ? item.instrumentType
+      : undefined;
 
   const [quote, setQuote] = useState<Quote | null>(null);
 
@@ -39,17 +45,9 @@ export default function AttachedSymbolCard({
 
   const fetchQuote = useCallback(async () => {
     if (!token) return;
-    try {
-      const extra = `${token}:${exchange}:${encodeURIComponent(tradingSymbol)}:EQ`;
-      const res = await fetch(`/api/v1/market/live?extra=${extra}`, { cache: "no-store" });
-      const json = await res.json();
-      if (!json.ok || !json.data?.[0]) return;
-      const q = json.data[0];
-      setQuote({ ltp: Number(q.ltp), changePct: Number(q.percentChange ?? 0) });
-    } catch {
-      /* ignore */
-    }
-  }, [token, exchange, tradingSymbol]);
+    const q = await fetchLiveQuote({ token, exchange, tradingSymbol, instrumentType });
+    if (q) setQuote(q);
+  }, [token, exchange, tradingSymbol, instrumentType]);
 
   useEffect(() => {
     fetchQuote();

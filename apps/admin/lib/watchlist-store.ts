@@ -198,7 +198,23 @@ export function getWatchlistSnapshot(): WatchlistState {
   return state;
 }
 
+const SERVER_SNAPSHOT: WatchlistState = {
+  lists: [],
+  activeId: null,
+  loading: false,
+  error: null,
+  version: 0,
+};
+
+export function getServerWatchlistSnapshot(): WatchlistState {
+  return SERVER_SNAPSHOT;
+}
+
 export function useWatchlistStore() {
-  const snap = useSyncExternalStore(subscribe, getWatchlistSnapshot, getWatchlistSnapshot);
+  const snap = useSyncExternalStore(
+    subscribe,
+    getWatchlistSnapshot,
+    getServerWatchlistSnapshot,
+  );
   return snap;
 }

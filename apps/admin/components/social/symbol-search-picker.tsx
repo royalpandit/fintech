@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { resolveMarketExchange } from "@/lib/angelone-shared";
 import type { AttachedSymbol } from "./attached-symbol-card";
 
 type SearchRow = {
@@ -8,19 +9,31 @@ type SearchRow = {
   tradingSymbol: string;
   symbolName: string;
   token: string;
+  instrumentType?: string;
 };
 
+function displayTitle(row: SearchRow): string {
+  const raw = (row.symbolName || row.tradingSymbol).replace(/-EQ$/i, "").trim();
+  if (row.instrumentType === "EQ" || row.tradingSymbol.endsWith("-EQ")) {
+    return raw.split("-")[0].toUpperCase();
+  }
+  return raw;
+}
+
 function normalizeSymbol(row: SearchRow): AttachedSymbol {
-  const sym = (row.symbolName || row.tradingSymbol)
-    .replace(/-EQ$/i, "")
-    .replace(/\.(NS|BO)$/i, "")
-    .split("-")[0]
-    .toUpperCase();
-  return {
-    symbol: sym,
-    tradingSymbol: row.tradingSymbol,
+  const instrumentType = row.instrumentType || "EQ";
+  const exchange = resolveMarketExchange({
     exchange: row.exchange,
+    symboltoken: row.token,
+    tradingSymbol: row.tradingSymbol,
+    instrumentType,
+  });
+  return {
+    symbol: displayTitle(row),
+    tradingSymbol: row.tradingSymbol,
+    exchange,
     token: row.token,
+    instrumentType,
   };
 }
 
@@ -32,7 +45,7 @@ export default function SymbolSearchPicker({
   onClose: () => void;
 }) {
   const [q, setQ] = useState("");
-  const [results, setResults] = useState<AttachedSymbol[]>([]);
+  const [results, setResults] = useState<SearchRow[]>([]);
   const [loading, setLoading] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -50,7 +63,7 @@ export default function SymbolSearchPicker({
         );
         const json = await res.json();
         const rows: SearchRow[] = json.data ?? [];
-        setResults(rows.slice(0, 12).map(normalizeSymbol));
+        setResults(rows.slice(0, 12));
       } finally {
         setLoading(false);
       }
@@ -87,13 +100,15 @@ export default function SymbolSearchPicker({
             type="button"
             className="sf-symbol-picker-row"
             onClick={() => {
-              onSelect(r);
+              onSelect(normalizeSymbol(r));
               onClose();
             }}
           >
-            <span className="sym">${r.symbol}</span>
-            <span className="meta">{r.tradingSymbol}</span>
-            <span className="exch">{r.exchange}</span>
+            <div className="sf-symbol-picker-row-main">
+              <span className="sf-symbol-picker-title">${displayTitle(r)}</span>
+              <span className="sf-symbol-picker-sub">{r.tradingSymbol}</span>
+            </div>
+            <span className="sf-symbol-picker-exch">{r.exchange}</span>
           </button>
         ))}
       </div>

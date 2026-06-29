@@ -646,6 +646,8 @@ model CommunityPost {
   postType      FeedPostType   @default(text) @map("post_type")
   title         String?        @db.VarChar(200)
   sentiment     SentimentType?
+  entryPrice    Decimal?       @map("entry_price") @db.Decimal(18, 4)
+  cmp           Decimal?       @db.Decimal(18, 4)
   targetPrice   Decimal?       @map("target_price") @db.Decimal(18, 4)
   stopLossPrice Decimal?       @map("stop_loss_price") @db.Decimal(18, 4)
   thumbnailUrl  String?        @map("thumbnail_url")
