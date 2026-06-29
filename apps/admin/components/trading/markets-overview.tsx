@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { FiArrowUpRight, FiArrowDownRight, FiBarChart2, FiRefreshCw } from "react-icons/fi";
+import AddToWatchlistButton, {
+  overviewRowToWatchlistItem,
+} from "@/components/watchlist/add-to-watchlist-button";
 
 type OverviewRow = {
   symbol: string;
@@ -231,6 +234,7 @@ export default function MarketsOverview() {
                 <Th>%</Th>
                 <Th>52W High</Th>
                 <Th>52W Low</Th>
+                <Th style={{ width: 72 }} />
               </tr>
             </thead>
             <tbody>
@@ -264,13 +268,19 @@ export default function MarketsOverview() {
                     <Td style={{ color: "var(--text-muted)" }}>
                       {s.week52Low != null ? inr(s.week52Low) : "—"}
                     </Td>
+                    <Td>
+                      <AddToWatchlistButton
+                        item={overviewRowToWatchlistItem(s)}
+                        compact
+                      />
+                    </Td>
                   </tr>
                 );
               })}
               {stocks.length === 0 && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}
                   >
                     {loading ? "Loading market data…" : "No data available."}
@@ -315,28 +325,40 @@ function MoverList({ title, rows, positive }: { title: string; rows: OverviewRow
           </p>
         ) : (
           rows.map((r) => (
-            <Link
+            <div
               key={r.token}
-              href={chartHref(r)}
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
+                gap: 8,
                 padding: "11px 16px",
                 borderTop: "1px solid var(--border)",
-                textDecoration: "none",
-                color: "inherit",
               }}
             >
-              <span style={{ fontWeight: 600, color: "var(--text)", fontSize: 13 }}>{r.symbol}</span>
-              <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ color: "var(--text)", fontSize: 13 }}>{inr(r.ltp)}</span>
-                <span style={{ color, fontWeight: 600, fontSize: 13, minWidth: 64, textAlign: "right" }}>
-                  {r.percentChange >= 0 ? "+" : ""}
-                  {r.percentChange.toFixed(2)}%
+              <Link
+                href={chartHref(r)}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  textDecoration: "none",
+                  color: "inherit",
+                  minWidth: 0,
+                }}
+              >
+                <span style={{ fontWeight: 600, color: "var(--text)", fontSize: 13 }}>{r.symbol}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ color: "var(--text)", fontSize: 13 }}>{inr(r.ltp)}</span>
+                  <span style={{ color, fontWeight: 600, fontSize: 13, minWidth: 64, textAlign: "right" }}>
+                    {r.percentChange >= 0 ? "+" : ""}
+                    {r.percentChange.toFixed(2)}%
+                  </span>
                 </span>
-              </span>
-            </Link>
+              </Link>
+              <AddToWatchlistButton item={overviewRowToWatchlistItem(r)} compact />
+            </div>
           ))
         )}
       </div>
@@ -344,7 +366,7 @@ function MoverList({ title, rows, positive }: { title: string; rows: OverviewRow
   );
 }
 
-function Th({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function Th({ children, style }: { children?: React.ReactNode; style?: React.CSSProperties }) {
   return <th style={{ padding: "10px 16px", fontWeight: 600, ...style }}>{children}</th>;
 }
 function Td({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {

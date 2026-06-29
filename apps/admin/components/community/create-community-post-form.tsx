@@ -24,10 +24,7 @@ export default function CreateCommunityPostForm({
   async function onImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files?.length) return;
-    const urls: string[] = [];
-    for (const file of Array.from(files)) {
-      urls.push(await uploadSocialFile(file, "image"));
-    }
+    const urls = await Promise.all(Array.from(files).map((file) => uploadSocialFile(file, "image")));
     setImageUrls((prev) => [...prev, ...urls]);
     setPostType("image");
   }
@@ -47,7 +44,9 @@ export default function CreateCommunityPostForm({
       });
       // Keep the button disabled while we navigate away — do NOT re-enable on
       // success, otherwise a quick second click posts twice.
-      router.push(`/user/community/${slug}/post/${post.id}`);
+      // Return to the community feed, not the single-post detail page.
+      router.replace(`/user/community/${slug}`);
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create post");
       setLoading(false);

@@ -18,6 +18,7 @@ import {
   useWatchlistStore,
   type StoredWatchlistItem,
 } from "@/lib/watchlist-store";
+import { isPortfolioWatchlist } from "@/lib/watchlist-db";
 
 function fmtPct(n?: number) {
   if (n === undefined || n === null || Number.isNaN(n)) return "—";
@@ -54,6 +55,7 @@ export default function WatchlistPanel({
   const [menuItem, setMenuItem] = useState<StoredWatchlistItem | null>(null);
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameVal, setRenameVal] = useState("");
+  const [mounted, setMounted] = useState(false);
 
   const dragTabId = useRef<number | null>(null);
   const dragItemId = useRef<number | null>(null);
@@ -61,9 +63,19 @@ export default function WatchlistPanel({
 
   const activeList = activeWatchlist(lists, activeId);
   const items: StoredWatchlistItem[] = activeList?.items ?? [];
+  const portfolioMode = activeList ? isPortfolioWatchlist(activeList.name) : false;
+
+  const startRename = (list: { id: number; name: string }) => {
+    setRenamingId(list.id);
+    setRenameVal(list.name);
+  };
 
   useEffect(() => {
-    if (!lists.length && !loading) void refresh();
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!lists.length && !loading) void refresh({ silent: true });
   }, [lists.length, loading]);
 
   useEffect(() => {
@@ -225,7 +237,20 @@ export default function WatchlistPanel({
                   {list.name}
                 </button>
               )}
-              {list.id === activeId && lists.length > 1 && (
+              {list.id === activeId && renamingId !== list.id && (
+                <button
+                  type="button"
+                  className="wl-tab-edit"
+                  title="Rename watchlist"
+                  onClick={e => {
+                    e.stopPropagation();
+                    startRename(list);
+                  }}
+                >
+                  ✎
+                </button>
+              )}
+              {list.id === activeId && lists.length > 1 && renamingId !== list.id && (
                 <button
                   type="button"
                   className="wl-tab-del"
@@ -250,15 +275,21 @@ export default function WatchlistPanel({
 
       <WatchlistSearch
         onAddToWatchlist={handleAddToWatchlist}
+        onQuickAdd={
+          portfolioMode && activeList
+            ? item => void handleAddToList(activeList.id, item)
+            : undefined
+        }
+        quickAddLabel={portfolioMode ? "Add" : undefined}
         onBuy={onBuy}
         onSell={onSell}
         onOpenChart={onOpenChart}
       />
 
       <div className="wl-list">
-        {loading && <div className="wl-list-msg">Loading…</div>}
-        {authError && <div className="wl-list-msg wl-list-warn">{authError}</div>}
-        {!loading && items.length === 0 && (
+        {mounted && loading && <div className="wl-list-msg">Loading…</div>}
+        {mounted && authError && <div className="wl-list-msg wl-list-warn">{authError}</div>}
+        {mounted && !loading && items.length === 0 && (
           <div className="wl-list-msg">Search and add symbols, or use + on a result.</div>
         )}
         {displayItems.map(row => {

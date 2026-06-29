@@ -19,6 +19,7 @@ import {
   uploadSocialMedia,
 } from "@/lib/social-feed-client";
 import type { FeedSentiment, FeedPostAccessType } from "@/lib/social-feed-types";
+import { fetchLiveQuote } from "@/lib/market-quote-client";
 import { useTheme } from "@/components/theme/theme-provider";
 
 type Mode = "post" | "article";
@@ -31,6 +32,16 @@ function getInitials(name: string) {
   if (!p.length) return "??";
   if (p.length === 1) return p[0].slice(0, 2).toUpperCase();
   return (p[0][0] + p[p.length - 1][0]).toUpperCase();
+}
+
+async function fetchSymbolLtp(sym: AttachedSymbol): Promise<number | null> {
+  const q = await fetchLiveQuote({
+    token: sym.token,
+    exchange: sym.exchange,
+    tradingSymbol: sym.tradingSymbol,
+    instrumentType: sym.instrumentType,
+  });
+  return q?.ltp ?? null;
 }
 
 export default function PostComposerModal({
@@ -62,6 +73,8 @@ export default function PostComposerModal({
   const [symbols, setSymbols] = useState<AttachedSymbol[]>([]);
   const [images, setImages] = useState<PreviewImage[]>([]);
   const [videos, setVideos] = useState<PreviewVideo[]>([]);
+  const [entryPrice, setEntryPrice] = useState("");
+  const [cmp, setCmp] = useState("");
   const [targetPrice, setTargetPrice] = useState("");
   const [stopLoss, setStopLoss] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
@@ -85,6 +98,8 @@ export default function PostComposerModal({
     videos.forEach(v => URL.revokeObjectURL(v.url));
     setImages([]);
     setVideos([]);
+    setEntryPrice("");
+    setCmp("");
     setTargetPrice("");
     setStopLoss("");
     setMode("post");
@@ -130,12 +145,16 @@ export default function PostComposerModal({
     setVideos([{ id: crypto.randomUUID(), file, url: URL.createObjectURL(file) }]);
   };
 
-  const addSymbol = (sym: AttachedSymbol) => {
+  const addSymbol = async (sym: AttachedSymbol) => {
     setSymbols(prev => {
       if (prev.some(s => s.token === sym.token)) return prev;
       return [...prev, sym].slice(0, 3);
     });
     insertAtCursor(`$${sym.symbol} `);
+    const ltp = await fetchSymbolLtp(sym);
+    if (ltp != null) {
+      setCmp(prev => prev || String(ltp));
+    }
   };
 
   const publish = async () => {
@@ -177,6 +196,8 @@ export default function PostComposerModal({
         articleBody: mode === "article" ? articleBody : undefined,
         thumbnailUrl,
         sentiment,
+        entryPrice: entryPrice ? Number(entryPrice) : undefined,
+        cmp: cmp ? Number(cmp) : undefined,
         targetPrice: targetPrice ? Number(targetPrice) : undefined,
         stopLossPrice: stopLoss ? Number(stopLoss) : undefined,
         imageUrls,
@@ -282,8 +303,24 @@ export default function PostComposerModal({
               </div>
             )}
 
-            {(targetPrice || stopLoss || symbols.length > 0) && (
+            {(symbols.length > 0 ||
+              entryPrice ||
+              cmp ||
+              targetPrice ||
+              stopLoss) && (
               <div className="sf-idea-fields">
+                <input
+                  type="number"
+                  placeholder="Entry ₹"
+                  value={entryPrice}
+                  onChange={e => setEntryPrice(e.target.value)}
+                />
+                <input
+                  type="number"
+                  placeholder="CMP ₹"
+                  value={cmp}
+                  onChange={e => setCmp(e.target.value)}
+                />
                 <input
                   type="number"
                   placeholder="Target ₹"

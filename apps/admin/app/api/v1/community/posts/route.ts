@@ -94,6 +94,8 @@ export async function POST(req: NextRequest) {
       sentiment?: FeedSentiment;
       targetPrice?: number;
       stopLossPrice?: number;
+      entryPrice?: number;
+      cmp?: number;
       thumbnailUrl?: string;
       articleBody?: string;
       imageUrls?: string[];
@@ -124,7 +126,7 @@ export async function POST(req: NextRequest) {
     if (body.imageUrls?.length) postType = postType === "text" ? "image" : postType;
     if (body.videoUrls?.length) postType = "video";
     if (body.symbols?.length) postType = postType === "text" ? "chart" : postType;
-    if (body.targetPrice || body.stopLossPrice) postType = "idea";
+    if (body.targetPrice || body.stopLossPrice || body.entryPrice || body.cmp) postType = "idea";
 
     const post = await prisma.communityPost.create({
       data: {
@@ -133,6 +135,8 @@ export async function POST(req: NextRequest) {
         postType,
         title: body.title,
         sentiment: body.sentiment,
+        entryPrice: body.entryPrice,
+        cmp: body.cmp,
         targetPrice: body.targetPrice,
         stopLossPrice: body.stopLossPrice,
         thumbnailUrl: body.thumbnailUrl,

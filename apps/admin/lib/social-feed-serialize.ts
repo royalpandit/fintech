@@ -8,6 +8,8 @@ type DbPost = {
   postType: string;
   title: string | null;
   sentiment: string | null;
+  entryPrice: unknown;
+  cmp: unknown;
   targetPrice: unknown;
   stopLossPrice: unknown;
   thumbnailUrl: string | null;
@@ -51,6 +53,8 @@ export function serializeSocialPost(
     post_type: post.postType as SocialPost["post_type"],
     title: post.title,
     sentiment: post.sentiment as SocialPost["sentiment"],
+    entry_price: post.entryPrice != null ? Number(post.entryPrice) : null,
+    cmp: post.cmp != null ? Number(post.cmp) : null,
     target_price: post.targetPrice != null ? Number(post.targetPrice) : null,
     stop_loss_price: post.stopLossPrice != null ? Number(post.stopLossPrice) : null,
     thumbnail_url: post.thumbnailUrl,

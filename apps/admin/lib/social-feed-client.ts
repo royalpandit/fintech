@@ -60,6 +60,8 @@ export async function createSocialPost(input: CreateSocialPostInput): Promise<So
       postType: input.postType ?? "text",
       title: input.title,
       sentiment: input.sentiment,
+      entryPrice: input.entryPrice,
+      cmp: input.cmp,
       targetPrice: input.targetPrice,
       stopLossPrice: input.stopLossPrice,
       thumbnailUrl: input.thumbnailUrl,
