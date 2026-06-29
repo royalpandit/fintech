@@ -40,6 +40,7 @@ const TOP_NAV = [
   { label: "Advisors", href: "/super-admin/advisors" },
   { label: "Posts", href: "/super-admin/market-posts" },
   { label: "Analytics", href: "/super-admin/analytics" },
+  { label: "Subscriptions", href: "/super-admin/subscriptions" },
   { label: "AI Agents", href: "/super-admin/agents" },
   { label: "Stock Picks", href: "/super-admin/stock-picks" },
   { label: "Finuer Basket", href: "/super-admin/finuer-basket/baskets" },

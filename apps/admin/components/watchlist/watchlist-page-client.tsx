@@ -8,7 +8,6 @@ import type { WatchlistItem } from "@/components/trading/trading-terminal-types"
 import {
   activeWatchlist,
   allWatchlistItems,
-  refresh,
   useWatchlistStore,
 } from "@/lib/watchlist-store";
 
@@ -43,12 +42,13 @@ export default function WatchlistPageClient() {
   const list = activeWatchlist(lists, activeId);
   const items = list?.items ?? [];
 
+  const [mounted, setMounted] = useState(false);
   const [selected, setSelected] = useState<WatchlistItem>(FALLBACK);
   const [liveQuotes, setLiveQuotes] = useState<WatchlistItem[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    void refresh();
+    setMounted(true);
   }, []);
 
   useEffect(() => {
@@ -107,6 +107,13 @@ export default function WatchlistPageClient() {
     [lists],
   );
 
+  const subtitle = useMemo(() => {
+    if (!mounted) return "Synced with Markets";
+    if (loading) return "Loading…";
+    if (error) return error;
+    return `${symbolCount} symbol${symbolCount !== 1 ? "s" : ""} across ${lists.length} list${lists.length !== 1 ? "s" : ""} — synced with Markets`;
+  }, [mounted, loading, error, symbolCount, lists.length]);
+
   const goMarkets = (item?: WatchlistItem) => {
     const q = item?.display ?? item?.tradingSymbol;
     router.push(q ? `/user/markets?q=${encodeURIComponent(q)}` : "/user/markets");
@@ -117,13 +124,7 @@ export default function WatchlistPageClient() {
       <div className="wl-page-header">
         <div>
           <h1 className="wl-page-title">Watchlist</h1>
-          <p className="wl-page-sub">
-            {loading
-              ? "Loading…"
-              : error
-                ? error
-                : `${symbolCount} symbol${symbolCount !== 1 ? "s" : ""} across ${lists.length} list${lists.length !== 1 ? "s" : ""} — synced with Markets`}
-          </p>
+          <p className="wl-page-sub">{subtitle}</p>
         </div>
         <Link href="/user/markets" className="wl-page-markets-link">
           Open Markets
@@ -148,7 +149,7 @@ export default function WatchlistPageClient() {
         />
       </article>
 
-      {!loading && !error && items.length === 0 && (
+      {!mounted && items.length === 0 ? null : !loading && !error && items.length === 0 && (
         <p className="wl-page-hint">
           Create a list above and search symbols, or open{" "}
           <Link href="/user/markets">Markets</Link> to add from live search.

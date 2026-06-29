@@ -17,6 +17,8 @@ export type SocialPost = {
   post_type: FeedPostType;
   title: string | null;
   sentiment: FeedSentiment | null;
+  entry_price: number | null;
+  cmp: number | null;
   target_price: number | null;
   stop_loss_price: number | null;
   thumbnail_url: string | null;
@@ -51,6 +53,8 @@ export type CreateSocialPostInput = {
   postType?: FeedPostType;
   title?: string;
   sentiment?: FeedSentiment;
+  entryPrice?: number;
+  cmp?: number;
   targetPrice?: number;
   stopLossPrice?: number;
   thumbnailUrl?: string;

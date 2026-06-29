@@ -6,7 +6,7 @@ import { refresh } from "@/lib/watchlist-store";
 /** Prefetch watchlists when user shell mounts (logged-in sessions). */
 export default function WatchlistStoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    void refresh();
+    void refresh({ silent: true });
   }, []);
 
   return children;

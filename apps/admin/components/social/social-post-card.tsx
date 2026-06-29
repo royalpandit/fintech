@@ -243,8 +243,28 @@ export default function SocialPostCard({
           </div>
         )}
 
-        {!locked && (postState.target_price != null || postState.stop_loss_price != null) && (
+        {!locked &&
+          (postState.entry_price != null ||
+            postState.cmp != null ||
+            postState.target_price != null ||
+            postState.stop_loss_price != null) && (
           <div className="sf-post-levels">
+            {postState.entry_price != null && (
+              <div className="sf-level-chip entry">
+                <span className="sf-level-label">Entry</span>
+                <span className="sf-level-value">
+                  ₹{postState.entry_price.toLocaleString("en-IN")}
+                </span>
+              </div>
+            )}
+            {postState.cmp != null && (
+              <div className="sf-level-chip cmp">
+                <span className="sf-level-label">CMP</span>
+                <span className="sf-level-value">
+                  ₹{postState.cmp.toLocaleString("en-IN")}
+                </span>
+              </div>
+            )}
             {postState.target_price != null && (
               <div className="sf-level-chip target">
                 <span className="sf-level-label">Target</span>
