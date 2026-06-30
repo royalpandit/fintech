@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import AdvisorActions from "@/components/views/advisor-actions";
+import { categoryLabel } from "@/lib/subscription-services";
 
 function statusTag(status: string) {
   if (status === "approved") return <span className="tag success">Verified</span>;
@@ -54,7 +55,7 @@ export default async function AdvisorDetailView({
 
   if (!advisor || !advisor.advisorProfile) notFound();
 
-  const [postStats, subscriberCount, latestMetrics] = await Promise.all([
+  const [postStats, subscriberCount, latestMetrics, subscriptionServices, profitData] = await Promise.all([
     prisma.marketPost.groupBy({
       by: ["complianceStatus"],
       where: { advisorUserId },
@@ -65,7 +66,34 @@ export default async function AdvisorDetailView({
       where: { advisorUserId },
       orderBy: { day: "desc" },
     }),
+    prisma.advisorSubscriptionService.findMany({
+      where: { advisorUserId, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: {
+          select: {
+            subscriptions: { where: { status: "active", endDate: { gt: new Date() } } },
+          },
+        },
+      },
+    }),
+    Promise.all([
+      prisma.subscription.aggregate({
+        where: { advisorUserId, serviceId: { not: null } },
+        _sum: { amount: true },
+      }),
+      prisma.advisorWallet.findUnique({ where: { advisorUserId } }),
+      prisma.advisorMetricDaily.aggregate({
+        where: { advisorUserId },
+        _sum: { earningsAmount: true },
+      }),
+    ]),
   ]);
+
+  const [serviceRevenue, wallet, lifetimeMetrics] = profitData;
+  const totalProfit = Number(lifetimeMetrics._sum.earningsAmount ?? 0);
+  const walletBalance = Number(wallet?.balance ?? 0);
+  const grossSubscriptionRevenue = Number(serviceRevenue._sum.amount ?? 0);
 
   const profile = advisor.advisorProfile;
   const totalPosts = postStats.reduce((sum, row) => sum + row._count._all, 0);
@@ -205,8 +233,52 @@ export default async function AdvisorDetailView({
               </p>
             </div>
           )}
+          <div style={{ marginTop: 12 }}>
+            <p className="metric-label">Total Profit (Advisor)</p>
+            <p className="metric-value" style={{ fontSize: 24, color: "#047857" }}>
+              ₹{totalProfit.toLocaleString("en-IN")}
+            </p>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--text-muted)" }}>
+              Wallet balance: ₹{walletBalance.toLocaleString("en-IN")} · Gross subscription revenue: ₹
+              {grossSubscriptionRevenue.toLocaleString("en-IN")}
+            </p>
+          </div>
         </article>
       </div>
+
+      <article className="card" style={{ marginTop: 16 }}>
+        <h3 style={{ marginTop: 0 }}>Subscription Services ({subscriptionServices.length})</h3>
+        {subscriptionServices.length === 0 ? (
+          <p style={{ margin: 0, color: "var(--text-muted)" }}>No subscription services created yet.</p>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Category</th>
+                  <th>Monthly</th>
+                  <th>Yearly</th>
+                  <th>Subscribers</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {subscriptionServices.map((s) => (
+                  <tr key={s.id}>
+                    <td><strong>{s.name}</strong></td>
+                    <td>{categoryLabel(s.category)}</td>
+                    <td>₹{Number(s.monthlyPrice).toLocaleString("en-IN")}</td>
+                    <td>₹{Number(s.yearlyPrice).toLocaleString("en-IN")}</td>
+                    <td>{s._count.subscriptions}</td>
+                    <td style={{ textTransform: "capitalize" }}>{s.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </article>
 
       <div className="grid" style={{ gridTemplateColumns: "1.35fr 1fr", marginTop: 16 }}>
         <article className="card">

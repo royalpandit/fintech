@@ -36,7 +36,7 @@ export default async function UserAdvisorsPage({
   const thirty = new Date();
   thirty.setDate(thirty.getDate() - 30);
 
-  const [advisors, advisorMetrics, totalAdvisors] = await Promise.all([
+  const [advisors, advisorMetrics, totalAdvisors, serviceCounts] = await Promise.all([
     prisma.user.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -68,7 +68,16 @@ export default async function UserAdvisorsPage({
         advisorProfile: { verificationStatus: "approved" },
       },
     }),
+    prisma.advisorSubscriptionService.groupBy({
+      by: ["advisorUserId"],
+      where: { deletedAt: null, status: "active" },
+      _count: { _all: true },
+    }),
   ]);
+
+  const servicesByAdvisor = new Map(
+    serviceCounts.map((row) => [row.advisorUserId, row._count._all]),
+  );
 
   const metricsByAdvisor = new Map(
     advisorMetrics.map((m) => [
@@ -303,11 +312,9 @@ export default async function UserAdvisorsPage({
                     </p>
                   </div>
                   <div>
-                    <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>Exp</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
-                      {adv.advisorProfile?.experienceYears
-                        ? `${adv.advisorProfile.experienceYears}y`
-                        : "—"}
+                    <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>Plans</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 600, color: "#0ea5e9" }}>
+                      {servicesByAdvisor.get(adv.id) ?? 0}
                     </p>
                   </div>
                 </div>

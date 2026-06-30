@@ -52,6 +52,7 @@ type NavItem = {
 const MAIN_NAV: NavItem[] = [
   { label: "Feed", href: "/user/feed", Icon: FiHome },
   { label: "Finance Professionals", href: "/user/advisors", Icon: FiUsers },
+  { label: "Subscriptions", href: "/user/subscriptions", Icon: FiCreditCard },
   { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
   { label: "Messages", href: "/user/messages", Icon: FiMessageCircle },
   { label: "Community", href: "/user/community", Icon: FiMessageSquare },
