@@ -2,19 +2,40 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import AdvisorServicesPickerModal from "@/components/advisor-services-picker-modal";
+import SubscribeServiceModal, { type AdvisorServiceCard } from "@/components/subscribe-service-modal";
 import SubscribePlansModal from "@/components/subscribe-plans-modal";
 
 export default function SubscribeButton({
   advisorId,
   initialSubscribed,
+  services = [],
 }: {
   advisorId: number;
   initialSubscribed: boolean;
+  services?: AdvisorServiceCard[];
 }) {
   const router = useRouter();
   const [subscribed, setSubscribed] = useState(initialSubscribed);
-  const [showPlans, setShowPlans] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [singleService, setSingleService] = useState<AdvisorServiceCard | null>(null);
+  const [showLegacyPlans, setShowLegacyPlans] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const availableServices = services.filter((s) => s.canSubscribe && !s.isSubscribed);
+  const hasServices = availableServices.length > 0;
+
+  function openSubscribe() {
+    if (availableServices.length === 1) {
+      setSingleService(availableServices[0]);
+      return;
+    }
+    if (availableServices.length > 1) {
+      setShowPicker(true);
+      return;
+    }
+    setShowLegacyPlans(true);
+  }
 
   async function unsubscribe() {
     if (loading) return;
@@ -34,7 +55,7 @@ export default function SubscribeButton({
     <>
       <button
         type="button"
-        onClick={subscribed ? unsubscribe : () => setShowPlans(true)}
+        onClick={subscribed ? unsubscribe : openSubscribe}
         disabled={loading}
         style={{
           padding: "12px 22px",
@@ -50,13 +71,39 @@ export default function SubscribeButton({
         {loading ? "…" : subscribed ? "✓ Subscribed" : "+ Subscribe"}
       </button>
 
-      {showPlans && (
+      {showPicker && (
+        <AdvisorServicesPickerModal
+          services={services}
+          title="Subscribe to a service"
+          subtitle="Pick a service — each has its own category, pricing, and benefits."
+          onClose={() => setShowPicker(false)}
+          onSubscribed={() => {
+            setShowPicker(false);
+            setSubscribed(true);
+            router.refresh();
+          }}
+        />
+      )}
+
+      {singleService && (
+        <SubscribeServiceModal
+          service={singleService}
+          onClose={() => setSingleService(null)}
+          onSubscribed={() => {
+            setSingleService(null);
+            setSubscribed(true);
+            router.refresh();
+          }}
+        />
+      )}
+
+      {showLegacyPlans && !hasServices && (
         <SubscribePlansModal
           advisorId={advisorId}
-          onClose={() => setShowPlans(false)}
+          onClose={() => setShowLegacyPlans(false)}
           onSubscribed={() => {
             setSubscribed(true);
-            setShowPlans(false);
+            setShowLegacyPlans(false);
             router.refresh();
           }}
         />

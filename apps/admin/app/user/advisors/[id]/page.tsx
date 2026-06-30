@@ -11,6 +11,8 @@ import SubscribeButton from "@/components/subscribe-button";
 import { marketPostAudienceWhere } from "@/lib/post-visibility";
 import { professionalTypeLabel } from "@/lib/professional-types";
 import MessageAdvisorButton from "./MessageAdvisorButton";
+import AdvisorServicesList from "@/components/advisor-services-list";
+import { categoryLabel, isSubscriptionActive, yearlySavingsPct } from "@/lib/subscription-services";
 
 export const dynamic = "force-dynamic";
 
@@ -85,52 +87,101 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
       )
     : false;
 
-  const isSubscribed = auth
-    ? (
-        await prisma.subscription.findUnique({
-          where: { userId_advisorUserId: { userId: auth.userId, advisorUserId } },
-          select: { status: true },
-        })
-      )?.status === "active"
-    : false;
-
   const thirty = new Date();
   thirty.setDate(thirty.getDate() - 30);
 
-  // Hide subscriber-only / specific-people posts the viewer isn't allowed to see.
   const audienceWhere = await marketPostAudienceWhere(auth?.userId ?? null);
 
-  const [posts, latestMetrics, subscriberCount, courses] = await Promise.all([
-    prisma.marketPost.findMany({
-      where: {
-        advisorUserId,
-        complianceStatus: "approved",
-        deletedAt: null,
-        ...audienceWhere,
-      },
-      orderBy: { publishedAt: "desc" },
-      take: 12,
-      include: {
-        _count: { select: { reactions: true, comments: true } },
-      },
-    }),
-    prisma.advisorMetricDaily.findFirst({
-      where: { advisorUserId },
-      orderBy: { day: "desc" },
-    }),
-    prisma.subscription.count({ where: { advisorUserId, status: "active" } }),
-    prisma.course.findMany({
-      where: {
-        advisorUserId,
-        isPublished: true,
-        deletedAt: null,
-        complianceStatus: "approved",
-      },
-      orderBy: { createdAt: "desc" },
-      take: 4,
-      include: { _count: { select: { enrollments: true } } },
-    }),
-  ]);
+  const [posts, latestMetrics, subscriberCount, courses, subscriptionServices, userServiceSubs] =
+    await Promise.all([
+      prisma.marketPost.findMany({
+        where: {
+          advisorUserId,
+          complianceStatus: "approved",
+          deletedAt: null,
+          ...audienceWhere,
+        },
+        orderBy: { publishedAt: "desc" },
+        take: 12,
+        include: {
+          _count: { select: { reactions: true, comments: true } },
+        },
+      }),
+      prisma.advisorMetricDaily.findFirst({
+        where: { advisorUserId },
+        orderBy: { day: "desc" },
+      }),
+      prisma.subscription.count({ where: { advisorUserId, status: "active" } }),
+      prisma.course.findMany({
+        where: {
+          advisorUserId,
+          isPublished: true,
+          deletedAt: null,
+          complianceStatus: "approved",
+        },
+        orderBy: { createdAt: "desc" },
+        take: 4,
+        include: { _count: { select: { enrollments: true } } },
+      }),
+      prisma.advisorSubscriptionService.findMany({
+        where: {
+          advisorUserId,
+          deletedAt: null,
+          status: { in: ["active", "paused"] },
+        },
+        orderBy: { createdAt: "desc" },
+        include: {
+          _count: {
+            select: {
+              subscriptions: { where: { status: "active", endDate: { gt: new Date() } } },
+            },
+          },
+        },
+      }),
+      auth
+        ? prisma.subscription.findMany({
+            where: { userId: auth.userId, advisorUserId, serviceId: { not: null } },
+            select: { serviceId: true, status: true, planType: true, endDate: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+  const userSubByService = new Map(
+    userServiceSubs
+      .filter((s) => s.serviceId != null)
+      .map((s) => [s.serviceId!, s]),
+  );
+
+  const serviceCards = subscriptionServices.map((s) => {
+    const userSub = userSubByService.get(s.id);
+    const monthly = Number(s.monthlyPrice);
+    const yearly = Number(s.yearlyPrice);
+    return {
+      id: s.id,
+      name: s.name,
+      categoryLabel: categoryLabel(s.category),
+      description: s.description,
+      monthlyPrice: monthly,
+      yearlyPrice: yearly,
+      yearlySavingsPct: yearlySavingsPct(monthly, yearly),
+      offerFreeTrial: s.offerFreeTrial,
+      subscriberCount: s._count.subscriptions,
+      isSubscribed: userSub ? isSubscriptionActive(userSub) : false,
+      canSubscribe: s.status === "active" && !s.pauseNewSubscriptions,
+    };
+  });
+
+  const legacySub = auth
+    ? await prisma.subscription.findUnique({
+        where: { userId_advisorUserId: { userId: auth.userId, advisorUserId } },
+        select: { status: true, endDate: true },
+      })
+    : null;
+
+  const isSubscribed = auth
+    ? serviceCards.some((s) => s.isSubscribed) ||
+      (legacySub?.status === "active" && Boolean(legacySub.endDate && new Date(legacySub.endDate) > new Date()))
+    : false;
 
   const initials = advisor.fullName
     .split(" ")
@@ -244,8 +295,13 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
                 <MessageAdvisorButton
                   advisorId={advisorUserId}
                   isFollowing={isFollowing}
+                  services={serviceCards}
                 />
-                <SubscribeButton advisorId={advisorUserId} initialSubscribed={isSubscribed} />
+                <SubscribeButton
+                  advisorId={advisorUserId}
+                  initialSubscribed={isSubscribed}
+                  services={serviceCards}
+                />
               </>
             ) : (
               <AuthGate
@@ -343,6 +399,8 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
           </article>
         ))}
       </div>
+
+      <AdvisorServicesList services={serviceCards} advisorName={advisor.fullName} />
 
       {/* Posts feed */}
       <h2 style={{ margin: "0 0 14px", fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
