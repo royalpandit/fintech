@@ -13,6 +13,13 @@ import {
   trackSubscription,
 } from "@/lib/angelone-metrics";
 
+// smartapi-javascript talks over `ws`, whose optional `bufferutil` native addon
+// is incompatible with newer Node (throws "bufferUtil.mask is not a function",
+// crashing the process on every outgoing frame). Force ws to use its pure-JS
+// masking/validation fallback. MUST run before the require below loads ws.
+process.env.WS_NO_BUFFER_UTIL = process.env.WS_NO_BUFFER_UTIL ?? "1";
+process.env.WS_NO_UTF_8_VALIDATE = process.env.WS_NO_UTF_8_VALIDATE ?? "1";
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { WebSocketV2 } = require("smartapi-javascript") as {
   WebSocketV2: new (p: {
