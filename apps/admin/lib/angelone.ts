@@ -106,7 +106,33 @@ function commonHeaders(jwt: string, feed: string) {
 
 const SEARCH_SCRIP_PATH = "/rest/secure/angelbroking/order/v1/searchScrip";
 
+/**
+ * NOTE: config guard commented out pending report — see KNOWN-ISSUES.md.
+ *
+ * AngelOne login needs all four credentials. Without them the TOTP step throws a
+ * cryptic "Cannot read properties of undefined (reading 'toUpperCase')". This
+ * guard surfaced the real cause; re-enable it (and the call in login()) to get a
+ * clear "missing env var(s): ..." message instead.
+ *
+ * function assertAngelOneConfig(): void {
+ *   const missing = [
+ *     "ANGELONE_API_KEY",
+ *     "ANGELONE_CLIENT_CODE",
+ *     "ANGELONE_MPIN",
+ *     "ANGELONE_TOTP_SECRET",
+ *   ].filter((name) => !process.env[name]?.trim());
+ *
+ *   if (missing.length) {
+ *     throw new Error(
+ *       `AngelOne is not configured — missing env var(s): ${missing.join(", ")}. ` +
+ *         `Add them to apps/admin/.env and restart the dev server.`,
+ *     );
+ *   }
+ * }
+ */
+
 async function login(): Promise<TokenCache> {
+  // assertAngelOneConfig(); // see KNOWN-ISSUES.md
   let lastError = "Authentication failed";
   // Try current window then adjacent windows to handle clock drift
   for (const offset of [0, -1, 1]) {

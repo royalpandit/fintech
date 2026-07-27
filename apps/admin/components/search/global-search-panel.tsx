@@ -1,220 +1,251 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useState, type RefObject } from "react";
-import { createPortal } from "react-dom";
-import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  SEARCH_CATEGORY_LABELS,
-  SEARCH_CATEGORY_ORDER,
-  TRENDING_STOCKS,
-  chartHref,
-  groupMarketHits,
-  normalizeMarketSearchRow,
-  type MarketSearchHit,
-  type SearchCategory,
-} from "@/lib/search-categories";
+import { FiSearch, FiArrowLeft, FiX } from "react-icons/fi";
+import { professionalTypeLabel } from "@/lib/professional-types";
 
-type Props = {
-  query: string;
-  anchorRef: RefObject<HTMLElement | null>;
-  onNavigate?: () => void;
+type Advisor = { id: number; name: string; sub: string; professionalType: string | null };
+type Post = { id: number; title: string; sub: string; sentiment: string };
+type Course = { id: number; title: string };
+type Community = { slug: string; name: string; type: string };
+
+type Results = {
+  advisors: Advisor[];
+  posts: Post[];
+  courses: Course[];
+  communities: Community[];
 };
 
-type PanelCoords = {
-  top: number;
-  left: number;
-  width: number;
-};
+const EMPTY: Results = { advisors: [], posts: [], courses: [], communities: [] };
 
-export default function GlobalSearchPanel({ query, anchorRef, onNavigate }: Props) {
+type TabId = "all" | "advisors" | "posts" | "courses" | "communities";
+
+const TABS: { id: TabId; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "advisors", label: "Professionals" },
+  { id: "posts", label: "Posts" },
+  { id: "courses", label: "Courses" },
+  { id: "communities", label: "Communities" },
+];
+
+export default function GlobalSearchPanel({ onClose }: { onClose: () => void }) {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-  const [coords, setCoords] = useState<PanelCoords>({ top: 0, left: 0, width: 320 });
+  const [q, setQ] = useState("");
+  const [tab, setTab] = useState<TabId>("all");
+  const [results, setResults] = useState<Results>(EMPTY);
   const [loading, setLoading] = useState(false);
-  const [hits, setHits] = useState<MarketSearchHit[]>([]);
-  const [activeTab, setActiveTab] = useState<SearchCategory | "all">("all");
-
-  const trimmed = query.trim();
-  const isEmpty = trimmed.length === 0;
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useLayoutEffect(() => {
-    function updatePosition() {
-      const el = anchorRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      setCoords({
-        top: rect.bottom + 6,
-        left: rect.left,
-        width: Math.max(rect.width, 280),
-      });
-    }
-
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
+    inputRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
     };
-  }, [anchorRef, trimmed, loading, hits.length]);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
+  // Debounced fetch
   useEffect(() => {
-    setActiveTab("all");
-  }, [trimmed]);
-
-  useEffect(() => {
-    if (!trimmed) {
-      setHits([]);
+    const term = q.trim();
+    if (term.length < 2) {
+      setResults(EMPTY);
       setLoading(false);
       return;
     }
-    const timer = setTimeout(async () => {
-      setLoading(true);
+    let cancelled = false;
+    setLoading(true);
+    const t = setTimeout(async () => {
       try {
-        const res = await fetch(
-          `/api/v1/market/search?q=${encodeURIComponent(trimmed)}&exchange=ALL`,
-          { cache: "no-store" },
-        );
+        const res = await fetch(`/api/v1/search?q=${encodeURIComponent(term)}`, {
+          cache: "no-store",
+        });
         const json = await res.json();
-        const rows = (json.data ?? []).map(normalizeMarketSearchRow);
-        setHits(rows.slice(0, 40));
+        if (!cancelled) {
+          setResults({
+            advisors: json.advisors ?? [],
+            posts: json.posts ?? [],
+            courses: json.courses ?? [],
+            communities: json.communities ?? [],
+          });
+        }
       } catch {
-        setHits([]);
+        if (!cancelled) setResults(EMPTY);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }, 280);
-    return () => clearTimeout(timer);
-  }, [trimmed]);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [q]);
 
-  const grouped = useMemo(() => groupMarketHits(hits), [hits]);
+  const go = (href: string) => {
+    onClose();
+    router.push(href);
+  };
 
-  const visibleCategories = useMemo(() => {
-    if (isEmpty) return [] as SearchCategory[];
-    if (activeTab === "all") {
-      return SEARCH_CATEGORY_ORDER.filter((c) => grouped[c].length > 0);
-    }
-    return grouped[activeTab].length > 0 ? [activeTab] : [];
-  }, [isEmpty, activeTab, grouped]);
+  const counts = useMemo(
+    () => ({
+      advisors: results.advisors.length,
+      posts: results.posts.length,
+      courses: results.courses.length,
+      communities: results.communities.length,
+    }),
+    [results],
+  );
+  const total = counts.advisors + counts.posts + counts.courses + counts.communities;
+  const show = (key: Exclude<TabId, "all">) => tab === "all" || tab === key;
 
-  function goTo(hit: MarketSearchHit) {
-    onNavigate?.();
-    router.push(chartHref(hit));
-  }
-
-  function renderRow(hit: MarketSearchHit) {
-    return (
-      <button
-        key={`${hit.exchange}-${hit.token}`}
-        type="button"
-        className="us-search-result-row"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => goTo(hit)}
-      >
-        <div className="us-search-result-main">
-          <span className="us-search-result-title">{hit.display}</span>
-          <span className="us-search-result-sub">{hit.tradingSymbol}</span>
-        </div>
-        <span className="us-search-result-exch">{hit.exchange}</span>
-      </button>
-    );
-  }
-
-  const panel = (
-    <div
-      className="us-global-search-panel us-global-search-panel--fixed"
-      style={{ top: coords.top, left: coords.left, width: coords.width }}
-      role="listbox"
-      aria-label="Search results"
-    >
-      {isEmpty ? (
-        <div className="us-search-panel-section">
-          <div className="us-search-panel-section-head">
-            <span className="us-search-panel-section-title">Trending Stocks</span>
-          </div>
-          <div className="us-search-panel-list">
-            {TRENDING_STOCKS.map((hit) => renderRow(hit))}
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="us-search-category-tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              className={`us-search-category-tab${activeTab === "all" ? " active" : ""}`}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setActiveTab("all")}
-            >
-              All
+  return (
+    <div className="gs-overlay" role="dialog" aria-label="Search" onClick={onClose}>
+      <div className="gs-panel" onClick={(e) => e.stopPropagation()}>
+        {/* Search bar */}
+        <div className="gs-bar">
+          <button type="button" className="gs-back" onClick={onClose} aria-label="Close search">
+            <FiArrowLeft size={18} />
+          </button>
+          <FiSearch size={16} className="gs-bar-icon" />
+          <input
+            ref={inputRef}
+            className="gs-input"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search professionals, posts, courses, communities…"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && q.trim()) {
+                go(`/user/search?q=${encodeURIComponent(q.trim())}`);
+              }
+            }}
+          />
+          {q && (
+            <button type="button" className="gs-clear" onClick={() => setQ("")} aria-label="Clear">
+              <FiX size={16} />
             </button>
-            {SEARCH_CATEGORY_ORDER.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                role="tab"
-                className={`us-search-category-tab${activeTab === cat ? " active" : ""}`}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => setActiveTab(cat)}
-              >
-                {SEARCH_CATEGORY_LABELS[cat]}
-                {grouped[cat].length > 0 ? ` (${grouped[cat].length})` : ""}
-              </button>
-            ))}
-          </div>
-
-          {loading && <p className="us-search-panel-muted">Searching…</p>}
-
-          {!loading && visibleCategories.length === 0 && (
-            <p className="us-search-panel-muted">No results for &quot;{trimmed}&quot;.</p>
           )}
+        </div>
 
-          {!loading &&
-            activeTab === "all" &&
-            visibleCategories.map((cat) => (
-              <div key={cat} className="us-search-panel-section">
-                <div className="us-search-panel-section-head">
-                  <span className="us-search-panel-section-title">
-                    {SEARCH_CATEGORY_LABELS[cat]}
-                  </span>
-                  <span className="us-search-panel-section-count">{grouped[cat].length}</span>
-                </div>
-                <div className="us-search-panel-list">
-                  {grouped[cat].slice(0, 6).map((hit) => renderRow(hit))}
-                </div>
-              </div>
-            ))}
+        {/* Category tabs */}
+        <div className="gs-tabs">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`gs-tab${tab === t.id ? " gs-tab-active" : ""}`}
+              onClick={() => setTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-          {!loading && activeTab !== "all" && grouped[activeTab].length > 0 && (
-            <div className="us-search-panel-section">
-              <div className="us-search-panel-list">
-                {grouped[activeTab].map((hit) => renderRow(hit))}
-              </div>
-            </div>
+        {/* Results */}
+        <div className="gs-results">
+          {q.trim().length < 2 ? (
+            <p className="gs-hint">Type at least 2 characters to search.</p>
+          ) : loading ? (
+            <p className="gs-hint">Searching…</p>
+          ) : total === 0 ? (
+            <p className="gs-hint">No results for &quot;{q.trim()}&quot;.</p>
+          ) : (
+            <>
+              {show("advisors") && counts.advisors > 0 && (
+                <section className="gs-group">
+                  <h4 className="gs-group-title">Finance Professionals</h4>
+                  {results.advisors.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      className="gs-row"
+                      onClick={() => go(`/user/advisors/${a.id}`)}
+                    >
+                      <span className="gs-avatar">{a.name.slice(0, 2).toUpperCase()}</span>
+                      <span className="gs-row-main">
+                        <span className="gs-row-title">{a.name}</span>
+                        <span className="gs-row-sub">
+                          {professionalTypeLabel(a.professionalType)}
+                          {a.sub ? ` · ${a.sub}` : ""}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </section>
+              )}
+
+              {show("posts") && counts.posts > 0 && (
+                <section className="gs-group">
+                  <h4 className="gs-group-title">Posts</h4>
+                  {results.posts.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="gs-row"
+                      onClick={() => go(`/user/markets/${p.id}`)}
+                    >
+                      <span className="gs-row-main">
+                        <span className="gs-row-title">{p.title}</span>
+                        <span className="gs-row-sub">
+                          {p.sub ? `${p.sub} · ` : ""}
+                          {p.sentiment}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </section>
+              )}
+
+              {show("courses") && counts.courses > 0 && (
+                <section className="gs-group">
+                  <h4 className="gs-group-title">Courses</h4>
+                  {results.courses.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className="gs-row"
+                      onClick={() => go(`/user/courses/${c.id}`)}
+                    >
+                      <span className="gs-row-main">
+                        <span className="gs-row-title">{c.title}</span>
+                      </span>
+                    </button>
+                  ))}
+                </section>
+              )}
+
+              {show("communities") && counts.communities > 0 && (
+                <section className="gs-group">
+                  <h4 className="gs-group-title">Communities</h4>
+                  {results.communities.map((g) => (
+                    <button
+                      key={g.slug}
+                      type="button"
+                      className="gs-row"
+                      onClick={() => go(`/user/community/${g.slug}`)}
+                    >
+                      <span className="gs-row-main">
+                        <span className="gs-row-title">{g.name}</span>
+                        <span className="gs-row-sub">{g.type}</span>
+                      </span>
+                    </button>
+                  ))}
+                </section>
+              )}
+            </>
           )}
+        </div>
 
-          {!loading && hits.length > 0 && (
-            <div className="us-search-panel-footer">
-              <Link
-                href={`/user/search?q=${encodeURIComponent(trimmed)}`}
-                className="us-search-panel-more"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={onNavigate}
-              >
-                Search advisors &amp; courses for &quot;{trimmed}&quot; →
-              </Link>
-            </div>
-          )}
-        </>
-      )}
+        {q.trim() && (
+          <button
+            type="button"
+            className="gs-seeall"
+            onClick={() => go(`/user/search?q=${encodeURIComponent(q.trim())}`)}
+          >
+            See all results for &quot;{q.trim()}&quot;
+          </button>
+        )}
+      </div>
     </div>
   );
-
-  if (!mounted) return null;
-  return createPortal(panel, document.body);
 }

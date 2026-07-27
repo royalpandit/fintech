@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err } from "@/lib/api-helpers";
-import { isSubscriptionActive, serializeService } from "@/lib/subscription-services";
+import { isSubscriptionActive, categoryLabel } from "@/lib/subscription-services";
 
 export const dynamic = "force-dynamic";
 
@@ -25,46 +25,52 @@ export async function GET(
   const auth = await requireAuthToken(bearer ?? token);
   const userId = auth?.userId ?? null;
 
-  const services = await prisma.advisorSubscriptionService.findMany({
+  const services = await prisma.subscriptionService.findMany({
     where: {
       advisorUserId,
-      deletedAt: null,
-      status: { in: ["active", "paused"] },
+      isActive: true,
+      paused: false,
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     include: {
       _count: {
         select: {
-          subscriptions: { where: { status: "active", endDate: { gt: new Date() } } },
+          subscriptions: { where: { status: "active", OR: [{ endDate: null }, { endDate: { gt: new Date() } }] } },
         },
       },
     },
   });
 
-  let userSubs: Map<number, { status: string; planType: string | null; endDate: Date | null }> =
-    new Map();
+  let userSubIds = new Set<number>();
   if (userId) {
-    const subs = await prisma.subscription.findMany({
-      where: { userId, serviceId: { in: services.map((s) => s.id) } },
-      select: { serviceId: true, status: true, planType: true, endDate: true },
+    const subs = await prisma.serviceSubscription.findMany({
+      where: {
+        userId,
+        advisorUserId,
+        status: "active",
+        OR: [{ endDate: null }, { endDate: { gt: new Date() } }],
+      },
+      select: { serviceId: true },
     });
-    userSubs = new Map(
-      subs
-        .filter((s) => s.serviceId != null)
-        .map((s) => [s.serviceId!, { status: s.status, planType: s.planType, endDate: s.endDate }]),
-    );
+    userSubIds = new Set(subs.map((s) => s.serviceId));
   }
 
   return ok({
-    data: services.map((s) => {
-      const userSub = userSubs.get(s.id);
-      return {
-        ...serializeService(s),
-        isSubscribed: userSub ? isSubscriptionActive(userSub) : false,
-        userPlanType: userSub?.planType ?? null,
-        userSubStatus: userSub?.status ?? null,
-        canSubscribe: s.status === "active" && !s.pauseNewSubscriptions,
-      };
-    }),
+    data: services.map((s) => ({
+      id: s.id,
+      advisorUserId: s.advisorUserId,
+      name: s.name,
+      category: s.category,
+      categoryLabel: s.category ? categoryLabel(s.category) : null,
+      description: s.description,
+      price: Number(s.price),
+      yearlyPrice: s.yearlyPrice != null ? Number(s.yearlyPrice) : null,
+      hasTrial: s.hasTrial,
+      trialDays: s.trialDays,
+      isBundle: s.isBundle,
+      paused: s.paused,
+      subscriberCount: s._count.subscriptions,
+      isSubscribed: userSubIds.has(s.id),
+    })),
   });
 }

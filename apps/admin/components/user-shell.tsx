@@ -21,17 +21,17 @@ import {
   FiClock,
   FiBookOpen,
   FiTarget,
-  FiAward,
   FiMessageSquare,
   FiMenu,
   FiCreditCard,
   FiX,
   FiSearch,
   FiChevronRight,
+  FiActivity,
 } from "react-icons/fi";
 import { TbRobot } from "react-icons/tb";
-import WatchlistStoreProvider from "@/components/watchlist/watchlist-store-provider";
 import GlobalSearchPanel from "@/components/search/global-search-panel";
+import WatchlistStoreProvider from "@/components/watchlist/watchlist-store-provider";
 
 type UserShellProps = {
   children: React.ReactNode;
@@ -51,8 +51,8 @@ type NavItem = {
 
 const MAIN_NAV: NavItem[] = [
   { label: "Feed", href: "/user/feed", Icon: FiHome },
+  { label: "Trades", href: "/user/trades", Icon: FiActivity },
   { label: "Finance Professionals", href: "/user/advisors", Icon: FiUsers },
-  { label: "Subscriptions", href: "/user/subscriptions", Icon: FiCreditCard },
   { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
   { label: "Messages", href: "/user/messages", Icon: FiMessageCircle },
   { label: "Community", href: "/user/community", Icon: FiMessageSquare },
@@ -63,8 +63,6 @@ const MAIN_NAV: NavItem[] = [
 const INVESTING_NAV: NavItem[] = [
   { label: "Dashboard", href: "/user/home", Icon: FiPieChart },
   { label: "Stock Basket", href: "/user/stock-picks", Icon: FiTarget },
-  { label: "Finuer Basket", href: "/user/finuer-basket", Icon: FiBriefcase },
-  { label: "Competition", href: "/user/competition", Icon: FiAward },
   { label: "Wallet", href: "/user/wallet", Icon: FiCreditCard },
   { label: "Watchlist", href: "/user/watchlist", Icon: FiStar },
   { label: "Portfolio", href: "/user/portfolio", Icon: FiBriefcase },
@@ -75,8 +73,8 @@ const INVESTING_NAV: NavItem[] = [
 
 const BOTTOM_NAV: NavItem[] = [
   { label: "Feed", href: "/user/feed", Icon: FiHome },
-  { label: "Pros", href: "/user/advisors", Icon: FiUsers },
-  { label: "Compete", href: "/user/competition", Icon: FiAward },
+  { label: "Trades", href: "/user/trades", Icon: FiActivity },
+  { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
   { label: "Messages", href: "/user/messages", Icon: FiMessageCircle },
   { label: "Alerts", href: "/user/notifications", Icon: FiBell },
 ];
@@ -111,70 +109,11 @@ export default function UserShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+  // Full search panel (tabs + live results) opened by clicking the header search.
+  const [searchPanelOpen, setSearchPanelOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [search, setSearch] = useState("");
-  const [searchFocused, setSearchFocused] = useState(false);
-  const desktopSearchRef = useRef<HTMLDivElement>(null);
-  const mobileSearchRef = useRef<HTMLDivElement>(null);
-
-  function openSearchPanel() {
-    setSearchFocused(true);
-  }
-
-  function submitSearch() {
-    const q = search.trim();
-    if (!q) {
-      openSearchPanel();
-      return;
-    }
-    router.push(`/user/search?q=${encodeURIComponent(q)}`);
-    setSearchOpen(false);
-    setSearchFocused(false);
-  }
-
-  function closeSearchPanel() {
-    setSearchFocused(false);
-    setSearchOpen(false);
-  }
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (searchOpen) setSearchFocused(true);
-  }, [searchOpen]);
-
-  useEffect(() => {
-    if (!searchFocused) return;
-    let removeListener: (() => void) | undefined;
-    const timer = window.setTimeout(() => {
-      function onDocClick(e: MouseEvent) {
-        const target = e.target as Node;
-        const inside =
-          desktopSearchRef.current?.contains(target) ||
-          mobileSearchRef.current?.contains(target) ||
-          (target instanceof Element && target.closest(".us-global-search-panel"));
-        if (!inside) setSearchFocused(false);
-      }
-      document.addEventListener("mousedown", onDocClick);
-      removeListener = () => document.removeEventListener("mousedown", onDocClick);
-    }, 0);
-    return () => {
-      clearTimeout(timer);
-      removeListener?.();
-    };
-  }, [searchFocused]);
-
-  useEffect(() => {
-    if (!searchFocused) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setSearchFocused(false);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [searchFocused]);
-
-  const searchAnchorRef = isMobile && searchOpen ? mobileSearchRef : desktopSearchRef;
 
   const initials = currentUser ? getInitials(currentUser.fullName) : "G";
   const pnlColor = todayPnL >= 0 ? "#16a34a" : "#dc2626";
@@ -338,28 +277,19 @@ export default function UserShell({
 
           {/* Center zone — search */}
           <div
-            ref={desktopSearchRef}
-            className={`us-search-wrap ${searchOpen ? "us-search-open" : ""}${searchFocused ? " us-search-focused" : ""}`}
+            className="us-search-wrap"
           >
-            <form
-              className="us-search-inner"
-              onSubmit={(e) => {
-                e.preventDefault();
-                submitSearch();
-              }}
+            {/* Acts as a button: clicking anywhere opens the full search panel. */}
+            <button
+              type="button"
+              className="us-search-inner us-search-trigger"
+              onClick={() => setSearchPanelOpen(true)}
             >
               <FiSearch size={14} className="us-search-icon" />
-              <input
-                className="us-search-input"
-                placeholder="Search stocks, mutual funds, options, futures…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onFocus={openSearchPanel}
-                onClick={openSearchPanel}
-                aria-expanded={searchFocused}
-                aria-haspopup="listbox"
-              />
-            </form>
+              <span className="us-search-placeholder">
+                Search professionals, posts, courses…
+              </span>
+            </button>
           </div>
 
           {/* Right zone — actions */}
@@ -369,7 +299,7 @@ export default function UserShell({
               className="us-icon-btn us-search-toggle"
               type="button"
               aria-label="Search"
-              onClick={() => setSearchOpen((v) => !v)}
+              onClick={() => setSearchPanelOpen(true)}
             >
               <FiSearch size={18} />
             </button>
@@ -464,40 +394,9 @@ export default function UserShell({
           </div>
         </div>
 
-        {/* Mobile search bar (expands below header) */}
-        {searchOpen && (
-          <div className="us-mobile-search" ref={mobileSearchRef}>
-            <form
-              className="us-search-inner"
-              onSubmit={(e) => {
-                e.preventDefault();
-                submitSearch();
-              }}
-            >
-              <FiSearch size={14} className="us-search-icon" />
-              <input
-                className="us-search-input"
-                placeholder="Search stocks, mutual funds, options, futures…"
-                autoFocus
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onFocus={openSearchPanel}
-                onClick={openSearchPanel}
-                aria-expanded={searchFocused}
-                aria-haspopup="listbox"
-              />
-            </form>
-          </div>
-        )}
-
-        {searchFocused && (
-          <GlobalSearchPanel
-            query={search}
-            anchorRef={searchAnchorRef}
-            onNavigate={closeSearchPanel}
-          />
-        )}
       </header>
+
+      {searchPanelOpen && <GlobalSearchPanel onClose={() => setSearchPanelOpen(false)} />}
 
       {/* ── Body ── */}
       <div className="us-body">

@@ -36,8 +36,6 @@ export async function PATCH(
       content: body.content,
       title: body.title,
       sentiment: body.sentiment,
-      entryPrice: body.entryPrice,
-      cmp: body.cmp,
       targetPrice: body.targetPrice,
       stopLossPrice: body.stopLossPrice,
       articleBody: body.articleBody,

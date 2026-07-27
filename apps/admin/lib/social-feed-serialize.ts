@@ -8,8 +8,8 @@ type DbPost = {
   postType: string;
   title: string | null;
   sentiment: string | null;
-  entryPrice: unknown;
-  cmp: unknown;
+  entryPrice?: unknown;
+  cmp?: unknown;
   targetPrice: unknown;
   stopLossPrice: unknown;
   thumbnailUrl: string | null;

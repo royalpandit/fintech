@@ -12,7 +12,9 @@ import {
   FiUsers,
   FiSettings,
   FiPlus,
+  FiX,
 } from "react-icons/fi";
+import CreateCommunityPostForm from "@/components/community/create-community-post-form";
 import type { SerializedCommunity } from "@/lib/community";
 import {
   fetchCommunity,
@@ -121,6 +123,8 @@ export default function CommunityDetailClient({
   const [sort, setSort] = useState<CommunitySort>("latest");
   const [loading, setLoading] = useState(true);
   const [joinLoading, setJoinLoading] = useState(false);
+  // Create Post opens over the community page instead of navigating away.
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     setCommunity(initialCommunity);
@@ -220,9 +224,13 @@ export default function CommunityDetailClient({
             </button>
           )}
           {isMember && community.can_create_post && (
-            <Link href={`/user/community/${community.slug}/new`} className="comm-btn comm-btn-primary">
+            <button
+              type="button"
+              className="comm-btn comm-btn-primary"
+              onClick={() => setCreateOpen(true)}
+            >
               <FiPlus size={14} /> Create Post
-            </Link>
+            </button>
           )}
           <Link href={`/user/community/${community.slug}/members`} className="comm-btn comm-btn-ghost">
             <FiUsers size={14} /> Members
@@ -280,7 +288,13 @@ export default function CommunityDetailClient({
               <div className="comm-empty">
                 <p>No posts yet.</p>
                 {isMember && community.can_create_post ? (
-                  <Link href={`/user/community/${community.slug}/new`}>Create the first post</Link>
+                  <button
+                    type="button"
+                    className="comm-linklike"
+                    onClick={() => setCreateOpen(true)}
+                  >
+                    Create the first post
+                  </button>
                 ) : null}
               </div>
             ) : (
@@ -296,6 +310,41 @@ export default function CommunityDetailClient({
             )}
           </div>
         </>
+      )}
+
+      {/* Create Post — rendered over the community page, which stays visible
+          (blurred) behind the modal. */}
+      {createOpen && (
+        <div
+          className="comm-modal-overlay"
+          role="dialog"
+          aria-label="Create post"
+          onClick={() => setCreateOpen(false)}
+        >
+          <div className="comm-modal" onClick={(e) => e.stopPropagation()}>
+            <header className="comm-modal-head">
+              <h2>Create Post</h2>
+              <button
+                type="button"
+                className="comm-modal-close"
+                onClick={() => setCreateOpen(false)}
+                aria-label="Close"
+              >
+                <FiX size={18} />
+              </button>
+            </header>
+            <div className="comm-modal-body">
+              <CreateCommunityPostForm
+                slug={community.slug}
+                communityName={community.name}
+                onCreated={() => {
+                  setCreateOpen(false);
+                  void loadPosts();
+                }}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

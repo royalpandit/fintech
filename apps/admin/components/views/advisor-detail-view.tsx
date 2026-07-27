@@ -66,21 +66,20 @@ export default async function AdvisorDetailView({
       where: { advisorUserId },
       orderBy: { day: "desc" },
     }),
-    prisma.advisorSubscriptionService.findMany({
-      where: { advisorUserId, deletedAt: null },
+    prisma.subscriptionService.findMany({
+      where: { advisorUserId },
       orderBy: { createdAt: "desc" },
       include: {
         _count: {
           select: {
-            subscriptions: { where: { status: "active", endDate: { gt: new Date() } } },
+            subscriptions: { where: { status: "active", OR: [{ endDate: null }, { endDate: { gt: new Date() } }] } },
           },
         },
       },
     }),
     Promise.all([
-      prisma.subscription.aggregate({
-        where: { advisorUserId, serviceId: { not: null } },
-        _sum: { amount: true },
+      prisma.serviceSubscription.count({
+        where: { advisorUserId, status: "active", OR: [{ endDate: null }, { endDate: { gt: new Date() } }] },
       }),
       prisma.advisorWallet.findUnique({ where: { advisorUserId } }),
       prisma.advisorMetricDaily.aggregate({
@@ -90,10 +89,10 @@ export default async function AdvisorDetailView({
     ]),
   ]);
 
-  const [serviceRevenue, wallet, lifetimeMetrics] = profitData;
+  const [_serviceSubCount, wallet, lifetimeMetrics] = profitData;
   const totalProfit = Number(lifetimeMetrics._sum.earningsAmount ?? 0);
   const walletBalance = Number(wallet?.balance ?? 0);
-  const grossSubscriptionRevenue = Number(serviceRevenue._sum.amount ?? 0);
+  const grossSubscriptionRevenue = 0; // tracked via AdvisorWallet now
 
   const profile = advisor.advisorProfile;
   const totalPosts = postStats.reduce((sum, row) => sum + row._count._all, 0);
@@ -267,11 +266,11 @@ export default async function AdvisorDetailView({
                 {subscriptionServices.map((s) => (
                   <tr key={s.id}>
                     <td><strong>{s.name}</strong></td>
-                    <td>{categoryLabel(s.category)}</td>
-                    <td>₹{Number(s.monthlyPrice).toLocaleString("en-IN")}</td>
-                    <td>₹{Number(s.yearlyPrice).toLocaleString("en-IN")}</td>
+                    <td>{s.category ? categoryLabel(s.category) : "—"}</td>
+                    <td>₹{Number(s.price).toLocaleString("en-IN")}</td>
+                    <td>{s.yearlyPrice ? `₹${Number(s.yearlyPrice).toLocaleString("en-IN")}` : "—"}</td>
                     <td>{s._count.subscriptions}</td>
-                    <td style={{ textTransform: "capitalize" }}>{s.status}</td>
+                    <td style={{ textTransform: "capitalize" }}>{s.isActive ? (s.paused ? "paused" : "active") : "inactive"}</td>
                   </tr>
                 ))}
               </tbody>

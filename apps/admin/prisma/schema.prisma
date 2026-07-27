@@ -56,6 +56,9 @@ enum AssetType {
   mf
   commodity
   other
+  futures
+  options
+  currency
 
   @@map("asset_type")
 }
@@ -91,6 +94,56 @@ enum PostAccessType {
   paid
 
   @@map("post_access_type")
+}
+
+/// Lifecycle of an advisor trade call (Trades Phase 1).
+enum TradeStatus {
+  awaiting_entry
+  active
+  target_hit
+  sl_hit
+  closed
+  draft
+  cancelled
+  exited
+
+  @@map("trade_status")
+}
+
+/// How the entry price is expressed on a trade (Trades Phase 3).
+enum TradeEntryType {
+  market
+  exact
+  range
+
+  @@map("trade_entry_type")
+}
+
+/// Structured replacement for the free-text `timeframe` field so trades can be
+/// filtered by horizon. The old string column is kept for back-compat.
+enum TradeTimeframe {
+  intraday
+  short_term
+  medium_term
+  long_term
+
+  @@map("trade_timeframe")
+}
+
+/// Timeline event kinds shown on a trade's "Trade Timeline".
+enum TradeUpdateKind {
+  published
+  entry_triggered
+  sl_moved
+  target_hit
+  sl_hit
+  closed
+  note
+  partial_booked
+  exited
+  cancelled
+
+  @@map("trade_update_kind")
 }
 
 enum ProfessionalType {
@@ -274,25 +327,6 @@ enum InvoiceStatus {
   @@map("invoice_status")
 }
 
-enum SubscriptionServiceCategory {
-  stocks
-  futures
-  options
-  commodity
-  currency
-  crypto
-
-  @@map("subscription_service_category")
-}
-
-enum SubscriptionServiceStatus {
-  active
-  paused
-  deleted
-
-  @@map("subscription_service_status")
-}
-
 // ─── 1) Identity & Access ────────────────────────────────
 
 model Role {
@@ -344,6 +378,9 @@ model User {
   groupBansIssued      GroupBan[]         @relation("banIssuer")
   communityPostShares  CommunityPostShare[]
   reputationLogs       ReputationLog[]
+  broadcasts           DmBroadcast[]         @relation("analystBroadcasts")
+  services             SubscriptionService[] @relation("advisorServices")
+  serviceSubscriptions ServiceSubscription[] @relation("serviceSubscriber")
   dmParticipations     DmThreadParticipant[]
   dmMessages           DmMessage[]
   brokerAccounts       BrokerAccount[]
@@ -373,7 +410,6 @@ model User {
   watchlists           Watchlist[]
   communityReactions   CommunityReaction[]
   advisorPlans         AdvisorPlan[]
-  subscriptionServices AdvisorSubscriptionService[]
   lessonProgress       CourseLessonProgress[]
   courseReviews         CourseReview[]
   devices              UserDevice[]
@@ -389,6 +425,8 @@ model User {
   createdAgents        GeminiAgent[]         @relation("AgentCreator")
   agentChatSessions    AgentChatSession[]
   createdStockPickGroups StockPickGroup[]    @relation("StockPickGroupCreator")
+  communityPostUnlocks CommunityPostUnlock[]
+  marketPostUnlocks    MarketPostUnlock[]
   createdFinuerBaskets   FinuerBasket[]      @relation("FinuerBasketCreator")
   createdCompetitions    Competition[]       @relation("CompetitionCreator")
   competitionParticipants CompetitionParticipant[]
@@ -399,8 +437,6 @@ model User {
   competitionOrders       CompetitionOrder[]
   competitionPredictions  CompetitionPrediction[]
   predictionStats         UserPredictionStats?
-  communityPostUnlocks CommunityPostUnlock[]
-  marketPostUnlocks    MarketPostUnlock[]
 
   @@map("users")
 }
@@ -519,6 +555,21 @@ model MarketPost {
   sentiment           SentimentType
   riskLevel           RiskLevel        @map("risk_level")
   timeframe           String?          @db.VarChar(50)
+  // ── Trades Phase 1/2 ────────────────────────────────────────────────────
+  timeframeType       TradeTimeframe?  @map("timeframe_type")
+  exchange            String?          @db.VarChar(20)
+  entryType           TradeEntryType?  @map("entry_type")
+  entryPriceMin       Decimal?         @map("entry_price_min") @db.Decimal(18, 4)
+  entryPriceMax       Decimal?         @map("entry_price_max") @db.Decimal(18, 4)
+  tradeStatus         TradeStatus      @default(awaiting_entry) @map("trade_status")
+  /// Advisor conviction 1–5 (rendered as stars).
+  conviction          Int?
+  // ── Trades Phase 3: manual exit / close ──
+  exitPrice           Decimal?         @map("exit_price") @db.Decimal(18, 4)
+  exitReason          String?          @map("exit_reason")
+  exitReturnPct       Decimal?         @map("exit_return_pct") @db.Decimal(8, 2)
+  closedAt            DateTime?        @map("closed_at")
+  // ────────────────────────────────────────────────────────────────────────
   targetPrice         Decimal?         @map("target_price") @db.Decimal(18, 4)
   stopLossPrice       Decimal?         @map("stop_loss_price") @db.Decimal(18, 4)
   disclaimer          String
@@ -545,6 +596,8 @@ model MarketPost {
   tags       MarketPostTag[]
   unlocks    MarketPostUnlock[]
   recipients MarketPostRecipient[]
+  updates    MarketPostUpdate[]
+  images     MarketPostImage[]
 
   @@index([advisorUserId])
   @@index([marketSymbol])
@@ -552,7 +605,38 @@ model MarketPost {
   @@index([complianceStatus])
   @@index([postAccessType])
   @@index([boostedUntil])
+  @@index([tradeStatus])
   @@map("market_posts")
+}
+
+/// Timeline entries for a trade — "Entry Triggered", "SL Moved to Cost", etc.
+/// Powers the Trade Timeline on the trade detail screen (Trades Phase 1).
+model MarketPostUpdate {
+  id        Int             @id @default(autoincrement())
+  postId    Int             @map("post_id")
+  kind      TradeUpdateKind @default(note)
+  title     String          @db.VarChar(120)
+  note      String?
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  post MarketPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@map("market_post_updates")
+}
+
+/// Chart screenshots attached to a trade (Trades Phase 2).
+model MarketPostImage {
+  id        Int      @id @default(autoincrement())
+  postId    Int      @map("post_id")
+  url       String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post MarketPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("market_post_images")
 }
 
 // Recipients for an audience="custom" post (specific people the advisor picks).
@@ -666,8 +750,6 @@ model CommunityPost {
   postType      FeedPostType   @default(text) @map("post_type")
   title         String?        @db.VarChar(200)
   sentiment     SentimentType?
-  entryPrice    Decimal?       @map("entry_price") @db.Decimal(18, 4)
-  cmp           Decimal?       @db.Decimal(18, 4)
   targetPrice   Decimal?       @map("target_price") @db.Decimal(18, 4)
   stopLossPrice Decimal?       @map("stop_loss_price") @db.Decimal(18, 4)
   thumbnailUrl  String?        @map("thumbnail_url")
@@ -977,14 +1059,41 @@ model DmMessage {
   attachmentUrl  String?   @map("attachment_url")
   attachmentType String?   @map("attachment_type") @db.VarChar(20) // "image" | "file"
   attachmentName String?   @map("attachment_name")
+  // Set when this message was delivered as part of an analyst broadcast.
+  broadcastId    Int?      @map("broadcast_id")
   createdAt      DateTime  @default(now()) @map("created_at")
   deletedAt      DateTime? @map("deleted_at")
 
-  thread DmThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  sender User     @relation(fields: [senderUserId], references: [id], onDelete: Cascade)
+  thread    DmThread     @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender    User         @relation(fields: [senderUserId], references: [id], onDelete: Cascade)
+  broadcast DmBroadcast? @relation(fields: [broadcastId], references: [id], onDelete: SetNull)
 
   @@index([threadId, createdAt])
   @@map("dm_messages")
+}
+
+/// One analyst broadcast, fanned out into every eligible subscriber's private
+/// chat as individual DmMessages. See MESSAGES-CHANGES.md.
+model DmBroadcast {
+  id             Int       @id @default(autoincrement())
+  analystUserId  Int       @map("analyst_user_id")
+  content        String
+  attachmentUrl  String?   @map("attachment_url")
+  attachmentType String?   @map("attachment_type") @db.VarChar(20)
+  attachmentName String?   @map("attachment_name")
+  recipientCount Int       @default(0) @map("recipient_count")
+  // Empty = all active subscribers; otherwise only these services' subscribers.
+  targetServiceIds Int[]   @default([]) @map("target_service_ids")
+  scheduledAt    DateTime? @map("scheduled_at")
+  sentAt         DateTime? @map("sent_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  analyst  User        @relation("analystBroadcasts", fields: [analystUserId], references: [id], onDelete: Cascade)
+  messages DmMessage[]
+
+  @@index([analystUserId, createdAt])
+  @@index([scheduledAt])
+  @@map("dm_broadcasts")
 }
 
 // ─── 5) Portfolio & Analytics ────────────────────────────
@@ -1425,13 +1534,86 @@ model CourseEnrollment {
   @@map("course_enrollments")
 }
 
+/// A named subscription plan/service an analyst offers (e.g. Equity, Commodity,
+/// Options), or a bundle of services. Powers message filters, chat badges,
+/// broadcast targeting and trade "publish to a service". See
+/// SUBSCRIPTION-SERVICES-CHANGES.md.
+enum ServiceCategory {
+  stocks
+  futures
+  options
+  commodity
+  currency
+  crypto
+
+  @@map("service_category")
+}
+
+model SubscriptionService {
+  id            Int              @id @default(autoincrement())
+  advisorUserId Int              @map("advisor_user_id")
+  name          String           @db.VarChar(80)
+  category      ServiceCategory?
+  description   String?
+  price         Decimal          @db.Decimal(12, 2) // monthly INR
+  yearlyPrice   Decimal?         @map("yearly_price") @db.Decimal(12, 2)
+  hasTrial      Boolean          @default(false) @map("has_trial")
+  trialDays     Int              @default(7) @map("trial_days")
+  isBundle      Boolean          @default(false) @map("is_bundle")
+  /// Paused = existing subscribers keep access, but no new sign-ups.
+  paused        Boolean          @default(false)
+  sortOrder     Int              @default(0) @map("sort_order")
+  isActive      Boolean          @default(true) @map("is_active")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  advisor       User                  @relation("advisorServices", fields: [advisorUserId], references: [id], onDelete: Cascade)
+  bundleItems   ServiceBundleItem[]   @relation("bundleParent")
+  memberOf      ServiceBundleItem[]   @relation("bundleMember")
+  subscriptions ServiceSubscription[]
+
+  @@index([advisorUserId])
+  @@map("subscription_services")
+}
+
+/// Membership of a service inside a bundle service.
+model ServiceBundleItem {
+  bundleId  Int @map("bundle_id")
+  serviceId Int @map("service_id")
+
+  bundle  SubscriptionService @relation("bundleParent", fields: [bundleId], references: [id], onDelete: Cascade)
+  service SubscriptionService @relation("bundleMember", fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([bundleId, serviceId])
+  @@map("service_bundle_items")
+}
+
+/// A user's ownership of a specific analyst service (or bundle). One user can own
+/// several services from the same analyst. Chat access still comes from the flat
+/// Subscription record, which is kept active whenever any service is owned.
+model ServiceSubscription {
+  id            Int                @id @default(autoincrement())
+  userId        Int                @map("user_id")
+  advisorUserId Int                @map("advisor_user_id")
+  serviceId     Int                @map("service_id")
+  status        SubscriptionStatus @default(active)
+  isTrial       Boolean            @default(false) @map("is_trial")
+  startDate     DateTime           @default(now()) @map("start_date")
+  endDate       DateTime?          @map("end_date")
+  createdAt     DateTime           @default(now()) @map("created_at")
+
+  user    User                @relation("serviceSubscriber", fields: [userId], references: [id], onDelete: Cascade)
+  service SubscriptionService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serviceId])
+  @@index([advisorUserId])
+  @@index([serviceId])
+  @@map("service_subscriptions")
+}
+
 model Subscription {
   id                     Int                @id @default(autoincrement())
   userId                 Int                @map("user_id")
   advisorUserId          Int                @map("advisor_user_id")
-  serviceId              Int?               @map("service_id")
-  planType               String?            @map("plan_type") @db.VarChar(20)
-  isTrial                Boolean            @default(false) @map("is_trial")
   amount                 Decimal            @db.Decimal(12, 2)
   currency               String             @default("INR") @db.VarChar(10)
   status                 SubscriptionStatus @default(pending)
@@ -1442,14 +1624,11 @@ model Subscription {
   createdAt              DateTime           @default(now()) @map("created_at")
   updatedAt              DateTime           @updatedAt @map("updated_at")
 
-  user    User                        @relation("subscriber", fields: [userId], references: [id], onDelete: Cascade)
-  advisor User                        @relation("advisorSub", fields: [advisorUserId], references: [id], onDelete: Cascade)
-  service AdvisorSubscriptionService? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  user    User @relation("subscriber", fields: [userId], references: [id], onDelete: Cascade)
+  advisor User @relation("advisorSub", fields: [advisorUserId], references: [id], onDelete: Cascade)
 
   @@unique([userId, advisorUserId])
-  @@unique([userId, serviceId])
   @@index([advisorUserId])
-  @@index([serviceId])
   @@index([status])
   @@map("subscriptions")
 }
@@ -1711,30 +1890,7 @@ model CommunityPostTag {
   @@map("community_post_tags")
 }
 
-// ─── 15) Advisor Subscription Services & Plans ────────────
-
-model AdvisorSubscriptionService {
-  id                    Int                         @id @default(autoincrement())
-  advisorUserId         Int                         @map("advisor_user_id")
-  name                  String                      @db.VarChar(150)
-  category              SubscriptionServiceCategory
-  description           String
-  monthlyPrice          Decimal                     @map("monthly_price") @db.Decimal(12, 2)
-  yearlyPrice           Decimal                     @map("yearly_price") @db.Decimal(12, 2)
-  offerFreeTrial        Boolean                     @default(false) @map("offer_free_trial")
-  status                SubscriptionServiceStatus   @default(active)
-  pauseNewSubscriptions Boolean                     @default(false) @map("pause_new_subscriptions")
-  createdAt             DateTime                    @default(now()) @map("created_at")
-  updatedAt             DateTime                    @updatedAt @map("updated_at")
-  deletedAt             DateTime?                   @map("deleted_at")
-
-  advisor       User           @relation(fields: [advisorUserId], references: [id], onDelete: Cascade)
-  subscriptions Subscription[]
-
-  @@index([advisorUserId, status])
-  @@index([category])
-  @@map("advisor_subscription_services")
-}
+// ─── 15) Advisor Plans ──────────────────────────────────
 
 model AdvisorPlan {
   id            Int      @id @default(autoincrement())
@@ -1993,8 +2149,30 @@ model StockPickStock {
   @@map("stock_pick_stocks")
 }
 
-// ─── 19c) Finuer Basket ─────────────────────────────────
+// ─── 20) Invoices ───────────────────────────────────────
 
+model Invoice {
+  id            Int           @id @default(autoincrement())
+  paymentId     Int           @unique @map("payment_id")
+  userId        Int           @map("user_id")
+  invoiceNumber String        @unique @map("invoice_number") @db.VarChar(50)
+  subtotal      Decimal       @db.Decimal(12, 2)
+  tax           Decimal       @default(0) @db.Decimal(12, 2)
+  totalAmount   Decimal       @map("total_amount") @db.Decimal(12, 2)
+  status        InvoiceStatus @default(draft)
+  issuedAt      DateTime?     @map("issued_at")
+  paidAt        DateTime?     @map("paid_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("invoices")
+}
+
+// --- Finuer Basket & Competition ---------------------
 enum FinuerCatalogStatus {
   active
   inactive
@@ -2186,7 +2364,7 @@ model FinuerBasketRebalanceEvent {
   @@map("finuer_basket_rebalance_events")
 }
 
-// ─── 19d) Competition ───────────────────────────────────
+// --- 19d) Competition -----------------------------------
 
 enum CompetitionStatus {
   draft
@@ -2496,25 +2674,4 @@ model CompetitionOrder {
   @@map("competition_orders")
 }
 
-// ─── 20) Invoices ───────────────────────────────────────
 
-model Invoice {
-  id            Int           @id @default(autoincrement())
-  paymentId     Int           @unique @map("payment_id")
-  userId        Int           @map("user_id")
-  invoiceNumber String        @unique @map("invoice_number") @db.VarChar(50)
-  subtotal      Decimal       @db.Decimal(12, 2)
-  tax           Decimal       @default(0) @db.Decimal(12, 2)
-  totalAmount   Decimal       @map("total_amount") @db.Decimal(12, 2)
-  status        InvoiceStatus @default(draft)
-  issuedAt      DateTime?     @map("issued_at")
-  paidAt        DateTime?     @map("paid_at")
-  createdAt     DateTime      @default(now()) @map("created_at")
-
-  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([status])
-  @@map("invoices")
-}

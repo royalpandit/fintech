@@ -9,6 +9,9 @@ export type FeedFilters = {
   asset: "all" | "equity" | "crypto" | "mf" | "commodity" | "other";
   risk: "all" | "low" | "medium" | "high";
   access: "all" | "free" | "paid";
+  // Trade filters (backed by MarketPost.timeframeType / tradeStatus)
+  horizon: "all" | "intraday" | "short_term" | "medium_term" | "long_term";
+  status: "all" | "awaiting_entry" | "active" | "target_hit" | "sl_hit" | "closed";
 };
 
 export const DEFAULT_FEED_FILTERS: FeedFilters = {
@@ -17,6 +20,8 @@ export const DEFAULT_FEED_FILTERS: FeedFilters = {
   asset: "all",
   risk: "all",
   access: "all",
+  horizon: "all",
+  status: "all",
 };
 
 const GROUPS: { key: keyof FeedFilters; label: string; options: { id: string; label: string }[] }[] = [
@@ -30,12 +35,35 @@ const GROUPS: { key: keyof FeedFilters; label: string; options: { id: string; la
   },
   {
     key: "sentiment",
-    label: "Direction",
+    label: "Recommendation",
     options: [
       { id: "all", label: "All" },
-      { id: "bullish", label: "Bullish" },
-      { id: "bearish", label: "Bearish" },
+      { id: "bullish", label: "Buy" },
+      { id: "bearish", label: "Sell" },
       { id: "neutral", label: "Neutral" },
+    ],
+  },
+  {
+    key: "status",
+    label: "Trade status",
+    options: [
+      { id: "all", label: "All" },
+      { id: "awaiting_entry", label: "Awaiting Entry" },
+      { id: "active", label: "Active" },
+      { id: "target_hit", label: "Target Hit" },
+      { id: "sl_hit", label: "Stop Loss Hit" },
+      { id: "closed", label: "Exited" },
+    ],
+  },
+  {
+    key: "horizon",
+    label: "Investment horizon",
+    options: [
+      { id: "all", label: "All" },
+      { id: "intraday", label: "Intraday" },
+      { id: "short_term", label: "Short Term" },
+      { id: "medium_term", label: "Medium Term" },
+      { id: "long_term", label: "Long Term" },
     ],
   },
   {
@@ -78,6 +106,8 @@ function countActive(f: FeedFilters): number {
   if (f.asset !== "all") n++;
   if (f.risk !== "all") n++;
   if (f.access !== "all") n++;
+  if (f.horizon !== "all") n++;
+  if (f.status !== "all") n++;
   return n;
 }
 

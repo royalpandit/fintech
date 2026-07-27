@@ -10,7 +10,9 @@ import {
   FiFile,
   FiX,
   FiDownload,
+  FiSmile,
 } from "react-icons/fi";
+import EmojiPicker from "@/components/social/emoji-picker";
 
 type Message = {
   id: number;
@@ -20,6 +22,7 @@ type Message = {
   attachmentUrl?: string | null;
   attachmentType?: string | null;
   attachmentName?: string | null;
+  broadcastId?: number | null;
   createdAt: string;
   deletedAt: string | null;
   sender: { id: number; fullName: string };
@@ -67,6 +70,22 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastIdRef = useRef<number>(initialMessages[initialMessages.length - 1]?.id ?? 0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [showEmoji, setShowEmoji] = useState(false);
+
+  const insertEmoji = (emoji: string) => {
+    const el = inputRef.current;
+    if (!el) {
+      setInput((prev) => prev + emoji);
+      return;
+    }
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    setInput((prev) => prev.slice(0, start) + emoji + prev.slice(end));
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + emoji.length, start + emoji.length);
+    });
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -357,6 +376,23 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
                         <em style={{ opacity: 0.6 }}>Message deleted</em>
                       ) : (
                         <>
+                          {m.broadcastId != null && (
+                            <span
+                              style={{
+                                display: "block",
+                                width: "fit-content",
+                                marginBottom: 6,
+                                padding: "1px 8px",
+                                borderRadius: 999,
+                                fontSize: 10,
+                                fontWeight: 700,
+                                background: isMine ? "rgba(255,255,255,0.2)" : "rgba(239,68,68,0.14)",
+                                color: isMine ? "#fff" : "#dc2626",
+                              }}
+                            >
+                              📢 Broadcast
+                            </span>
+                          )}
                           {m.attachmentUrl && m.attachmentType === "image" && (
                             <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -504,6 +540,33 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
             accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
             onChange={onPickFile}
           />
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => setShowEmoji((v) => !v)}
+              title="Emoji"
+              aria-label="Emoji"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 44,
+                height: 44,
+                borderRadius: 10,
+                border: "1px solid var(--border)",
+                background: showEmoji ? "var(--surface-2)" : "var(--surface)",
+                color: "var(--text-muted)",
+                cursor: "pointer",
+              }}
+            >
+              <FiSmile size={18} />
+            </button>
+            {showEmoji && (
+              <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, zIndex: 20 }}>
+                <EmojiPicker onSelect={insertEmoji} onClose={() => setShowEmoji(false)} />
+              </div>
+            )}
+          </div>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}

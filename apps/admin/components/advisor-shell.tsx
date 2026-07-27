@@ -294,7 +294,7 @@ export default function AdvisorShell({
             {[
               { label: "Overview", href: "/advisor/dashboard" },
               { label: "Posts", href: "/advisor/posts" },
-              { label: "Subscribers", href: "/advisor/subscribers" },
+              { label: "Subscription Services", href: "/advisor/services" },
               { label: "Earnings", href: "/advisor/earnings" },
               { label: "Profile", href: "/advisor/profile" },
             ].map((nav) => {
