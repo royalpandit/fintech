@@ -1,8 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiX } from "react-icons/fi";
 import { SUB_PLANS, type SubPlanId } from "@/lib/subscription-plans";
+
+type Service = {
+  id: number;
+  name: string;
+  description: string | null;
+  price: number;
+  yearlyPrice: number | null;
+  hasTrial: boolean;
+  trialDays: number;
+  isBundle: boolean;
+};
 
 /**
  * Shared monthly/yearly plan picker. One paid subscription unlocks both the
@@ -22,20 +33,30 @@ export default function SubscribePlansModal({
   onClose: () => void;
   onSubscribed: (plan: SubPlanId) => void;
 }) {
-  const [subscribing, setSubscribing] = useState<SubPlanId | null>(null);
+  const [subscribing, setSubscribing] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [services, setServices] = useState<Service[]>([]);
+  const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
 
-  async function subscribe(plan: SubPlanId) {
+  // Prefer the advisor's own services (Equity / Commodity / …) when they exist.
+  useEffect(() => {
+    fetch(`/api/v1/advisor/${advisorId}/services`)
+      .then((r) => r.json())
+      .then((d) => setServices(d.data ?? []))
+      .catch(() => setServices([]));
+  }, [advisorId]);
+
+  async function subscribe(opts: { plan?: SubPlanId; serviceId?: number; key: string }) {
     if (subscribing) return;
-    setSubscribing(plan);
+    setSubscribing(opts.key);
     setError("");
     try {
       const res = await fetch(`/api/v1/advisor/${advisorId}/subscribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan: opts.plan, serviceId: opts.serviceId, billing }),
       });
-      if (res.ok) onSubscribed(plan);
+      if (res.ok) onSubscribed((opts.plan ?? "monthly") as SubPlanId);
       else setError("Couldn't subscribe. Please try again.");
     } catch {
       setError("Network error. Please try again.");
@@ -82,36 +103,107 @@ export default function SubscribePlansModal({
         </div>
         <p style={{ margin: "0 0 18px", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5 }}>{subtitle}</p>
 
+        {services.length > 0 && services.some((s) => s.yearlyPrice != null) && (
+          <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+            {(["monthly", "yearly"] as const).map((b) => (
+              <button
+                key={b}
+                type="button"
+                onClick={() => setBilling(b)}
+                style={{
+                  flex: 1,
+                  padding: "8px",
+                  borderRadius: 8,
+                  border: billing === b ? "2px solid #0ea5e9" : "1px solid var(--border)",
+                  background: billing === b ? "var(--primary-soft)" : "var(--surface)",
+                  color: billing === b ? "var(--primary)" : "var(--text)",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  textTransform: "capitalize",
+                  cursor: "pointer",
+                }}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div style={{ display: "grid", gap: 10 }}>
-          {Object.values(SUB_PLANS).map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => subscribe(p.id)}
-              disabled={subscribing !== null}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "14px 16px",
-                borderRadius: 12,
-                border: "1px solid var(--border)",
-                background: "var(--surface-2)",
-                cursor: subscribing ? "wait" : "pointer",
-                textAlign: "left",
-              }}
-            >
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{p.label}</div>
-                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  {p.id === "yearly" ? "Best value · billed yearly" : "Billed monthly"}
-                </div>
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 600, color: "#0ea5e9" }}>
-                {subscribing === p.id ? "…" : `₹${p.price.toLocaleString("en-IN")}`}
-              </div>
-            </button>
-          ))}
+          {services.length > 0
+            ? services.map((s) => {
+                const showYearly = billing === "yearly" && s.yearlyPrice != null;
+                const shownPrice = showYearly ? s.yearlyPrice! : s.price;
+                return (
+                <button
+                  key={`svc-${s.id}`}
+                  type="button"
+                  onClick={() => subscribe({ serviceId: s.id, key: `svc-${s.id}` })}
+                  disabled={subscribing !== null}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "14px 16px",
+                    borderRadius: 12,
+                    border: "1px solid var(--border)",
+                    background: "var(--surface-2)",
+                    cursor: subscribing ? "wait" : "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
+                      {s.name}
+                      {s.isBundle && (
+                        <span style={{ fontSize: 9, fontWeight: 700, color: "#7c3aed", background: "rgba(124,58,237,0.12)", padding: "1px 6px", borderRadius: 999 }}>
+                          BUNDLE
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                      {s.hasTrial ? `${s.trialDays}-day free trial · ` : ""}
+                      {s.description || "Subscription"}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "#0ea5e9", flexShrink: 0, textAlign: "right" }}>
+                    {subscribing === `svc-${s.id}` ? "…" : `₹${shownPrice.toLocaleString("en-IN")}`}
+                    <div style={{ fontSize: 10, fontWeight: 500, color: "var(--text-muted)" }}>
+                      /{showYearly ? "yr" : "mo"}
+                    </div>
+                  </div>
+                </button>
+                );
+              })
+            : Object.values(SUB_PLANS).map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => subscribe({ plan: p.id, key: p.id })}
+                  disabled={subscribing !== null}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "14px 16px",
+                    borderRadius: 12,
+                    border: "1px solid var(--border)",
+                    background: "var(--surface-2)",
+                    cursor: subscribing ? "wait" : "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{p.label}</div>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                      {p.id === "yearly" ? "Best value · billed yearly" : "Billed monthly"}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "#0ea5e9" }}>
+                    {subscribing === p.id ? "…" : `₹${p.price.toLocaleString("en-IN")}`}
+                  </div>
+                </button>
+              ))}
         </div>
 
         {error && (

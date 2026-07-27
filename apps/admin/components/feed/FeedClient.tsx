@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { formatRelativeTime } from "@/lib/format-date";
+import TradePanel from "@/components/trades/trade-panel";
 import {
   FiHeart,
   FiMessageSquare,
@@ -53,6 +54,17 @@ type FeedPost = {
   sentiment: string;
   publishedAt: string | null;
   createdAt: string;
+  // Trades Phase 1/2
+  exchange?: string | null;
+  tradeStatus?: string | null;
+  timeframeType?: string | null;
+  conviction?: number | null;
+  entryPriceMin?: number | string | null;
+  entryPriceMax?: number | string | null;
+  targetPrice?: number | string | null;
+  stopLossPrice?: number | string | null;
+  potential_return_pct?: number | null;
+  has_trade?: boolean;
   post_access_type?: "free" | "paid";
   unlock_price?: number | null;
   is_unlocked?: boolean;
@@ -511,6 +523,28 @@ function PostCard({
         )}
         {locked && <PremiumPostOverlay onUnlock={premium.openUnlock} />}
       </div>
+
+      {/* Trade panel (Trades Phase 1/2). Locked posts show an upside-% teaser. */}
+      <TradePanel
+        locked={locked}
+        hasTrade={postState.has_trade}
+        precomputedReturnPct={postState.potential_return_pct}
+        unlockPrice={postState.unlock_price}
+        onUnlock={premium.openUnlock}
+        data={{
+          sentiment: postState.sentiment,
+          exchange: postState.exchange,
+          marketSymbol: postState.marketSymbol,
+          tradeStatus: postState.tradeStatus,
+          timeframeType: postState.timeframeType,
+          riskLevel: postState.riskLevel,
+          conviction: postState.conviction,
+          entryPriceMin: postState.entryPriceMin,
+          entryPriceMax: postState.entryPriceMax,
+          targetPrice: postState.targetPrice,
+          stopLossPrice: postState.stopLossPrice,
+        }}
+      />
 
       {/* Tags */}
       <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
@@ -1006,6 +1040,8 @@ export default function FeedClient({
       if (filters.asset !== "all" && p.assetType !== filters.asset) return false;
       if (filters.risk !== "all" && p.riskLevel !== filters.risk) return false;
       if (filters.access !== "all" && (p.post_access_type ?? "free") !== filters.access) return false;
+      if (filters.horizon !== "all" && p.timeframeType !== filters.horizon) return false;
+      if (filters.status !== "all" && p.tradeStatus !== filters.status) return false;
       return true;
     });
     return out.sort((a, b) => {

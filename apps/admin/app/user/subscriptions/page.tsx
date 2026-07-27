@@ -16,7 +16,26 @@ export default async function UserSubscriptionsPage() {
   const auth = await requireAuthToken(token);
   if (!auth) redirect("/login");
 
-  const subscriptions = await prisma.subscription.findMany({
+  // Per-service subscriptions (new model)
+  const serviceSubscriptions = await prisma.serviceSubscription.findMany({
+    where: { userId: auth.userId },
+    orderBy: { startDate: "desc" },
+    include: {
+      service: {
+        select: {
+          id: true,
+          name: true,
+          category: true,
+          price: true,
+          yearlyPrice: true,
+          advisor: { select: { id: true, fullName: true } },
+        },
+      },
+    },
+  });
+
+  // Legacy advisor-level subscriptions
+  const legacySubscriptions = await prisma.subscription.findMany({
     where: { userId: auth.userId },
     orderBy: { startDate: "desc" },
     include: {
@@ -27,33 +46,22 @@ export default async function UserSubscriptionsPage() {
           advisorProfile: { select: { sebiRegistrationNo: true } },
         },
       },
-      service: {
-        select: {
-          id: true,
-          name: true,
-          category: true,
-          monthlyPrice: true,
-          yearlyPrice: true,
-        },
-      },
     },
   });
 
-  const availableServices = (
-    await prisma.advisorSubscriptionService.findMany({
-      where: { deletedAt: null, status: "active", pauseNewSubscriptions: false },
-      orderBy: { createdAt: "desc" },
-      take: 12,
-      include: {
-        advisor: { select: { id: true, fullName: true } },
-      },
-    })
-  ).filter((svc) => svc.advisor);
+  const availableServices = await prisma.subscriptionService.findMany({
+    where: { isActive: true, paused: false },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    take: 12,
+    include: {
+      advisor: { select: { id: true, fullName: true } },
+    },
+  });
 
   const subscribedServiceIds = new Set(
-    subscriptions
-      .filter((s) => s.serviceId && isSubscriptionActive(s))
-      .map((s) => s.serviceId!),
+    serviceSubscriptions
+      .filter((s) => isSubscriptionActive(s))
+      .map((s) => s.serviceId),
   );
 
   return (
@@ -68,14 +76,14 @@ export default async function UserSubscriptionsPage() {
       </div>
 
       <article className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Active & past subscriptions</h3>
-        {subscriptions.length === 0 ? (
+        <h3 style={{ marginTop: 0 }}>Active &amp; past subscriptions</h3>
+        {serviceSubscriptions.length === 0 && legacySubscriptions.length === 0 ? (
           <p style={{ margin: 0, color: "var(--text-muted)", fontSize: 14 }}>
             You haven&apos;t subscribed to any plan yet.
           </p>
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
-            {subscriptions.map((s) => {
+            {serviceSubscriptions.map((s) => {
               const active = isSubscriptionActive(s);
               return (
                 <div
@@ -89,16 +97,58 @@ export default async function UserSubscriptionsPage() {
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                     <div>
-                      <strong>{s.service?.name ?? "Advisor subscription"}</strong>
+                      <strong>{s.service.name}</strong>
                       <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
                         Advisor:{" "}
+                        <Link href={`/user/advisors/${s.service.advisor.id}`} style={{ color: "#0ea5e9" }}>
+                          {s.service.advisor.fullName}
+                        </Link>
+                        {s.service.category ? ` · ${categoryLabel(s.service.category)}` : ""}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+                        {s.isTrial ? "Trial" : "plan"} · {formatINR(Number(s.service.price))}
+                        {s.endDate ? ` · until ${new Date(s.endDate).toLocaleDateString("en-IN")}` : ""}
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        alignSelf: "flex-start",
+                        padding: "3px 10px",
+                        borderRadius: 999,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        background: active ? "#d1fae5" : "#f1f5f9",
+                        color: active ? "#047857" : "#64748b",
+                      }}
+                    >
+                      {active ? "Active" : s.status}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+            {legacySubscriptions.map((s) => {
+              const active = isSubscriptionActive(s);
+              return (
+                <div
+                  key={`legacy-${s.id}`}
+                  style={{
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                    padding: 14,
+                    background: "var(--surface-2)",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                    <div>
+                      <strong>Advisor subscription</strong>
+                      <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
                         <Link href={`/user/advisors/${s.advisor.id}`} style={{ color: "#0ea5e9" }}>
                           {s.advisor.fullName}
                         </Link>
-                        {s.service ? ` · ${categoryLabel(s.service.category)}` : ""}
                       </div>
                       <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-                        {s.isTrial ? "Trial" : s.planType ?? "plan"} · {formatINR(Number(s.amount))}
+                        {formatINR(Number(s.amount))}
                         {s.endDate ? ` · until ${new Date(s.endDate).toLocaleDateString("en-IN")}` : ""}
                       </div>
                     </div>
@@ -150,18 +200,20 @@ export default async function UserSubscriptionsPage() {
                 <div>
                   <strong>{svc.name}</strong>
                   <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-                    {svc.advisor!.fullName} · {categoryLabel(svc.category)} · {formatINR(Number(svc.monthlyPrice))}/mo
+                    {svc.advisor.fullName}
+                    {svc.category ? ` · ${categoryLabel(svc.category)}` : ""}
+                    {" · "}{formatINR(Number(svc.price))}/mo
                   </div>
                 </div>
                 {subscribedServiceIds.has(svc.id) ? (
                   <span style={{ fontSize: 12, color: "#047857", fontWeight: 600 }}>Subscribed</span>
                 ) : (
                   <Link
-                    href={`/user/advisors/${svc.advisor!.id}`}
+                    href={`/user/advisors/${svc.advisor.id}`}
                     className="btn-primary"
                     style={{ padding: "8px 14px", fontSize: 12 }}
                   >
-                    View & Subscribe
+                    View &amp; Subscribe
                   </Link>
                 )}
               </div>

@@ -8,9 +8,13 @@ import { UserPageBackLink } from "@/components/user/user-page-layout";
 export default function CreateCommunityPostForm({
   slug,
   communityName,
+  // When rendered inside a modal the parent handles what happens next, and the
+  // back-link/title are supplied by the modal chrome instead.
+  onCreated,
 }: {
   slug: string;
   communityName: string;
+  onCreated?: () => void;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -24,7 +28,10 @@ export default function CreateCommunityPostForm({
   async function onImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files?.length) return;
-    const urls = await Promise.all(Array.from(files).map((file) => uploadSocialFile(file, "image")));
+    const urls: string[] = [];
+    for (const file of Array.from(files)) {
+      urls.push(await uploadSocialFile(file, "image"));
+    }
     setImageUrls((prev) => [...prev, ...urls]);
     setPostType("image");
   }
@@ -44,9 +51,11 @@ export default function CreateCommunityPostForm({
       });
       // Keep the button disabled while we navigate away — do NOT re-enable on
       // success, otherwise a quick second click posts twice.
-      // Return to the community feed, not the single-post detail page.
-      router.replace(`/user/community/${slug}`);
-      router.refresh();
+      if (onCreated) {
+        onCreated();
+        return;
+      }
+      router.push(`/user/community/${slug}/post/${post.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create post");
       setLoading(false);
@@ -54,9 +63,15 @@ export default function CreateCommunityPostForm({
   }
 
   return (
-    <div className="comm-form-wrap">
-      <UserPageBackLink href={`/user/community/${slug}`}>← Back to {communityName}</UserPageBackLink>
-      <h1 className="comm-form-title">Create Post</h1>
+    <div className={onCreated ? "comm-form-wrap comm-form-in-modal" : "comm-form-wrap"}>
+      {!onCreated && (
+        <>
+          <UserPageBackLink href={`/user/community/${slug}`}>
+            Back to {communityName}
+          </UserPageBackLink>
+          <h1 className="comm-form-title">Create Post</h1>
+        </>
+      )}
       <form className="comm-form" onSubmit={onSubmit}>
         <label>
           Post Type

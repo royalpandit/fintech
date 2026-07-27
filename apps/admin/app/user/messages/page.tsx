@@ -1,13 +1,24 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { FiMessageCircle } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
-import MessagesInbox, {
-  type SubscriptionRow,
-  type ThreadRow,
-} from "./messages-inbox";
+import { sendDueBroadcasts } from "@/lib/broadcast";
+import NewChatSearch from "./new-chat-search";
+import ThreadList, { type ThreadItem } from "./thread-list";
 
 export const dynamic = "force-dynamic";
+
+function relTime(date: Date): string {
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
 
 export default async function MessagesPage() {
   const token = cookies().get("access_token")?.value ?? null;
@@ -16,7 +27,10 @@ export default async function MessagesPage() {
 
   const userId = auth.userId;
 
-  const [threads, subscriptions] = await Promise.all([
+  // Deliver any scheduled broadcasts that are now due.
+  await sendDueBroadcasts();
+
+  const [threads, activeSubs] = await Promise.all([
     prisma.dmThread.findMany({
       where: { participants: { some: { userId } } },
       orderBy: { createdAt: "desc" },
@@ -31,52 +45,41 @@ export default async function MessagesPage() {
         },
       },
     }),
+    // Advisors the user "took the service" from = active subscriptions.
+    // These are the only people a user can start a chat with.
     prisma.subscription.findMany({
-      where: { userId },
+      where: { userId, status: "active", endDate: { gt: new Date() } },
       orderBy: { startDate: "desc" },
-      select: {
-        id: true,
-        status: true,
-        amount: true,
-        startDate: true,
-        endDate: true,
-        advisor: {
-          select: {
-            id: true,
-            fullName: true,
-            advisorProfile: { select: { sebiRegistrationNo: true } },
-          },
-        },
-      },
+      select: { advisor: { select: { id: true, fullName: true } } },
     }),
   ]);
 
-  const threadRows: ThreadRow[] = threads.map((t) => {
+  const contacts = activeSubs
+    .map((s) => s.advisor)
+    .filter((a): a is { id: number; fullName: string } => Boolean(a));
+
+  // Flatten threads for the client-side searchable list.
+  const threadItems: ThreadItem[] = threads.map((t) => {
     const partner = t.participants.find((p) => p.userId !== userId)?.user;
     const lastMsg = t.messages[0];
+    const attachmentLabel =
+      lastMsg?.attachmentType === "image"
+        ? "📷 Photo"
+        : lastMsg?.attachmentType === "file"
+          ? `📎 ${lastMsg.attachmentName ?? "Document"}`
+          : null;
+    const body = lastMsg ? lastMsg.contentEnc || attachmentLabel || "" : "";
     return {
       id: t.id,
       partnerName: partner?.fullName ?? "Unknown",
-      lastPreview: lastMsg?.contentEnc ?? "No messages yet",
-      lastAt: lastMsg?.createdAt.toISOString() ?? null,
-      isOwnLast: lastMsg?.senderUserId === userId,
+      preview: lastMsg
+        ? lastMsg.senderUserId === userId
+          ? `You: ${body}`
+          : body
+        : "No messages yet",
+      timeLabel: lastMsg ? relTime(lastMsg.createdAt) : "",
     };
   });
-
-  const subscriptionRows: SubscriptionRow[] = subscriptions
-    .filter((s) => s.advisor)
-    .map((s) => ({
-      id: s.id,
-      status: s.status,
-      amount: Number(s.amount),
-      startDate: s.startDate.toISOString(),
-      endDate: s.endDate?.toISOString() ?? null,
-      advisor: {
-        id: s.advisor!.id,
-        fullName: s.advisor!.fullName,
-        sebiRegistrationNo: s.advisor!.advisorProfile?.sebiRegistrationNo ?? null,
-      },
-    }));
 
   return (
     <section>
@@ -93,11 +96,58 @@ export default async function MessagesPage() {
           Messages
         </h1>
         <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
-          Chat with analysts from your subscriptions
+          Direct conversations with advisors and other users
         </p>
       </div>
 
-      <MessagesInbox threads={threadRows} subscriptions={subscriptionRows} />
+      <NewChatSearch contacts={contacts} />
+
+      {threads.length === 0 ? (
+        <article
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: 14,
+            padding: 48,
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginBottom: 14,
+              color: "var(--text-muted)",
+            }}
+          >
+            <FiMessageCircle size={40} />
+          </div>
+          <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
+            No messages yet
+          </h2>
+          <p style={{ margin: "0 0 18px", fontSize: 13, color: "var(--text-muted)" }}>
+            Message an advisor or a friend by visiting their profile and clicking{" "}
+            <strong>Message</strong>.
+          </p>
+          <Link
+            href="/user/advisors"
+            style={{
+              display: "inline-block",
+              padding: "10px 22px",
+              borderRadius: 10,
+              background: "linear-gradient(135deg, #0ea5e9, #10b981)",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 13,
+              textDecoration: "none",
+            }}
+          >
+            Browse advisors
+          </Link>
+        </article>
+      ) : (
+        <ThreadList threads={threadItems} />
+      )}
     </section>
   );
 }

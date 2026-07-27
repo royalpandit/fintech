@@ -15,13 +15,12 @@ export async function hasActiveAdvisorAccess(
   });
   if (isSubscriptionActive(legacy)) return true;
 
-  const serviceSub = await prisma.subscription.findFirst({
+  const serviceSub = await prisma.serviceSubscription.findFirst({
     where: {
       userId,
       advisorUserId,
-      serviceId: { not: null },
       status: "active",
-      endDate: { gt: new Date() },
+      OR: [{ endDate: null }, { endDate: { gt: new Date() } }],
     },
     select: { id: true },
   });

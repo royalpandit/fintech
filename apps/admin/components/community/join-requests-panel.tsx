@@ -33,7 +33,7 @@ export default function JoinRequestsPanel({ slug, communityName }: { slug: strin
 
   return (
     <div className="comm-panel">
-      <UserPageBackLink href={`/user/community/${slug}`}>← Back to {communityName}</UserPageBackLink>
+      <UserPageBackLink href={`/user/community/${slug}`}>Back to {communityName}</UserPageBackLink>
       <h1 className="comm-form-title">Join Requests</h1>
       {loading ? (
         <p className="comm-loading">Loading...</p>
