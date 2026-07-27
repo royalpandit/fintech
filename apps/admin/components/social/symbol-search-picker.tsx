@@ -34,32 +34,31 @@ export default function SymbolSearchPicker({
   const [q, setQ] = useState("");
   const [results, setResults] = useState<AttachedSymbol[]>([]);
   const [loading, setLoading] = useState(false);
-  // const [error, setError] = useState(""); // see KNOWN-ISSUES.md (market search)
+  const [error, setError] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (q.length < 1) {
       setResults([]);
-      // setError("");
+      setError("");
       return;
     }
     const t = setTimeout(async () => {
       setLoading(true);
-      // setError("");
+      setError("");
       try {
         const res = await fetch(
           `/api/v1/market/search?q=${encodeURIComponent(q)}&exchange=ALL`,
           { cache: "no-store" },
         );
         const json = await res.json();
-        // NOTE: error surfacing commented out pending report — see KNOWN-ISSUES.md.
-        // The API returns { ok: false, error } when AngelOne env vars are missing,
-        // which currently shows as a plain "No symbols found".
-        // if (json.ok === false) {
-        //   setError(json.error || "Symbol search is unavailable right now.");
-        //   setResults([]);
-        //   return;
-        // }
+        // The API returns { ok: false, error } when the market feed is unavailable
+        // (e.g. AngelOne creds missing) — surface it instead of "No symbols found".
+        if (json.ok === false) {
+          setError(json.error || "Symbol search is unavailable right now.");
+          setResults([]);
+          return;
+        }
         const rows: SearchRow[] = json.data ?? [];
         setResults(rows.slice(0, 12).map(normalizeSymbol));
       } finally {
@@ -89,14 +88,12 @@ export default function SymbolSearchPicker({
       />
       <div className="sf-symbol-picker-list">
         {loading && <p className="sf-picker-empty">Searching…</p>}
-        {/* Error message commented out pending report — see KNOWN-ISSUES.md
         {!loading && error && (
           <p className="sf-picker-empty" style={{ color: "#dc2626", lineHeight: 1.5 }}>
             {error}
           </p>
         )}
-        */}
-        {!loading && q && results.length === 0 && (
+        {!loading && !error && q && results.length === 0 && (
           <p className="sf-picker-empty">No symbols found</p>
         )}
         {results.map(r => (
