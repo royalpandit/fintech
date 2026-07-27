@@ -74,23 +74,20 @@ export default function CommunitySettingsForm({
   }
 
   return (
-    <div className="comm-form-wrap">
-      <UserPageBackLink href={`/user/community/${initialCommunity.slug}`}>
-        ← Back to {initialCommunity.name}
-      </UserPageBackLink>
-      <h1 className="comm-form-title">Community Settings</h1>
-      <form className="comm-form" onSubmit={onSubmit}>
+    <div className="comm-form-wrap comm-settings-wrap">
+      <div className="comm-settings-head">
+        <UserPageBackLink href={`/user/community/${initialCommunity.slug}`}>
+          Back to {initialCommunity.name}
+        </UserPageBackLink>
+        <h1 className="comm-form-title comm-settings-title">Community Settings</h1>
+        <p className="comm-settings-sub">
+          Manage how {initialCommunity.name} appears and who can post in it.
+        </p>
+      </div>
+      <form className="comm-form comm-form-grid" onSubmit={onSubmit}>
         <label>
           Name
           <input value={name} onChange={(e) => setName(e.target.value)} disabled={initialCommunity.my_role !== "owner"} />
-        </label>
-        <label>
-          Description
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
-        </label>
-        <label>
-          Rules
-          <textarea value={rules} onChange={(e) => setRules(e.target.value)} rows={4} />
         </label>
         {initialCommunity.my_role === "owner" && (
           <label>
@@ -101,6 +98,14 @@ export default function CommunitySettingsForm({
             </select>
           </label>
         )}
+        <label className="comm-field-full">
+          Description
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+        </label>
+        <label className="comm-field-full">
+          Rules
+          <textarea value={rules} onChange={(e) => setRules(e.target.value)} rows={4} />
+        </label>
 
         <label>
           Posting Permissions
@@ -127,8 +132,8 @@ export default function CommunitySettingsForm({
           Banner
           <input type="file" accept="image/*" onChange={(e) => void onUpload(e, "banner")} />
         </label>
-        {error ? <p className="comm-error">{error}</p> : null}
-        <button type="submit" className="comm-btn comm-btn-primary" disabled={loading}>
+        {error ? <p className="comm-error comm-field-full">{error}</p> : null}
+        <button type="submit" className="comm-btn comm-btn-primary comm-field-full" disabled={loading}>
           {loading ? "Saving..." : "Save Changes"}
         </button>
       </form>

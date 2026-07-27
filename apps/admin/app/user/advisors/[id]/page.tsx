@@ -10,6 +10,7 @@ import FollowToggle from "@/components/FollowToggle";
 import SubscribeButton from "@/components/subscribe-button";
 import { marketPostAudienceWhere } from "@/lib/post-visibility";
 import { professionalTypeLabel } from "@/lib/professional-types";
+import { computeAnalystPerformance } from "@/lib/trades";
 import MessageAdvisorButton from "./MessageAdvisorButton";
 
 export const dynamic = "force-dynamic";
@@ -140,6 +141,40 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
     .toUpperCase();
 
   const accuracy = latestMetrics?.accuracyPct ? Number(latestMetrics.accuracyPct) : 0;
+
+  // Analyst trade performance (Trades Phase 3) — computed from this advisor's
+  // trades (posts with entry/target/SL). Cancelled/drafts excluded from win rate.
+  const perfRows = await prisma.marketPost.findMany({
+    where: {
+      advisorUserId,
+      deletedAt: null,
+      OR: [
+        { entryPriceMin: { not: null } },
+        { targetPrice: { not: null } },
+        { stopLossPrice: { not: null } },
+      ],
+    },
+    select: {
+      tradeStatus: true,
+      exitReturnPct: true,
+      entryPriceMin: true,
+      entryPriceMax: true,
+      targetPrice: true,
+      stopLossPrice: true,
+      sentiment: true,
+    },
+  });
+  const performance = computeAnalystPerformance(
+    perfRows.map((r) => ({
+      tradeStatus: r.tradeStatus,
+      exitReturnPct: r.exitReturnPct != null ? Number(r.exitReturnPct) : null,
+      entryPriceMin: r.entryPriceMin != null ? Number(r.entryPriceMin) : null,
+      entryPriceMax: r.entryPriceMax != null ? Number(r.entryPriceMax) : null,
+      targetPrice: r.targetPrice != null ? Number(r.targetPrice) : null,
+      stopLossPrice: r.stopLossPrice != null ? Number(r.stopLossPrice) : null,
+      sentiment: r.sentiment,
+    })),
+  );
 
   return (
     <section>
@@ -314,8 +349,12 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
       >
         {[
           { label: "Active Subscribers", value: subscriberCount.toLocaleString(), color: "#0ea5e9" },
-          { label: "Accuracy", value: `${accuracy.toFixed(1)}%`, color: "#16a34a" },
-          { label: "Approved Posts", value: posts.length.toLocaleString(), color: "#7c3aed" },
+          {
+            label: "Win Rate",
+            value: performance.winRatePct != null ? `${performance.winRatePct.toFixed(0)}%` : "—",
+            color: "#16a34a",
+          },
+          { label: "Total Trades", value: performance.total.toLocaleString(), color: "#7c3aed" },
           {
             label: "Member Since",
             value: advisor.createdAt.toLocaleDateString("en-US", {
@@ -343,6 +382,48 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
           </article>
         ))}
       </div>
+
+      {/* Analyst track record (Trades Phase 3) */}
+      {performance.total > 0 && (
+        <article
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: 14,
+            padding: 18,
+            marginBottom: 20,
+          }}
+        >
+          <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
+            Track Record
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: 12 }}>
+            {[
+              { label: "Winning", value: performance.winning, color: "#16a34a" },
+              { label: "Losing", value: performance.losing, color: "#dc2626" },
+              { label: "Open", value: performance.open, color: "#f59e0b" },
+              { label: "Cancelled", value: performance.cancelled, color: "var(--text-muted)" },
+              {
+                label: "Avg Return",
+                value:
+                  performance.avgReturnPct != null
+                    ? `${performance.avgReturnPct >= 0 ? "+" : ""}${performance.avgReturnPct.toFixed(1)}%`
+                    : "—",
+                color: (performance.avgReturnPct ?? 0) >= 0 ? "#16a34a" : "#dc2626",
+              },
+            ].map((s) => (
+              <div key={s.label} style={{ background: "var(--surface-2)", borderRadius: 10, padding: "10px 12px" }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 3 }}>{s.label}</div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: s.color }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+          <p style={{ margin: "12px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
+            Win rate and returns are computed from closed trades. Cancelled trades don&apos;t count
+            toward win rate.
+          </p>
+        </article>
+      )}
 
       {/* Posts feed */}
       <h2 style={{ margin: "0 0 14px", fontSize: 18, fontWeight: 600, color: "var(--text)" }}>

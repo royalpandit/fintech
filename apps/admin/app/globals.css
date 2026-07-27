@@ -3174,12 +3174,33 @@ body.terminal-active .us-content {
 }
 
 .user-page-back-link {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   margin-bottom: 12px;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
+  transition: color 0.15s;
+}
+.user-page-back-link:hover {
+  color: var(--text);
+}
+.user-page-back-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.15s;
+}
+.user-page-back-link:hover .user-page-back-icon {
+  background: var(--surface-2);
+  transform: translateX(-2px);
 }
 
 .user-page-back-link:hover {
@@ -3697,6 +3718,56 @@ body.terminal-active .us-content {
   padding: 0 6px 0 0;
   font-size: 14px;
   line-height: 1;
+}
+
+/* Rename (pencil) on the active tab — makes renaming discoverable instead of
+   hiding it behind a double-click. */
+.wl-tab-edit {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+.wl-tab-edit:hover {
+  color: var(--primary);
+}
+
+/* Sync button — a proper pill instead of a cramped icon square. */
+.wl-sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.wl-sync-btn:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.wl-sync-btn:disabled {
+  opacity: 0.75;
+  cursor: wait;
+}
+.wl-sync-spin {
+  animation: wl-spin 0.8s linear infinite;
+}
+@keyframes wl-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .wl-tab-del:hover {
@@ -6033,6 +6104,878 @@ body.terminal-active .us-content {
   white-space: pre-wrap;
   word-break: break-word;
   padding: 12px 16px 0;
+}
+/* ══════════════════════════════
+   COMMUNITY CREATE-POST MODAL
+   Opens over the community page, which stays visible (blurred) behind it.
+══════════════════════════════ */
+.comm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 190;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  animation: gs-fade-in 0.15s ease-out;
+}
+.comm-modal {
+  width: min(560px, 100%);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+.comm-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.comm-modal-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.comm-modal-close {
+  border: none;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.comm-modal-close:hover {
+  color: var(--text);
+}
+.comm-modal-body {
+  overflow-y: auto;
+  padding: 4px 18px 18px;
+  scrollbar-width: thin;
+}
+/* Inside the modal the form is already framed by the modal chrome. */
+.comm-form-in-modal {
+  max-width: none;
+  margin: 0;
+}
+.comm-form-in-modal .comm-form {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin-top: 12px;
+}
+/* Settings fills the content area like every other page instead of sitting as a
+   narrow centred island with dead space either side. */
+.comm-settings-wrap {
+  max-width: none;
+  margin: 0;
+  width: 100%;
+}
+.comm-settings-head {
+  margin-bottom: 18px;
+}
+.comm-settings-title {
+  text-align: left;
+  margin: 4px 0 2px;
+}
+.comm-settings-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+/* Fluid columns: 2 on a normal screen, 3+ on a wide one; long fields span all. */
+.comm-form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  column-gap: 18px;
+}
+.comm-form-grid .comm-field-full {
+  grid-column: 1 / -1;
+}
+/* Higher specificity so it beats the centred submit rule defined further down. */
+.comm-form.comm-form-grid > button[type="submit"] {
+  justify-self: start;
+  min-width: 200px;
+}
+@media (max-width: 720px) {
+  .comm-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.comm-linklike {
+  border: none;
+  background: none;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+.comm-linklike:hover {
+  text-decoration: underline;
+}
+
+/* ══════════════════════════════
+   BROADCAST COMPOSER
+══════════════════════════════ */
+.bc-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+.bc-modal {
+  width: min(520px, 100%);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+.bc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.bc-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.bc-close {
+  border: none;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.bc-body {
+  padding: 16px 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bc-recipients {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.bc-recipients strong {
+  color: var(--text);
+  font-size: 14px;
+}
+.bc-recip-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bc-recip-chip.active {
+  background: var(--primary-soft);
+  border-color: #0ea5e9;
+  color: var(--primary);
+}
+.svc-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.svc-tab {
+  padding: 9px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.svc-tab.active {
+  color: var(--primary);
+  border-bottom-color: #0ea5e9;
+}
+.bc-textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  box-sizing: border-box;
+}
+.bc-attachment {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+.bc-attachment img {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.bc-attachment span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bc-attachment button {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.bc-toolbar {
+  display: flex;
+  gap: 8px;
+}
+.bc-attach {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bc-delivery {
+  display: flex;
+  gap: 8px;
+}
+.bc-delivery label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bc-delivery label.active {
+  border-color: #0ea5e9;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.bc-schedule {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  box-sizing: border-box;
+}
+.bc-error {
+  margin: 0;
+  font-size: 12.5px;
+  color: #dc2626;
+}
+.bc-done {
+  margin: 0;
+  font-size: 12.5px;
+  color: #047857;
+  font-weight: 600;
+}
+.bc-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+}
+.bc-cancel {
+  padding: 10px 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.bc-send {
+  padding: 10px 22px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.bc-send:disabled,
+.bc-cancel:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* ══════════════════════════════
+   GLOBAL SEARCH PANEL
+══════════════════════════════ */
+.gs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  /* Blur and dim everything behind the search panel. */
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 8vh 16px 16px;
+  animation: gs-fade-in 0.15s ease-out;
+}
+@keyframes gs-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.gs-panel {
+  width: min(680px, 100%);
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+.gs-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.gs-back,
+.gs-clear {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border-radius: 8px;
+}
+.gs-back:hover,
+.gs-clear:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.gs-bar-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.gs-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  min-width: 0;
+}
+.gs-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.gs-tabs::-webkit-scrollbar {
+  display: none;
+}
+.gs-tab {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.gs-tab-active {
+  background: #0ea5e9;
+  border-color: transparent;
+  color: #fff;
+}
+.gs-results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 0;
+  scrollbar-width: thin;
+}
+.gs-hint {
+  margin: 0;
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.gs-group {
+  padding: 6px 0 10px;
+}
+.gs-group-title {
+  margin: 0;
+  padding: 8px 16px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+}
+.gs-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gs-row:hover {
+  background: var(--surface-2);
+}
+.gs-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0ea5e9;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.13), rgba(16, 185, 129, 0.13));
+}
+.gs-row-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+.gs-row-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gs-row-sub {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+.gs-seeall {
+  border: none;
+  border-top: 1px solid var(--border);
+  background: transparent;
+  color: #0ea5e9;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 12px;
+  cursor: pointer;
+}
+.gs-seeall:hover {
+  background: var(--surface-2);
+}
+
+/* Header search acts as a button that opens the panel — keeps the pill look of
+   the input it replaced. */
+.us-search-trigger {
+  width: 100%;
+  height: 38px;
+  padding: 0 14px 0 36px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--us-bg);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s;
+}
+.us-search-trigger:hover {
+  border-color: var(--us-border);
+}
+.us-search-placeholder {
+  color: var(--us-muted, var(--text-muted));
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════
+   TRADE PANEL (Trades Phase 1/2)
+══════════════════════════════ */
+.trade-panel {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.trade-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  flex-wrap: wrap;
+}
+.trade-side {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+.trade-side-buy {
+  color: #16a34a;
+}
+.trade-side-sell {
+  color: #dc2626;
+}
+.trade-symbol {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.trade-status {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.trade-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border-top: 1px solid var(--border);
+}
+.trade-cell {
+  background: var(--surface);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.trade-cell-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+}
+.trade-cell-value {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trade-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  flex-wrap: wrap;
+}
+.trade-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.trade-chip-time {
+  color: #0ea5e9;
+  border-color: rgba(14, 165, 233, 0.3);
+}
+.trade-chip-risk-high {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.3);
+}
+.trade-chip-risk-medium {
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+.trade-chip-risk-low {
+  color: #16a34a;
+  border-color: rgba(22, 163, 74, 0.3);
+}
+.trade-stars {
+  font-size: 13px;
+  color: #f59e0b;
+  letter-spacing: 1px;
+  margin-left: auto;
+}
+.trade-stars-empty {
+  color: var(--border);
+}
+
+/* Trades section: asset tabs + quick chips */
+.trades-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 12px 0 4px;
+  scrollbar-width: none;
+}
+.trades-tabs::-webkit-scrollbar {
+  display: none;
+}
+.trades-tab {
+  flex-shrink: 0;
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.trades-tab.active {
+  background: #0ea5e9;
+  border-color: transparent;
+  color: #fff;
+}
+.trades-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 4px 0 16px;
+}
+.trades-chip {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.trades-chip.active {
+  background: var(--primary-soft);
+  border-color: #0ea5e9;
+  color: var(--primary);
+}
+
+/* Locked teaser (paid / not-subscribed) */
+.trade-panel-locked .trade-locked-body {
+  position: relative;
+}
+.trade-locked-blur {
+  filter: blur(5px);
+  pointer-events: none;
+  user-select: none;
+}
+.trade-locked-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  padding: 8px;
+}
+.trade-locked-lock {
+  font-size: 20px;
+}
+.trade-locked-msg {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.trade-locked-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.trade-locked-upside {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border: 1px solid #16a34a55;
+  border-radius: 10px;
+}
+.trade-unlock-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.trade-unlock-btn:hover {
+  filter: brightness(1.05);
+}
+@media (max-width: 560px) {
+  .trade-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Trade timeline (detail view) */
+.trade-timeline {
+  display: flex;
+  flex-direction: column;
+}
+.trade-timeline-row {
+  display: flex;
+  gap: 14px;
+}
+.trade-timeline-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 14px;
+}
+.trade-timeline-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.trade-timeline-line {
+  flex: 1;
+  width: 2px;
+  background: var(--border);
+  margin: 4px 0;
+  min-height: 14px;
+}
+.trade-timeline-body {
+  padding-bottom: 16px;
+  flex: 1;
+  min-width: 0;
+}
+.trade-timeline-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.trade-timeline-head strong {
+  font-size: 13.5px;
+  color: var(--text);
+}
+.trade-timeline-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.trade-timeline-note {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.sf-tag {
+  text-decoration: none;
+  cursor: pointer;
+}
+.sf-tag:hover {
+  text-decoration: underline;
 }
 .sf-tag.hash {
   color: #0ea5e9;

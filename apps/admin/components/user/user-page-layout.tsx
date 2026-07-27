@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { FiArrowLeft } from "react-icons/fi";
 
 /** Matches Advisors page: full-width section inside `.us-content` */
 export function UserPageSection({ children }: { children: ReactNode }) {
@@ -56,6 +57,9 @@ export function UserPageCard({ children, className = "" }: { children: ReactNode
 export function UserPageBackLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <Link href={href} className="user-page-back-link">
+      <span className="user-page-back-icon">
+        <FiArrowLeft size={14} />
+      </span>
       {children}
     </Link>
   );

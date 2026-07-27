@@ -27,8 +27,10 @@ import {
   FiX,
   FiSearch,
   FiChevronRight,
+  FiActivity,
 } from "react-icons/fi";
 import { TbRobot } from "react-icons/tb";
+import GlobalSearchPanel from "@/components/search/global-search-panel";
 import WatchlistStoreProvider from "@/components/watchlist/watchlist-store-provider";
 
 type UserShellProps = {
@@ -49,6 +51,7 @@ type NavItem = {
 
 const MAIN_NAV: NavItem[] = [
   { label: "Feed", href: "/user/feed", Icon: FiHome },
+  { label: "Trades", href: "/user/trades", Icon: FiActivity },
   { label: "Finance Professionals", href: "/user/advisors", Icon: FiUsers },
   { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
   { label: "Messages", href: "/user/messages", Icon: FiMessageCircle },
@@ -70,7 +73,7 @@ const INVESTING_NAV: NavItem[] = [
 
 const BOTTOM_NAV: NavItem[] = [
   { label: "Feed", href: "/user/feed", Icon: FiHome },
-  { label: "Pros", href: "/user/advisors", Icon: FiUsers },
+  { label: "Trades", href: "/user/trades", Icon: FiActivity },
   { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
   { label: "Messages", href: "/user/messages", Icon: FiMessageCircle },
   { label: "Alerts", href: "/user/notifications", Icon: FiBell },
@@ -106,17 +109,10 @@ export default function UserShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+  // Full search panel (tabs + live results) opened by clicking the header search.
+  const [searchPanelOpen, setSearchPanelOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [search, setSearch] = useState("");
-
-  function submitSearch() {
-    const q = search.trim();
-    if (!q) return;
-    router.push(`/user/search?q=${encodeURIComponent(q)}`);
-    setSearchOpen(false);
-  }
   const menuRef = useRef<HTMLDivElement>(null);
 
   const initials = currentUser ? getInitials(currentUser.fullName) : "G";
@@ -281,23 +277,19 @@ export default function UserShell({
 
           {/* Center zone — search */}
           <div
-            className={`us-search-wrap ${searchOpen ? "us-search-open" : ""}`}
+            className="us-search-wrap"
           >
-            <form
-              className="us-search-inner"
-              onSubmit={(e) => {
-                e.preventDefault();
-                submitSearch();
-              }}
+            {/* Acts as a button: clicking anywhere opens the full search panel. */}
+            <button
+              type="button"
+              className="us-search-inner us-search-trigger"
+              onClick={() => setSearchPanelOpen(true)}
             >
               <FiSearch size={14} className="us-search-icon" />
-              <input
-                className="us-search-input"
-                placeholder="Search advisors, symbols, courses…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </form>
+              <span className="us-search-placeholder">
+                Search professionals, posts, courses…
+              </span>
+            </button>
           </div>
 
           {/* Right zone — actions */}
@@ -307,7 +299,7 @@ export default function UserShell({
               className="us-icon-btn us-search-toggle"
               type="button"
               aria-label="Search"
-              onClick={() => setSearchOpen((v) => !v)}
+              onClick={() => setSearchPanelOpen(true)}
             >
               <FiSearch size={18} />
             </button>
@@ -402,28 +394,9 @@ export default function UserShell({
           </div>
         </div>
 
-        {/* Mobile search bar (expands below header) */}
-        {searchOpen && (
-          <div className="us-mobile-search">
-            <form
-              className="us-search-inner"
-              onSubmit={(e) => {
-                e.preventDefault();
-                submitSearch();
-              }}
-            >
-              <FiSearch size={14} className="us-search-icon" />
-              <input
-                className="us-search-input"
-                placeholder="Search advisors, symbols, courses…"
-                autoFocus
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </form>
-          </div>
-        )}
       </header>
+
+      {searchPanelOpen && <GlobalSearchPanel onClose={() => setSearchPanelOpen(false)} />}
 
       {/* ── Body ── */}
       <div className="us-body">

@@ -75,6 +75,10 @@ export default async function UserFeedPage() {
   // Hide subscriber-only posts from non-subscribers.
   const audienceWhere = await marketPostAudienceWhere(userId);
 
+  // Structured trades live in the dedicated /user/trades section; the feed shows
+  // only normal analysis posts (no entry/target/SL). See TRADES-PHASE1-2-CHANGES.md.
+  const notTradeWhere = { entryPriceMin: null, targetPrice: null, stopLossPrice: null };
+
   const [followedPosts, discoverPostsRaw, suggestedAdvisors, trendingSymbols] =
     await Promise.all([
       followedIds.length > 0
@@ -83,6 +87,7 @@ export default async function UserFeedPage() {
               complianceStatus: "approved",
               deletedAt: null,
               advisorUserId: { in: followedIds, notIn: blockedIds },
+              ...notTradeWhere,
               ...audienceWhere,
             },
             orderBy,
@@ -96,6 +101,7 @@ export default async function UserFeedPage() {
           complianceStatus: "approved",
           deletedAt: null,
           ...(notInDiscoverIds.length > 0 ? { advisorUserId: { notIn: notInDiscoverIds } } : {}),
+          ...notTradeWhere,
           ...audienceWhere,
         },
         orderBy,

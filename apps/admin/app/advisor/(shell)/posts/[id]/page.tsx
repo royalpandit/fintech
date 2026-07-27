@@ -7,6 +7,7 @@ import { requireAuthToken } from "@/lib/auth";
 import { isBoostActive } from "@/lib/post-boost";
 import PostActions from "./post-actions";
 import BoostButton from "./boost-button";
+import TradeUpdatePanel from "./trade-update-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -279,6 +280,11 @@ export default async function AdvisorPostDetailPage({ params }: { params: { id: 
         boostedUntil={post.boostedUntil ? post.boostedUntil.toISOString() : null}
         approved={post.complianceStatus === "approved"}
       />
+
+      {post.complianceStatus === "approved" &&
+        (post.targetPrice || post.stopLossPrice || post.entryPriceMin) && (
+          <TradeUpdatePanel postId={post.id} currentStatus={post.tradeStatus} />
+        )}
 
       <article className="card" style={{ marginTop: 16 }}>
         <h3 style={{ marginTop: 0 }}>Comments ({post._count.comments})</h3>
