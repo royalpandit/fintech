@@ -51,7 +51,7 @@ export default function CreateCommunityForm() {
 
   return (
     <div className="comm-form-wrap">
-      <UserPageBackLink href="/user/community">← Back to Communities</UserPageBackLink>
+      <UserPageBackLink href="/user/community">Back to Communities</UserPageBackLink>
       <h1 className="comm-form-title">Create a Community</h1>
       <form className="comm-form" onSubmit={onSubmit}>
         <label>

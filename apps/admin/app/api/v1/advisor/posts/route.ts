@@ -5,12 +5,24 @@ import { requireRole } from "@/lib/auth";
 import { parsePostAccessType } from "@/lib/post-access";
 import { getBoostTier } from "@/lib/post-boost";
 import { parseAudience } from "@/lib/post-visibility";
+import { isTradeTimeframe, formatPrice, formatEntryRange } from "@/lib/trades";
+import { subscribersForServiceIds } from "@/lib/subscription-services";
 
 export const dynamic = "force-dynamic";
 
 const VALID_SENTIMENT = ["bullish", "bearish", "neutral"] as const;
 const VALID_RISK = ["low", "medium", "high"] as const;
-const VALID_ASSET = ["equity", "crypto", "mf", "commodity", "other"] as const;
+const VALID_ASSET = [
+  "equity",
+  "crypto",
+  "mf",
+  "commodity",
+  "other",
+  "futures",
+  "options",
+  "currency",
+] as const;
+const VALID_ENTRY_TYPE = ["market", "exact", "range"] as const;
 
 export async function GET(req: NextRequest) {
   const auth = await requireRole(req, ["advisor"]);
@@ -75,7 +87,36 @@ export async function POST(req: NextRequest) {
     audience?: string;
     recipientUserIds?: number[];
     scheduledAt?: string;
+    // ── Trades Phase 1/2 ──
+    exchange?: string;
+    entryPriceMin?: number;
+    entryPriceMax?: number;
+    entryType?: string;
+    timeframeType?: string;
+    conviction?: number;
+    imageUrls?: string[];
+    saveDraft?: boolean;
+    serviceIds?: number[]; // publish to these subscription services only
   }>(req);
+
+  const entryType = VALID_ENTRY_TYPE.includes(body.entryType as never)
+    ? (body.entryType as (typeof VALID_ENTRY_TYPE)[number])
+    : null;
+  const saveDraft = body.saveDraft === true;
+
+  // Trades Phase 1/2 — optional trade metadata.
+  const timeframeType = isTradeTimeframe(body.timeframeType) ? body.timeframeType : null;
+  const entryPriceMin =
+    typeof body.entryPriceMin === "number" && body.entryPriceMin > 0 ? body.entryPriceMin : null;
+  const entryPriceMax =
+    typeof body.entryPriceMax === "number" && body.entryPriceMax > 0 ? body.entryPriceMax : null;
+  const conviction =
+    typeof body.conviction === "number" && body.conviction >= 1 && body.conviction <= 5
+      ? Math.round(body.conviction)
+      : null;
+  const chartImages = Array.isArray(body.imageUrls)
+    ? body.imageUrls.filter((u) => typeof u === "string" && u.trim()).slice(0, 6)
+    : [];
 
   // Optional scheduled publish time. Only honoured if it's a valid future date.
   let scheduledAt: Date | null = null;
@@ -86,12 +127,23 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const audience = parseAudience(body.audience);
+  let audience = parseAudience(body.audience);
 
-  // For "custom" audience, keep only ids that are actually active subscribers of
-  // this advisor — you can only send to people who've subscribed to you.
+  const serviceIds = Array.isArray(body.serviceIds)
+    ? body.serviceIds.filter((n) => Number.isInteger(n))
+    : [];
+
+  // Publish-to-service: expand the chosen services to their subscribers and treat
+  // the post as a custom-audience post targeted at exactly those users.
   let recipientIds: number[] = [];
-  if (audience === "custom") {
+  if (serviceIds.length > 0) {
+    audience = "custom";
+    recipientIds = await subscribersForServiceIds(auth.userId, serviceIds);
+    if (recipientIds.length === 0) {
+      return err("No subscribers own the selected service(s)");
+    }
+  } else if (audience === "custom") {
+    // For a hand-picked custom audience, keep only active subscribers of this advisor.
     const requested = Array.isArray(body.recipientUserIds)
       ? body.recipientUserIds.filter((n) => Number.isInteger(n))
       : [];
@@ -165,22 +217,30 @@ export async function POST(req: NextRequest) {
       sentiment: sentiment as any,
       riskLevel: riskLevel as any,
       timeframe: body.timeframe?.trim() || null,
+      timeframeType,
+      exchange: body.exchange?.trim().toUpperCase() || null,
+      entryType,
+      entryPriceMin,
+      entryPriceMax,
+      conviction,
+      // Draft trades stay in tradeStatus 'draft' and are only visible to the author.
+      tradeStatus: saveDraft ? "draft" : "awaiting_entry",
       targetPrice: typeof body.targetPrice === "number" ? body.targetPrice : null,
       stopLossPrice: typeof body.stopLossPrice === "number" ? body.stopLossPrice : null,
       disclaimer,
-      complianceStatus: complianceStatus as any,
-      complianceRiskScore,
+      complianceStatus: saveDraft ? "pending" : (complianceStatus as any),
+      complianceRiskScore: saveDraft ? null : complianceRiskScore,
       postAccessType,
       unlockPrice:
         postAccessType === "paid" && typeof body.unlockPrice === "number"
           ? body.unlockPrice
           : null,
-      // Flagged → unpublished (awaits review). Scheduled → unpublished until due.
-      // Otherwise publish now.
-      publishedAt: matchedPhrase || scheduledAt ? null : new Date(),
-      scheduledAt: matchedPhrase ? null : scheduledAt,
-      boostedUntil,
-      boostTier: willBoost && boostTierObj ? boostTierObj.id : null,
+      // Draft → unpublished. Flagged → unpublished (awaits review). Scheduled →
+      // unpublished until due. Otherwise publish now.
+      publishedAt: saveDraft || matchedPhrase || scheduledAt ? null : new Date(),
+      scheduledAt: saveDraft || matchedPhrase ? null : scheduledAt,
+      boostedUntil: saveDraft ? null : boostedUntil,
+      boostTier: !saveDraft && willBoost && boostTierObj ? boostTierObj.id : null,
       audience,
     },
   });
@@ -191,6 +251,30 @@ export async function POST(req: NextRequest) {
       skipDuplicates: true,
     });
   }
+
+  // ── Trades Phase 1/2 ──────────────────────────────────────────────────
+  if (chartImages.length > 0) {
+    await prisma.marketPostImage.createMany({
+      data: chartImages.map((url, i) => ({ postId: post.id, url, sortOrder: i })),
+    });
+  }
+
+  // Seed the timeline with the "Trade Published" event (not for drafts).
+  if (!saveDraft) {
+  const entryText = formatEntryRange(entryPriceMin, entryPriceMax);
+  const slText = post.stopLossPrice ? formatPrice(Number(post.stopLossPrice)) : "—";
+  const targetText = post.targetPrice ? formatPrice(Number(post.targetPrice)) : "—";
+  await prisma.marketPostUpdate.create({
+    data: {
+      postId: post.id,
+      kind: "published",
+      title: "Trade Published",
+      note:
+        entryText !== "—"
+          ? `Entry ${entryText} · SL ${slText} · Target ${targetText}`
+          : `SL ${slText} · Target ${targetText}`,
+    },
+  });
 
   await prisma.complianceLog.create({
     data: {
@@ -214,6 +298,8 @@ export async function POST(req: NextRequest) {
       targetId: post.id,
     },
   });
+  }
+  // ──────────────────────────────────────────────────────────────────────
 
   return ok({
     id: post.id,

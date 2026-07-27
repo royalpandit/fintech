@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { FiRefreshCw, FiEdit2 } from "react-icons/fi";
 import type { WatchlistItem } from "./trading-terminal-types";
 import WatchlistSearch from "./watchlist-search";
 import {
@@ -54,6 +55,7 @@ export default function WatchlistPanel({
   const [menuItem, setMenuItem] = useState<StoredWatchlistItem | null>(null);
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameVal, setRenameVal] = useState("");
+  const [syncing, setSyncing] = useState(false);
 
   const dragTabId = useRef<number | null>(null);
   const dragItemId = useRef<number | null>(null);
@@ -181,8 +183,22 @@ export default function WatchlistPanel({
 
       {variant === "page" && (
         <div className="wl-panel-head wl-panel-head-page">
-          <button type="button" className="wl-icon-btn" title="Refresh" onClick={() => refresh()}>
-            ↺ Sync
+          <button
+            type="button"
+            className="wl-sync-btn"
+            title="Sync with Markets"
+            disabled={syncing}
+            onClick={async () => {
+              setSyncing(true);
+              try {
+                await refresh();
+              } finally {
+                setSyncing(false);
+              }
+            }}
+          >
+            <FiRefreshCw size={14} className={syncing ? "wl-sync-spin" : undefined} />
+            {syncing ? "Syncing…" : "Sync"}
           </button>
         </div>
       )}
@@ -223,6 +239,20 @@ export default function WatchlistPanel({
                   }}
                 >
                   {list.name}
+                </button>
+              )}
+              {list.id === activeId && renamingId !== list.id && (
+                <button
+                  type="button"
+                  className="wl-tab-edit"
+                  title="Rename watchlist"
+                  onClick={e => {
+                    e.stopPropagation();
+                    setRenamingId(list.id);
+                    setRenameVal(list.name);
+                  }}
+                >
+                  <FiEdit2 size={12} />
                 </button>
               )}
               {list.id === activeId && lists.length > 1 && (

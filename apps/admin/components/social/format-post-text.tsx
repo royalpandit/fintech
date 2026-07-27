@@ -1,30 +1,36 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
-/** Render #hashtags, @mentions, and $cashtags with highlight spans */
+type TagKind = "hash" | "mention" | "cashtag";
+
+function tagKind(part: string): TagKind | null {
+  if (part.startsWith("#")) return "hash";
+  if (part.startsWith("@")) return "mention";
+  if (part.startsWith("$")) return "cashtag";
+  return null;
+}
+
+/**
+ * Render #hashtags, @mentions and $cashtags as highlighted links.
+ * Each one searches the platform for the term (people, posts, courses).
+ */
 export function formatPostText(text: string): ReactNode[] {
   const parts = text.split(/(\#[\w]+|\@[\w]+|\$[\w]+)/g);
   return parts.map((part, i) => {
-    if (part.startsWith("#")) {
-      return (
-        <span key={i} className="sf-tag hash">
-          {part}
-        </span>
-      );
-    }
-    if (part.startsWith("@")) {
-      return (
-        <span key={i} className="sf-tag mention">
-          {part}
-        </span>
-      );
-    }
-    if (part.startsWith("$")) {
-      return (
-        <span key={i} className="sf-tag cashtag">
-          {part}
-        </span>
-      );
-    }
-    return part;
+    const kind = tagKind(part);
+    if (!kind) return part;
+    const term = part.slice(1);
+    return (
+      <Link
+        key={i}
+        href={`/user/search?q=${encodeURIComponent(term)}`}
+        className={`sf-tag ${kind}`}
+        // The card body isn't a link, but stop propagation anyway so clicking a
+        // tag never triggers a parent row/card handler.
+        onClick={(e) => e.stopPropagation()}
+      >
+        {part}
+      </Link>
+    );
   });
 }

@@ -4,16 +4,11 @@ import { redirect } from "next/navigation";
 import { FiMessageCircle } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
+import { sendDueBroadcasts } from "@/lib/broadcast";
 import NewChatSearch from "./new-chat-search";
+import ThreadList, { type ThreadItem } from "./thread-list";
 
 export const dynamic = "force-dynamic";
-
-function getInitials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 
 function relTime(date: Date): string {
   const diff = Date.now() - date.getTime();
@@ -31,6 +26,9 @@ export default async function MessagesPage() {
   if (!auth) redirect("/login");
 
   const userId = auth.userId;
+
+  // Deliver any scheduled broadcasts that are now due.
+  await sendDueBroadcasts();
 
   const [threads, activeSubs] = await Promise.all([
     prisma.dmThread.findMany({
@@ -59,6 +57,29 @@ export default async function MessagesPage() {
   const contacts = activeSubs
     .map((s) => s.advisor)
     .filter((a): a is { id: number; fullName: string } => Boolean(a));
+
+  // Flatten threads for the client-side searchable list.
+  const threadItems: ThreadItem[] = threads.map((t) => {
+    const partner = t.participants.find((p) => p.userId !== userId)?.user;
+    const lastMsg = t.messages[0];
+    const attachmentLabel =
+      lastMsg?.attachmentType === "image"
+        ? "📷 Photo"
+        : lastMsg?.attachmentType === "file"
+          ? `📎 ${lastMsg.attachmentName ?? "Document"}`
+          : null;
+    const body = lastMsg ? lastMsg.contentEnc || attachmentLabel || "" : "";
+    return {
+      id: t.id,
+      partnerName: partner?.fullName ?? "Unknown",
+      preview: lastMsg
+        ? lastMsg.senderUserId === userId
+          ? `You: ${body}`
+          : body
+        : "No messages yet",
+      timeLabel: lastMsg ? relTime(lastMsg.createdAt) : "",
+    };
+  });
 
   return (
     <section>
@@ -125,89 +146,7 @@ export default async function MessagesPage() {
           </Link>
         </article>
       ) : (
-        <article
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: 14,
-            overflow: "hidden",
-          }}
-        >
-          <style>{`.msg-thread-link:hover { background: var(--hover) !important; }`}</style>
-          {threads.map((t, i) => {
-            const partner = t.participants.find((p) => p.userId !== userId)?.user;
-            const lastMsg = t.messages[0];
-            return (
-              <Link
-                key={t.id}
-                href={`/user/messages/${t.id}`}
-                className="msg-thread-link"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 14,
-                  padding: "14px 18px",
-                  borderBottom:
-                    i === threads.length - 1 ? "none" : "1px solid var(--border)",
-                  textDecoration: "none",
-                  transition: "background 0.15s",
-                }}
-              >
-                <div
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
-                    background:
-                      "linear-gradient(135deg, rgba(14,165,233,0.13), rgba(16,185,129,0.13))",
-                    color: "#0ea5e9",
-                    display: "grid",
-                    placeItems: "center",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    flexShrink: 0,
-                  }}
-                >
-                  {getInitials(partner?.fullName ?? "??")}
-                </div>
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 700,
-                      color: "var(--text)",
-                      marginBottom: 3,
-                    }}
-                  >
-                    {partner?.fullName ?? "Unknown"}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "var(--text-muted)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {lastMsg
-                      ? lastMsg.senderUserId === userId
-                        ? `You: ${lastMsg.contentEnc}`
-                        : lastMsg.contentEnc
-                      : "No messages yet"}
-                  </div>
-                </div>
-
-                {lastMsg && (
-                  <span style={{ fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>
-                    {relTime(lastMsg.createdAt)}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </article>
+        <ThreadList threads={threadItems} />
       )}
     </section>
   );

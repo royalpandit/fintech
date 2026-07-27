@@ -376,9 +376,12 @@ export default function PostComposerModal({
               </button>
               <button
                 type="button"
-                className="sf-tool-btn"
-                onClick={() => insertAtCursor("$")}
-                title="Tag symbol"
+                className={`sf-tool-btn${showSymbolPicker ? " active" : ""}`}
+                onClick={() => {
+                  setShowSymbolPicker(v => !v);
+                  setShowEmoji(false);
+                }}
+                title="Tag a symbol"
               >
                 <FiDollarSign size={18} />
               </button>
@@ -401,7 +404,12 @@ export default function PostComposerModal({
                   />
                 )}
               </div>
-              <button type="button" className="sf-tool-btn" title="Trend">
+              <button
+                type="button"
+                className="sf-tool-btn"
+                onClick={() => insertAtCursor("#")}
+                title="Add hashtag"
+              >
                 <FiTrendingUp size={18} />
               </button>
               <span className="sf-toolbar-sep" />

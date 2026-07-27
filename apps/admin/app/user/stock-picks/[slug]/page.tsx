@@ -54,7 +54,7 @@ export default async function StockPickGroupDetailPage({ params }: Params) {
 
   return (
     <UserPageSection>
-      <UserPageBackLink href="/user/stock-picks">← Back to Stock Basket</UserPageBackLink>
+      <UserPageBackLink href="/user/stock-picks">Back to Stock Basket</UserPageBackLink>
 
       <article className="stock-pick-detail-hero">
         <div style={{ display: "flex", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>

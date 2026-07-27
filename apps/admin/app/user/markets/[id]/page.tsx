@@ -9,6 +9,9 @@ import AuthGate from "@/components/auth-gate";
 import { CheckCircle } from "@/components/advisor-ui/icons";
 import MarketPostDetailBody from "@/components/posts/market-post-detail-body";
 import { isPostLocked, previewText } from "@/lib/post-access";
+import TradePanel from "@/components/trades/trade-panel";
+import PremiumTradeGate from "@/components/trades/premium-trade-gate";
+import { tradeStatusMeta, potentialReturnPct, tradeSide, daysActive } from "@/lib/trades";
 
 export const dynamic = "force-dynamic";
 
@@ -61,11 +64,39 @@ export default async function PostDetailPage({ params }: { params: { id: string 
         take: 20,
         include: { user: { select: { fullName: true } } },
       },
+      // Trades Phase 1/2
+      updates: { orderBy: { createdAt: "asc" } },
+      images: { orderBy: { sortOrder: "asc" } },
       _count: { select: { reactions: true, comments: true } },
     },
   });
 
   if (!post) notFound();
+
+  // Similar trades — same symbol or asset type from other advisors.
+  const similarTrades = await prisma.marketPost.findMany({
+    where: {
+      id: { not: post.id },
+      complianceStatus: "approved",
+      deletedAt: null,
+      publishedAt: { not: null },
+      audience: "public",
+      OR: [
+        post.marketSymbol ? { marketSymbol: post.marketSymbol } : {},
+        { assetType: post.assetType },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+    take: 4,
+    select: {
+      id: true,
+      title: true,
+      marketSymbol: true,
+      sentiment: true,
+      tradeStatus: true,
+      advisor: { select: { fullName: true } },
+    },
+  });
 
   // Subscriber-only posts are hidden from non-subscribers (and guests).
   if (!(await canViewMarketPost(post, auth?.userId ?? null))) notFound();
@@ -81,6 +112,32 @@ export default async function PostDetailPage({ params }: { params: { id: string 
   }
   const locked = isPostLocked({ postAccessType, isUnlocked, isOwn });
   const displayContent = locked ? previewText(post.content, 200) : post.content;
+
+  // Premium gate data (only needed when locked).
+  const [subscriberCount, mySub] = locked
+    ? await Promise.all([
+        prisma.subscription.count({
+          where: { advisorUserId: post.advisorUserId, status: "active" },
+        }),
+        auth
+          ? prisma.subscription.findUnique({
+              where: {
+                userId_advisorUserId: { userId: auth.userId, advisorUserId: post.advisorUserId },
+              },
+              select: { status: true, endDate: true },
+            })
+          : null,
+      ])
+    : [0, null];
+  const isSubscribed =
+    !!mySub && mySub.status === "active" && !!mySub.endDate && new Date(mySub.endDate) > new Date();
+  // Upside % computed server-side so the raw prices never reach a locked client.
+  const gateReturnPct = potentialReturnPct({
+    entryMin: post.entryPriceMin ? Number(post.entryPriceMin) : null,
+    entryMax: post.entryPriceMax ? Number(post.entryPriceMax) : null,
+    target: post.targetPrice ? Number(post.targetPrice) : null,
+    side: tradeSide(post.sentiment),
+  });
 
   const initials = (post.advisor?.fullName ?? "??")
     .split(" ")
@@ -167,6 +224,33 @@ export default async function PostDetailPage({ params }: { params: { id: string 
               </span>
             </div>
 
+            {locked ? (
+              <>
+                <h1 style={{ margin: "0 0 16px", fontSize: 22, fontWeight: 700, color: "var(--text)", letterSpacing: -0.3 }}>
+                  {post.title}
+                </h1>
+                <PremiumTradeGate
+                  postId={post.id}
+                  isAuthed={isAuthed}
+                  unlockPrice={post.unlockPrice ? Number(post.unlockPrice) : null}
+                  precomputedReturnPct={gateReturnPct}
+                  teaser={{
+                    sentiment: post.sentiment,
+                    exchange: post.exchange,
+                    marketSymbol: post.marketSymbol,
+                    tradeStatus: post.tradeStatus,
+                    timeframeType: post.timeframeType,
+                    riskLevel: post.riskLevel,
+                  }}
+                  advisor={{
+                    id: post.advisor!.id,
+                    fullName: post.advisor!.fullName,
+                    subscriberCount,
+                    isSubscribed,
+                  }}
+                />
+              </>
+            ) : (
             <MarketPostDetailBody
               isAuthed={isAuthed}
               post={{
@@ -244,34 +328,75 @@ export default async function PostDetailPage({ params }: { params: { id: string 
               )}
             </div>
 
-            {(post.targetPrice || post.stopLossPrice) && (
+            {!locked && (
+              <div style={{ marginBottom: 16 }}>
+                <TradePanel
+                  data={{
+                    sentiment: post.sentiment,
+                    exchange: post.exchange,
+                    marketSymbol: post.marketSymbol,
+                    tradeStatus: post.tradeStatus,
+                    timeframeType: post.timeframeType,
+                    riskLevel: post.riskLevel,
+                    conviction: post.conviction,
+                    entryPriceMin: post.entryPriceMin ? Number(post.entryPriceMin) : null,
+                    entryPriceMax: post.entryPriceMax ? Number(post.entryPriceMax) : null,
+                    targetPrice: post.targetPrice ? Number(post.targetPrice) : null,
+                    stopLossPrice: post.stopLossPrice ? Number(post.stopLossPrice) : null,
+                  }}
+                />
+                {/* Days active + realised exit (Trades Phase 3) */}
+                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 10, fontSize: 12, color: "var(--text-muted)" }}>
+                  {daysActive(post.publishedAt) != null && (
+                    <span>
+                      <strong style={{ color: "var(--text)" }}>{daysActive(post.publishedAt)}</strong> day
+                      {daysActive(post.publishedAt) === 1 ? "" : "s"} active
+                    </span>
+                  )}
+                  {post.exitPrice != null && (
+                    <span>
+                      Exited @ <strong style={{ color: "var(--text)" }}>{formatINR(Number(post.exitPrice))}</strong>
+                    </span>
+                  )}
+                  {post.exitReturnPct != null && (
+                    <span>
+                      Realised:{" "}
+                      <strong style={{ color: Number(post.exitReturnPct) >= 0 ? "#16a34a" : "#dc2626" }}>
+                        {Number(post.exitReturnPct) >= 0 ? "+" : ""}
+                        {Number(post.exitReturnPct).toFixed(2)}%
+                      </strong>
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Chart gallery (Trades Phase 2) */}
+            {!locked && post.images.length > 0 && (
               <div
                 style={{
-                  display: "flex",
-                  gap: 16,
-                  padding: "14px 16px",
-                  background: "var(--surface-2)",
-                  borderRadius: 10,
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+                  gap: 8,
                   marginBottom: 16,
-                  fontSize: 13,
                 }}
               >
-                {post.targetPrice && (
-                  <span>
-                    Target:{" "}
-                    <strong style={{ color: "#16a34a" }}>
-                      {formatINR(Number(post.targetPrice))}
-                    </strong>
-                  </span>
-                )}
-                {post.stopLossPrice && (
-                  <span>
-                    Stop Loss:{" "}
-                    <strong style={{ color: "#dc2626" }}>
-                      {formatINR(Number(post.stopLossPrice))}
-                    </strong>
-                  </span>
-                )}
+                {post.images.map((img) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={img.url}
+                      alt="Trade chart"
+                      style={{
+                        width: "100%",
+                        aspectRatio: "1",
+                        objectFit: "cover",
+                        borderRadius: 10,
+                        border: "1px solid var(--border)",
+                      }}
+                    />
+                  </a>
+                ))}
               </div>
             )}
 
@@ -291,6 +416,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
               <strong>Disclaimer:</strong> {post.disclaimer}
             </div>
             </MarketPostDetailBody>
+            )}
 
             <div
               style={{
@@ -352,6 +478,105 @@ export default async function PostDetailPage({ params }: { params: { id: string 
               </AuthGate>
             </div>
           </article>
+
+          {/* Trade Timeline (Trades Phase 1) */}
+          {!locked && post.updates.length > 0 && (
+            <article
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                borderRadius: 14,
+                padding: 24,
+                marginTop: 16,
+              }}
+            >
+              <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
+                Trade Timeline
+              </h3>
+              <div className="trade-timeline">
+                {post.updates.map((u, i) => (
+                  <div key={u.id} className="trade-timeline-row">
+                    <div className="trade-timeline-marker">
+                      <span
+                        className="trade-timeline-dot"
+                        style={{ background: tradeStatusMeta(u.kind === "published" ? "awaiting_entry" : u.kind).tone }}
+                      />
+                      {i < post.updates.length - 1 && <span className="trade-timeline-line" />}
+                    </div>
+                    <div className="trade-timeline-body">
+                      <div className="trade-timeline-head">
+                        <strong>{u.title}</strong>
+                        <span className="trade-timeline-time">{relTime(u.createdAt)}</span>
+                      </div>
+                      {u.note && <p className="trade-timeline-note">{u.note}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+          )}
+
+          {/* Similar Trades (Trades Phase 2) */}
+          {similarTrades.length > 0 && (
+            <article
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                borderRadius: 14,
+                padding: 24,
+                marginTop: 16,
+              }}
+            >
+              <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
+                Similar Trades
+              </h3>
+              <div style={{ display: "grid", gap: 10 }}>
+                {similarTrades.map((t) => {
+                  const st = tradeStatusMeta(t.tradeStatus);
+                  return (
+                    <Link
+                      key={t.id}
+                      href={`/user/markets/${t.id}`}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "12px 14px",
+                        borderRadius: 10,
+                        border: "1px solid var(--border)",
+                        textDecoration: "none",
+                        color: "inherit",
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {t.title}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                          {t.marketSymbol ? `${t.marketSymbol} · ` : ""}
+                          {t.advisor?.fullName}
+                        </div>
+                      </div>
+                      <span
+                        style={{
+                          padding: "3px 10px",
+                          borderRadius: 999,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          color: st.tone,
+                          background: `${st.tone}1f`,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {st.label}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </article>
+          )}
 
           {/* Comments */}
           <article
