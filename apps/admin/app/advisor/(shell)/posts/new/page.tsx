@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { FiArrowLeft } from "react-icons/fi";
 import PostAccessSelector from "@/components/posts/post-access-selector";
 import BoostPicker from "@/components/posts/boost-picker";
 import RecipientPicker from "@/components/posts/recipient-picker";
@@ -186,9 +187,10 @@ export default function NewPostPage() {
   };
 
   return (
-    <section>
-      <Link href="/advisor/posts" className="page-subtitle" style={{ marginTop: 0, display: "inline-block" }}>
-        ← My Posts
+    <section style={{ maxWidth: 1080, margin: "0 auto" }}>
+      <Link href="/advisor/posts" className="user-page-back-link" style={{ marginBottom: 8 }}>
+        <span className="user-page-back-icon"><FiArrowLeft size={14} /></span>
+        My Posts
       </Link>
       <h1 className="page-title">Post Market Sentiment</h1>
       <p className="page-subtitle">
@@ -196,7 +198,7 @@ export default function NewPostPage() {
       </p>
 
       <form onSubmit={submit}>
-        <div className="grid" style={{ gridTemplateColumns: "2fr 1fr", marginTop: 16, alignItems: "start" }}>
+        <div className="grid" style={{ gridTemplateColumns: "minmax(0, 2fr) minmax(260px, 1fr)", gap: 20, marginTop: 16, alignItems: "start" }}>
           <article className="card">
             <label className="metric-label">Title *</label>
             <input
@@ -710,7 +712,7 @@ export default function NewPostPage() {
             </div>
           </article>
 
-          <article className="card">
+          <article className="card" style={{ position: "sticky", top: 80, alignSelf: "start" }}>
             <h3 style={{ marginTop: 0 }}>Compliance Checklist</h3>
             <ul style={{ paddingLeft: 18, margin: 0, fontSize: 13, lineHeight: 1.8, color: "var(--text)" }}>
               <li>Do NOT promise guaranteed returns</li>
