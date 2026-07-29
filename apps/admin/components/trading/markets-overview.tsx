@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { FiArrowUpRight, FiArrowDownRight, FiBarChart2, FiRefreshCw } from "react-icons/fi";
+import MarketSearch from "@/components/trading/market-search";
+import AddToWatchlistButton from "@/components/watchlist/add-to-watchlist-button";
+import type { WatchlistItem } from "@/components/trading/trading-terminal-types";
 
 type OverviewRow = {
   symbol: string;
@@ -31,6 +34,10 @@ function chartHref(r: OverviewRow) {
     type: r.type,
   });
   return `/user/markets/chart?${params.toString()}`;
+}
+
+function toWatchItem(r: OverviewRow): WatchlistItem {
+  return { display: r.symbol, tradingSymbol: r.symbol, token: r.token, exchange: r.exchange, type: r.type };
 }
 
 const up = "#16a34a";
@@ -126,6 +133,8 @@ export default function MarketsOverview() {
           <FiBarChart2 size={15} /> Open full chart
         </Link>
       </div>
+
+      <MarketSearch />
 
       {error && (
         <div
@@ -231,6 +240,7 @@ export default function MarketsOverview() {
                 <Th>%</Th>
                 <Th>52W High</Th>
                 <Th>52W Low</Th>
+                <Th></Th>
               </tr>
             </thead>
             <tbody>
@@ -239,6 +249,7 @@ export default function MarketsOverview() {
                 return (
                   <tr
                     key={s.token}
+                    className="mkt-trow"
                     style={{ borderTop: "1px solid var(--border)" }}
                   >
                     <Td style={{ textAlign: "left" }}>
@@ -263,6 +274,9 @@ export default function MarketsOverview() {
                     </Td>
                     <Td style={{ color: "var(--text-muted)" }}>
                       {s.week52Low != null ? inr(s.week52Low) : "—"}
+                    </Td>
+                    <Td>
+                      <AddToWatchlistButton item={toWatchItem(s)} compact label="" />
                     </Td>
                   </tr>
                 );
@@ -315,28 +329,37 @@ function MoverList({ title, rows, positive }: { title: string; rows: OverviewRow
           </p>
         ) : (
           rows.map((r) => (
-            <Link
+            <div
               key={r.token}
-              href={chartHref(r)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "11px 16px",
-                borderTop: "1px solid var(--border)",
-                textDecoration: "none",
-                color: "inherit",
-              }}
+              className="mkt-row"
+              style={{ display: "flex", alignItems: "center", gap: 6, borderTop: "1px solid var(--border)" }}
             >
-              <span style={{ fontWeight: 600, color: "var(--text)", fontSize: 13 }}>{r.symbol}</span>
-              <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ color: "var(--text)", fontSize: 13 }}>{inr(r.ltp)}</span>
-                <span style={{ color, fontWeight: 600, fontSize: 13, minWidth: 64, textAlign: "right" }}>
-                  {r.percentChange >= 0 ? "+" : ""}
-                  {r.percentChange.toFixed(2)}%
+              <Link
+                href={chartHref(r)}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "11px 4px 11px 16px",
+                  textDecoration: "none",
+                  color: "inherit",
+                }}
+              >
+                <span style={{ fontWeight: 600, color: "var(--text)", fontSize: 13 }}>{r.symbol}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ color: "var(--text)", fontSize: 13 }}>{inr(r.ltp)}</span>
+                  <span style={{ color, fontWeight: 600, fontSize: 13, minWidth: 64, textAlign: "right" }}>
+                    {r.percentChange >= 0 ? "+" : ""}
+                    {r.percentChange.toFixed(2)}%
+                  </span>
                 </span>
+              </Link>
+              <span style={{ paddingRight: 12, flexShrink: 0 }}>
+                <AddToWatchlistButton item={toWatchItem(r)} compact label="" />
               </span>
-            </Link>
+            </div>
           ))
         )}
       </div>
@@ -344,7 +367,7 @@ function MoverList({ title, rows, positive }: { title: string; rows: OverviewRow
   );
 }
 
-function Th({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function Th({ children, style }: { children?: React.ReactNode; style?: React.CSSProperties }) {
   return <th style={{ padding: "10px 16px", fontWeight: 600, ...style }}>{children}</th>;
 }
 function Td({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {

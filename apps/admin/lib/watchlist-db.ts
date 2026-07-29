@@ -22,6 +22,12 @@ export function itemToWatchlist(row: {
   };
 }
 
+/** Default portfolio watchlist — direct "Add" instead of picker modal. */
+export function isPortfolioWatchlist(name: string): boolean {
+  const n = name.trim().toLowerCase();
+  return n === "my portfolio" || n === "portfolio";
+}
+
 export function watchlistItemPayload(item: WatchlistItem) {
   const exchange = item.exchange || "NSE";
   const token = item.token || item.tradingSymbol;

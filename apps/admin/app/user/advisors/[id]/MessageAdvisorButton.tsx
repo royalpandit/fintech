@@ -3,17 +3,27 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FiMessageCircle } from "react-icons/fi";
+import AdvisorServicesPickerModal from "@/components/advisor-services-picker-modal";
+import SubscribeServiceModal, { type AdvisorServiceCard } from "@/components/subscribe-service-modal";
 import SubscribePlansModal from "@/components/subscribe-plans-modal";
 
-type Props = { advisorId: number; isFollowing?: boolean };
+type Props = {
+  advisorId: number;
+  isFollowing?: boolean;
+  services?: AdvisorServiceCard[];
+};
 
-export default function MessageAdvisorButton({ advisorId }: Props) {
+export default function MessageAdvisorButton({ advisorId, services = [] }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [showPlans, setShowPlans] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [singleService, setSingleService] = useState<AdvisorServiceCard | null>(null);
+  const [showLegacyPlans, setShowLegacyPlans] = useState(false);
   const [error, setError] = useState("");
 
-  // Returns "gated" when the chat is locked behind a subscription (HTTP 403).
+  const availableServices = services.filter((s) => s.canSubscribe && !s.isSubscribed);
+  const hasServices = availableServices.length > 0;
+
   async function tryOpenChat(): Promise<"ok" | "gated" | "error"> {
     try {
       const res = await fetch("/api/v1/messages/threads", {
@@ -33,17 +43,37 @@ export default function MessageAdvisorButton({ advisorId }: Props) {
     }
   }
 
+  function openSubscribeFlow() {
+    if (availableServices.length === 1) {
+      setSingleService(availableServices[0]);
+      return;
+    }
+    if (availableServices.length > 1) {
+      setShowPicker(true);
+      return;
+    }
+    setShowLegacyPlans(true);
+  }
+
   async function onMessage() {
     if (loading) return;
     setLoading(true);
     setError("");
     try {
       const result = await tryOpenChat();
-      if (result === "gated") setShowPlans(true);
+      if (result === "gated") openSubscribeFlow();
       else if (result === "error") setError("Couldn't open chat. Please try again.");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function onSubscribed() {
+    setShowPicker(false);
+    setSingleService(null);
+    setShowLegacyPlans(false);
+    router.refresh();
+    await tryOpenChat();
   }
 
   return (
@@ -97,17 +127,31 @@ export default function MessageAdvisorButton({ advisorId }: Props) {
         </div>
       )}
 
-      {showPlans && (
+      {showPicker && (
+        <AdvisorServicesPickerModal
+          services={services}
+          title="Subscribe to chat"
+          subtitle="Subscribe to a service to message this advisor and get subscriber-only posts."
+          onClose={() => setShowPicker(false)}
+          onSubscribed={onSubscribed}
+        />
+      )}
+
+      {singleService && (
+        <SubscribeServiceModal
+          service={singleService}
+          onClose={() => setSingleService(null)}
+          onSubscribed={onSubscribed}
+        />
+      )}
+
+      {showLegacyPlans && !hasServices && (
         <SubscribePlansModal
           advisorId={advisorId}
           title="Subscribe to chat"
           subtitle="Subscribe to message this advisor directly — you'll also get their subscriber-only posts."
-          onClose={() => setShowPlans(false)}
-          onSubscribed={async () => {
-            setShowPlans(false);
-            router.refresh();
-            await tryOpenChat(); // now subscribed → opens the chat
-          }}
+          onClose={() => setShowLegacyPlans(false)}
+          onSubscribed={onSubscribed}
         />
       )}
     </>

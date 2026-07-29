@@ -17,11 +17,16 @@ function ExchangeBadge({ exchange, type }: { exchange: string; type: string }) {
 
 export default function WatchlistSearch({
   onAddToWatchlist,
+  onQuickAdd,
+  quickAddLabel = "Watchlist",
   onBuy,
   onSell,
   onOpenChart,
 }: {
   onAddToWatchlist: (item: WatchlistItem) => void;
+  /** When set, adds directly to the active list (e.g. My Portfolio). */
+  onQuickAdd?: (item: WatchlistItem) => void;
+  quickAddLabel?: string;
   onBuy: (item: WatchlistItem) => void;
   onSell: (item: WatchlistItem) => void;
   onOpenChart: (item: WatchlistItem) => void;
@@ -94,6 +99,16 @@ export default function WatchlistSearch({
 
   const rowKey = (r: WatchlistItem) => `${r.exchange}:${r.token}`;
 
+  const handleAdd = (item: WatchlistItem) => {
+    if (onQuickAdd) onQuickAdd(item);
+    else onAddToWatchlist(item);
+    setQ("");
+    setResults([]);
+    setOpen(false);
+  };
+
+  const addLabel = onQuickAdd ? quickAddLabel : `+ ${quickAddLabel}`;
+
   return (
     <div className="wl-search-wrap">
       <div className="wl-search-input-row">
@@ -149,8 +164,8 @@ export default function WatchlistSearch({
                 <ExchangeBadge exchange={r.exchange} type={r.type} />
                 {hovered && (
                   <div className="wl-search-actions">
-                    <button type="button" className="wl-act wl-act-add" onMouseDown={e => e.preventDefault()} onClick={() => { onAddToWatchlist(r); setQ(""); setResults([]); setOpen(false); }}>
-                      + Watchlist
+                    <button type="button" className="wl-act wl-act-add" onMouseDown={e => e.preventDefault()} onClick={() => handleAdd(r)}>
+                      {addLabel}
                     </button>
                     <button type="button" className="wl-act wl-act-buy" onMouseDown={e => e.preventDefault()} onClick={() => { onBuy(r); setOpen(false); }}>
                       Buy

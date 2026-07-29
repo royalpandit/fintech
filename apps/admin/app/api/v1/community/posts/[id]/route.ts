@@ -25,6 +25,8 @@ export async function PATCH(
     sentiment?: "bullish" | "bearish" | "neutral";
     targetPrice?: number;
     stopLossPrice?: number;
+    entryPrice?: number;
+    cmp?: number;
     articleBody?: string;
   }>(req);
 

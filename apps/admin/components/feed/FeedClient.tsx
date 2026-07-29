@@ -19,7 +19,6 @@ import {
 } from "react-icons/fi";
 import { CheckCircle } from "@/components/advisor-ui/icons";
 import SocialFeedSection from "@/components/social/social-feed-section";
-import PostAccessBadge from "@/components/posts/post-access-badge";
 import PremiumPostOverlay from "@/components/posts/premium-post-overlay";
 import PremiumUnlockModal from "@/components/posts/premium-unlock-modal";
 import { usePremiumPostUnlock } from "@/components/posts/use-premium-post-unlock";
@@ -355,7 +354,6 @@ function PostCard({
           </button>
         )}
 
-        <PostAccessBadge type={postState.post_access_type ?? "free"} />
         {/* Sentiment pill */}
         <span
           style={{

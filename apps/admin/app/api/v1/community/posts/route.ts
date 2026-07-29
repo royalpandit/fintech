@@ -109,6 +109,8 @@ export async function POST(req: NextRequest) {
       sentiment?: FeedSentiment;
       targetPrice?: number;
       stopLossPrice?: number;
+      entryPrice?: number;
+      cmp?: number;
       thumbnailUrl?: string;
       articleBody?: string;
       imageUrls?: string[];

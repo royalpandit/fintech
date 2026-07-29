@@ -109,6 +109,17 @@ export async function subscribersForServiceIds(
   return [...new Set(subs.map((s) => s.userId))];
 }
 
+export const ADVISOR_REVENUE_SHARE = 0.8;
+
+export function isSubscriptionActive(sub: {
+  status: string;
+  endDate?: Date | string | null;
+} | null | undefined): boolean {
+  if (!sub || sub.status !== "active") return false;
+  if (!sub.endDate) return true;
+  return new Date(sub.endDate).getTime() > Date.now();
+}
+
 /** Map of userId → owned service names for an analyst (for chat badges). */
 export async function subscriberServiceNames(
   advisorUserId: number,

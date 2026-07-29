@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireAuthToken } from "@/lib/auth";
 import { advisorServices } from "@/lib/subscription-services";
 import ServicesClient from "./services-client";
+import FeaturePromote from "./feature-promote";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export default async function AdvisorServicesPage() {
           </p>
         </div>
       </div>
+      <FeaturePromote />
       <ServicesClient initialServices={services} />
     </section>
   );
