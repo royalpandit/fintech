@@ -1,10 +1,50 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import FinuerLogo from "@/components/brand/finuer-logo";
-import ThemeHeaderButton from "@/components/theme/theme-header-button";
+import { FiGlobe, FiChevronDown, FiMoon, FiSun, FiArrowUpRight } from "react-icons/fi";
+import { useTheme } from "@/components/theme/theme-provider";
+
+/** Language pill (visual). */
+function LangPill() {
+  return (
+    <button type="button" className="lp-lang" aria-label="Language: English">
+      <FiGlobe size={15} />
+      <span>English</span>
+      <FiChevronDown size={13} className="lp-lang-caret" aria-hidden />
+    </button>
+  );
+}
+
+/** Segmented moon / sun theme toggle — wired to the real theme provider. */
+function ThemeSegToggle() {
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
+  return (
+    <div className="lp-theme-seg" role="group" aria-label="Theme">
+      <button
+        type="button"
+        className={`lp-theme-opt${isDark ? " active" : ""}`}
+        aria-pressed={isDark}
+        aria-label="Dark mode"
+        onClick={() => { if (!isDark) toggleTheme(); }}
+      >
+        <FiMoon size={15} />
+      </button>
+      <button
+        type="button"
+        className={`lp-theme-opt${!isDark ? " active" : ""}`}
+        aria-pressed={!isDark}
+        aria-label="Light mode"
+        onClick={() => { if (isDark) toggleTheme(); }}
+      >
+        <FiSun size={15} />
+      </button>
+    </div>
+  );
+}
 
 const NAV = [
   { label: "Products", href: "#products" },
@@ -18,25 +58,50 @@ const NAV = [
 
 const MOBILE_MQ = "(max-width: 768px)";
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+type NavLinksProps = {
+  onNavigate?: () => void;
+  /** Section id currently in view, used to highlight the matching link. */
+  activeId?: string | null;
+  /** Staggers drawer items in; desktop passes false. */
+  stagger?: boolean;
+};
+
+function NavLinks({ onNavigate, activeId, stagger = false }: NavLinksProps) {
   return (
     <>
       <nav className="lp-nav" aria-label="Main">
-        {NAV.map(item => (
-          <a key={item.label} href={item.href} onClick={onNavigate}>
-            {item.label}
-            {item.dropdown && <span className="lp-nav-chevron">▾</span>}
-          </a>
-        ))}
+        {NAV.map((item, i) => {
+          const active = activeId != null && item.href === `#${activeId}`;
+          return (
+            <a
+              key={item.label}
+              href={item.href}
+              onClick={onNavigate}
+              aria-current={active ? "true" : undefined}
+              className={active ? "is-active" : undefined}
+              style={stagger ? ({ "--i": i } as CSSProperties) : undefined}
+            >
+              {item.label}
+              {item.dropdown && <span className="lp-nav-chevron" aria-hidden>▾</span>}
+            </a>
+          );
+        })}
       </nav>
 
-      <div className="lp-header-actions">
-        <ThemeHeaderButton />
+      <div
+        className="lp-header-actions"
+        style={stagger ? ({ "--i": NAV.length } as CSSProperties) : undefined}
+      >
         <Link href="/login" className="lp-btn-login" onClick={onNavigate}>
           Log in
         </Link>
-        <Link href="/register" className="lp-btn-primary" onClick={onNavigate}>
-          Get Started Free <span aria-hidden>→</span>
+        <LangPill />
+        <ThemeSegToggle />
+        <Link href="/register" className="lp-btn-start" onClick={onNavigate}>
+          Start Now
+          <span className="lp-start-arrow" aria-hidden>
+            <FiArrowUpRight size={15} />
+          </span>
         </Link>
       </div>
     </>
@@ -50,6 +115,8 @@ function isMobileViewport() {
 export default function LandingHeader() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const close = useCallback(() => setOpen(false), []);
 
@@ -66,6 +133,36 @@ export default function LandingHeader() {
     };
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  // Condense the bar into its glass state once the page leaves the top.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Highlight whichever section is currently under the header.
+  useEffect(() => {
+    const ids = NAV.map(n => n.href.slice(1));
+    const sections = ids
+      .map(id => document.getElementById(id))
+      .filter((el): el is HTMLElement => el != null);
+    if (!sections.length || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      entries => {
+        const visible = entries
+          .filter(e => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible) setActiveId(visible.target.id);
+      },
+      { rootMargin: "-45% 0px -50% 0px", threshold: [0, 0.25, 0.5] },
+    );
+
+    sections.forEach(s => observer.observe(s));
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -122,7 +219,7 @@ export default function LandingHeader() {
               </button>
             </div>
             <div className="lp-nav-drawer-body">
-              <NavLinks onNavigate={close} />
+              <NavLinks onNavigate={close} activeId={activeId} stagger />
             </div>
           </aside>
         </>,
@@ -132,22 +229,28 @@ export default function LandingHeader() {
 
   return (
     <>
-      <header className={`lp-header${open ? " nav-open" : ""}`}>
+      <header
+        className={`lp-header${open ? " nav-open" : ""}${scrolled ? " lp-header--scrolled" : ""}`}
+      >
         <div className="landing-container lp-header-inner">
           <FinuerLogo href="/" height={40} className="lp-brand-logo" onClick={close} />
 
           <div className="lp-nav-drawer lp-nav-drawer--desktop">
-            <NavLinks />
+            <NavLinks activeId={activeId} />
           </div>
 
           <button
             type="button"
-            className="lp-menu-toggle"
+            className={`lp-menu-toggle${open ? " is-open" : ""}`}
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             onClick={toggleMenu}
           >
-            {open ? "✕" : "☰"}
+            <span className="lp-menu-bars" aria-hidden>
+              <span />
+              <span />
+              <span />
+            </span>
           </button>
         </div>
       </header>

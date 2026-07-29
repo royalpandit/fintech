@@ -2,21 +2,22 @@ import Link from "next/link";
 import LandingHeader from "./landing-header";
 import LandingTicker from "./landing-ticker";
 import FinuerLogo from "@/components/brand/finuer-logo";
+import Reveal from "@/components/motion/reveal";
+import Counter from "@/components/motion/counter";
+import LandingBackground from "./landing-background";
+import LandingPopup from "./landing-popup";
+import AdvisorCarousel from "./advisor-carousel";
+import ProductSlider from "./product-slider";
 import { DashboardMock, FeedMock, VirtualLabMock } from "./landing-mockups";
-export type LandingAdvisor = {
-  id: number;
-  name: string;
-  sebi: string;
-  expertise: string;
-  years: number;
-  returnsPct: number;
-  initials: string;
-};
+import type { LandingAdvisor } from "./types";
 
+export type { LandingAdvisor };
+
+/** `tone` maps to a token-driven icon style so the tiles survive dark mode. */
 const FEATURES = [
   {
     icon: "📱",
-    bg: "#dcfce7",
+    tone: "emerald",
     title: "Social FinMedia Feed",
     desc: "Follow markets, share insights, and learn from a community of investors and advisors.",
     href: "/user/feed",
@@ -24,7 +25,7 @@ const FEATURES = [
   },
   {
     icon: "✓",
-    bg: "#dbeafe",
+    tone: "teal",
     title: "SEBI Registered Advisors",
     desc: "Connect with verified professionals for research-backed guidance you can trust.",
     href: "/user/advisors",
@@ -32,7 +33,7 @@ const FEATURES = [
   },
   {
     icon: "🧪",
-    bg: "#ede9fe",
+    tone: "violet",
     title: "Virtual Lab",
     desc: "Practice trading with real-time simulated markets and unlimited virtual cash.",
     href: "/user/lab",
@@ -41,7 +42,7 @@ const FEATURES = [
   },
   {
     icon: "📊",
-    bg: "#ffedd5",
+    tone: "amber",
     title: "Smart Portfolio Tracking",
     desc: "Track holdings, P&L, and performance with beautiful charts and daily snapshots.",
     href: "/register",
@@ -49,7 +50,7 @@ const FEATURES = [
   },
   {
     icon: "📈",
-    bg: "#e0f2fe",
+    tone: "sky",
     title: "Markets & Insights",
     desc: "Live indices, option chains, and professional-grade charts in one terminal.",
     href: "/user/markets",
@@ -57,7 +58,7 @@ const FEATURES = [
   },
   {
     icon: "🎓",
-    bg: "#fce7f3",
+    tone: "rose",
     title: "Courses & Learning",
     desc: "Structured courses from top advisors to build your investing knowledge.",
     href: "/user/courses",
@@ -72,6 +73,20 @@ const FALLBACK_ADVISORS: LandingAdvisor[] = [
   { id: 4, name: "Sneha Rao", sebi: "INH000045678", expertise: "Banking & FMCG", years: 7, returnsPct: 19.5, initials: "SR" },
 ];
 
+const TRUST = [
+  "SEBI Registered Advisors",
+  "Bank-Grade Security",
+  "10L+ Users And Growing",
+  "Made in India For the World",
+];
+
+const LAB_POINTS = [
+  "Real-time simulated market",
+  "Unlimited virtual cash",
+  "Full order book experience",
+  "Track P&L like a pro",
+];
+
 type Props = {
   advisors?: LandingAdvisor[];
 };
@@ -79,12 +94,16 @@ type Props = {
 export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
   return (
     <div className="landing-root">
+      <LandingBackground />
       <LandingHeader />
 
       <section className="lp-hero">
         <div className="landing-container lp-hero-grid">
-          <div>
-            <div className="lp-pill">All-in-One FinMedia Platform</div>
+          <Reveal variant="left" className="lp-hero-copy">
+            <div className="lp-pill">
+              <span className="lp-pill-dot" aria-hidden />
+              All-in-One FinMedia Platform
+            </div>
             <h1>
               Learn. Invest. Connect. <span className="lp-gradient-text">Grow.</span>
             </h1>
@@ -97,20 +116,15 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
                 Get Started for Free <span aria-hidden>→</span>
               </Link>
               <Link href="/user/feed" className="lp-btn-outline">
-                ▷ Explore Platform
+                <span aria-hidden>▷</span> Explore Platform
               </Link>
             </div>
             <div className="lp-trust-row">
-              {[
-                "SEBI Registered Advisors",
-                "Bank-Grade Security",
-                "10L+ Users And Growing",
-                "Made in India For the World",
-              ].map(t => (
-                <div key={t} className="lp-trust-item">
-                  <span className="lp-trust-icon">✓</span>
+              {TRUST.map((t, i) => (
+                <Reveal key={t} className="lp-trust-item" variant="fade" delay={120 + i * 70}>
+                  <span className="lp-trust-icon" aria-hidden>✓</span>
                   {t}
-                </div>
+                </Reveal>
               ))}
             </div>
             <div className="lp-social-proof">
@@ -118,17 +132,36 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
                 {["AK", "PS", "RM", "DV"].map(i => (
                   <span key={i}>{i}</span>
                 ))}
-                <span style={{ background: "linear-gradient(135deg,#2563eb,#7c3aed)" }}>+2K</span>
+                <span className="lp-avatars-more">+2K</span>
               </div>
               <div className="lp-stars">
-                4.9/5 stars
-                <small>Trusted by 2,000+ investors</small>
+                <Counter to={4.9} decimals={1} suffix="/5 stars" />
+                <small>
+                  Trusted by <Counter to={2000} locale="en-IN" suffix="+" /> investors
+                </small>
               </div>
             </div>
-          </div>
-          <div className="lp-hero-visual lp-mock-scroll">
-            <DashboardMock />
-          </div>
+          </Reveal>
+
+          <Reveal variant="right" delay={140} className="lp-hero-visual">
+            <div className="lp-mock-scroll">
+              <DashboardMock />
+            </div>
+
+            {/* Floating stat cards layered over the dashboard mock */}
+            <div className="lp-float-card lp-float-card--returns" aria-hidden>
+              <span className="lp-float-label">Portfolio</span>
+              <strong className="lp-float-value">+18.4%</strong>
+              <span className="lp-float-spark" />
+            </div>
+            <div className="lp-float-card lp-float-card--verified" aria-hidden>
+              <span className="lp-float-check">✓</span>
+              <div>
+                <strong>SEBI Verified</strong>
+                <span className="lp-float-label">Every advisor</span>
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
@@ -138,125 +171,144 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
 
       <section className="lp-section" id="products">
         <div className="landing-container">
-          <div className="lp-section-head">
+          <Reveal className="lp-section-head">
             <div className="lp-kicker">Powerful Products</div>
             <h2>Everything you need to invest and grow</h2>
             <p>
               From social feeds to virtual trading and verified advisors — Finuer gives you the
               complete toolkit for your investment journey.
             </p>
-          </div>
+          </Reveal>
           <div className="lp-features-grid">
-            {FEATURES.map(f => (
-              <article key={f.title} className="lp-feature-card">
-                <div className="lp-feature-icon" style={{ background: f.bg }}>{f.icon}</div>
+            {FEATURES.map((f, i) => (
+              <Reveal
+                key={f.title}
+                as="article"
+                className="lp-feature-card lift"
+                variant="pop"
+                delay={i * 80}
+              >
+                <div className={`lp-feature-icon lp-feature-icon--${f.tone}`} aria-hidden>
+                  {f.icon}
+                </div>
                 <h3>
                   {f.title}
                   {f.badge && <span className="lp-badge-new">New</span>}
                 </h3>
                 <p>{f.desc}</p>
-                <Link href={f.href} className="lp-feature-link">{f.link} →</Link>
-              </article>
+                <Link href={f.href} className="lp-feature-link">
+                  {f.link} <span aria-hidden>→</span>
+                </Link>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="lp-section" id="virtual-lab" style={{ paddingTop: 0 }}>
+      <section className="lp-section lp-section--band" id="product-tour">
         <div className="landing-container">
-          <div className="lp-split surface">
+          <Reveal className="lp-section-head">
+            <div className="lp-kicker">Product Tour</div>
+            <h2>See the platform in action</h2>
+            <p>
+              Flip through the screens you&apos;ll actually use — portfolio tracking, the virtual
+              trading lab, and the social feed.
+            </p>
+          </Reveal>
+          <Reveal variant="fade" delay={100}>
+            <ProductSlider />
+          </Reveal>
+        </div>
+      </section>
+
+      <section className="lp-section" id="virtual-lab">
+        <div className="landing-container">
+          <Reveal className="lp-split surface" variant="scale">
             <div>
               <div className="lp-kicker">Practice. Learn. Master.</div>
-              <h2 style={{ fontSize: "2rem", fontWeight: 600, margin: "0 0 12px" }}>Virtual Lab</h2>
-              <p style={{ color: "var(--lp-muted)", lineHeight: 1.65, margin: 0 }}>
+              <h2 className="lp-split-title">Virtual Lab</h2>
+              <p className="lp-split-lead">
                 Trade with real-time simulated markets using unlimited virtual cash. Perfect your
                 strategies before risking real capital.
               </p>
               <ul className="lp-checklist">
-                {[
-                  "Real-time simulated market",
-                  "Unlimited virtual cash",
-                  "Full order book experience",
-                  "Track P&L like a pro",
-                ].map(t => (
-                  <li key={t}><span className="lp-check">✓</span>{t}</li>
+                {LAB_POINTS.map(t => (
+                  <li key={t}>
+                    <span className="lp-check" aria-hidden>✓</span>
+                    {t}
+                  </li>
                 ))}
               </ul>
               <Link href="/user/lab" className="lp-btn-primary">
                 Explore Virtual Lab <span aria-hidden>→</span>
               </Link>
             </div>
-            <div className="lp-mock-scroll">
+            <div className="lp-mock-scroll lp-mock-float">
               <VirtualLabMock />
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
-      <section className="lp-section" id="advisors">
+      <section className="lp-section lp-section--band" id="advisors">
         <div className="landing-container">
           <div className="lp-advisors-head">
-            <div className="lp-section-head">
+            <Reveal className="lp-section-head">
               <div className="lp-kicker">SEBI Registered</div>
               <h2>Trusted advice from verified professionals</h2>
               <p>
                 Every advisor on Finuer is SEBI registered. Follow their research, insights, and
                 trade ideas with full transparency.
               </p>
-            </div>
-            <Link href="/user/advisors" className="lp-btn-outline">
-              View All Advisors →
-            </Link>
+            </Reveal>
+            <Reveal variant="fade" delay={120}>
+              <Link href="/user/advisors" className="lp-btn-outline">
+                View All Advisors <span aria-hidden>→</span>
+              </Link>
+            </Reveal>
           </div>
-          <div className="lp-advisor-grid">
-            {advisors.map(a => (
-              <article key={a.id} className="lp-advisor-card">
-                <div className="lp-advisor-photo">{a.initials}</div>
-                <div className="lp-advisor-body">
-                  <h3>{a.name}</h3>
-                  <div className="lp-advisor-meta">SEBI Reg. {a.sebi}</div>
-                  <div className="lp-advisor-tags">{a.expertise} · {a.years} yrs exp.</div>
-                  <div className="lp-advisor-return">
-                    +{a.returnsPct.toFixed(1)}%
-                    <small>Avg. Returns</small>
-                  </div>
-                  <Link href="/register" className="lp-btn-follow">Follow</Link>
-                </div>
-              </article>
-            ))}
-          </div>
+          <Reveal variant="fade">
+            <AdvisorCarousel advisors={advisors} />
+          </Reveal>
         </div>
       </section>
 
-      <section className="lp-section" id="community" style={{ background: "var(--lp-bg)" }}>
+      <section className="lp-section" id="community">
         <div className="landing-container lp-split">
-          <div>
+          <Reveal variant="left">
             <div className="lp-kicker">A Community That Grows Together</div>
-            <h2 style={{ fontSize: "2rem", fontWeight: 600, margin: "0 0 12px", letterSpacing: "-0.02em" }}>
-              Learn, share and grow with investors like you
-            </h2>
-            <p style={{ color: "var(--lp-muted)", lineHeight: 1.65, margin: 0 }}>
+            <h2 className="lp-split-title">Learn, share and grow with investors like you</h2>
+            <p className="lp-split-lead">
               Join discussions, follow trending topics, and build your network on India&apos;s
               fastest-growing investing community.
             </p>
             <div className="lp-community-stats">
-              <div className="lp-stat"><strong>10L+</strong><span>Members</span></div>
-              <div className="lp-stat"><strong>25K+</strong><span>Daily Discussions</span></div>
-              <div className="lp-stat"><strong>2K+</strong><span>Posts/Day</span></div>
+              <div className="lp-stat">
+                <strong><Counter to={10} suffix="L+" /></strong>
+                <span>Members</span>
+              </div>
+              <div className="lp-stat">
+                <strong><Counter to={25} suffix="K+" /></strong>
+                <span>Daily Discussions</span>
+              </div>
+              <div className="lp-stat">
+                <strong><Counter to={2} suffix="K+" /></strong>
+                <span>Posts/Day</span>
+              </div>
             </div>
             <Link href="/register" className="lp-btn-primary">
               Join Community <span aria-hidden>→</span>
             </Link>
-          </div>
-          <div className="lp-mock-scroll">
+          </Reveal>
+          <Reveal variant="right" delay={120} className="lp-mock-scroll lp-mock-float">
             <FeedMock />
-          </div>
+          </Reveal>
         </div>
       </section>
 
       <section className="lp-cta" id="pricing">
         <div className="landing-container">
-          <div className="lp-cta-inner">
+          <Reveal className="lp-cta-inner" variant="scale">
             <h2>Start your investment journey today</h2>
             <p>Learn, invest, connect and grow with Finuer.</p>
             <div className="lp-cta-btns">
@@ -267,7 +319,7 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
                 Explore Platform
               </Link>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
@@ -310,7 +362,7 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
               <Link href="#">Privacy Policy</Link>
               <Link href="#">Terms of Use</Link>
               <Link href="#">Disclaimer</Link>
-              <div className="lp-sebi-box" style={{ marginTop: 16 }}>
+              <div className="lp-sebi-box">
                 <strong>SEBI Registered Platform</strong>
                 Investment in securities market are subject to market risks. Read all related documents carefully.
               </div>
@@ -322,6 +374,8 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
           </div>
         </div>
       </footer>
+
+      <LandingPopup />
     </div>
   );
 }

@@ -61,9 +61,24 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const cursor = Number(searchParams.get("cursor") || 0) || undefined;
     const limit = Math.min(30, Math.max(1, Number(searchParams.get("limit") || PAGE_SIZE)));
+    const q = (searchParams.get("q") || "").trim();
 
     const rows = await prisma.communityPost.findMany({
-      where: { deletedAt: null, visibility: "public" },
+      where: {
+        deletedAt: null,
+        visibility: "public",
+        // Search by keyword — content (catches inline #tags and $symbols),
+        // title, and any attached symbol chip.
+        ...(q
+          ? {
+              OR: [
+                { content: { contains: q, mode: "insensitive" as const } },
+                { title: { contains: q, mode: "insensitive" as const } },
+                { symbols: { some: { symbol: { contains: q.toUpperCase() } } } },
+              ],
+            }
+          : {}),
+      },
       orderBy: { createdAt: "desc" },
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -173,6 +188,47 @@ export async function POST(req: NextRequest) {
 
     const tags = extractHashtags(content);
     if (tags.length) await upsertTags(post.id, tags);
+
+    // Notify any @mentioned users (best-effort; matches on first name so an
+    // advisor tagged like "@Ananya" gets an in-app notification).
+    try {
+      const tokens = [
+        ...new Set(
+          [...content.matchAll(/@([a-zA-Z][a-zA-Z0-9_]{1,30})/g)].map((m) => m[1].toLowerCase()),
+        ),
+      ];
+      if (tokens.length) {
+        const candidates = await prisma.user.findMany({
+          where: {
+            id: { not: auth.userId },
+            deletedAt: null,
+            OR: tokens.map((t) => ({ fullName: { startsWith: t, mode: "insensitive" as const } })),
+          },
+          select: { id: true, fullName: true },
+          take: 20,
+        });
+        const mentioned = candidates.filter((u) =>
+          tokens.includes(u.fullName.trim().split(/\s+/)[0]?.toLowerCase() ?? ""),
+        );
+        if (mentioned.length) {
+          const author = await prisma.user.findUnique({
+            where: { id: auth.userId },
+            select: { fullName: true },
+          });
+          await prisma.notification.createMany({
+            data: mentioned.map((u) => ({
+              userId: u.id,
+              title: "You were mentioned",
+              message: `${author?.fullName ?? "Someone"} mentioned you in a post.`,
+              channel: "in_app" as const,
+              data: { type: "mention", postId: post.id, byUserId: auth.userId },
+            })),
+          });
+        }
+      }
+    } catch (e) {
+      console.error("[community/posts] mention notify failed", e);
+    }
 
     const serialized = serializeSocialPost(post, {
       userId: auth.userId,

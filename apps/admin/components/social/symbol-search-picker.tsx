@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { resolveMarketExchange } from "@/lib/angelone-shared";
 import type { AttachedSymbol } from "./attached-symbol-card";
 
 type SearchRow = {
@@ -9,31 +8,19 @@ type SearchRow = {
   tradingSymbol: string;
   symbolName: string;
   token: string;
-  instrumentType?: string;
 };
 
-function displayTitle(row: SearchRow): string {
-  const raw = (row.symbolName || row.tradingSymbol).replace(/-EQ$/i, "").trim();
-  if (row.instrumentType === "EQ" || row.tradingSymbol.endsWith("-EQ")) {
-    return raw.split("-")[0].toUpperCase();
-  }
-  return raw;
-}
-
 function normalizeSymbol(row: SearchRow): AttachedSymbol {
-  const instrumentType = row.instrumentType || "EQ";
-  const exchange = resolveMarketExchange({
-    exchange: row.exchange,
-    symboltoken: row.token,
-    tradingSymbol: row.tradingSymbol,
-    instrumentType,
-  });
+  const sym = (row.symbolName || row.tradingSymbol)
+    .replace(/-EQ$/i, "")
+    .replace(/\.(NS|BO)$/i, "")
+    .split("-")[0]
+    .toUpperCase();
   return {
-    symbol: displayTitle(row),
+    symbol: sym,
     tradingSymbol: row.tradingSymbol,
-    exchange,
+    exchange: row.exchange,
     token: row.token,
-    instrumentType,
   };
 }
 
@@ -45,36 +32,35 @@ export default function SymbolSearchPicker({
   onClose: () => void;
 }) {
   const [q, setQ] = useState("");
-  const [results, setResults] = useState<SearchRow[]>([]);
+  const [results, setResults] = useState<AttachedSymbol[]>([]);
   const [loading, setLoading] = useState(false);
-  // const [error, setError] = useState(""); // see KNOWN-ISSUES.md (market search)
+  const [error, setError] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (q.length < 1) {
       setResults([]);
-      // setError("");
+      setError("");
       return;
     }
     const t = setTimeout(async () => {
       setLoading(true);
-      // setError("");
+      setError("");
       try {
         const res = await fetch(
           `/api/v1/market/search?q=${encodeURIComponent(q)}&exchange=ALL`,
           { cache: "no-store" },
         );
         const json = await res.json();
-        // NOTE: error surfacing commented out pending report — see KNOWN-ISSUES.md.
-        // The API returns { ok: false, error } when AngelOne env vars are missing,
-        // which currently shows as a plain "No symbols found".
-        // if (json.ok === false) {
-        //   setError(json.error || "Symbol search is unavailable right now.");
-        //   setResults([]);
-        //   return;
-        // }
+        // The API returns { ok: false, error } when the market feed is unavailable
+        // (e.g. AngelOne creds missing) — surface it instead of "No symbols found".
+        if (json.ok === false) {
+          setError(json.error || "Symbol search is unavailable right now.");
+          setResults([]);
+          return;
+        }
         const rows: SearchRow[] = json.data ?? [];
-        setResults(rows.slice(0, 12));
+        setResults(rows.slice(0, 12).map(normalizeSymbol));
       } finally {
         setLoading(false);
       }
@@ -102,14 +88,12 @@ export default function SymbolSearchPicker({
       />
       <div className="sf-symbol-picker-list">
         {loading && <p className="sf-picker-empty">Searching…</p>}
-        {/* Error message commented out pending report — see KNOWN-ISSUES.md
         {!loading && error && (
           <p className="sf-picker-empty" style={{ color: "#dc2626", lineHeight: 1.5 }}>
             {error}
           </p>
         )}
-        */}
-        {!loading && q && results.length === 0 && (
+        {!loading && !error && q && results.length === 0 && (
           <p className="sf-picker-empty">No symbols found</p>
         )}
         {results.map(r => (
@@ -118,15 +102,13 @@ export default function SymbolSearchPicker({
             type="button"
             className="sf-symbol-picker-row"
             onClick={() => {
-              onSelect(normalizeSymbol(r));
+              onSelect(r);
               onClose();
             }}
           >
-            <div className="sf-symbol-picker-row-main">
-              <span className="sf-symbol-picker-title">${displayTitle(r)}</span>
-              <span className="sf-symbol-picker-sub">{r.tradingSymbol}</span>
-            </div>
-            <span className="sf-symbol-picker-exch">{r.exchange}</span>
+            <span className="sym">${r.symbol}</span>
+            <span className="meta">{r.tradingSymbol}</span>
+            <span className="exch">{r.exchange}</span>
           </button>
         ))}
       </div>

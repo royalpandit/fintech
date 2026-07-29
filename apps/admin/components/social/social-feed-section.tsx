@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { FiSearch, FiX, FiPlus } from "react-icons/fi";
 import AuthGate from "@/components/auth-gate";
 import PostComposerModal from "./post-composer-modal";
-import PostComposerTrigger from "./post-composer-trigger";
 import PostEditModal from "./post-edit-modal";
 import SocialPostCard from "./social-post-card";
 import {
@@ -36,13 +36,15 @@ export default function SocialFeedSection({
   const [commentsMap, setCommentsMap] = useState<Map<number, SocialComment[]>>(new Map());
   const [commentsLoading, setCommentsLoading] = useState<Set<number>>(new Set());
   const [commentInput, setCommentInput] = useState<Map<number, string>>(new Map());
+  const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
 
-  const load = useCallback(async (cursor?: number) => {
+  const load = useCallback(async (cursor?: number, q?: string) => {
     const isMore = cursor != null;
     if (isMore) setLoadingMore(true);
     else setLoading(true);
     try {
-      const data = await fetchSocialPosts({ cursor, limit: 15 });
+      const data = await fetchSocialPosts({ cursor, limit: 15, q });
       setPosts(prev => (isMore ? [...prev, ...data.posts] : data.posts));
       setNextCursor(data.nextCursor);
     } finally {
@@ -51,9 +53,12 @@ export default function SocialFeedSection({
     }
   }, []);
 
+  // Load the feed, and re-run (debounced) whenever the search query changes.
   useEffect(() => {
-    load();
-  }, [load]);
+    const q = search.trim();
+    const t = setTimeout(() => load(undefined, q || undefined), q ? 300 : 0);
+    return () => clearTimeout(t);
+  }, [load, search]);
 
   // Show a freshly created post immediately instead of refetching the whole feed.
   const handlePosted = (post: SocialPost) => {
@@ -126,18 +131,65 @@ export default function SocialFeedSection({
 
   return (
     <div className="sf-feed-section">
-      <div className="sf-create-row">
-        <AuthGate
-          isAuthenticated={isAuthed}
-          promptTitle="Sign in to post"
-          promptDescription="Share market ideas, charts, and analysis with the community."
-        >
-          <PostComposerTrigger
-            userName={userName}
-            onClick={() => setComposerOpen(true)}
+      {searchOpen ? (
+        <div style={{ position: "relative", marginBottom: 14 }}>
+          <FiSearch
+            size={16}
+            style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }}
           />
-        </AuthGate>
-      </div>
+          <input
+            type="search"
+            autoFocus
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search posts — NIFTY, RELIANCE, #Nifty50…"
+            aria-label="Search posts"
+            style={{
+              width: "100%",
+              padding: "11px 42px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: "var(--surface)",
+              color: "var(--text)",
+              fontSize: 14,
+              outline: "none",
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => { setSearchOpen(false); setSearch(""); }}
+            aria-label="Close search"
+            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", border: "none", background: "var(--surface-2)", color: "var(--text-muted)", width: 26, height: 26, borderRadius: "50%", display: "grid", placeItems: "center", cursor: "pointer" }}
+          >
+            <FiX size={15} />
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Search posts"
+            title="Search posts"
+            style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 15px", borderRadius: 999, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-muted)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+          >
+            <FiSearch size={15} /> Search posts
+          </button>
+          <AuthGate
+            isAuthenticated={isAuthed}
+            promptTitle="Sign in to post"
+            promptDescription="Share market ideas, charts, and analysis with the community."
+          >
+            <button
+              type="button"
+              onClick={() => setComposerOpen(true)}
+              style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "10px 18px", borderRadius: 999, border: "none", background: "var(--primary)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+            >
+              <FiPlus size={16} /> Post
+            </button>
+          </AuthGate>
+        </div>
+      )}
 
       <PostComposerModal
         open={composerOpen}
@@ -164,7 +216,13 @@ export default function SocialFeedSection({
       />
 
       {loading && posts.length === 0 && (
-        <p className="sf-feed-empty">Loading community posts…</p>
+        <p className="sf-feed-empty">
+          {search.trim() ? `Searching for “${search.trim()}”…` : "Loading community posts…"}
+        </p>
+      )}
+
+      {!loading && search.trim() && posts.length === 0 && (
+        <p className="sf-feed-empty">No posts found for “{search.trim()}”.</p>
       )}
 
       <div className="sf-post-list">
@@ -193,7 +251,7 @@ export default function SocialFeedSection({
         <button
           type="button"
           className="sf-load-more"
-          onClick={() => load(nextCursor)}
+          onClick={() => load(nextCursor, search.trim() || undefined)}
           disabled={loadingMore}
         >
           {loadingMore ? "Loading…" : "Load more posts"}
