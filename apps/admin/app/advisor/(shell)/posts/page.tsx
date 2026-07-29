@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { FiHeart, FiMessageSquare } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
-import { isBoostActive } from "@/lib/post-boost";
 
 export const dynamic = "force-dynamic";
 
@@ -205,22 +204,6 @@ export default async function AdvisorPostsPage({
                       >
                         {post.title}
                       </Link>
-                      {isBoostActive((post as any).boostedUntil) && (
-                        <span
-                          style={{
-                            marginLeft: 8,
-                            padding: "1px 8px",
-                            borderRadius: 999,
-                            fontSize: 10,
-                            fontWeight: 700,
-                            background: "#e0f2fe",
-                            color: "#0369a1",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          🚀 Promoted
-                        </span>
-                      )}
                     </td>
                     <td>{post.marketSymbol ?? "—"}</td>
                     <td style={{ textTransform: "capitalize" }}>

@@ -58,12 +58,6 @@ export default function AdvisorShell({
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [search, setSearch] = useState("");
-
-  function submitSearch() {
-    const q = search.trim();
-    if (q) router.push(`/advisor/search?q=${encodeURIComponent(q)}`);
-  }
 
   // While unverified, every feature link routes to the verification page so the
   // advisor must "verify first" before opening posts, subscribers, etc. The
@@ -236,59 +230,6 @@ export default function AdvisorShell({
           className="admin-header"
           style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
         >
-          {/* Search */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, maxWidth: 420 }}>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                submitSearch();
-              }}
-              style={{
-                position: "relative",
-                width: "100%",
-              }}
-            >
-              <button
-                type="submit"
-                aria-label="Search"
-                style={{
-                  position: "absolute",
-                  left: 12,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  background: "none",
-                  border: "none",
-                  padding: 4,
-                  cursor: "pointer",
-                  color: "var(--text-muted)",
-                  display: "inline-flex",
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-                  <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </button>
-              <input
-                placeholder="Search posts, subscribers, courses..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{
-                  width: "100%",
-                  height: 40,
-                  paddingLeft: 38,
-                  paddingRight: 14,
-                  borderRadius: 10,
-                  border: "1px solid var(--border)",
-                  background: "var(--surface-2)",
-                  color: "var(--text)",
-                  fontSize: 13,
-                  outline: "none",
-                }}
-              />
-            </form>
-          </div>
-
           {/* Top page tabs */}
           <nav style={{ display: "flex", gap: 4, alignItems: "center", margin: "0 auto" }}>
             {[
@@ -297,7 +238,7 @@ export default function AdvisorShell({
               { label: "Posts", href: "/advisor/posts" },
               { label: "Subscription Services", href: "/advisor/services" },
               { label: "Earnings", href: "/advisor/earnings" },
-              { label: "Paper", href: "/advisor/paper" },
+              { label: "Virtual Trading", href: "/advisor/paper" },
             ].map((nav) => {
               const active = pathname === nav.href || pathname.startsWith(nav.href + "/");
               return (

@@ -21,16 +21,17 @@ import {
   FiClock,
   FiBookOpen,
   FiTarget,
+  FiAward,
+  FiLayers,
   FiMessageSquare,
   FiMenu,
   FiCreditCard,
   FiX,
-  FiSearch,
   FiChevronRight,
   FiActivity,
+  FiPackage,
 } from "react-icons/fi";
 import { TbRobot } from "react-icons/tb";
-import GlobalSearchPanel from "@/components/search/global-search-panel";
 import WatchlistStoreProvider from "@/components/watchlist/watchlist-store-provider";
 
 type UserShellProps = {
@@ -63,7 +64,10 @@ const MAIN_NAV: NavItem[] = [
 const INVESTING_NAV: NavItem[] = [
   { label: "Dashboard", href: "/user/home", Icon: FiPieChart },
   { label: "Stock Basket", href: "/user/stock-picks", Icon: FiTarget },
+  { label: "Finuer Basket", href: "/user/finuer-basket", Icon: FiLayers },
+  { label: "Competitions", href: "/user/competition", Icon: FiAward },
   { label: "Wallet", href: "/user/wallet", Icon: FiCreditCard },
+  { label: "Subscriptions", href: "/user/subscriptions", Icon: FiPackage },
   { label: "Watchlist", href: "/user/watchlist", Icon: FiStar },
   { label: "Portfolio", href: "/user/portfolio", Icon: FiBriefcase },
   { label: "Courses", href: "/user/courses", Icon: FiBookOpen },
@@ -110,7 +114,6 @@ export default function UserShell({
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   // Full search panel (tabs + live results) opened by clicking the header search.
-  const [searchPanelOpen, setSearchPanelOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -275,35 +278,8 @@ export default function UserShell({
             />
           </div>
 
-          {/* Center zone — search */}
-          <div
-            className="us-search-wrap"
-          >
-            {/* Acts as a button: clicking anywhere opens the full search panel. */}
-            <button
-              type="button"
-              className="us-search-inner us-search-trigger"
-              onClick={() => setSearchPanelOpen(true)}
-            >
-              <FiSearch size={14} className="us-search-icon" />
-              <span className="us-search-placeholder">
-                Search professionals, posts, courses…
-              </span>
-            </button>
-          </div>
-
           {/* Right zone — actions */}
           <div className="us-header-right">
-            {/* Mobile search toggle */}
-            <button
-              className="us-icon-btn us-search-toggle"
-              type="button"
-              aria-label="Search"
-              onClick={() => setSearchPanelOpen(true)}
-            >
-              <FiSearch size={18} />
-            </button>
-
             <ThemeHeaderButton />
 
             {currentUser ? (
@@ -395,8 +371,6 @@ export default function UserShell({
         </div>
 
       </header>
-
-      {searchPanelOpen && <GlobalSearchPanel onClose={() => setSearchPanelOpen(false)} />}
 
       {/* ── Body ── */}
       <div className="us-body">

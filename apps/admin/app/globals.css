@@ -3173,6 +3173,912 @@ body.terminal-active .us-content {
   font-size: 12px;
 }
 
+/* ══ Finuer Basket (styles were missing after the merge) ════════════════ */
+.finuer-basket-filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+.finuer-basket-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 150px;
+}
+.finuer-basket-filter-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.finuer-basket-filter-select {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.finuer-basket-filter-select:focus {
+  border-color: var(--primary);
+}
+
+.finuer-basket-page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.finuer-basket-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+.finuer-basket-card:hover {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+.finuer-basket-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.finuer-basket-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+.finuer-basket-card-info {
+  flex: 1;
+  min-width: 0;
+}
+.finuer-basket-card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.finuer-basket-card-desc {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.finuer-basket-plan-badge {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.finuer-basket-plan-badge--free {
+  background: rgba(16, 185, 129, 0.14);
+  color: #047857;
+}
+.finuer-basket-plan-badge--premium {
+  background: rgba(124, 58, 237, 0.14);
+  color: #7c3aed;
+}
+
+.finuer-basket-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.finuer-basket-tag {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.finuer-basket-hero-return {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.finuer-basket-hero-return-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.finuer-basket-hero-return-value {
+  margin: 2px 0 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.finuer-basket-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.finuer-basket-status-pill--up {
+  background: rgba(16, 185, 129, 0.14);
+  color: #047857;
+}
+.finuer-basket-status-pill--down {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+.finuer-basket-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.finuer-basket-returns-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.finuer-basket-return-cell {
+  padding: 8px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+.finuer-basket-return-cell--active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.finuer-basket-return-cell-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.finuer-basket-return-cell-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 2px;
+}
+
+.finuer-basket-benchmark-box {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+.finuer-basket-benchmark-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.finuer-basket-benchmark-compare {
+  display: flex;
+  gap: 24px;
+}
+.finuer-basket-benchmark-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.finuer-basket-benchmark-stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.finuer-basket-benchmark-stat-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.finuer-basket-detail {
+  max-width: 820px;
+}
+/* Return colour utilities — declared last so they win over the value colours above. */
+.finuer-text-success {
+  color: #059669;
+}
+.finuer-text-danger {
+  color: #dc2626;
+}
+
+/* ══ Trades — split view (filters · list · featured rail) ═══════════════ */
+.trades-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+.trades-sidebar {
+  flex: 0 0 224px;
+  position: sticky;
+  top: 12px;
+}
+.trades-main {
+  flex: 1 1 460px;
+  min-width: 0;
+}
+.trades-rail {
+  flex: 0 0 300px;
+  position: sticky;
+  top: 12px;
+  display: grid;
+  gap: 14px;
+}
+@media (max-width: 1140px) {
+  .trades-rail {
+    flex-basis: 100%;
+    position: static;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    order: 3;
+  }
+}
+@media (max-width: 760px) {
+  .trades-sidebar {
+    flex-basis: 100%;
+    position: static;
+  }
+}
+
+/* Filters sidebar */
+.trades-fcard {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 14px;
+}
+.trades-fhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.trades-fhead button {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.trades-fgroup {
+  margin-bottom: 14px;
+}
+.trades-fgroup:last-child {
+  margin-bottom: 0;
+}
+.trades-flabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 7px;
+}
+.trades-fopts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.trades-fopt {
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease,
+    background 0.12s ease,
+    color 0.12s ease;
+}
+.trades-fopt:hover {
+  border-color: var(--primary);
+}
+.trades-fopt.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+/* Featured analyst rail */
+.trades-rail-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 14px;
+}
+.trades-rail-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.trades-adv-list {
+  display: grid;
+  gap: 4px;
+}
+.trades-adv {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: background 0.12s ease;
+}
+.trades-adv:hover {
+  background: var(--surface-2);
+}
+.trades-adv-av {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0ea5e9;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.14), rgba(16, 185, 129, 0.14));
+  object-fit: cover;
+}
+.trades-adv-av-img {
+  background: var(--surface-2);
+}
+.trades-adv-body {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.trades-adv-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trades-adv-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trades-adv-badge {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+.trades-rail-cta {
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+}
+.trades-rail-cta strong {
+  font-size: 13px;
+  color: var(--text);
+}
+.trades-rail-cta span {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.trades-rail-cta a {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+/* Sponsored trade card highlight + "Promoted" tag */
+.trades-post-sponsored {
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.12);
+}
+.trades-promoted {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+
+/* ══ Competitions (styles were missing after the merge) ═════════════════ */
+.competition-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 18px;
+}
+.competition-tabs--trade {
+  border-bottom: none;
+}
+.competition-tab {
+  padding: 10px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.competition-tab:hover {
+  color: var(--text);
+}
+.competition-tab--active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.competition-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.competition-loading,
+.competition-empty {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.competition-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+.competition-card:hover {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+.competition-card-banner-link {
+  text-decoration: none;
+}
+.competition-card-banner {
+  position: relative;
+  min-height: 92px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  background: linear-gradient(135deg, var(--primary-soft), var(--surface-2));
+  background-size: cover;
+  background-position: center;
+}
+.competition-card-status {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--surface);
+  color: var(--text-muted);
+}
+.competition-card-status--live {
+  background: #dcfce7;
+  color: #047857;
+}
+.competition-card-status--upcoming {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.competition-card-status--completed {
+  background: #f1f5f9;
+  color: #64748b;
+}
+.competition-card-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+.competition-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+  display: block;
+}
+.competition-card-desc {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.competition-card-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 2px;
+}
+.competition-card-stat-label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.competition-card-stat-value {
+  display: block;
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 700;
+  margin-top: 2px;
+}
+.competition-card-actions {
+  margin-top: auto;
+  padding-top: 6px;
+}
+.competition-card-join-btn,
+.competition-card-view-btn,
+.competition-card-open-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 11px 16px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+}
+.competition-card-join-btn {
+  border: none;
+  background: var(--primary);
+  color: #fff;
+}
+.competition-card-join-btn:hover {
+  filter: brightness(1.06);
+}
+.competition-card-open-btn {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.competition-card-view-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* Detail */
+.competition-detail {
+  max-width: 780px;
+}
+.competition-detail-banner {
+  min-height: 140px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--primary-soft), var(--surface-2));
+  background-size: cover;
+  background-position: center;
+  margin-bottom: 16px;
+}
+.competition-detail-header {
+  margin-bottom: 14px;
+}
+.competition-detail-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+.competition-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.competition-detail-section {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 14px;
+  background: var(--surface);
+}
+.competition-detail-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.competition-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.competition-input:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+/* Leaderboard */
+.competition-lb-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-top: 1px solid var(--border);
+}
+.competition-lb-row--top {
+  background: var(--primary-soft);
+}
+.competition-lb-rank {
+  width: 28px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.competition-lb-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.competition-lb-avatar--initials {
+  background: var(--primary);
+  color: #fff;
+}
+.competition-lb-user {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--text);
+}
+.competition-lb-stat {
+  text-align: right;
+  font-weight: 700;
+  color: var(--text);
+}
+.competition-lb-stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Trading competition (paper) */
+.competition-trade-panel {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  background: var(--surface);
+}
+.competition-trade-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.competition-trade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+.competition-trade-forms {
+  display: grid;
+  gap: 10px;
+}
+.competition-trade-summary-pill {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+.competition-cmp-box {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.competition-cmp-box--compact {
+  padding: 8px 10px;
+}
+.competition-cmp-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.competition-cmp-price {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.competition-cmp-stock {
+  font-weight: 700;
+  color: var(--text);
+}
+.competition-cmp-estimate {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.competition-portfolio-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+.competition-table-wrap {
+  overflow-x: auto;
+}
+.competition-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.competition-table th,
+.competition-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.competition-table th {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.competition-order-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.competition-search-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+  z-index: 50;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Markets — add-to-watchlist buttons + row hover */
+.mkt-add-wl {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--primary, #0ea5e9);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.mkt-add-wl:hover {
+  background: var(--primary-soft, rgba(14, 165, 233, 0.1));
+  border-color: var(--primary, #0ea5e9);
+}
+.mkt-add-wl-compact {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  gap: 0;
+  justify-content: center;
+  border-radius: 9px;
+}
+.mkt-row:hover {
+  background: var(--surface-2);
+}
+.mkt-trow:hover td {
+  background: var(--surface-2);
+}
+
+/* Subscriptions & Purchases — split view (list left, browse right) */
+.subs-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.subs-side {
+  position: sticky;
+  top: 76px;
+}
+@media (max-width: 900px) {
+  .subs-grid {
+    grid-template-columns: 1fr;
+  }
+  .subs-side {
+    position: static;
+  }
+}
+
 .user-page-back-link {
   font-size: 13px;
   color: var(--text-muted);
