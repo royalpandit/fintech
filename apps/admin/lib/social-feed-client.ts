@@ -34,10 +34,12 @@ export async function uploadSocialMedia(
 export async function fetchSocialPosts(params?: {
   cursor?: number;
   limit?: number;
+  q?: string;
 }): Promise<{ posts: SocialPost[]; nextCursor: number | null }> {
   const q = new URLSearchParams();
   if (params?.cursor) q.set("cursor", String(params.cursor));
   if (params?.limit) q.set("limit", String(params.limit));
+  if (params?.q?.trim()) q.set("q", params.q.trim());
   const res = await fetch(`/api/v1/community/posts?${q}`, {
     credentials: "include",
     cache: "no-store",

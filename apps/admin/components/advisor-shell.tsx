@@ -293,10 +293,11 @@ export default function AdvisorShell({
           <nav style={{ display: "flex", gap: 4, alignItems: "center", margin: "0 auto" }}>
             {[
               { label: "Overview", href: "/advisor/dashboard" },
+              { label: "Feed", href: "/advisor/feed" },
               { label: "Posts", href: "/advisor/posts" },
               { label: "Subscription Services", href: "/advisor/services" },
               { label: "Earnings", href: "/advisor/earnings" },
-              { label: "Profile", href: "/advisor/profile" },
+              { label: "Paper", href: "/advisor/paper" },
             ].map((nav) => {
               const active = pathname === nav.href || pathname.startsWith(nav.href + "/");
               return (
