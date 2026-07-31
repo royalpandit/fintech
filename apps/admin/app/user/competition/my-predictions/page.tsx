@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { UserPageHeader, UserPageSection } from "@/components/user/user-page-layout";
+import { UserPageBackLink, UserPageHeader, UserPageSection } from "@/components/user/user-page-layout";
 
 type Row = {
   id: number;
@@ -42,9 +42,7 @@ export default function MyPredictionsPage() {
       />
 
       <div style={{ marginBottom: 16 }}>
-        <Link href="/user/competition" className="competition-card-view-btn">
-          ← Back to Competitions
-        </Link>
+        <UserPageBackLink href="/user/competition">Back to Competitions</UserPageBackLink>
       </div>
 
       {loading ? (

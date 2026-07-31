@@ -157,8 +157,8 @@ export default function CompetitionFormPage({ competitionId, viewOnly = false }:
               <option value="draft">Draft</option>
               <option value="upcoming">Upcoming</option>
               <option value="live">Active</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
+              {/* Completed / Cancelled are set automatically later (on result
+                  declaration / cancellation), so they're not manual options. */}
             </select>
           </Field>
           <Field label="Visibility">

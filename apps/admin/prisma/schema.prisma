@@ -152,8 +152,28 @@ enum ProfessionalType {
   portfolio_manager
   advisory_firm
   wealth_manager
+  mutual_fund_distributor
+  stock_broker
+  finance_creator
+  listed_company
+  financial_platform
 
   @@map("professional_type")
+}
+
+// Admin-editable permission matrix: which capability each professional type has.
+// Seeded lazily from code defaults (lib/capabilities). A row here overrides the
+// default for that (type, capability) pair; absence = fall back to the default.
+model ProfessionalCapability {
+  id               Int              @id @default(autoincrement())
+  professionalType ProfessionalType @map("professional_type")
+  capability       String           @db.VarChar(64)
+  allowed          Boolean
+  updatedByAdminId Int?             @map("updated_by_admin_id")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  @@unique([professionalType, capability])
+  @@map("professional_capabilities")
 }
 
 enum PostPaymentStatus {

@@ -113,7 +113,7 @@ export default function UserCompetitionDetailClient() {
   if (!data) {
     return (
       <UserPageSection>
-        <UserPageBackLink href="/user/competition">← Back to Competitions</UserPageBackLink>
+        <UserPageBackLink href="/user/competition">Back to Competitions</UserPageBackLink>
         <p>Competition not found.</p>
       </UserPageSection>
     );
@@ -132,7 +132,7 @@ export default function UserCompetitionDetailClient() {
   if (submitted && data.hasPrediction && !resultDeclared) {
     return (
       <UserPageSection>
-        <UserPageBackLink href="/user/competition">← Back to Competitions</UserPageBackLink>
+        <UserPageBackLink href="/user/competition">Back to Competitions</UserPageBackLink>
         <div className="competition-detail-section" style={{ textAlign: "center", padding: "32px 16px" }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
           <h1 className="competition-detail-title">Prediction Submitted Successfully</h1>
@@ -169,7 +169,7 @@ export default function UserCompetitionDetailClient() {
   if (resultDeclared) {
     return (
       <UserPageSection>
-        <UserPageBackLink href="/user/competition">← Back to Competitions</UserPageBackLink>
+        <UserPageBackLink href="/user/competition">Back to Competitions</UserPageBackLink>
         <div className="competition-detail-section">
           <h1 className="competition-detail-title">🏆 Competition Completed</h1>
           <p style={{ marginTop: 12 }}>
@@ -210,7 +210,7 @@ export default function UserCompetitionDetailClient() {
 
   return (
     <UserPageSection>
-      <UserPageBackLink href="/user/competition">← Back to Competitions</UserPageBackLink>
+      <UserPageBackLink href="/user/competition">Back to Competitions</UserPageBackLink>
 
       <div
         className="competition-detail-banner"
