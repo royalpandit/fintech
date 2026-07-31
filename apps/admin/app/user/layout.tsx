@@ -23,13 +23,14 @@ export default async function UserLayout({ children }: { children: React.ReactNo
         where: { userId: auth.userId },
         select: { verificationStatus: true },
       });
-      // Approved advisors have their own console — send them there.
-      // Pending/rejected advisors have no console yet, so let them browse the
-      // user-facing community while they wait (the pending page links here).
-      if (profile?.verificationStatus === "approved") {
-        redirect("/advisor/dashboard");
+      // Approved advisors have their own console, but their sidebar links into
+      // the investor-facing Markets / Watchlist / Finuer Basket / Competitions
+      // sections (and their detail pages), so they're allowed to browse here too.
+      // Pending/rejected advisors browse the community while they wait — we mount
+      // the approval watcher so they get punted to their console once approved.
+      if (profile?.verificationStatus !== "approved") {
+        pendingAdvisor = true;
       }
-      pendingAdvisor = true;
     }
   }
 

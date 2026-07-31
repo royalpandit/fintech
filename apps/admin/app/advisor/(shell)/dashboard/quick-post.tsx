@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -18,6 +18,15 @@ export default function QuickPost() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Only SEBI tiers may attach a target (buy/sell call). API is authoritative.
+  const [canTrade, setCanTrade] = useState(true);
+  useEffect(() => {
+    fetch("/api/v1/advisor/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setCanTrade(((d?.capabilities ?? []) as string[]).includes("post.entry_target_sl")))
+      .catch(() => {});
+  }, []);
 
   const reset = () => {
     setSymbol("");
@@ -151,37 +160,41 @@ export default function QuickPost() {
           </button>
         </div>
 
-        <label
-          style={{
-            fontSize: 11,
-            fontWeight: 600,
-            color: "var(--text-muted)",
-            display: "block",
-            marginBottom: 4,
-          }}
-        >
-          Target Price (optional)
-        </label>
-        <input
-          value={targetPrice}
-          onChange={(e) => setTargetPrice(e.target.value)}
-          type="number"
-          step="0.01"
-          min={0}
-          placeholder="₹"
-          style={{
-            width: "100%",
-            height: 38,
-            padding: "0 12px",
-            borderRadius: 8,
-            border: "1px solid var(--border)",
-            background: "var(--surface)",
-            fontSize: 12,
-            color: "var(--text)",
-            outline: "none",
-            marginBottom: 12,
-          }}
-        />
+        {canTrade && (
+          <>
+            <label
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: "var(--text-muted)",
+                display: "block",
+                marginBottom: 4,
+              }}
+            >
+              Target Price (optional)
+            </label>
+            <input
+              value={targetPrice}
+              onChange={(e) => setTargetPrice(e.target.value)}
+              type="number"
+              step="0.01"
+              min={0}
+              placeholder="₹"
+              style={{
+                width: "100%",
+                height: 38,
+                padding: "0 12px",
+                borderRadius: 8,
+                border: "1px solid var(--border)",
+                background: "var(--surface)",
+                fontSize: 12,
+                color: "var(--text)",
+                outline: "none",
+                marginBottom: 12,
+              }}
+            />
+          </>
+        )}
 
         <label
           style={{

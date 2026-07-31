@@ -7,8 +7,14 @@ import { getBoostTier } from "@/lib/post-boost";
 import { parseAudience } from "@/lib/post-visibility";
 import { isTradeTimeframe, formatPrice, formatEntryRange } from "@/lib/trades";
 import { subscribersForServiceIds } from "@/lib/subscription-services";
+import { canType } from "@/lib/capabilities-server";
 
 export const dynamic = "force-dynamic";
+
+// Per "Roles and permissions in finuer": cap how many buy/sell (Entry/Target/SL)
+// calls a single analyst can publish per day. Trade-posting itself is limited to
+// SEBI tiers via the capability layer.
+const DAILY_TRADE_POST_LIMIT = 5;
 
 const VALID_SENTIMENT = ["bullish", "bearish", "neutral"] as const;
 const VALID_RISK = ["low", "medium", "high"] as const;
@@ -64,7 +70,7 @@ export async function POST(req: NextRequest) {
   // Only approved advisors can publish.
   const profile = await prisma.advisorProfile.findUnique({
     where: { userId: auth.userId },
-    select: { verificationStatus: true },
+    select: { verificationStatus: true, professionalType: true },
   });
   if (profile?.verificationStatus !== "approved") {
     return err("Your advisor account must be approved before posting", 403);
@@ -114,6 +120,47 @@ export async function POST(req: NextRequest) {
     typeof body.conviction === "number" && body.conviction >= 1 && body.conviction <= 5
       ? Math.round(body.conviction)
       : null;
+  const targetPrice = typeof body.targetPrice === "number" && body.targetPrice > 0 ? body.targetPrice : null;
+  const stopLossPrice =
+    typeof body.stopLossPrice === "number" && body.stopLossPrice > 0 ? body.stopLossPrice : null;
+
+  // A "trade" (advisory buy/sell call) is any post carrying an entry range,
+  // target, or stop-loss. Per the roles matrix, only SEBI tiers may post these.
+  const isTradePost =
+    entryPriceMin != null || entryPriceMax != null || targetPrice != null || stopLossPrice != null;
+
+  if (isTradePost && !(await canType(profile?.professionalType ?? null, "post.entry_target_sl"))) {
+    return err(
+      "Only SEBI-registered Research Analysts and Advisory Firms can post Entry/Target/SL (buy-sell) calls. You can still publish normal analysis posts.",
+      403,
+    );
+  }
+
+  // Daily buy/sell cap — applies to published (non-draft) trade posts only.
+  if (isTradePost && body.saveDraft !== true) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const todayTradeCount = await prisma.marketPost.count({
+      where: {
+        advisorUserId: auth.userId,
+        deletedAt: null,
+        publishedAt: { gte: startOfDay },
+        OR: [
+          { entryPriceMin: { not: null } },
+          { entryPriceMax: { not: null } },
+          { targetPrice: { not: null } },
+          { stopLossPrice: { not: null } },
+        ],
+      },
+    });
+    if (todayTradeCount >= DAILY_TRADE_POST_LIMIT) {
+      return err(
+        `Daily limit reached — you can publish up to ${DAILY_TRADE_POST_LIMIT} buy/sell calls per day.`,
+        429,
+      );
+    }
+  }
+
   const chartImages = Array.isArray(body.imageUrls)
     ? body.imageUrls.filter((u) => typeof u === "string" && u.trim()).slice(0, 6)
     : [];
@@ -225,8 +272,8 @@ export async function POST(req: NextRequest) {
       conviction,
       // Draft trades stay in tradeStatus 'draft' and are only visible to the author.
       tradeStatus: saveDraft ? "draft" : "awaiting_entry",
-      targetPrice: typeof body.targetPrice === "number" ? body.targetPrice : null,
-      stopLossPrice: typeof body.stopLossPrice === "number" ? body.stopLossPrice : null,
+      targetPrice,
+      stopLossPrice,
       disclaimer,
       complianceStatus: saveDraft ? "pending" : (complianceStatus as any),
       complianceRiskScore: saveDraft ? null : complianceRiskScore,

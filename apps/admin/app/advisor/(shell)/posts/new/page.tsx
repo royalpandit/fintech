@@ -68,6 +68,20 @@ export default function NewPostPage() {
   }, []);
   const toggleService = (id: number) =>
     setServiceIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  // Only SEBI-tier professionals may post Entry/Target/SL (buy-sell) calls — the
+  // API enforces this; here we hide the trade fields for everyone else. Optimistic
+  // until the profile loads.
+  const [canTrade, setCanTrade] = useState(true);
+  useEffect(() => {
+    fetch("/api/v1/advisor/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const caps: string[] = d?.capabilities ?? [];
+        setCanTrade(caps.includes("post.entry_target_sl"));
+      })
+      .catch(() => {});
+  }, []);
   const [disclaimer, setDisclaimer] = useState(
     "This post is for informational purposes only and does not constitute investment advice. Please consult a qualified financial advisor before making any investment decisions. Past performance is not indicative of future results.",
   );
@@ -306,6 +320,8 @@ export default function NewPostPage() {
                   <option value="high">High</option>
                 </select>
               </div>
+              {canTrade && (
+                <>
               <div>
                 <label className="metric-label">Horizon</label>
                 <select
@@ -435,6 +451,25 @@ export default function NewPostPage() {
                   )}
                 </div>
               </div>
+                </>
+              )}
+              {!canTrade && (
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    fontSize: 12,
+                    color: "var(--text-muted)",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    padding: "10px 12px",
+                  }}
+                >
+                  Buy/sell calls (Entry / Target / Stop-loss) are available to
+                  SEBI-registered Research Analysts &amp; Advisory Firms. You can still
+                  publish normal analysis posts.
+                </div>
+              )}
             </div>
 
             {/* Chart screenshots (Trades Phase 2) */}

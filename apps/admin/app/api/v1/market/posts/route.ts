@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { parsePostAccessType } from "@/lib/post-access";
+import { canType } from "@/lib/capabilities-server";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,24 @@ export async function POST(req: NextRequest) {
   const postAccessType = parsePostAccessType(body.postAccessType) ?? "free";
   if (body.postAccessType != null && !parsePostAccessType(body.postAccessType)) {
     return err("postAccessType must be 'free' or 'paid'");
+  }
+
+  // Entry/Target/SL (buy-sell) calls are restricted to SEBI tiers. Non-advisors
+  // have no professional type, so this also blocks them from posting trade fields.
+  const isTradePost =
+    (typeof body.targetPrice === "number" && body.targetPrice > 0) ||
+    (typeof body.stopLossPrice === "number" && body.stopLossPrice > 0);
+  if (isTradePost) {
+    const profile = await prisma.advisorProfile.findUnique({
+      where: { userId },
+      select: { professionalType: true },
+    });
+    if (!(await canType(profile?.professionalType ?? null, "post.entry_target_sl"))) {
+      return err(
+        "Only SEBI-registered Research Analysts and Advisory Firms can post Entry/Target/SL (buy-sell) calls.",
+        403,
+      );
+    }
   }
 
   const post = await prisma.marketPost.create({
