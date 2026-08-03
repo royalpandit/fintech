@@ -4,6 +4,7 @@ import { FiSettings, FiUser, FiBell, FiSliders, FiLock } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import ThemeSettingsField from "@/components/theme/theme-settings-field";
+import AccountForm from "./account-form";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,7 @@ export default async function UserSettingsPage() {
         email: true,
         phone: true,
         emailVerifiedAt: true,
+        avatarUrl: true,
       },
     }),
     prisma.userPreference.findUnique({ where: { userId } }),
@@ -131,101 +133,14 @@ export default async function UserSettingsPage() {
             <FiUser size={16} /> Account
           </h3>
 
-          <label
-            style={{
-              display: "block",
-              fontSize: 11,
-              fontWeight: 600,
-              color: "var(--text-muted)",
-              marginBottom: 4,
-            }}
-          >
-            Full Name
-          </label>
-          <input
-            defaultValue={user.fullName}
-            style={{
-              width: "100%",
-              height: 38,
-              padding: "0 12px",
-              borderRadius: 8,
-              border: "1px solid var(--border)",
-              fontSize: 13,
-              outline: "none",
-              marginBottom: 12,
-              boxSizing: "border-box",
+          <AccountForm
+            user={{
+              fullName: user.fullName,
+              email: user.email,
+              phone: user.phone,
+              avatarUrl: user.avatarUrl ?? null,
             }}
           />
-
-          <label
-            style={{
-              display: "block",
-              fontSize: 11,
-              fontWeight: 600,
-              color: "var(--text-muted)",
-              marginBottom: 4,
-            }}
-          >
-            Email
-          </label>
-          <input
-            defaultValue={user.email}
-            type="email"
-            style={{
-              width: "100%",
-              height: 38,
-              padding: "0 12px",
-              borderRadius: 8,
-              border: "1px solid var(--border)",
-              fontSize: 13,
-              outline: "none",
-              marginBottom: 12,
-              boxSizing: "border-box",
-            }}
-          />
-
-          <label
-            style={{
-              display: "block",
-              fontSize: 11,
-              fontWeight: 600,
-              color: "var(--text-muted)",
-              marginBottom: 4,
-            }}
-          >
-            Phone
-          </label>
-          <input
-            defaultValue={user.phone}
-            type="tel"
-            style={{
-              width: "100%",
-              height: 38,
-              padding: "0 12px",
-              borderRadius: 8,
-              border: "1px solid var(--border)",
-              fontSize: 13,
-              outline: "none",
-              marginBottom: 16,
-              boxSizing: "border-box",
-            }}
-          />
-
-          <button
-            type="button"
-            style={{
-              padding: "10px 18px",
-              borderRadius: 10,
-              background: "#0ea5e9",
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: 12,
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            Save changes
-          </button>
         </article>
 
         <article

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { FiArrowUpRight, FiArrowDownRight, FiBarChart2, FiRefreshCw } from "react-icons/fi";
 import MarketSearch from "@/components/trading/market-search";
+import MutualFundsView from "@/components/trading/mutual-funds-view";
 import AddToWatchlistButton from "@/components/watchlist/add-to-watchlist-button";
 import type { WatchlistItem } from "@/components/trading/trading-terminal-types";
 
@@ -43,7 +44,10 @@ function toWatchItem(r: OverviewRow): WatchlistItem {
 const up = "#16a34a";
 const down = "#dc2626";
 
+type MarketTab = "stocks" | "mf";
+
 export default function MarketsOverview() {
+  const [tab, setTab] = useState<MarketTab>("stocks");
   const [indices, setIndices] = useState<OverviewRow[]>([]);
   const [stocks, setStocks] = useState<OverviewRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +55,7 @@ export default function MarketsOverview() {
   const [updatedAt, setUpdatedAt] = useState<string>("");
 
   useEffect(() => {
+    if (tab !== "stocks") return;
     let alive = true;
     const load = async () => {
       try {
@@ -79,7 +84,7 @@ export default function MarketsOverview() {
       alive = false;
       clearInterval(id);
     };
-  }, []);
+  }, [tab]);
 
   const gainers = useMemo(
     () => [...stocks].sort((a, b) => b.percentChange - a.percentChange).slice(0, 5),
@@ -115,25 +120,61 @@ export default function MarketsOverview() {
             )}
           </p>
         </div>
-        <Link
-          href="/user/markets/chart"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "9px 16px",
-            borderRadius: 10,
-            background: "#0ea5e9",
-            color: "#fff",
-            fontSize: 13,
-            fontWeight: 600,
-            textDecoration: "none",
-          }}
-        >
-          <FiBarChart2 size={15} /> Open full chart
-        </Link>
+        {tab === "stocks" && (
+          <Link
+            href="/user/markets/chart"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "9px 16px",
+              borderRadius: 10,
+              background: "var(--accent-blue, #2563eb)",
+              color: "#fff",
+              fontSize: 13,
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            <FiBarChart2 size={15} /> Open full chart
+          </Link>
+        )}
       </div>
 
+      {/* Instrument tabs */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, borderBottom: "1px solid var(--border)" }}>
+        {([
+          { key: "stocks", label: "Stocks & Indices" },
+          { key: "mf", label: "Mutual Funds" },
+        ] as { key: MarketTab; label: string }[]).map((t) => {
+          const active = tab === t.key;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              style={{
+                padding: "10px 16px",
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 600,
+                color: active ? "var(--text)" : "var(--text-muted)",
+                borderBottom: active ? "2px solid var(--primary, #10b981)" : "2px solid transparent",
+                marginBottom: -1,
+              }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === "mf" ? (
+        <MutualFundsView />
+      ) : (
+      <>
       <MarketSearch />
 
       {error && (
@@ -295,6 +336,8 @@ export default function MarketsOverview() {
           </table>
         </div>
       </article>
+      </>
+      )}
     </section>
   );
 }

@@ -1,19 +1,8 @@
 import { notFound } from "next/navigation";
 
-const allowedModules = new Set([
-  "users",
-  "advisors",
-  "market-posts",
-  "community",
-  "reports",
-  "ai-compliance",
-  "analytics",
-  "payments",
-  "courses",
-  "notifications",
-  "audit-logs",
-  "settings",
-]);
+// Every super-admin module now has a dedicated static route, which Next.js
+// prefers over this dynamic segment. Nothing legitimately falls through here.
+const allowedModules = new Set<string>();
 
 function titleFromSlug(slug: string) {
   return slug

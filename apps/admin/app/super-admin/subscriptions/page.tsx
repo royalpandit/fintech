@@ -135,7 +135,7 @@ export default async function SuperAdminSubscriptionsPage({
   const totalPages = Math.max(1, Math.ceil(filteredCount / perPage));
 
   return (
-    <section className="advisor-scope" style={{ ["--advisor-primary" as any]: "#7c3aed" }}>
+    <section className="advisor-scope" style={{ ["--advisor-primary" as any]: "#10b981" }}>
       <div style={{ marginBottom: 18 }}>
         <h1
           style={{
@@ -259,7 +259,7 @@ export default async function SuperAdminSubscriptionsPage({
                           style={{
                             fontSize: 13,
                             fontWeight: 700,
-                            color: "#7c3aed",
+                            color: "#10b981",
                             textDecoration: "none",
                           }}
                         >

@@ -51,7 +51,7 @@ export default function UserRowActions({ userId, status, emailVerified }: Props)
     <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-start" }}>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {!emailVerified && status !== "suspended" && (
-          <button type="button" style={{ ...btn, background: "#7c3aed", color: "#fff", border: "none" }} disabled={loading} onClick={() => run("verify")}>
+          <button type="button" style={{ ...btn, background: "#2563eb", color: "#fff", border: "none" }} disabled={loading} onClick={() => run("verify")}>
             Verify
           </button>
         )}
