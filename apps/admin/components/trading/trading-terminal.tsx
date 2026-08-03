@@ -12,6 +12,7 @@ import TradingUtilityShell from "./trading-utility-shell";
 import { allWatchlistItems, refresh, useWatchlistStore } from "@/lib/watchlist-store";
 import type { UtilityPanelId } from "./trading-utility-types";
 import type { WatchlistItem } from "./trading-terminal-types";
+import AddToWatchlistButton from "@/components/watchlist/add-to-watchlist-button";
 import {
   DEFAULT_TIMEFRAME,
   defaultPeriodForTimeframe,
@@ -308,19 +309,22 @@ function OverviewPanel({
 
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
-      <div style={{ marginBottom: 20 }}>
-        <h3 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 600, color: "#0f172a" }}>{symbol.display}</h3>
-        <div style={{ fontSize: 12, color: "#64748b" }}>
-          {symbol.exchange} · {symbol.type} · Token {symbol.token}
-        </div>
-        {symbol.ltp !== undefined && (
-          <div style={{ marginTop: 12, display: "flex", alignItems: "baseline", gap: 10 }}>
-            <span style={{ fontSize: 28, fontWeight: 600, color: "#0f172a" }}>{fmtP(symbol.ltp)}</span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: up ? "#16a34a" : "#dc2626" }}>
-              {up ? "▲" : "▼"} {fmtPct(symbol.changePct ?? dayChange ?? undefined)}
-            </span>
+      <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
+        <div>
+          <h3 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 600, color: "#0f172a" }}>{symbol.display}</h3>
+          <div style={{ fontSize: 12, color: "#64748b" }}>
+            {symbol.exchange} · {symbol.type} · Token {symbol.token}
           </div>
-        )}
+          {symbol.ltp !== undefined && (
+            <div style={{ marginTop: 12, display: "flex", alignItems: "baseline", gap: 10 }}>
+              <span style={{ fontSize: 28, fontWeight: 600, color: "#0f172a" }}>{fmtP(symbol.ltp)}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: up ? "#16a34a" : "#dc2626" }}>
+                {up ? "▲" : "▼"} {fmtPct(symbol.changePct ?? dayChange ?? undefined)}
+              </span>
+            </div>
+          )}
+        </div>
+        <AddToWatchlistButton item={symbol} label="Add to Watchlist" />
       </div>
 
       {loading ? (

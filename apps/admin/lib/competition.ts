@@ -70,7 +70,7 @@ export const COMPETITION_TAGS = [
 ] as const;
 export type CompetitionTag = (typeof COMPETITION_TAGS)[number];
 
-export const COMPETITION_USER_TABS = ["live", "upcoming", "completed", "my"] as const;
+export const COMPETITION_USER_TABS = ["all", "live", "upcoming", "completed", "my"] as const;
 export type CompetitionUserTab = (typeof COMPETITION_USER_TABS)[number];
 
 export type CompetitionWithRelations = Competition & {

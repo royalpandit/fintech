@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FiSearch, FiX } from "react-icons/fi";
 import { Btn, Field, Panel, finuerBasketApi, inputStyle, tableStyle, tdStyle, thStyle } from "@/components/finuer-basket/admin-ui";
 
 type Stock = {
@@ -13,6 +14,14 @@ type Stock = {
   weightPct: number | null;
   cmp: number | null;
   sortOrder: number;
+};
+
+type SearchResult = {
+  exchange: string;
+  tradingSymbol: string;
+  symbolName: string;
+  instrumentType: string;
+  token: string;
 };
 
 type Basket = {
@@ -46,6 +55,50 @@ export default function BasketStocksAdminPage() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
 
+  // Stock search (AngelOne) so the admin can look a stock up instead of typing
+  // symbol/name/exchange by hand.
+  const [search, setSearch] = useState("");
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+
+  useEffect(() => {
+    const query = search.trim();
+    if (query.length < 1) {
+      setResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/v1/market/search?q=${encodeURIComponent(query)}&exchange=ALL`,
+          { cache: "no-store" },
+        );
+        const json = await res.json();
+        setResults(json.ok === false ? [] : (json.data ?? []));
+      } catch {
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  function pickResult(r: SearchResult) {
+    setForm((f) => ({
+      ...f,
+      symbol: r.tradingSymbol,
+      stockName: r.symbolName || r.tradingSymbol,
+      exchange: r.exchange === "BSE" ? "BSE" : "NSE",
+    }));
+    setSearch("");
+    setResults([]);
+    setShowResults(false);
+  }
+
   const load = useCallback(async () => {
     setLoading(true);
     const [basketRes, stocksRes] = await Promise.all([
@@ -63,10 +116,17 @@ export default function BasketStocksAdminPage() {
     load();
   }, [load]);
 
+  function resetSearch() {
+    setSearch("");
+    setResults([]);
+    setShowResults(false);
+  }
+
   function openCreate() {
     setForm(emptyStock());
     setEditId(null);
     setError("");
+    resetSearch();
     setOpen(true);
   }
 
@@ -80,6 +140,7 @@ export default function BasketStocksAdminPage() {
     });
     setEditId(s.id);
     setError("");
+    resetSearch();
     setOpen(true);
   }
 
@@ -235,34 +296,115 @@ export default function BasketStocksAdminPage() {
           <div
             style={{
               width: "100%",
-              maxWidth: 440,
+              maxWidth: 620,
+              maxHeight: "90vh",
+              overflowY: "auto",
               background: "var(--surface)",
-              borderRadius: 14,
+              borderRadius: 16,
               border: "1px solid var(--border)",
-              padding: 20,
+              padding: 24,
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800 }}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 17, fontWeight: 600 }}>
               {editId ? "Edit Stock" : "Add Stock to Basket"}
             </h3>
+            <p style={{ margin: "0 0 16px", fontSize: 12.5, color: "var(--text-muted)" }}>
+              Search for a stock to auto-fill its details, or enter them manually below.
+            </p>
+
+            {/* Stock search — autofills symbol / name / exchange */}
+            <div style={{ position: "relative", marginBottom: 18 }}>
+              <FiSearch
+                size={16}
+                style={{ position: "absolute", left: 15, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }}
+              />
+              <input
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setShowResults(true); }}
+                onFocus={() => setShowResults(true)}
+                placeholder="Search stocks… (RELIANCE, HAL, TCS)"
+                style={{
+                  ...inputStyle,
+                  padding: "12px 44px",
+                  borderRadius: 12,
+                  fontSize: 14,
+                  background: "var(--surface)",
+                }}
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={resetSearch}
+                  aria-label="Clear search"
+                  style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", border: "none", background: "var(--surface-2)", color: "var(--text-muted)", width: 26, height: 26, borderRadius: "50%", display: "grid", placeItems: "center", cursor: "pointer" }}
+                >
+                  <FiX size={15} />
+                </button>
+              )}
+              {showResults && search.trim() && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 6px)",
+                    left: 0,
+                    right: 0,
+                    zIndex: 20,
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                    boxShadow: "0 16px 44px rgba(0,0,0,0.16)",
+                    maxHeight: 260,
+                    overflowY: "auto",
+                  }}
+                >
+                  {searching && <p style={{ margin: 0, padding: "12px 14px", fontSize: 13, color: "var(--text-muted)" }}>Searching…</p>}
+                  {!searching && results.length === 0 && (
+                    <p style={{ margin: 0, padding: "12px 14px", fontSize: 13, color: "var(--text-muted)" }}>No matches.</p>
+                  )}
+                  {results.map((r) => (
+                    <button
+                      key={`${r.exchange}-${r.token}`}
+                      type="button"
+                      onClick={() => pickResult(r)}
+                      style={{ display: "block", width: "100%", textAlign: "left", border: "none", borderBottom: "1px solid var(--border)", background: "none", cursor: "pointer", padding: "10px 14px" }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--text)" }}>{r.tradingSymbol}</span>
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 999, background: "var(--surface-2)", color: "var(--text-muted)" }}>
+                          {r.exchange}
+                        </span>
+                      </div>
+                      {r.symbolName && (
+                        <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {r.symbolName}
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <form onSubmit={onSubmit}>
-              <Field label="Symbol *">
-                <input
-                  style={inputStyle}
-                  value={form.symbol}
-                  onChange={(e) => setForm((f) => ({ ...f, symbol: e.target.value.toUpperCase() }))}
-                  placeholder="e.g. HAL"
-                />
-              </Field>
-              <Field label="Stock Name *">
-                <input
-                  style={inputStyle}
-                  value={form.stockName}
-                  onChange={(e) => setForm((f) => ({ ...f, stockName: e.target.value }))}
-                  placeholder="e.g. Hindustan Aeronautics"
-                />
-              </Field>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 12 }}>
+                <Field label="Symbol *">
+                  <input
+                    style={inputStyle}
+                    value={form.symbol}
+                    onChange={(e) => setForm((f) => ({ ...f, symbol: e.target.value.toUpperCase() }))}
+                    placeholder="e.g. HAL"
+                  />
+                </Field>
+                <Field label="Stock Name *">
+                  <input
+                    style={inputStyle}
+                    value={form.stockName}
+                    onChange={(e) => setForm((f) => ({ ...f, stockName: e.target.value }))}
+                    placeholder="e.g. Hindustan Aeronautics"
+                  />
+                </Field>
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <Field label="Exchange">
                   <select style={inputStyle} value={form.exchange} onChange={(e) => setForm((f) => ({ ...f, exchange: e.target.value }))}>

@@ -296,7 +296,7 @@ export default function UserCompetitionTradeClient() {
   if (!competition) {
     return (
       <UserPageSection>
-        <UserPageBackLink href="/user/competition">← Back</UserPageBackLink>
+        <UserPageBackLink href="/user/competition">Back</UserPageBackLink>
         <p>Competition not found.</p>
       </UserPageSection>
     );
@@ -304,7 +304,7 @@ export default function UserCompetitionTradeClient() {
 
   return (
     <UserPageSection>
-      <UserPageBackLink href="/user/competition">← Back to Competitions</UserPageBackLink>
+      <UserPageBackLink href="/user/competition">Back to Competitions</UserPageBackLink>
 
       <div className="competition-trade-header">
         <div>

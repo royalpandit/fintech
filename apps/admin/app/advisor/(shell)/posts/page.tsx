@@ -121,7 +121,7 @@ export default async function AdvisorPostsPage({
         }}
       >
         <div>
-          <h1 className="page-title">My Market Posts</h1>
+          <h1 className="page-title">Market Posts</h1>
           <p className="page-subtitle">
             Draft, track, and manage every sentiment post you publish.
           </p>

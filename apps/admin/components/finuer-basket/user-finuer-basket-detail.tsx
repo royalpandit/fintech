@@ -3,6 +3,7 @@
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import FinuerBasketCard, { type FinuerBasketCardData } from "@/components/finuer-basket/finuer-basket-card";
+import BasketActions from "@/components/finuer-basket/basket-actions";
 import { formatReturnPct, type FinuerBasketTimePeriod } from "@/lib/finuer-basket";
 import { UserPageBackLink, UserPageSection } from "@/components/user/user-page-layout";
 
@@ -107,7 +108,7 @@ export default function UserFinuerBasketDetailClient() {
   if (!basket) {
     return (
       <UserPageSection>
-        <UserPageBackLink href="/user/finuer-basket">← Back to Finuer Basket</UserPageBackLink>
+        <UserPageBackLink href="/user/finuer-basket">Back to Finuer Basket</UserPageBackLink>
         <p style={{ marginTop: 16 }}>Basket not found.</p>
       </UserPageSection>
     );
@@ -118,7 +119,10 @@ export default function UserFinuerBasketDetailClient() {
 
   return (
     <UserPageSection>
-      <UserPageBackLink href="/user/finuer-basket">← Back to Finuer Basket</UserPageBackLink>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <UserPageBackLink href="/user/finuer-basket">Back to Finuer Basket</UserPageBackLink>
+        <BasketActions basketId={basket.id} />
+      </div>
 
       <div style={{ marginTop: 12, marginBottom: 16 }}>
         <FinuerBasketCard basket={basket} timePeriod={timePeriod} linkable={false} />

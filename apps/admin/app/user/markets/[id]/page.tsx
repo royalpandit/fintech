@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { FiHeart, FiMessageSquare } from "react-icons/fi";
+import { FiHeart, FiMessageSquare, FiArrowLeft } from "react-icons/fi";
+import MarketCommentForm from "@/components/posts/market-comment-form";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import { canViewMarketPost } from "@/lib/post-visibility";
@@ -105,10 +106,32 @@ export default async function PostDetailPage({ params }: { params: { id: string 
   const isOwn = auth?.userId === post.advisorUserId;
   let isUnlocked = isOwn;
   if (auth && postAccessType === "paid" && !isOwn) {
-    const unlock = await prisma.marketPostUnlock.findUnique({
-      where: { postId_userId: { postId, userId: auth.userId } },
-    });
-    isUnlocked = Boolean(unlock);
+    // Unlocked if individually purchased, OR the viewer subscribes to this advisor
+    // (advisor-level or via any of their subscription services).
+    const [unlock, advisorSub, serviceSub] = await Promise.all([
+      prisma.marketPostUnlock.findUnique({
+        where: { postId_userId: { postId, userId: auth.userId } },
+        select: { id: true },
+      }),
+      prisma.subscription.findUnique({
+        where: { userId_advisorUserId: { userId: auth.userId, advisorUserId: post.advisorUserId } },
+        select: { status: true, endDate: true },
+      }),
+      prisma.serviceSubscription.findFirst({
+        where: {
+          userId: auth.userId,
+          advisorUserId: post.advisorUserId,
+          status: "active",
+          OR: [{ endDate: null }, { endDate: { gt: new Date() } }],
+        },
+        select: { id: true },
+      }),
+    ]);
+    const advisorSubbed =
+      !!advisorSub &&
+      advisorSub.status === "active" &&
+      (!advisorSub.endDate || new Date(advisorSub.endDate) > new Date());
+    isUnlocked = Boolean(unlock) || advisorSubbed || Boolean(serviceSub);
   }
   const locked = isPostLocked({ postAccessType, isUnlocked, isOwn });
   const displayContent = locked ? previewText(post.content, 200) : post.content;
@@ -152,11 +175,9 @@ export default async function PostDetailPage({ params }: { params: { id: string 
     <section>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 18, alignItems: "start" }}>
         <div>
-          <Link
-            href="/user/markets"
-            style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12, display: "inline-block" }}
-          >
-            ← Markets
+          <Link href="/user/markets" className="user-page-back-link" style={{ marginBottom: 12 }}>
+            <span className="user-page-back-icon"><FiArrowLeft size={14} /></span>
+            Markets
           </Link>
 
           <article
@@ -516,68 +537,6 @@ export default async function PostDetailPage({ params }: { params: { id: string 
             </article>
           )}
 
-          {/* Similar Trades (Trades Phase 2) */}
-          {similarTrades.length > 0 && (
-            <article
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                borderRadius: 14,
-                padding: 24,
-                marginTop: 16,
-              }}
-            >
-              <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
-                Similar Trades
-              </h3>
-              <div style={{ display: "grid", gap: 10 }}>
-                {similarTrades.map((t) => {
-                  const st = tradeStatusMeta(t.tradeStatus);
-                  return (
-                    <Link
-                      key={t.id}
-                      href={`/user/markets/${t.id}`}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        padding: "12px 14px",
-                        borderRadius: 10,
-                        border: "1px solid var(--border)",
-                        textDecoration: "none",
-                        color: "inherit",
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {t.title}
-                        </div>
-                        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                          {t.marketSymbol ? `${t.marketSymbol} · ` : ""}
-                          {t.advisor?.fullName}
-                        </div>
-                      </div>
-                      <span
-                        style={{
-                          padding: "3px 10px",
-                          borderRadius: 999,
-                          fontSize: 10,
-                          fontWeight: 700,
-                          textTransform: "uppercase",
-                          color: st.tone,
-                          background: `${st.tone}1f`,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {st.label}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </article>
-          )}
-
           {/* Comments */}
           <article
             style={{
@@ -591,6 +550,8 @@ export default async function PostDetailPage({ params }: { params: { id: string 
             <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
               Comments ({post._count.comments})
             </h3>
+
+            {isAuthed && <MarketCommentForm postId={post.id} />}
 
             {!isAuthed && (
               <div
@@ -770,6 +731,68 @@ export default async function PostDetailPage({ params }: { params: { id: string 
               </button>
             </AuthGate>
           </article>
+
+          {/* Similar Trades — beneath the advisor */}
+          {similarTrades.length > 0 && (
+            <article
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                borderRadius: 14,
+                padding: 18,
+                marginTop: 16,
+              }}
+            >
+              <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
+                Similar Trades
+              </h3>
+              <div style={{ display: "grid", gap: 8 }}>
+                {similarTrades.map((t) => {
+                  const st = tradeStatusMeta(t.tradeStatus);
+                  return (
+                    <Link
+                      key={t.id}
+                      href={`/user/markets/${t.id}`}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        border: "1px solid var(--border)",
+                        textDecoration: "none",
+                        color: "inherit",
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {t.title}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {t.marketSymbol ? `${t.marketSymbol} · ` : ""}
+                          {t.advisor?.fullName}
+                        </div>
+                      </div>
+                      <span
+                        style={{
+                          padding: "3px 8px",
+                          borderRadius: 999,
+                          fontSize: 9.5,
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          color: st.tone,
+                          background: `${st.tone}1f`,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {st.label}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </article>
+          )}
         </aside>
       </div>
     </section>

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
+import { canType } from "@/lib/capabilities-server";
 
 async function assertOwnership(postId: number, userId: number) {
   const post = await prisma.marketPost.findFirst({
@@ -75,6 +76,23 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
   if ("marketSymbol" in body) data.marketSymbol = body.marketSymbol?.trim() || null;
   if ("timeframe" in body) data.timeframe = body.timeframe?.trim() || null;
+
+  // Adding a target / stop-loss turns a post into a buy/sell call — SEBI tiers only.
+  const settingTradeFields =
+    ("targetPrice" in body && body.targetPrice != null) ||
+    ("stopLossPrice" in body && body.stopLossPrice != null);
+  if (settingTradeFields) {
+    const profile = await prisma.advisorProfile.findUnique({
+      where: { userId: auth.userId },
+      select: { professionalType: true },
+    });
+    if (!(await canType(profile?.professionalType ?? null, "post.entry_target_sl"))) {
+      return err(
+        "Only SEBI-registered Research Analysts and Advisory Firms can add buy/sell targets.",
+        403,
+      );
+    }
+  }
   if ("targetPrice" in body) data.targetPrice = body.targetPrice ?? null;
   if ("stopLossPrice" in body) data.stopLossPrice = body.stopLossPrice ?? null;
 

@@ -17,7 +17,7 @@ import {
   type CompetitionVisibility,
   COMPETITION_USER_TABS,
 } from "@/lib/competition";
-import { serializePredictionStats } from "@/lib/competition-reputation";
+import { serializePredictionStats, getFinuerLevel } from "@/lib/competition-reputation";
 
 const competitionIncludeList = {
   allowedRoles: true,
@@ -543,6 +543,71 @@ export class CompetitionRepository {
       });
     }
     return serializePredictionStats(stats);
+  }
+
+  /**
+   * Global reputation leaderboard.
+   *  - "all"     → all-time, ranked by cumulative Finuer Score.
+   *  - "weekly"  → points earned from competitions declared in the last 7 days.
+   *  - "monthly" → same, last 30 days.
+   */
+  async getGlobalLeaderboard(
+    period: "all" | "weekly" | "monthly",
+    limit = 100,
+  ): Promise<{ rank: number; userId: number; name: string; score: number; level: string; won: number }[]> {
+    if (period === "all") {
+      const rows = await prisma.userPredictionStats.findMany({
+        where: { finuerScore: { gt: 0 } },
+        orderBy: [{ finuerScore: "desc" }, { competitionsWon: "desc" }],
+        take: limit,
+        include: { user: { select: { fullName: true } } },
+      });
+      return rows.map((r, i) => ({
+        rank: i + 1,
+        userId: r.userId,
+        name: r.user.fullName,
+        score: r.finuerScore,
+        level: getFinuerLevel(r.finuerScore),
+        won: r.competitionsWon,
+      }));
+    }
+
+    const days = period === "weekly" ? 7 : 30;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const declared = await prisma.competition.findMany({
+      where: { resultDeclaredAt: { gte: since } },
+      select: { id: true },
+    });
+    const ids = declared.map((c) => c.id);
+    if (!ids.length) return [];
+
+    const grouped = await prisma.competitionPrediction.groupBy({
+      by: ["userId"],
+      where: { competitionId: { in: ids } },
+      _sum: { pointsEarned: true },
+      orderBy: { _sum: { pointsEarned: "desc" } },
+      take: limit,
+    });
+    const userIds = grouped.map((g) => g.userId);
+    const [users, stats] = await Promise.all([
+      prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, fullName: true } }),
+      prisma.userPredictionStats.findMany({
+        where: { userId: { in: userIds } },
+        select: { userId: true, finuerScore: true },
+      }),
+    ]);
+    const nameById = new Map(users.map((u) => [u.id, u.fullName]));
+    const scoreById = new Map(stats.map((s) => [s.userId, s.finuerScore]));
+    return grouped
+      .filter((g) => (g._sum.pointsEarned ?? 0) > 0)
+      .map((g, i) => ({
+        rank: i + 1,
+        userId: g.userId,
+        name: nameById.get(g.userId) ?? "User",
+        score: g._sum.pointsEarned ?? 0,
+        level: getFinuerLevel(scoreById.get(g.userId) ?? 0),
+        won: 0,
+      }));
   }
 
   parseListQuery(params: URLSearchParams): CompetitionListFilters {
