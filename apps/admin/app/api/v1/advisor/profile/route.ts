@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
 import { isProfessionalType } from "@/lib/professional-types";
+import { effectiveCapabilities } from "@/lib/capabilities-server";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export async function GET(req: NextRequest) {
       advisorProfile: {
         select: {
           sebiRegistrationNo: true,
+          professionalType: true,
           experienceYears: true,
           bio: true,
           expertiseTags: true,
@@ -36,7 +38,11 @@ export async function GET(req: NextRequest) {
   });
 
   if (!user) return err("User not found", 404);
-  return ok({ user });
+
+  // Effective capabilities (DB matrix, falling back to defaults) so client-side
+  // gates match what the server will actually allow.
+  const capabilities = await effectiveCapabilities(user.advisorProfile?.professionalType ?? null);
+  return ok({ user, capabilities });
 }
 
 export async function PATCH(req: NextRequest) {

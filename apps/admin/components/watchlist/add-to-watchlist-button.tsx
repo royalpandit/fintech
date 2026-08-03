@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FiStar } from "react-icons/fi";
 import type { WatchlistItem } from "@/components/trading/trading-terminal-types";
 import {
   activeWatchlist,
@@ -100,7 +101,8 @@ export default function AddToWatchlistButton({
           void handleOpen();
         }}
       >
-        + {label}
+        <FiStar size={compact ? 16 : 14} />
+        {label ? <span>{label}</span> : null}
       </button>
 
       {open && (

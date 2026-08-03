@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { FiArrowLeft } from "react-icons/fi";
 import TradingTerminal from "@/components/trading/trading-terminal";
 import type { WatchlistItem } from "@/components/trading/trading-terminal-types";
 
@@ -21,5 +23,13 @@ export default function MarketsChartPage({
         }
       : undefined;
 
-  return <TradingTerminal initialSymbol={initialSymbol} />;
+  return (
+    <div>
+      <Link href="/user/markets" className="user-page-back-link" style={{ marginBottom: 10 }}>
+        <span className="user-page-back-icon"><FiArrowLeft size={14} /></span>
+        Back to Markets
+      </Link>
+      <TradingTerminal initialSymbol={initialSymbol} />
+    </div>
+  );
 }

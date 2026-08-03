@@ -24,7 +24,11 @@ export const DEFAULT_FEED_FILTERS: FeedFilters = {
   status: "all",
 };
 
-const GROUPS: { key: keyof FeedFilters; label: string; options: { id: string; label: string }[] }[] = [
+export const FEED_FILTER_GROUPS: {
+  key: keyof FeedFilters;
+  label: string;
+  options: { id: string; label: string }[];
+}[] = [
   {
     key: "sort",
     label: "Sort by",
@@ -197,7 +201,7 @@ export default function FeedFilter({
           </div>
 
           <div style={{ display: "grid", gap: 14, maxHeight: "60vh", overflowY: "auto" }}>
-            {GROUPS.map((g) => (
+            {FEED_FILTER_GROUPS.map((g) => (
               <div key={g.key}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
                   {g.label}

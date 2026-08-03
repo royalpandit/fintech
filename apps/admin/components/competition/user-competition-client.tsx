@@ -8,6 +8,7 @@ import type { CompetitionUserTab } from "@/lib/competition";
 import { UserPageHeader, UserPageSection } from "@/components/user/user-page-layout";
 
 const TABS: { id: CompetitionUserTab; label: string }[] = [
+  { id: "all", label: "All" },
   { id: "live", label: "Live" },
   { id: "upcoming", label: "Upcoming" },
   { id: "completed", label: "Completed" },
@@ -49,6 +50,26 @@ export default function UserCompetitionClient() {
         title="Competitions"
         subtitle="Predict market outcomes, earn reputation points, and climb the Finuer leaderboard."
       />
+
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+        <Link
+          href="/user/competition/leaderboard"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 7,
+            padding: "9px 16px",
+            borderRadius: 10,
+            background: "var(--primary)",
+            color: "#fff",
+            fontSize: 13,
+            fontWeight: 700,
+            textDecoration: "none",
+          }}
+        >
+          🏆 Leaderboard
+        </Link>
+      </div>
 
       <div className="competition-tabs">
         {TABS.map((t) => (

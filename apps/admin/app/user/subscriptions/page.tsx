@@ -4,11 +4,32 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import { categoryLabel, isSubscriptionActive } from "@/lib/subscription-services";
+import SubscriptionsBrowser, {
+  type PurchaseRow,
+  type SubRow,
+} from "@/components/subscriptions/subscriptions-browser";
 
 export const dynamic = "force-dynamic";
 
 function formatINR(n: number) {
   return `₹${n.toLocaleString("en-IN")}`;
+}
+
+function fmtDate(d: Date | string) {
+  return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
+
+/** Human expiry status with an "expiring soon" flag (≤ 7 days). */
+function expiryInfo(endDate: Date | string | null | undefined) {
+  if (!endDate) return { text: "No expiry", soon: false, expired: false };
+  const days = Math.ceil((new Date(endDate).getTime() - Date.now()) / 86_400_000);
+  if (days < 0) return { text: `Expired · ${fmtDate(endDate)}`, soon: false, expired: true };
+  if (days === 0) return { text: "Expires today", soon: true, expired: false };
+  return {
+    text: `${days} day${days > 1 ? "s" : ""} left · until ${fmtDate(endDate)}`,
+    soon: days <= 7,
+    expired: false,
+  };
 }
 
 export default async function UserSubscriptionsPage() {
@@ -25,6 +46,7 @@ export default async function UserSubscriptionsPage() {
         select: {
           id: true,
           name: true,
+          description: true,
           category: true,
           price: true,
           yearlyPrice: true,
@@ -49,6 +71,23 @@ export default async function UserSubscriptionsPage() {
     },
   });
 
+  // One-time purchases — paid trades / posts the user unlocked individually.
+  const purchases = await prisma.marketPostUnlock.findMany({
+    where: { userId: auth.userId },
+    orderBy: { unlockedAt: "desc" },
+    take: 40,
+    include: {
+      post: {
+        select: {
+          id: true,
+          title: true,
+          marketSymbol: true,
+          advisor: { select: { id: true, fullName: true } },
+        },
+      },
+    },
+  });
+
   const availableServices = await prisma.subscriptionService.findMany({
     where: { isActive: true, paused: false },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
@@ -59,168 +98,137 @@ export default async function UserSubscriptionsPage() {
   });
 
   const subscribedServiceIds = new Set(
-    serviceSubscriptions
-      .filter((s) => isSubscriptionActive(s))
-      .map((s) => s.serviceId),
+    serviceSubscriptions.filter((s) => isSubscriptionActive(s)).map((s) => s.serviceId),
   );
+
+  const activeCount =
+    serviceSubscriptions.filter((s) => isSubscriptionActive(s)).length +
+    legacySubscriptions.filter((s) => isSubscriptionActive(s)).length;
+
+  // Serialize the two lists for the client-side search/filter browser.
+  const subRows: SubRow[] = [
+    ...serviceSubscriptions.map((s): SubRow => {
+      const active = isSubscriptionActive(s);
+      const exp = expiryInfo(s.endDate);
+      return {
+        key: `svc-${s.id}`,
+        kind: "service",
+        id: s.id,
+        title: s.service.name,
+        advisorName: s.service.advisor.fullName,
+        advisorId: s.service.advisor.id,
+        meta: [
+          s.service.category ? categoryLabel(s.service.category) : "",
+          s.isTrial ? "Free trial" : "Plan",
+          formatINR(Number(s.service.price)),
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        description: s.service.description ?? null,
+        active,
+        status: s.status,
+        expText: exp.text,
+        expTone: exp.expired ? "expired" : exp.soon ? "soon" : "muted",
+        showExp: active || exp.expired,
+      };
+    }),
+    ...legacySubscriptions.map((s): SubRow => {
+      const active = isSubscriptionActive(s);
+      const exp = expiryInfo(s.endDate);
+      return {
+        key: `adv-${s.id}`,
+        kind: "advisor",
+        id: s.id,
+        title: "Advisor subscription",
+        advisorName: s.advisor.fullName,
+        advisorId: s.advisor.id,
+        meta: formatINR(Number(s.amount)),
+        description: null,
+        active,
+        status: s.status,
+        expText: exp.text,
+        expTone: exp.expired ? "expired" : exp.soon ? "soon" : "muted",
+        showExp: active || exp.expired,
+      };
+    }),
+  ];
+
+  const purchaseRows: PurchaseRow[] = purchases.map((p) => ({
+    id: p.id,
+    title: p.post.title || p.post.marketSymbol || "Unlocked post",
+    advisorName: p.post.advisor?.fullName ?? "—",
+    marketSymbol: p.post.marketSymbol,
+    unlockedAt: fmtDate(p.unlockedAt),
+    priceText: p.unlockPrice != null ? formatINR(Number(p.unlockPrice)) : "Unlocked",
+  }));
 
   return (
     <section>
       <div style={{ marginBottom: 18 }}>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: "var(--text)", letterSpacing: -0.5 }}>
-          My Subscriptions
+          Subscriptions &amp; Purchases
         </h1>
         <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
-          Plans you&apos;ve subscribed to and available advisor services
+          {activeCount > 0 ? `${activeCount} active` : "No active plans"} · services you subscribe to and
+          one-time trades you&apos;ve unlocked
         </p>
       </div>
 
-      <article className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Active &amp; past subscriptions</h3>
-        {serviceSubscriptions.length === 0 && legacySubscriptions.length === 0 ? (
-          <p style={{ margin: 0, color: "var(--text-muted)", fontSize: 14 }}>
-            You haven&apos;t subscribed to any plan yet.
-          </p>
-        ) : (
-          <div style={{ display: "grid", gap: 10 }}>
-            {serviceSubscriptions.map((s) => {
-              const active = isSubscriptionActive(s);
-              return (
-                <div
-                  key={s.id}
-                  style={{
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    padding: 14,
-                    background: "var(--surface-2)",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                    <div>
-                      <strong>{s.service.name}</strong>
-                      <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-                        Advisor:{" "}
-                        <Link href={`/user/advisors/${s.service.advisor.id}`} style={{ color: "#0ea5e9" }}>
-                          {s.service.advisor.fullName}
-                        </Link>
-                        {s.service.category ? ` · ${categoryLabel(s.service.category)}` : ""}
-                      </div>
-                      <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-                        {s.isTrial ? "Trial" : "plan"} · {formatINR(Number(s.service.price))}
-                        {s.endDate ? ` · until ${new Date(s.endDate).toLocaleDateString("en-IN")}` : ""}
-                      </div>
-                    </div>
-                    <span
-                      style={{
-                        alignSelf: "flex-start",
-                        padding: "3px 10px",
-                        borderRadius: 999,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        background: active ? "#d1fae5" : "#f1f5f9",
-                        color: active ? "#047857" : "#64748b",
-                      }}
-                    >
-                      {active ? "Active" : s.status}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-            {legacySubscriptions.map((s) => {
-              const active = isSubscriptionActive(s);
-              return (
-                <div
-                  key={`legacy-${s.id}`}
-                  style={{
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    padding: 14,
-                    background: "var(--surface-2)",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                    <div>
-                      <strong>Advisor subscription</strong>
-                      <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-                        <Link href={`/user/advisors/${s.advisor.id}`} style={{ color: "#0ea5e9" }}>
-                          {s.advisor.fullName}
-                        </Link>
-                      </div>
-                      <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-                        {formatINR(Number(s.amount))}
-                        {s.endDate ? ` · until ${new Date(s.endDate).toLocaleDateString("en-IN")}` : ""}
-                      </div>
-                    </div>
-                    <span
-                      style={{
-                        alignSelf: "flex-start",
-                        padding: "3px 10px",
-                        borderRadius: 999,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        background: active ? "#d1fae5" : "#f1f5f9",
-                        color: active ? "#047857" : "#64748b",
-                      }}
-                    >
-                      {active ? "Active" : s.status}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </article>
+      <div className="subs-grid">
+        <SubscriptionsBrowser subs={subRows} purchases={purchaseRows} />
 
-      <article className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          <h3 style={{ margin: 0 }}>Browse advisor plans</h3>
-          <Link href="/user/advisors" className="btn-primary" style={{ padding: "8px 14px", fontSize: 12 }}>
-            All professionals
-          </Link>
-        </div>
-        {availableServices.length === 0 ? (
-          <p style={{ margin: 0, color: "var(--text-muted)" }}>No subscription services available yet.</p>
-        ) : (
-          <div style={{ display: "grid", gap: 10 }}>
-            {availableServices.map((svc) => (
-              <div
-                key={svc.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: 12,
-                  flexWrap: "wrap",
-                  padding: "12px 0",
-                  borderBottom: "1px solid var(--border)",
-                }}
-              >
-                <div>
-                  <strong>{svc.name}</strong>
-                  <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-                    {svc.advisor.fullName}
-                    {svc.category ? ` · ${categoryLabel(svc.category)}` : ""}
-                    {" · "}{formatINR(Number(svc.price))}/mo
-                  </div>
-                </div>
-                {subscribedServiceIds.has(svc.id) ? (
-                  <span style={{ fontSize: 12, color: "#047857", fontWeight: 600 }}>Subscribed</span>
-                ) : (
-                  <Link
-                    href={`/user/advisors/${svc.advisor.id}`}
-                    className="btn-primary"
-                    style={{ padding: "8px 14px", fontSize: 12 }}
+        <div className="subs-side">
+          <article className="card">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <h3 style={{ margin: 0 }}>Browse advisor plans</h3>
+              <Link href="/user/advisors" className="btn-primary" style={{ padding: "8px 14px", fontSize: 12 }}>
+                All professionals
+              </Link>
+            </div>
+            {availableServices.length === 0 ? (
+              <p style={{ margin: 0, color: "var(--text-muted)" }}>No subscription services available yet.</p>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {availableServices.map((svc) => (
+                  <div
+                    key={svc.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 12,
+                      flexWrap: "wrap",
+                      padding: "12px 0",
+                      borderBottom: "1px solid var(--border)",
+                    }}
                   >
-                    View &amp; Subscribe
-                  </Link>
-                )}
+                    <div>
+                      <strong>{svc.name}</strong>
+                      <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+                        {svc.advisor.fullName}
+                        {svc.category ? ` · ${categoryLabel(svc.category)}` : ""}
+                        {" · "}
+                        {formatINR(Number(svc.price))}/mo
+                      </div>
+                    </div>
+                    {subscribedServiceIds.has(svc.id) ? (
+                      <span style={{ fontSize: 12, color: "#047857", fontWeight: 600 }}>Subscribed</span>
+                    ) : (
+                      <Link
+                        href={`/user/advisors/${svc.advisor.id}`}
+                        className="btn-primary"
+                        style={{ padding: "8px 14px", fontSize: 12 }}
+                      >
+                        View &amp; Subscribe
+                      </Link>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-      </article>
+            )}
+          </article>
+        </div>
+      </div>
     </section>
   );
 }

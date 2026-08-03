@@ -152,8 +152,28 @@ enum ProfessionalType {
   portfolio_manager
   advisory_firm
   wealth_manager
+  mutual_fund_distributor
+  stock_broker
+  finance_creator
+  listed_company
+  financial_platform
 
   @@map("professional_type")
+}
+
+// Admin-editable permission matrix: which capability each professional type has.
+// Seeded lazily from code defaults (lib/capabilities). A row here overrides the
+// default for that (type, capability) pair; absence = fall back to the default.
+model ProfessionalCapability {
+  id               Int              @id @default(autoincrement())
+  professionalType ProfessionalType @map("professional_type")
+  capability       String           @db.VarChar(64)
+  allowed          Boolean
+  updatedByAdminId Int?             @map("updated_by_admin_id")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  @@unique([professionalType, capability])
+  @@map("professional_capabilities")
 }
 
 enum PostPaymentStatus {
@@ -428,6 +448,7 @@ model User {
   communityPostUnlocks CommunityPostUnlock[]
   marketPostUnlocks    MarketPostUnlock[]
   createdFinuerBaskets   FinuerBasket[]      @relation("FinuerBasketCreator")
+  finuerBasketSaves      FinuerBasketSave[]
   createdCompetitions    Competition[]       @relation("CompetitionCreator")
   competitionParticipants CompetitionParticipant[]
   competitionLeaderboard  CompetitionLeaderboard[]
@@ -514,12 +535,18 @@ model AdvisorProfile {
   // null = advisor still needs to complete the form (popup is shown on login).
   verificationFormSubmittedAt DateTime? @map("verification_form_submitted_at")
   verificationDetails         Json?     @map("verification_details")
+  // Paid promotion — an advisor pays to be a "Featured Analyst" (surfaced at the
+  // top of Trades + in the featured rail) until `featuredUntil`. Mirrors the
+  // post-level boostedUntil/boostTier pattern. Billing is BYPASSED for now (dev).
+  featuredUntil      DateTime?          @map("featured_until")
+  featuredTier       String?            @map("featured_tier") @db.VarChar(20)
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
 
   user       User  @relation("advisorOwner", fields: [userId], references: [id], onDelete: Cascade)
   verifiedBy User? @relation("advisorVerifier", fields: [verifiedByAdminId], references: [id], onDelete: SetNull)
 
+  @@index([featuredUntil])
   @@map("advisor_profiles")
 }
 
@@ -2284,11 +2311,27 @@ model FinuerBasket {
   performance     FinuerBasketPerformance?
   stocks          FinuerBasketStock[]
   rebalanceEvents FinuerBasketRebalanceEvent[]
+  saves           FinuerBasketSave[]
 
   @@index([status, visibility])
   @@index([marketId])
   @@index([typeId])
   @@map("finuer_baskets")
+}
+
+/// A user saving/watching a basket (basket-level watchlist). Spec: "Add Basket to Watchlist".
+model FinuerBasketSave {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  basketId  Int      @map("basket_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  basket FinuerBasket @relation(fields: [basketId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, basketId])
+  @@index([userId])
+  @@map("finuer_basket_saves")
 }
 
 model FinuerBasketPerformance {

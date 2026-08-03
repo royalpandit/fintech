@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatReturnPct, type FinuerBasketTimePeriod } from "@/lib/finuer-basket";
+import BasketCardWatchButton from "@/components/finuer-basket/basket-card-watch-button";
 
 export type FinuerBasketCardData = {
   id: number;
@@ -63,6 +64,27 @@ function marketEmoji(market: string) {
   return "📊";
 }
 
+/** Compact return-by-horizon sparkline (1M → 5Y). */
+function Sparkline({ values, up }: { values: (number | null)[]; up: boolean }) {
+  const pts = values.map((v) => v ?? 0);
+  if (pts.length < 2) return null;
+  const min = Math.min(...pts, 0);
+  const max = Math.max(...pts, 0);
+  const range = max - min || 1;
+  const w = 240;
+  const h = 34;
+  const step = w / (pts.length - 1);
+  const coords = pts
+    .map((v, i) => `${(i * step).toFixed(1)},${(h - 3 - ((v - min) / range) * (h - 6)).toFixed(1)}`)
+    .join(" ");
+  const stroke = up ? "#16a34a" : "#dc2626";
+  return (
+    <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ display: "block" }} aria-hidden>
+      <polyline points={coords} fill="none" stroke={stroke} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 type Props = {
   basket: FinuerBasketCardData;
   timePeriod?: FinuerBasketTimePeriod;
@@ -91,6 +113,7 @@ export default function FinuerBasketCard({ basket, timePeriod = "1_year", linkab
           ) : null}
         </div>
         <span className={planClass}>{basket.requiredPlan}</span>
+        {linkable ? <BasketCardWatchButton basketId={basket.id} /> : null}
       </div>
 
       <div className="finuer-basket-tags">
@@ -115,6 +138,13 @@ export default function FinuerBasketCard({ basket, timePeriod = "1_year", linkab
           <span className="finuer-basket-status-dot" />
           {outperforming ? "Outperforming" : "Underperforming"}
         </span>
+      </div>
+
+      <div style={{ margin: "8px 0 2px" }}>
+        <Sparkline
+          values={[p.oneMonthReturn, p.threeMonthReturn, p.sixMonthReturn, p.oneYearReturn, p.threeYearReturn, p.fiveYearReturn]}
+          up={(p.oneYearReturn ?? p.sinceLaunchReturn ?? 0) >= 0}
+        />
       </div>
 
       <div className="finuer-basket-returns-grid">

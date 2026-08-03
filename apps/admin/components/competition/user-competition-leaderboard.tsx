@@ -42,7 +42,7 @@ export default function UserCompetitionLeaderboardClient() {
 
   return (
     <UserPageSection>
-      <UserPageBackLink href={`/user/competition/${id}`}>← Back to Competition</UserPageBackLink>
+      <UserPageBackLink href={`/user/competition/${id}`}>Back to Competition</UserPageBackLink>
       <h1 className="competition-detail-title" style={{ marginTop: 16 }}>
         {title} — Leaderboard
       </h1>
