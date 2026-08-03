@@ -75,7 +75,7 @@ export default async function SuperAdminMarketPostsPage({
   );
 
   const tabs = [
-    { key: "all", label: `All (${totalC})`, color: "#7c3aed" },
+    { key: "all", label: `All (${totalC})`, color: "#10b981" },
     { key: "pending", label: `Pending (${pendingC})`, color: "#f59e0b" },
     { key: "approved", label: `Approved (${approvedC})`, color: "#10b981" },
     { key: "flagged", label: `Flagged (${flaggedC})`, color: "#ef4444" },
@@ -83,7 +83,7 @@ export default async function SuperAdminMarketPostsPage({
   ];
 
   return (
-    <section className="advisor-scope" style={{ ["--advisor-primary" as any]: "#7c3aed" }}>
+    <section className="advisor-scope" style={{ ["--advisor-primary" as any]: "#10b981" }}>
       <div
         style={{
           display: "flex",
@@ -331,7 +331,7 @@ export default async function SuperAdminMarketPostsPage({
                           style={{
                             padding: "6px 14px",
                             borderRadius: 8,
-                            background: "#7c3aed",
+                            background: "#10b981",
                             color: "#fff",
                             fontSize: 12,
                             fontWeight: 700,

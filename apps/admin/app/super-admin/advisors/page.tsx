@@ -93,12 +93,12 @@ export default async function SuperAdminAdvisorsPage() {
     {
       label: "Monthly Revenue",
       value: formatINR(Number(monthlyRevenue._sum.amount ?? 0), true),
-      color: "#7c3aed",
+      color: "#10b981",
     },
   ];
 
   return (
-    <section className="advisor-scope" style={{ ["--advisor-primary" as any]: "#7c3aed" }}>
+    <section className="advisor-scope" style={{ ["--advisor-primary" as any]: "#10b981" }}>
       <div
         style={{
           display: "flex",
@@ -159,7 +159,7 @@ export default async function SuperAdminAdvisorsPage() {
             <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Top Earning Advisors</h3>
             <Link
               href="/super-admin/users?role=advisor"
-              style={{ fontSize: 11, color: "#7c3aed", fontWeight: 600 }}
+              style={{ fontSize: 11, color: "#10b981", fontWeight: 600 }}
             >
               View all
             </Link>
@@ -205,7 +205,7 @@ export default async function SuperAdminAdvisorsPage() {
                           style={{
                             padding: "12px 16px",
                             fontWeight: 700,
-                            color: i < 3 ? "#7c3aed" : "var(--text-muted)",
+                            color: i < 3 ? "#10b981" : "var(--text-muted)",
                           }}
                         >
                           {i + 1}
@@ -250,7 +250,7 @@ export default async function SuperAdminAdvisorsPage() {
                             href={`/super-admin/advisors/${row.advisorUserId}`}
                             style={{
                               fontSize: 11,
-                              color: "#7c3aed",
+                              color: "#10b981",
                               fontWeight: 700,
                               textDecoration: "none",
                             }}
@@ -338,7 +338,7 @@ export default async function SuperAdminAdvisorsPage() {
           </h3>
           <Link
             href="/super-admin/users?role=advisor&status=pending"
-            style={{ fontSize: 11, color: "#7c3aed", fontWeight: 600 }}
+            style={{ fontSize: 11, color: "#10b981", fontWeight: 600 }}
           >
             Open queue
           </Link>
@@ -402,7 +402,7 @@ export default async function SuperAdminAdvisorsPage() {
                               height: 32,
                               borderRadius: 8,
                               background: "rgba(124, 58, 237, 0.13)",
-                              color: "#7c3aed",
+                              color: "#10b981",
                               display: "grid",
                               placeItems: "center",
                               fontSize: 11,
@@ -454,7 +454,7 @@ export default async function SuperAdminAdvisorsPage() {
                           style={{
                             padding: "6px 14px",
                             borderRadius: 8,
-                            background: "#7c3aed",
+                            background: "#10b981",
                             color: "#fff",
                             fontSize: 12,
                             fontWeight: 700,

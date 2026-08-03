@@ -1,9 +1,12 @@
 import { prisma } from "@/lib/prisma";
+import IntegrationsManager from "./integrations-manager";
+import GeneralConfigForm from "./general-config-form";
+import SecurityForm from "./security-form";
 
 export const dynamic = "force-dynamic";
 
 async function getSettingsData() {
-  const [failedPayments, pendingSubscriptions, activeSessions, recentSecurityEvents, providerSummary] = await Promise.all([
+  const [failedPayments, pendingSubscriptions, activeSessions, recentSecurityEvents] = await Promise.all([
     prisma.payment.count({ where: { status: "failed" } }),
     prisma.subscription.count({ where: { status: "pending" } }),
     prisma.userSession.count({ where: { revokedAt: null, expiresAt: { gt: new Date() } } }),
@@ -11,11 +14,6 @@ async function getSettingsData() {
       orderBy: { createdAt: "desc" },
       take: 5,
       include: { actor: { select: { fullName: true } } },
-    }),
-    prisma.payment.groupBy({
-      by: ["provider", "status"],
-      _count: { _all: true },
-      where: { provider: { not: null } },
     }),
   ]);
 
@@ -33,22 +31,24 @@ async function getSettingsData() {
     key: `${event.action}-${event.id}`,
   }));
 
-  const integrations = providerSummary.map((item) => ({
-    name: item.provider ?? "Unknown Provider",
-    status: item.status === "failed" ? "Pending" : "Connected",
-    updated: item._count._all > 3 ? "Updated today" : "Updated recently",
-    key: `${item.provider}-${item.status}`,
-  }));
-
   return {
     healthRows,
     securityEvents,
-    integrations,
   };
 }
 
+// Which integrations are wired via the server environment. We only ever expose
+// the boolean presence — never the secret values themselves.
+function serverConnectedIntegrations(): string[] {
+  const ids: string[] = [];
+  if (process.env.ANGELONE_API_KEY) ids.push("angelone");
+  if (process.env.GEMINI_API_KEY) ids.push("gemini");
+  return ids;
+}
+
 export default async function SettingsPage() {
-  const { healthRows, securityEvents, integrations } = await getSettingsData();
+  const { healthRows, securityEvents } = await getSettingsData();
+  const serverConnected = serverConnectedIntegrations();
 
   return (
     <section>
@@ -61,35 +61,14 @@ export default async function SettingsPage() {
             <h3 style={{ margin: 0 }}>General Configuration</h3>
             <span className="tag">Core</span>
           </div>
-          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", marginTop: 14 }}>
-            <label>
-              <p className="metric-label" style={{ margin: "0 0 6px" }}>
-                Platform Name
-              </p>
-              <input className="input" defaultValue={process.env.NEXT_PUBLIC_PLATFORM_NAME ?? "Finance Admin Console"} />
-            </label>
-            <label>
-              <p className="metric-label" style={{ margin: "0 0 6px" }}>
-                Support Email
-              </p>
-              <input className="input" defaultValue={process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@finance.app"} />
-            </label>
-            <label>
-              <p className="metric-label" style={{ margin: "0 0 6px" }}>
-                Default Timezone
-              </p>
-              <input className="input" defaultValue={process.env.NEXT_PUBLIC_DEFAULT_TIMEZONE ?? "Asia/Kolkata"} />
-            </label>
-            <label>
-              <p className="metric-label" style={{ margin: "0 0 6px" }}>
-                Locale
-              </p>
-              <input className="input" defaultValue={process.env.NEXT_PUBLIC_LOCALE ?? "en-IN"} />
-            </label>
-          </div>
-          <button className="btn-primary" style={{ marginTop: 14 }} type="button">
-            Save General Settings
-          </button>
+          <GeneralConfigForm
+            defaults={{
+              platformName: process.env.NEXT_PUBLIC_PLATFORM_NAME ?? "Finuer Admin Console",
+              supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@finuer.app",
+              timezone: process.env.NEXT_PUBLIC_DEFAULT_TIMEZONE ?? "Asia/Kolkata",
+              locale: process.env.NEXT_PUBLIC_LOCALE ?? "en-IN",
+            }}
+          />
         </article>
 
         <article className="card">
@@ -112,37 +91,7 @@ export default async function SettingsPage() {
             <span className="tag danger">Restricted</span>
           </div>
 
-          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", marginTop: 14 }}>
-            <label>
-              <p className="metric-label" style={{ margin: "0 0 6px" }}>
-                Session Timeout (minutes)
-              </p>
-              <input className="input" defaultValue="30" />
-            </label>
-            <label>
-              <p className="metric-label" style={{ margin: "0 0 6px" }}>
-                Failed Login Threshold
-              </p>
-              <input className="input" defaultValue="5" />
-            </label>
-          </div>
-
-          <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
-            {[
-              "Enforce 2FA for all admins",
-              "Require IP allowlisting for sensitive actions",
-              "Enable immutable audit log retention",
-            ].map((policy) => (
-              <label key={policy} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
-                <input type="checkbox" className="toggle" defaultChecked />
-                {policy}
-              </label>
-            ))}
-          </div>
-
-          <button className="btn-primary" style={{ marginTop: 14 }} type="button">
-            Update Security Policies
-          </button>
+          <SecurityForm />
         </article>
 
         <article className="card">
@@ -170,25 +119,7 @@ export default async function SettingsPage() {
         </article>
       </div>
 
-      <article className="card" style={{ marginTop: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3 style={{ margin: 0 }}>Integrations & Infrastructure</h3>
-          <button className="btn-primary" type="button">
-            Add Integration
-          </button>
-        </div>
-        <div className="grid" style={{ marginTop: 12, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
-          {integrations.map((integration) => (
-            <article key={integration.key} className="card" style={{ padding: 16 }}>
-              <p style={{ margin: 0, fontWeight: 700 }}>{integration.name}</p>
-              <p className="page-subtitle" style={{ margin: "6px 0 10px" }}>
-                {integration.updated}
-              </p>
-              <span className={`tag ${integration.status === "Pending" ? "danger" : "success"}`}>{integration.status}</span>
-            </article>
-          ))}
-        </div>
-      </article>
+      <IntegrationsManager serverConnected={serverConnected} />
     </section>
   );
 }
