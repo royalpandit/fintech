@@ -9538,3 +9538,29 @@ body.terminal-active .us-content {
     width: 100%;
   }
 }
+
+/* ─── Super-admin dashboard: interactive tiles & green+blue accents ─────── */
+.dash-kpi,
+.dash-tile {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.dash-kpi:hover,
+.dash-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.09);
+}
+.dash-tile:hover {
+  border-color: var(--accent-blue, #2563eb);
+}
+.dash-icon-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+/* Header quick-search dropdown */
+.admin-search-result:hover {
+  background: var(--surface-2);
+}

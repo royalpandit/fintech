@@ -2,7 +2,27 @@ import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
-const g = globalThis as unknown as { prisma: PrismaClient; pgPool: Pool };
+const g = globalThis as unknown as { prismaBase: PrismaClient; pgPool: Pool };
+
+// The hosted Postgres (pgbouncer-style) closes idle connections, so the pool can
+// hand out a socket the server already killed — the query then fails on first use
+// with "Server has closed the connection" / "Can't reach database server". These
+// mean the query never ran, so retrying on a fresh connection is safe.
+function isTransientConnError(e: unknown): boolean {
+  const msg =
+    e && typeof e === "object" && "message" in e
+      ? String((e as { message?: unknown }).message ?? "").toLowerCase()
+      : "";
+  return (
+    msg.includes("server has closed the connection") ||
+    msg.includes("can't reach database server") ||
+    msg.includes("connection terminated") ||
+    msg.includes("connection reset") ||
+    msg.includes("econnreset")
+  );
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function poolSslOption(connectionString: string | undefined) {
   if (!connectionString) return {};
@@ -42,11 +62,31 @@ if (!g.pgPool) {
 
 const adapter = new PrismaPg(g.pgPool);
 
-export const prisma =
-  g.prisma ??
+const basePrisma =
+  g.prismaBase ??
   new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") g.prisma = prisma;
+if (process.env.NODE_ENV !== "production") g.prismaBase = basePrisma;
+
+// Retry transient connection drops once or twice on a fresh pooled connection,
+// so a stale idle-killed socket doesn't surface as a 500 to the user.
+export const prisma = basePrisma.$extends({
+  query: {
+    async $allOperations({ args, query }) {
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return await query(args);
+        } catch (e) {
+          if (attempt < 2 && isTransientConnError(e)) {
+            await sleep(120 * (attempt + 1));
+            continue;
+          }
+          throw e;
+        }
+      }
+    },
+  },
+});

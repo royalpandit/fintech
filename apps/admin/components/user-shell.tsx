@@ -36,11 +36,24 @@ import WatchlistStoreProvider from "@/components/watchlist/watchlist-store-provi
 
 type UserShellProps = {
   children: React.ReactNode;
-  currentUser: { fullName: string; email: string; isVerified: boolean } | null;
+  currentUser: {
+    fullName: string;
+    email: string;
+    isVerified: boolean;
+    role?: string;
+    profileImageUrl?: string | null;
+  } | null;
   unreadNotifications: number;
   walletBalance: number;
   todayPnL: number;
   todayPnLPct: number;
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  user: "Investor",
+  advisor: "Advisor",
+  admin: "Admin",
+  super_admin: "Super Admin",
 };
 
 type NavItem = {
@@ -309,8 +322,22 @@ export default function UserShell({
                     onClick={() => setMenuOpen((v) => !v)}
                     aria-label="Account menu"
                     title={currentUser.fullName}
+                    style={
+                      currentUser.profileImageUrl
+                        ? { padding: 0, overflow: "hidden", background: "transparent" }
+                        : undefined
+                    }
                   >
-                    {initials}
+                    {currentUser.profileImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={currentUser.profileImageUrl}
+                        alt=""
+                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }}
+                      />
+                    ) : (
+                      initials
+                    )}
                   </button>
 
                   {menuOpen && (
@@ -404,19 +431,34 @@ export default function UserShell({
                 <div
                   className="us-profile-avatar"
                   style={{
-                    background: currentUser
-                      ? "linear-gradient(135deg,#0ea5e9,#10b981)"
-                      : "linear-gradient(135deg,#94a3b8,#64748b)",
+                    background: currentUser?.profileImageUrl
+                      ? "transparent"
+                      : currentUser
+                        ? "linear-gradient(135deg,#0ea5e9,#10b981)"
+                        : "linear-gradient(135deg,#94a3b8,#64748b)",
+                    overflow: "hidden",
+                    padding: 0,
                   }}
                 >
-                  {initials}
+                  {currentUser?.profileImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={currentUser.profileImageUrl}
+                      alt=""
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    initials
+                  )}
                 </div>
                 <div className="us-profile-info">
                   <div className="us-profile-name">
                     {currentUser?.fullName ?? "Guest Visitor"}
                   </div>
                   <div className="us-profile-role">
-                    {currentUser ? "Investor" : "Sign in to personalise"}
+                    {currentUser
+                      ? ROLE_LABELS[currentUser.role ?? "user"] ?? "Investor"
+                      : "Sign in to personalise"}
                   </div>
                 </div>
               </div>

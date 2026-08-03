@@ -184,6 +184,26 @@ export default function CommunityDetailClient({
 
   return (
     <div className="comm-detail">
+      <button
+        type="button"
+        onClick={() => router.back()}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          marginBottom: 12,
+          padding: "7px 12px",
+          borderRadius: 8,
+          border: "1px solid var(--border)",
+          background: "var(--surface)",
+          color: "var(--text)",
+          fontSize: 13,
+          fontWeight: 600,
+          cursor: "pointer",
+        }}
+      >
+        ← Back
+      </button>
       <div
         className="comm-detail-banner"
         style={

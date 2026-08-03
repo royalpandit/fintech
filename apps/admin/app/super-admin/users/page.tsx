@@ -22,7 +22,7 @@ const ROLE_COLORS: Record<string, string> = {
   user: "#2563eb",
   advisor: "#10b981",
   admin: "#f59e0b",
-  super_admin: "#7c3aed",
+  super_admin: "#047857",
 };
 
 export default async function UsersPage({ searchParams }: { searchParams: SearchParams }) {
@@ -72,7 +72,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
   const totalPages = Math.max(1, Math.ceil(filteredCount / perPage));
 
   return (
-    <section className="advisor-scope" style={{ ["--advisor-primary" as any]: "#7c3aed" }}>
+    <section className="advisor-scope" style={{ ["--advisor-primary" as any]: "#10b981" }}>
       <div
         style={{
           display: "flex",
@@ -102,7 +102,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
           style={{
             padding: "10px 18px",
             borderRadius: 10,
-            background: "#7c3aed",
+            background: "var(--advisor-primary-deep, #047857)",
             color: "#fff",
             fontWeight: 700,
             fontSize: 13,
@@ -347,7 +347,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
                   style={{
                     padding: "8px 16px",
                     borderRadius: 8,
-                    background: "#7c3aed",
+                    background: "var(--advisor-primary-deep, #047857)",
                     color: "#fff",
                     fontWeight: 700,
                     textDecoration: "none",

@@ -41,7 +41,7 @@ const ROLE_COLORS: Record<string, string> = {
   user: "#2563eb",
   advisor: "#10b981",
   admin: "#f59e0b",
-  super_admin: "#7c3aed",
+  super_admin: "#10b981",
 };
 const ROLE_LABELS: Record<string, string> = {
   user: "Users",
@@ -209,7 +209,7 @@ export default async function SuperAdminAnalyticsPage({
   const complianceTotal = complianceSlices.reduce((s, x) => s + x.value, 0);
 
   return (
-    <section className="advisor-scope" style={{ ["--advisor-primary" as any]: "#7c3aed" }}>
+    <section className="advisor-scope" style={{ ["--advisor-primary" as any]: "#10b981" }}>
       <div
         style={{
           display: "flex",
@@ -291,7 +291,7 @@ export default async function SuperAdminAnalyticsPage({
           </div>
           <AreaChart
             data={revenueChart}
-            color="#7c3aed"
+            color="#10b981"
             height={240}
             valueFormatter={(n) => formatINR(n, true)}
           />
@@ -506,7 +506,7 @@ export default async function SuperAdminAnalyticsPage({
                           style={{
                             width: `${pct}%`,
                             height: "100%",
-                            background: "#7c3aed",
+                            background: "#10b981",
                           }}
                         />
                       </div>
