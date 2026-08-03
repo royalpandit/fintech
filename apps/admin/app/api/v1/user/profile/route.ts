@@ -31,13 +31,14 @@ export async function PUT(req: NextRequest) {
   const auth = await requireAuth(req);
   if (!auth) return err("Unauthorized", 401);
 
-  const body = await parseBody<{ fullName?: string; phone?: string }>(req);
+  const body = await parseBody<{ fullName?: string; phone?: string; avatarUrl?: string | null }>(req);
 
   const user = await prisma.user.update({
     where: { id: auth.userId },
     data: {
       ...(body.fullName && { fullName: body.fullName }),
       ...(body.phone && { phone: body.phone }),
+      ...(body.avatarUrl !== undefined && { avatarUrl: body.avatarUrl }),
     },
     select: {
       id: true,
@@ -46,6 +47,7 @@ export async function PUT(req: NextRequest) {
       email: true,
       phone: true,
       role: true,
+      avatarUrl: true,
     },
   });
 

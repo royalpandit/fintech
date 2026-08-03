@@ -6,8 +6,9 @@ import { useState } from "react";
 import FinuerLogo from "@/components/brand/finuer-logo";
 import ThemeToggleMenu from "@/components/theme/theme-toggle-menu";
 import ThemeHeaderButton from "@/components/theme/theme-header-button";
-import { ADVISOR_MODULES, ADVISOR_MODULE_ROUTE_MAP } from "../lib/advisor-nav";
+import { ADVISOR_NAV_GROUPS, ADVISOR_MODULE_ROUTE_MAP } from "../lib/advisor-nav";
 import { Bell } from "./advisor-ui/icons";
+import AdvisorSearch from "./advisor-search";
 
 type AdvisorShellProps = {
   children: React.ReactNode;
@@ -28,10 +29,6 @@ function getInitials(name: string): string {
   if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-function formatINR(n: number) {
-  return `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 }
 
 function formatINRCompact(n: number) {
@@ -172,22 +169,10 @@ export default function AdvisorShell({
           </div>
         </div>
 
-        <div
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            color: "var(--text-muted)",
-            letterSpacing: 1,
-            marginBottom: 8,
-            paddingLeft: 6,
-          }}
-        >
-          ADVISOR
-        </div>
-
         <nav className="admin-nav">
-          {ADVISOR_MODULES.map((moduleName) => {
+          {ADVISOR_NAV_GROUPS.flatMap((g) => g.modules).map((moduleName) => {
             const href = ADVISOR_MODULE_ROUTE_MAP[moduleName];
+            if (!href) return null;
             const active = pathname === href || pathname.startsWith(href + "/");
             const badgeCount = badges[moduleName] ?? 0;
             return (
@@ -230,49 +215,13 @@ export default function AdvisorShell({
           className="admin-header"
           style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
         >
-          {/* Top page tabs */}
-          <nav style={{ display: "flex", gap: 4, alignItems: "center", margin: "0 auto" }}>
-            {[
-              { label: "Overview", href: "/advisor/dashboard" },
-              { label: "Feed", href: "/advisor/feed" },
-              { label: "Posts", href: "/advisor/posts" },
-              { label: "Subscription Services", href: "/advisor/services" },
-              { label: "Earnings", href: "/advisor/earnings" },
-              { label: "Virtual Trading", href: "/advisor/paper" },
-            ].map((nav) => {
-              const active = pathname === nav.href || pathname.startsWith(nav.href + "/");
-              return (
-                <Link
-                  key={nav.href}
-                  href={lockedHref(nav.href)}
-                  style={{
-                    padding: "8px 14px",
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: active ? "#2563eb" : "var(--text-muted)",
-                    background: active ? "rgba(37, 99, 235, 0.08)" : "transparent",
-                    textDecoration: "none",
-                  }}
-                >
-                  {nav.label}
-                  {active && (
-                    <svg
-                      width="10"
-                      height="10"
-                      viewBox="0 0 12 12"
-                      style={{ marginLeft: 4, verticalAlign: "middle" }}
-                    >
-                      <path d="M3 5l3 3 3-3" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-                    </svg>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+          {/* Functional search (stocks + page nav, ⌘K) */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, maxWidth: 460 }}>
+            {!needsVerification && <AdvisorSearch />}
+          </div>
 
           {/* Right side: notifications + avatar */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative", marginLeft: 24, flexShrink: 0 }}>
             <Link
               href={lockedHref("/advisor/notifications")}
               aria-label="Notifications"

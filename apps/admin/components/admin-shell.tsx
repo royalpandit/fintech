@@ -6,8 +6,10 @@ import { useState } from "react";
 import FinuerLogo from "@/components/brand/finuer-logo";
 import ThemeToggleMenu from "@/components/theme/theme-toggle-menu";
 import ThemeHeaderButton from "@/components/theme/theme-header-button";
-import { MODULE_ROUTE_MAP, SUPER_ADMIN_MODULES } from "../lib/super-admin";
+import { MODULE_ROUTE_MAP, NAV_GROUPS } from "../lib/super-admin";
 import { Bell } from "./advisor-ui/icons";
+import CommandPalette from "./command-palette";
+import { ToastProvider } from "./toast";
 
 type AdminShellProps = {
   children: React.ReactNode;
@@ -16,8 +18,6 @@ type AdminShellProps = {
     email: string;
     role: string;
   };
-  monthlyRevenue: number;
-  weekDeltaPct: number;
 };
 
 function getInitials(name: string): string {
@@ -27,33 +27,7 @@ function getInitials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function formatINRCompact(n: number) {
-  if (Math.abs(n) >= 10000000) return `₹${(n / 10000000).toFixed(2)}Cr`;
-  if (Math.abs(n) >= 100000) return `₹${(n / 100000).toFixed(2)}L`;
-  if (Math.abs(n) >= 1000) return `₹${(n / 1000).toFixed(1)}k`;
-  return `₹${n.toFixed(0)}`;
-}
-
-const TOP_NAV = [
-  { label: "Overview", href: "/super-admin/dashboard" },
-  { label: "Users", href: "/super-admin/users" },
-  { label: "Advisors", href: "/super-admin/advisors" },
-  { label: "Posts", href: "/super-admin/market-posts" },
-  { label: "Analytics", href: "/super-admin/analytics" },
-  { label: "Subscriptions", href: "/super-admin/subscriptions" },
-  { label: "AI Agents", href: "/super-admin/agents" },
-  { label: "Stock Picks", href: "/super-admin/stock-picks" },
-  { label: "Finuer Basket", href: "/super-admin/finuer-basket/baskets" },
-  { label: "Competition", href: "/super-admin/competition/list" },
-  { label: "Settings", href: "/super-admin/settings" },
-];
-
-export default function AdminShell({
-  children,
-  currentUser,
-  monthlyRevenue,
-  weekDeltaPct,
-}: AdminShellProps) {
+export default function AdminShell({ children, currentUser }: AdminShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -72,27 +46,47 @@ export default function AdminShell({
     }
   };
 
-  const deltaColor = weekDeltaPct >= 0 ? "#16a34a" : "#dc2626";
-  const deltaSign = weekDeltaPct >= 0 ? "+" : "";
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(href + "/");
 
   return (
     <div
       className="admin-shell advisor-scope"
-      style={{ ["--advisor-primary" as any]: "#7c3aed" }}
+      style={
+        {
+          // Emerald "Finuer" theme, scoped to the super-admin console only.
+          "--advisor-primary": "#10b981",
+          "--advisor-primary-deep": "#047857",
+          "--advisor-accent": "#14b8a6",
+          "--primary": "#10b981",
+          "--primary-2": "#34d399",
+          "--primary-soft": "rgba(16, 185, 129, 0.12)",
+          // Blue is the brand's secondary accent — used for data/analytics.
+          "--accent-blue": "#2563eb",
+          "--accent-blue-soft": "rgba(37, 99, 235, 0.12)",
+          "--nav-active-gradient":
+            "linear-gradient(135deg, #059669 0%, #10b981 55%, #34d399 100%)",
+          "--nav-active-shadow": "0 4px 14px rgba(16, 185, 129, 0.28)",
+        } as React.CSSProperties
+      }
     >
-      <aside className="admin-sidebar" style={{ background: "var(--surface-2)", padding: "20px 14px" }}>
-        <div style={{ marginBottom: 16, paddingLeft: 4 }}>
-          <FinuerLogo href="/" height={34} />
+      <aside
+        className="admin-sidebar"
+        style={{ background: "var(--surface-2)", padding: "18px 14px" }}
+      >
+        <div style={{ marginBottom: 18, paddingLeft: 4 }}>
+          <FinuerLogo href="/" height={44} />
         </div>
-        {/* Profile card */}
+
+        {/* Profile card — identity only (revenue/growth moved to the dashboard) */}
         <div className="profile-card">
-          <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <div
               style={{
                 width: 40,
                 height: 40,
                 borderRadius: 999,
-                background: "linear-gradient(135deg, #7c3aed, #ec4899)",
+                background: "linear-gradient(135deg, #10b981, #14b8a6)",
                 color: "#fff",
                 display: "grid",
                 placeItems: "center",
@@ -122,57 +116,39 @@ export default function AdminShell({
               </div>
             </div>
           </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 10,
-              borderTop: "1px solid var(--border)",
-              paddingTop: 10,
-            }}
-          >
-            <div>
-              <div className="profile-card-label">Revenue (30d)</div>
-              <div className="profile-card-stat">{formatINRCompact(monthlyRevenue)}</div>
-            </div>
-            <div>
-              <div className="profile-card-label">7d Growth</div>
-              <div className="profile-card-stat" style={{ color: deltaColor }}>
-                {deltaSign}
-                {weekDeltaPct.toFixed(1)}%
-              </div>
-            </div>
-          </div>
         </div>
 
-        <div
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            color: "var(--text-muted)",
-            letterSpacing: 1,
-            marginBottom: 8,
-            paddingLeft: 6,
-          }}
-        >
-          GOVERNANCE
-        </div>
-
-        <nav className="admin-nav">
-          {SUPER_ADMIN_MODULES.map((moduleName) => {
-            const href = MODULE_ROUTE_MAP[moduleName];
-            const active = pathname === href;
-            return (
-              <Link
-                key={moduleName}
-                href={href}
-                className={`admin-nav-link ${active ? "active" : ""}`}
+        <nav className="admin-nav" style={{ display: "grid", gap: 4 }}>
+          {NAV_GROUPS.map((group) => (
+            <div key={group.heading} style={{ marginTop: 10 }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: "var(--text-muted)",
+                  letterSpacing: 1,
+                  margin: "0 0 6px",
+                  paddingLeft: 6,
+                  textTransform: "uppercase",
+                }}
               >
-                {moduleName}
-              </Link>
-            );
-          })}
+                {group.heading}
+              </div>
+              {group.modules.map((moduleName) => {
+                const href = MODULE_ROUTE_MAP[moduleName];
+                if (!href) return null;
+                return (
+                  <Link
+                    key={moduleName}
+                    href={href}
+                    className={`admin-nav-link ${isActive(href) ? "active" : ""}`}
+                  >
+                    {moduleName}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
       </aside>
 
@@ -181,74 +157,24 @@ export default function AdminShell({
           className="admin-header"
           style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, maxWidth: 420 }}>
-            <div style={{ position: "relative", width: "100%" }}>
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                style={{
-                  position: "absolute",
-                  left: 14,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "var(--text-muted)",
-                }}
-              >
-                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-                <path
-                  d="m20 20-3.5-3.5"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <input
-                placeholder="Search across the platform..."
-                style={{
-                  width: "100%",
-                  height: 40,
-                  paddingLeft: 38,
-                  paddingRight: 14,
-                  borderRadius: 10,
-                  border: "1px solid var(--border)",
-                  background: "var(--surface-2)",
-                  color: "var(--text)",
-                  fontSize: 13,
-                  outline: "none",
-                }}
-              />
-            </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, maxWidth: 460 }}>
+            <CommandPalette />
           </div>
 
-          <nav style={{ display: "flex", gap: 4, alignItems: "center", margin: "0 auto" }}>
-            {TOP_NAV.map((nav) => {
-              const active = pathname === nav.href || pathname.startsWith(nav.href + "/");
-              return (
-                <Link
-                  key={nav.href}
-                  href={nav.href}
-                  style={{
-                    padding: "8px 14px",
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: active ? "#7c3aed" : "var(--text-muted)",
-                    background: active ? "rgba(124, 58, 237, 0.08)" : "transparent",
-                    textDecoration: "none",
-                  }}
-                >
-                  {nav.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative", marginLeft: 24, flexShrink: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              position: "relative",
+              marginLeft: 24,
+              flexShrink: 0,
+            }}
+          >
             <Link
-              href="/super-admin/audit-logs"
-              aria-label="Activity"
+              href="/super-admin/notifications"
+              aria-label="Notifications"
+              title="Notifications"
               style={{
                 width: 36,
                 height: 36,
@@ -273,7 +199,7 @@ export default function AdminShell({
                 width: 38,
                 height: 38,
                 borderRadius: 999,
-                background: "linear-gradient(135deg, #7c3aed, #ec4899)",
+                background: "linear-gradient(135deg, #10b981, #14b8a6)",
                 color: "#fff",
                 display: "grid",
                 placeItems: "center",
@@ -317,8 +243,8 @@ export default function AdminShell({
                       fontSize: 10,
                       padding: "2px 8px",
                       borderRadius: 999,
-                      background: "rgba(124, 58, 237, 0.1)",
-                      color: "#7c3aed",
+                      background: "rgba(16, 185, 129, 0.1)",
+                      color: "#047857",
                       textTransform: "capitalize",
                       fontWeight: 700,
                     }}
@@ -380,7 +306,7 @@ export default function AdminShell({
           </div>
         </header>
         <main className="admin-main theme-page">
-          {children}
+          <ToastProvider>{children}</ToastProvider>
         </main>
       </section>
     </div>

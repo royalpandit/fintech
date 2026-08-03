@@ -27,6 +27,7 @@ export const MODULE_ROUTE_MAP: Record<string, string> = {
   Community: "/super-admin/community",
   Reports: "/super-admin/reports",
   "AI & Compliance": "/super-admin/ai-compliance",
+  "AI Agents": "/super-admin/agents",
   Analytics: "/super-admin/analytics",
   Subscriptions: "/super-admin/subscriptions",
   Payments: "/super-admin/payments",
@@ -39,4 +40,22 @@ export const MODULE_ROUTE_MAP: Record<string, string> = {
   Settings: "/super-admin/settings",
   Permissions: "/super-admin/permissions",
 };
+
+/**
+ * Sidebar navigation, grouped in a sensible operating order:
+ * overview → people → content → AI → products → revenue → system.
+ * This is the single source of nav truth (the old duplicate top-bar was removed).
+ */
+export const NAV_GROUPS: { heading: string; modules: string[] }[] = [
+  { heading: "Overview", modules: ["Dashboard", "Analytics"] },
+  { heading: "People", modules: ["Users", "Advisors", "Permissions"] },
+  { heading: "Content", modules: ["Market Posts", "Community", "Reports"] },
+  { heading: "AI", modules: ["AI & Compliance", "AI Agents"] },
+  {
+    heading: "Products",
+    modules: ["AI Stock Picks", "Finuer Basket", "Competition", "Courses"],
+  },
+  { heading: "Revenue", modules: ["Subscriptions", "Payments"] },
+  { heading: "System", modules: ["Notifications", "Audit Logs", "Settings"] },
+];
 
