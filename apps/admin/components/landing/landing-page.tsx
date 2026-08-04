@@ -8,7 +8,7 @@ import LandingBackground from "./landing-background";
 import LandingPopup from "./landing-popup";
 import AdvisorCarousel from "./advisor-carousel";
 import ProductSlider from "./product-slider";
-import { DashboardMock, FeedMock, VirtualLabMock } from "./landing-mockups";
+import { DashboardMock, FeedMock, PhoneMock, VirtualLabMock } from "./landing-mockups";
 import type { LandingAdvisor } from "./types";
 
 export type { LandingAdvisor };
@@ -144,21 +144,12 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
           </Reveal>
 
           <Reveal variant="right" delay={140} className="lp-hero-visual">
-            <div className="lp-mock-scroll">
-              <DashboardMock />
-            </div>
-
-            {/* Floating stat cards layered over the dashboard mock */}
-            <div className="lp-float-card lp-float-card--returns" aria-hidden>
-              <span className="lp-float-label">Portfolio</span>
-              <strong className="lp-float-value">+18.4%</strong>
-              <span className="lp-float-spark" />
-            </div>
-            <div className="lp-float-card lp-float-card--verified" aria-hidden>
-              <span className="lp-float-check">✓</span>
-              <div>
-                <strong>SEBI Verified</strong>
-                <span className="lp-float-label">Every advisor</span>
+            <div className="lp-device-combo">
+              <div className="lp-device-desktop">
+                <DashboardMock />
+              </div>
+              <div className="lp-device-phone">
+                <PhoneMock />
               </div>
             </div>
           </Reveal>

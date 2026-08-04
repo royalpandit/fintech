@@ -2068,6 +2068,7 @@ model GeminiAgent {
   model        String   @default("gemini-1.5-flash") @db.VarChar(60)
   temperature  Float    @default(0.7)
   isActive     Boolean  @default(true) @map("is_active")
+  isSiteAssistant Boolean @default(false) @map("is_site_assistant")
   createdById  Int      @map("created_by_id")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")

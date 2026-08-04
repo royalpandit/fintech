@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type MutualFund = {
   code: string;
@@ -12,8 +12,9 @@ type MutualFund = {
   date: string;
 };
 
+type Returns = { r3m: number | null; r6m: number | null; r1y: number | null };
+
 function cleanCategory(c: string): string {
-  // "Open Ended Schemes(Equity Scheme - Flexi Cap Fund)" -> "Equity Scheme - Flexi Cap Fund"
   const m = c.match(/\(([^)]+)\)/);
   return (m ? m[1] : c).trim();
 }
@@ -21,11 +22,34 @@ function cleanCategory(c: string): string {
 const inr = (n: number) =>
   n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const SORTS = [
+  { key: "name", label: "Name" },
+  { key: "r1y", label: "1Y return" },
+  { key: "r6m", label: "6M return" },
+  { key: "r3m", label: "3M return" },
+] as const;
+
+type SortKey = (typeof SORTS)[number]["key"];
+
+function ReturnCell({ v }: { v: number | null }) {
+  if (v == null) return <span style={{ color: "var(--text-muted)" }}>—</span>;
+  const pos = v >= 0;
+  return (
+    <span style={{ color: pos ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
+      {pos ? "+" : ""}
+      {v.toFixed(2)}%
+    </span>
+  );
+}
+
 export default function MutualFundsView() {
   const [q, setQ] = useState("");
   const [funds, setFunds] = useState<MutualFund[]>([]);
+  const [returns, setReturns] = useState<Record<string, Returns>>({});
   const [loading, setLoading] = useState(true);
+  const [returnsLoading, setReturnsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [sort, setSort] = useState<SortKey>("name");
 
   useEffect(() => {
     let alive = true;
@@ -36,8 +60,24 @@ export default function MutualFundsView() {
         const res = await fetch(`/api/v1/market/mutual-funds?q=${encodeURIComponent(q.trim())}`);
         const j = await res.json();
         if (!alive) return;
-        if (j.ok || j.status) setFunds(j.funds ?? []);
-        else setError(j.error || "Failed to load funds");
+        const list: MutualFund[] = j.ok || j.status ? j.funds ?? [] : [];
+        setFunds(list);
+        if (!(j.ok || j.status)) setError(j.error || "Failed to load funds");
+
+        // Fetch trailing returns for the visible funds (fast list first, returns fill in).
+        const codes = list.map((f) => f.code).slice(0, 50);
+        if (codes.length) {
+          setReturnsLoading(true);
+          fetch(`/api/v1/market/mutual-funds/returns?codes=${codes.join(",")}`)
+            .then((r) => r.json())
+            .then((rj) => {
+              if (alive && (rj.ok || rj.status)) setReturns(rj.returns ?? {});
+            })
+            .catch(() => {})
+            .finally(() => alive && setReturnsLoading(false));
+        } else {
+          setReturns({});
+        }
       } catch {
         if (alive) setError("Network error");
       } finally {
@@ -50,66 +90,73 @@ export default function MutualFundsView() {
     };
   }, [q]);
 
+  const sorted = useMemo(() => {
+    if (sort === "name") return funds;
+    return [...funds].sort((a, b) => {
+      const av = returns[a.code]?.[sort] ?? null;
+      const bv = returns[b.code]?.[sort] ?? null;
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return bv - av; // high → low
+    });
+  }, [funds, returns, sort]);
+
   return (
     <section>
-      <div style={{ position: "relative", marginBottom: 16, maxWidth: 520 }}>
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}
-        >
-          <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-          <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search mutual funds by scheme or AMC…"
-          style={{
-            width: "100%",
-            height: 42,
-            paddingLeft: 40,
-            paddingRight: 14,
-            borderRadius: 10,
-            border: "1px solid var(--border)",
-            background: "var(--surface)",
-            color: "var(--text)",
-            fontSize: 14,
-            outline: "none",
-          }}
-        />
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
+        <div style={{ position: "relative", flex: 1, minWidth: 260, maxWidth: 460 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}>
+            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+            <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search mutual funds by scheme or AMC…"
+            style={{ width: "100%", height: 42, paddingLeft: 40, paddingRight: 14, borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", fontSize: 14, outline: "none" }}
+          />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600 }}>Sort:</span>
+          {SORTS.map((s) => {
+            const active = s.key === sort;
+            return (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => setSort(s.key)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  border: "1px solid var(--border)",
+                  background: active ? "var(--primary-soft, rgba(37,99,235,0.12))" : "var(--surface)",
+                  color: active ? "var(--accent-blue, #2563eb)" : "var(--text-muted)",
+                }}
+              >
+                {s.label}
+                {active && s.key !== "name" ? " ↓" : ""}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <p style={{ margin: "0 0 12px", fontSize: 11.5, color: "var(--text-muted)" }}>
-        NAV data from AMFI (Association of Mutual Funds in India) · updated each business day
+        NAV from AMFI · returns computed from historical NAV (mfapi.in)
+        {returnsLoading ? " · loading returns…" : ""}
       </p>
 
       {error && (
-        <div
-          style={{
-            padding: "10px 14px",
-            borderRadius: 10,
-            background: "rgba(245,158,11,0.12)",
-            border: "1px solid rgba(245,158,11,0.3)",
-            color: "#92400e",
-            fontSize: 12,
-            marginBottom: 16,
-          }}
-        >
+        <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)", color: "#92400e", fontSize: 12, marginBottom: 16 }}>
           {error}
         </div>
       )}
 
-      <article
-        style={{
-          background: "var(--surface)",
-          border: "1px solid var(--border)",
-          borderRadius: 14,
-          overflow: "hidden",
-        }}
-      >
+      <article style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
@@ -117,42 +164,33 @@ export default function MutualFundsView() {
                 <th style={{ padding: "12px 16px", fontWeight: 600 }}>Scheme</th>
                 <th style={{ padding: "12px 16px", fontWeight: 600 }}>Category</th>
                 <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>NAV (₹)</th>
-                <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right", whiteSpace: "nowrap" }}>As of</th>
+                <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>3M</th>
+                <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>6M</th>
+                <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>1Y</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={4} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>
-                    Loading funds…
-                  </td>
-                </tr>
-              ) : funds.length === 0 ? (
-                <tr>
-                  <td colSpan={4} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>
-                    No funds matched “{q.trim()}”.
-                  </td>
-                </tr>
+                <tr><td colSpan={6} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>Loading funds…</td></tr>
+              ) : sorted.length === 0 ? (
+                <tr><td colSpan={6} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>No funds matched “{q.trim()}”.</td></tr>
               ) : (
-                funds.map((f) => (
-                  <tr key={f.code} className="mkt-trow" style={{ borderTop: "1px solid var(--border)" }}>
-                    <td style={{ padding: "12px 16px", maxWidth: 420 }}>
-                      <div style={{ fontWeight: 600, color: "var(--text)" }}>{f.name}</div>
-                      {f.amc && (
-                        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{f.amc}</div>
-                      )}
-                    </td>
-                    <td style={{ padding: "12px 16px", color: "var(--text-muted)", maxWidth: 220 }}>
-                      {cleanCategory(f.category)}
-                    </td>
-                    <td style={{ padding: "12px 16px", textAlign: "right", fontWeight: 700, color: "var(--text)" }}>
-                      {f.nav != null ? inr(f.nav) : "—"}
-                    </td>
-                    <td style={{ padding: "12px 16px", textAlign: "right", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                      {f.date}
-                    </td>
-                  </tr>
-                ))
+                sorted.map((f) => {
+                  const ret = returns[f.code];
+                  return (
+                    <tr key={f.code} className="mkt-trow" style={{ borderTop: "1px solid var(--border)" }}>
+                      <td style={{ padding: "12px 16px", maxWidth: 380 }}>
+                        <div style={{ fontWeight: 600, color: "var(--text)" }}>{f.name}</div>
+                        {f.amc && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{f.amc}</div>}
+                      </td>
+                      <td style={{ padding: "12px 16px", color: "var(--text-muted)", maxWidth: 200 }}>{cleanCategory(f.category)}</td>
+                      <td style={{ padding: "12px 16px", textAlign: "right", fontWeight: 600, color: "var(--text)" }}>{f.nav != null ? inr(f.nav) : "—"}</td>
+                      <td style={{ padding: "12px 16px", textAlign: "right" }}><ReturnCell v={ret?.r3m ?? null} /></td>
+                      <td style={{ padding: "12px 16px", textAlign: "right" }}><ReturnCell v={ret?.r6m ?? null} /></td>
+                      <td style={{ padding: "12px 16px", textAlign: "right" }}><ReturnCell v={ret?.r1y ?? null} /></td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
