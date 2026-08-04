@@ -5,8 +5,13 @@ import Link from "next/link";
 import { FiArrowUpRight, FiArrowDownRight, FiBarChart2, FiRefreshCw } from "react-icons/fi";
 import MarketSearch from "@/components/trading/market-search";
 import MutualFundsView from "@/components/trading/mutual-funds-view";
+import CryptoView from "@/components/trading/crypto-view";
+import CurrenciesView from "@/components/trading/currencies-view";
+import MarketsAllView from "@/components/trading/markets-all-view";
+import MarketsPlaceholder from "@/components/trading/markets-placeholder";
 import AddToWatchlistButton from "@/components/watchlist/add-to-watchlist-button";
 import type { WatchlistItem } from "@/components/trading/trading-terminal-types";
+import { MARKET_SECTORS, stockInSector } from "@/lib/market-sectors";
 
 type OverviewRow = {
   symbol: string;
@@ -44,18 +49,42 @@ function toWatchItem(r: OverviewRow): WatchlistItem {
 const up = "#16a34a";
 const down = "#dc2626";
 
-type MarketTab = "stocks" | "mf";
+type MarketTab =
+  | "all"
+  | "stocks"
+  | "mf"
+  | "etf"
+  | "commodities"
+  | "ipo"
+  | "crypto"
+  | "currencies"
+  | "global";
+
+const TABS: { key: MarketTab; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "stocks", label: "Stocks & Indices" },
+  { key: "mf", label: "Mutual Funds" },
+  { key: "etf", label: "ETFs" },
+  { key: "commodities", label: "Commodities" },
+  { key: "ipo", label: "IPO" },
+  { key: "crypto", label: "Crypto" },
+  { key: "currencies", label: "Currencies" },
+  { key: "global", label: "Global" },
+];
 
 export default function MarketsOverview() {
-  const [tab, setTab] = useState<MarketTab>("stocks");
+  const [tab, setTab] = useState<MarketTab>("all");
+  const [sector, setSector] = useState<string>("all");
   const [indices, setIndices] = useState<OverviewRow[]>([]);
   const [stocks, setStocks] = useState<OverviewRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updatedAt, setUpdatedAt] = useState<string>("");
 
+  const needsStockData = tab === "all" || tab === "stocks";
+
   useEffect(() => {
-    if (tab !== "stocks") return;
+    if (!needsStockData) return;
     let alive = true;
     const load = async () => {
       try {
@@ -84,7 +113,12 @@ export default function MarketsOverview() {
       alive = false;
       clearInterval(id);
     };
-  }, [tab]);
+  }, [needsStockData]);
+
+  const filteredStocks = useMemo(
+    () => (sector === "all" ? stocks : stocks.filter((s) => stockInSector(s.symbol, sector))),
+    [stocks, sector],
+  );
 
   const gainers = useMemo(
     () => [...stocks].sort((a, b) => b.percentChange - a.percentChange).slice(0, 5),
@@ -142,11 +176,8 @@ export default function MarketsOverview() {
       </div>
 
       {/* Instrument tabs */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, borderBottom: "1px solid var(--border)" }}>
-        {([
-          { key: "stocks", label: "Stocks & Indices" },
-          { key: "mf", label: "Mutual Funds" },
-        ] as { key: MarketTab; label: string }[]).map((t) => {
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, borderBottom: "1px solid var(--border)", overflowX: "auto" }}>
+        {TABS.map((t) => {
           const active = tab === t.key;
           return (
             <button
@@ -160,6 +191,7 @@ export default function MarketsOverview() {
                 cursor: "pointer",
                 fontSize: 14,
                 fontWeight: 600,
+                whiteSpace: "nowrap",
                 color: active ? "var(--text)" : "var(--text-muted)",
                 borderBottom: active ? "2px solid var(--primary, #10b981)" : "2px solid transparent",
                 marginBottom: -1,
@@ -171,10 +203,67 @@ export default function MarketsOverview() {
         })}
       </div>
 
-      {tab === "mf" ? (
-        <MutualFundsView />
-      ) : (
+      {tab === "all" && <MarketsAllView stocks={stocks} />}
+      {tab === "mf" && <MutualFundsView />}
+      {tab === "crypto" && <CryptoView />}
+      {tab === "currencies" && <CurrenciesView />}
+      {tab === "etf" && (
+        <MarketsPlaceholder
+          title="ETFs"
+          blurb="Exchange-traded funds trade like stocks. Use the Stocks tab search for listed ETFs (e.g. NIFTYBEES, GOLDBEES) — a dedicated curated ETF board is coming next."
+          needs="curated ETF list"
+        />
+      )}
+      {tab === "commodities" && (
+        <MarketsPlaceholder
+          title="Commodities"
+          blurb="MCX commodities (gold, silver, crude, natural gas). Requires the broker's commodity (MCX) segment to be enabled on the data feed."
+          needs="MCX data segment"
+        />
+      )}
+      {tab === "ipo" && (
+        <MarketsPlaceholder
+          title="IPO"
+          blurb="Upcoming, open and recently-listed IPOs. There's no free feed for this — it needs a paid IPO data provider or an admin-curated list."
+          needs="IPO data provider / admin-curated list"
+        />
+      )}
+      {tab === "global" && (
+        <MarketsPlaceholder
+          title="Global Markets"
+          blurb="US & global indices (S&P 500, Nasdaq, Dow, FTSE, Nikkei) and ADRs. Needs a global market-data provider."
+          needs="global market-data provider"
+        />
+      )}
+
+      {tab === "stocks" && (
       <>
+      {/* Sector / industry filter */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+        {[{ key: "all", label: "All sectors" }, ...MARKET_SECTORS].map((s) => {
+          const active = sector === s.key;
+          return (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => setSector(s.key)}
+              style={{
+                padding: "6px 14px",
+                borderRadius: 999,
+                fontSize: 12.5,
+                fontWeight: 600,
+                cursor: "pointer",
+                border: "1px solid var(--border)",
+                background: active ? "var(--primary-soft, rgba(37,99,235,0.12))" : "var(--surface)",
+                color: active ? "var(--accent-blue, #2563eb)" : "var(--text-muted)",
+              }}
+            >
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
+
       <MarketSearch />
 
       {error && (
@@ -266,10 +355,11 @@ export default function MarketsOverview() {
           overflow: "hidden",
         }}
       >
-        <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--border)" }}>
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
-            All Stocks · 52-Week Range
+        <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>
+            {sector === "all" ? "All Stocks" : `${MARKET_SECTORS.find((s) => s.key === sector)?.label ?? ""} Stocks`} · 52-Week Range
           </h3>
+          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{filteredStocks.length} shown</span>
         </div>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -285,7 +375,7 @@ export default function MarketsOverview() {
               </tr>
             </thead>
             <tbody>
-              {stocks.map((s) => {
+              {filteredStocks.map((s) => {
                 const pos = s.percentChange >= 0;
                 return (
                   <tr
@@ -322,13 +412,17 @@ export default function MarketsOverview() {
                   </tr>
                 );
               })}
-              {stocks.length === 0 && (
+              {filteredStocks.length === 0 && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}
                   >
-                    {loading ? "Loading market data…" : "No data available."}
+                    {loading
+                      ? "Loading market data…"
+                      : sector !== "all" && stocks.length > 0
+                        ? "No stocks from this sector in the current live list."
+                        : "No data available."}
                   </td>
                 </tr>
               )}
@@ -363,7 +457,7 @@ function MoverList({ title, rows, positive }: { title: string; rows: OverviewRow
         }}
       >
         {positive ? <FiArrowUpRight size={15} color={color} /> : <FiArrowDownRight size={15} color={color} />}
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{title}</h3>
+        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>{title}</h3>
       </div>
       <div>
         {rows.length === 0 ? (

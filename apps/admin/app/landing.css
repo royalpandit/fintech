@@ -157,7 +157,10 @@ html {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: transparent;
+  /* Subtle glass even at rest — light frost so the hero reads through it */
+  background: color-mix(in srgb, var(--lp-bg) 52%, transparent);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  backdrop-filter: blur(8px) saturate(140%);
   border-bottom: 1px solid transparent;
   transition:
     background-color var(--dur-base) var(--ease-out),
@@ -277,64 +280,32 @@ html {
 }
 
 /* ── StockLink-style top-bar controls ───────────────────────────────────── */
-/* Language pill */
-.lp-lang {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 12px;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--lp-border);
-  background: var(--lp-surface);
-  color: var(--lp-text);
-  font-family: inherit;
-  font-size: 0.82rem;
-  font-weight: 650;
-  cursor: pointer;
-  transition:
-    background-color var(--dur-fast) var(--ease-out),
-    border-color var(--dur-fast) var(--ease-out);
-}
-.lp-lang:hover {
-  background: var(--band);
-  border-color: var(--border-strong);
-}
-.lp-lang-caret {
-  opacity: 0.5;
-}
-
-/* Segmented moon / sun theme toggle */
-.lp-theme-seg {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--lp-border);
-  background: var(--lp-surface);
-}
-.lp-theme-opt {
-  width: 30px;
-  height: 30px;
+/* Single theme toggle button */
+.lp-theme-toggle {
   display: grid;
   place-items: center;
-  border: none;
-  background: transparent;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
+  border: 1px solid var(--lp-border);
+  background: var(--lp-surface);
   color: var(--lp-muted);
   cursor: pointer;
+  flex-shrink: 0;
   transition:
     background-color var(--dur-fast) var(--ease-out),
-    color var(--dur-fast) var(--ease-out);
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
-.lp-theme-opt.active {
-  background: var(--lp-primary);
-  color: #fff;
-  box-shadow: var(--shadow-primary);
-}
-.lp-theme-opt:not(.active):hover {
-  color: var(--lp-text);
+.lp-theme-toggle:hover {
+  color: var(--lp-primary-text);
+  border-color: var(--lp-primary);
   background: var(--band);
+  transform: rotate(-12deg);
+}
+.lp-theme-toggle:active {
+  transform: scale(0.94);
 }
 
 /* "Start Now" pill with circular arrow */
@@ -345,18 +316,19 @@ html {
   text-decoration: none;
   padding: 6px 7px 6px 17px;
   border-radius: var(--r-pill);
-  background: var(--brand-navy);
+  background: var(--lp-gradient);
   color: #fff;
   font-size: 0.85rem;
   font-weight: 700;
   white-space: nowrap;
+  box-shadow: var(--shadow-primary);
   transition:
     transform var(--dur-fast) var(--ease-out),
     box-shadow var(--dur-fast) var(--ease-out);
 }
 .lp-btn-start:hover {
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 16px 40px rgba(16, 185, 129, 0.36);
 }
 .lp-start-arrow {
   display: grid;
@@ -364,7 +336,7 @@ html {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: var(--lp-primary);
+  background: rgba(255, 255, 255, 0.22);
   color: #fff;
 }
 
@@ -682,10 +654,124 @@ html {
   to { opacity: 1; }
 }
 
+/* ── Route-transition curtain (Log in / Start Now) ───────────────────── */
+/* Portalled to <body>, so it must NOT rely on .landing-root-scoped tokens —
+   all colours/easings here are literal on purpose. */
+.lp-route-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 10100;
+  display: grid;
+  place-items: center;
+  /* A living, multi-stop emerald→teal gradient that keeps flowing */
+  background: linear-gradient(
+    125deg,
+    #064e3b 0%,
+    #047857 18%,
+    #059669 36%,
+    #10b981 54%,
+    #14b8a6 72%,
+    #2dd4bf 86%,
+    #34d399 100%
+  );
+  background-size: 280% 280%;
+  /* Grows from the exact click point while the gradient drifts */
+  clip-path: circle(0% at var(--rt-x, 50%) var(--rt-y, 50%));
+  animation:
+    lp-curtain-open 0.6s cubic-bezier(0.65, 0, 0.35, 1) forwards,
+    lp-curtain-flow 5s ease-in-out infinite;
+  will-change: clip-path, background-position;
+}
+
+/* Soft radial glow that blooms behind the wordmark */
+.lp-route-curtain::before {
+  content: "";
+  position: absolute;
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.24), transparent 62%);
+  opacity: 0;
+  animation: lp-curtain-glow 0.9s ease-out 0.18s forwards;
+  pointer-events: none;
+}
+
+/* Light sheen sweeping across the fill */
+.lp-route-curtain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.16) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: lp-curtain-sheen 1s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+  pointer-events: none;
+}
+
+.lp-route-curtain-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  text-align: center;
+}
+
+.lp-route-mark {
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: clamp(2.4rem, 7vw, 4rem);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  opacity: 0;
+  transform: translateY(16px) scale(0.9);
+  filter: blur(8px);
+  animation: lp-curtain-reveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.14s forwards;
+  text-shadow: 0 8px 34px rgba(0, 0, 0, 0.2);
+}
+
+.lp-route-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.92);
+  opacity: 0;
+  transform: translateY(10px);
+  animation: lp-curtain-reveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.32s forwards;
+}
+
+@keyframes lp-curtain-open {
+  from { clip-path: circle(0% at var(--rt-x, 50%) var(--rt-y, 50%)); }
+  to { clip-path: circle(150% at var(--rt-x, 50%) var(--rt-y, 50%)); }
+}
+
+@keyframes lp-curtain-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes lp-curtain-glow {
+  to { opacity: 1; }
+}
+
+@keyframes lp-curtain-sheen {
+  to { transform: translateX(100%); }
+}
+
+@keyframes lp-curtain-reveal {
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+
 /* ── Hero ────────────────────────────────────────────────────────────── */
 .lp-hero {
   position: relative;
-  padding: 88px 0 72px;
+  padding: 64px 0 48px;
   isolation: isolate;
 }
 
@@ -841,76 +927,201 @@ html {
   position: relative;
 }
 
-.lp-float-card {
+/* ── Hero device combo: desktop dashboard + phone beside it ──────────── */
+.lp-device-combo {
+  position: relative;
+  /* Phone lives mostly to the right of the desktop, so it overlaps just the
+     corner and lets the aurora show around it */
+  padding-right: 104px;
+  padding-bottom: 14px;
+}
+
+.lp-device-desktop {
+  position: relative;
+  z-index: 1;
+}
+
+/* The desktop dashboard fills its column without any inner scrollbars */
+.lp-device-desktop .lp-dashboard-mock {
+  width: 100%;
+  max-width: 100%;
+}
+
+.lp-device-phone {
   position: absolute;
-  z-index: 3;
+  right: -8px;
+  bottom: -8px;
+  z-index: 4;
+  width: 150px;
+  animation: float-y 7s var(--ease-in-out) infinite;
+}
+
+.lp-phone {
+  width: 100%;
+}
+
+.lp-phone-frame {
+  position: relative;
+  border-radius: 26px;
+  /* Thin bezel so the screen dominates and less background is hidden */
+  padding: 4px;
+  background: linear-gradient(158deg, #2b3644, #0d131c);
+  box-shadow:
+    0 20px 44px rgba(11, 23, 32, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  /* Rest tilt mirrors the desktop; straightens on hover */
+  transform: perspective(1000px) rotateY(-9deg) rotateX(4deg);
+  transition:
+    transform 0.7s var(--ease-spring),
+    box-shadow 0.7s var(--ease-out);
+  will-change: transform;
+}
+
+.lp-phone-notch {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 5px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.3);
+  z-index: 2;
+}
+
+.lp-phone-screen {
+  border-radius: 22px;
+  background: var(--lp-surface);
+  padding: 18px 13px 11px;
+  overflow: hidden;
+}
+
+.lp-phone-head {
   display: flex;
-  gap: 10px;
-  padding: 14px 18px;
-  border-radius: var(--r-md);
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-lg);
-  font-size: 0.78rem;
-}
-
-.lp-float-card--returns {
-  flex-direction: column;
-  gap: 2px;
-  top: 8%;
-  left: -32px;
-  animation: float-y 6s var(--ease-in-out) infinite;
-}
-
-.lp-float-card--verified {
   align-items: center;
-  bottom: 10%;
-  right: -24px;
-  animation: float-y 7.5s var(--ease-in-out) infinite 0.8s;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
 
-.lp-float-card--verified strong {
+.lp-phone-greet {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--lp-muted);
+}
+
+.lp-phone-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: var(--r-pill);
+  background: var(--lp-primary-soft);
+  color: var(--lp-primary-text);
+}
+
+.lp-phone-chip.up { color: var(--lp-primary-text); }
+
+.lp-phone-value {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--lp-text);
+}
+
+.lp-phone-sub {
+  font-size: 10.5px;
+  font-weight: 650;
+  margin-bottom: 10px;
+}
+
+.lp-phone-sub.up { color: var(--lp-green); }
+
+.lp-phone-spark {
+  height: 46px;
+  margin-bottom: 12px;
+}
+
+.lp-phone-spark svg {
+  width: 100%;
+  height: 100%;
   display: block;
-  font-size: 0.82rem;
+}
+
+.lp-phone-list {
+  height: 92px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent);
+  mask-image: linear-gradient(180deg, #000 82%, transparent);
+}
+
+.lp-phone-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  --lp-scroll-shift: -74px;
+  animation: lp-auto-scroll 9s var(--ease-in-out) infinite;
+}
+
+.lp-phone-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-phone-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--lp-primary);
+  flex-shrink: 0;
+}
+
+.lp-phone-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.lp-phone-item-main strong {
+  font-size: 10.5px;
   font-weight: 700;
   color: var(--lp-text);
 }
 
-.lp-float-label {
+.lp-phone-item-main span {
+  font-size: 9px;
   color: var(--lp-muted);
-  font-size: 0.7rem;
-  font-weight: 600;
 }
 
-.lp-float-value {
-  font-size: 1.3rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--lp-green);
-}
-
-.lp-float-spark {
-  display: block;
-  height: 4px;
-  width: 64px;
-  margin-top: 6px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, var(--lp-primary), var(--brand-accent));
-}
-
-.lp-float-check {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--lp-primary);
-  color: #fff;
-  font-size: 0.9rem;
+.lp-phone-item-chg {
+  font-size: 10px;
   font-weight: 700;
-  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-phone-item-chg.up { color: var(--lp-green); }
+
+.lp-phone-tabbar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--lp-border);
+}
+
+.lp-phone-tabbar span {
+  width: 18px;
+  height: 5px;
+  border-radius: var(--r-pill);
+  background: var(--lp-border);
+}
+
+.lp-phone-tabbar span.is-active {
+  background: var(--lp-primary);
+  width: 22px;
 }
 
 .lp-mock-scroll {
@@ -934,7 +1145,7 @@ html {
 
 /* ── Ticker ──────────────────────────────────────────────────────────── */
 .lp-ticker {
-  padding: 8px 0 64px;
+  padding: 8px 0 40px;
 }
 
 .lp-ticker-row {
@@ -1021,7 +1232,7 @@ html {
 
 /* ── Sections ────────────────────────────────────────────────────────── */
 .lp-section {
-  padding: 104px 0;
+  padding: 72px 0;
 }
 
 .lp-section--tight {
@@ -1037,7 +1248,7 @@ html {
 .lp-section-head {
   text-align: center;
   max-width: 680px;
-  margin: 0 auto 64px;
+  margin: 0 auto 44px;
 }
 
 .lp-kicker {
@@ -1398,7 +1609,7 @@ html {
 
 /* ── CTA banner ──────────────────────────────────────────────────────── */
 .lp-cta {
-  padding: 0 0 104px;
+  padding: 0 0 72px;
 }
 
 .lp-cta-inner {
@@ -1588,12 +1799,27 @@ html {
 }
 
 .lp-mock--tilt {
-  transform: perspective(1400px) rotateY(-5deg) rotateX(3deg);
-  transition: transform var(--dur-slow) var(--ease-out);
+  transform: perspective(1600px) rotateY(-6deg) rotateX(3deg);
+  transition:
+    transform 0.75s var(--ease-spring),
+    box-shadow 0.75s var(--ease-out);
+  will-change: transform;
 }
 
-.lp-mock--tilt:hover {
-  transform: perspective(1400px) rotateY(0deg) rotateX(0deg);
+/* Hovering anywhere in the combo settles both devices upright together with a
+   gentle spring + lift, so the phone and desktop feel like one live scene. */
+@media (hover: hover) and (min-width: 1101px) {
+  .lp-device-combo:hover .lp-mock--tilt {
+    transform: perspective(1600px) rotateY(0deg) rotateX(0deg) translateY(-6px);
+    box-shadow: 0 40px 90px rgba(11, 23, 32, 0.16);
+  }
+
+  .lp-device-combo:hover .lp-phone-frame {
+    transform: perspective(1000px) rotateY(0deg) rotateX(0deg) translateY(-8px) scale(1.03);
+    box-shadow:
+      0 30px 60px rgba(11, 23, 32, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+  }
 }
 
 .lp-mock-chrome {
@@ -1761,6 +1987,25 @@ html {
 
 .lp-mock-row:last-child { border-bottom: none; }
 .lp-mock-row .up { color: var(--lp-green); }
+
+/* Auto-scrolling holdings list — cycles on load to make the demo feel live */
+.lp-mock-scrollbox {
+  height: 78px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(180deg, #000 80%, transparent);
+  mask-image: linear-gradient(180deg, #000 80%, transparent);
+}
+
+.lp-mock-autoscroll {
+  --lp-scroll-shift: -58px;
+  animation: lp-auto-scroll 9s var(--ease-in-out) infinite;
+}
+
+@keyframes lp-auto-scroll {
+  0%, 14% { transform: translateY(0); }
+  50%, 64% { transform: translateY(var(--lp-scroll-shift, -60px)); }
+  100% { transform: translateY(0); }
+}
 
 /* Virtual Lab mock */
 .lp-mock-labhead {
@@ -2159,7 +2404,10 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
 @media (prefers-reduced-motion: reduce) {
   .lp-bg-blob,
   .lp-bg-grid,
-  .lp-bg-particle {
+  .lp-bg-particle,
+  .lp-mock-autoscroll,
+  .lp-phone-scroll,
+  .lp-device-phone {
     animation: none !important;
   }
 
@@ -2566,7 +2814,8 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
     gap: 48px;
   }
 
-  .lp-mock--tilt {
+  .lp-mock--tilt,
+  .lp-phone-frame {
     transform: none;
   }
 
@@ -2582,8 +2831,11 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
     grid-template-columns: 1fr 1fr;
   }
 
-  .lp-float-card--returns { left: -8px; }
-  .lp-float-card--verified { right: -8px; }
+  /* Full-width hero visual now — give the dashboard room and nudge the phone */
+  .lp-device-combo {
+    max-width: 620px;
+    margin-inline: auto;
+  }
 }
 
 @media (max-width: 768px) {
@@ -2602,6 +2854,11 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
   .lp-header-inner,
   .lp-header--scrolled .lp-header-inner {
     min-height: 62px;
+  }
+
+  /* Rein the enlarged brand mark back in on small headers */
+  .lp-brand-logo {
+    height: 40px !important;
   }
 
   /* The bar is glass at all scroll positions on mobile, since the hero
@@ -2644,9 +2901,14 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
     order: 1;
   }
 
-  /* Floating cards overlap the mock badly at this width */
-  .lp-float-card {
-    display: none;
+  /* Keep the phone tucked at the desktop's corner, just smaller */
+  .lp-device-combo {
+    padding-right: 48px;
+    padding-bottom: 16px;
+  }
+
+  .lp-device-phone {
+    width: 128px;
   }
 
   /* Lighter ambient load on phones: fewer blobs, no particle layer */
@@ -2712,11 +2974,11 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
 
   /* Sections */
   .lp-section {
-    padding: 64px 0;
+    padding: 48px 0;
   }
 
   .lp-section-head {
-    margin-bottom: 40px;
+    margin-bottom: 32px;
   }
 
   .lp-section-head h2 {
@@ -2864,6 +3126,16 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
 @media (max-width: 480px) {
   .landing-root {
     --lp-gutter: 16px;
+  }
+
+  /* Phone overlaps the dashboard too tightly here — show desktop only */
+  .lp-device-combo {
+    padding-right: 0;
+    padding-bottom: 0;
+  }
+
+  .lp-device-phone {
+    display: none;
   }
 
   .lp-pill {
