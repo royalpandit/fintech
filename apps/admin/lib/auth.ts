@@ -13,11 +13,19 @@ export type AuthPayload = {
   exp: number;
 };
 
-const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = "7d";
 
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET environment variable is required for admin auth");
+/**
+ * Resolve at call time — not module load — so `next build` can collect page
+ * data for API routes without JWT_SECRET in the build environment (Vercel).
+ * Runtime still fails fast if the secret is missing when signing/verifying.
+ */
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET environment variable is required for admin auth");
+  }
+  return secret;
 }
 
 export function parseBearerToken(req: NextRequest): string | null {
@@ -38,13 +46,13 @@ export function parseBearerToken(req: NextRequest): string | null {
 }
 
 export function signAccessToken(payload: { sub: number; role: UserRole; sid: number }) {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, getJwtSecret(), {
     expiresIn: JWT_EXPIRES_IN,
   });
 }
 
 export function verifyAccessToken(token: string): AuthPayload {
-  const payload = jwt.verify(token, JWT_SECRET);
+  const payload = jwt.verify(token, getJwtSecret());
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw new Error("Invalid token payload");
   }
