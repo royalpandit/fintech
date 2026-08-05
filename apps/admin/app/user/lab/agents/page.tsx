@@ -27,9 +27,7 @@ export default async function AgentsBrowserPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 18 }}>
           {agents.map(a => (
             <Link key={a.id} href={`/user/lab/agents/${a.id}`} style={{ textDecoration: "none" }}>
-              <div style={{ background: "var(--surface)", borderRadius: 16, padding: "22px 22px 18px", border: "1.5px solid var(--border)", cursor: "pointer", transition: "all 0.15s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#6366f1"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(99,102,241,0.12)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)"; }}>
+              <div className="lab-agent-card" style={{ background: "var(--surface)", borderRadius: 16, padding: "22px 22px 18px", border: "1.5px solid var(--border)", cursor: "pointer", transition: "all 0.15s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
                 <div style={{ display: "flex", gap: 14, alignItems: "flex-start", marginBottom: 14 }}>
                   <div style={{ width: 52, height: 52, borderRadius: 14, background: "linear-gradient(135deg,#ede9fe,#c7d2fe)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>
                     {a.avatar}

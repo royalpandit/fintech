@@ -5,12 +5,28 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import FinuerLogo from "@/components/brand/finuer-logo";
 import ThemeHeaderButton from "@/components/theme/theme-header-button";
+import { PROFESSIONAL_TYPES, type ProfessionalType } from "@/lib/professional-types";
 
 type Role = "user" | "advisor";
+
+// The registration/licence field adapts to the chosen profession.
+const REG_FIELD: Record<ProfessionalType, { label: string; placeholder: string }> = {
+  research_analyst: { label: "SEBI Research Analyst No.", placeholder: "INH000012345" },
+  investment_advisor: { label: "SEBI RIA Registration No.", placeholder: "INA000012345" },
+  portfolio_manager: { label: "SEBI PMS Registration No.", placeholder: "INP000012345" },
+  wealth_manager: { label: "Registration / Licence No.", placeholder: "Your licence number" },
+  advisory_firm: { label: "SEBI Firm Registration No.", placeholder: "INA / INH number" },
+  mutual_fund_distributor: { label: "AMFI ARN", placeholder: "ARN-123456" },
+  stock_broker: { label: "Broker / Member Code", placeholder: "NSE-BR-004567" },
+  finance_creator: { label: "Handle / Website / ID", placeholder: "@yourhandle or website" },
+  listed_company: { label: "Listing ID / CIN", placeholder: "NSE:SYMBOL or CIN" },
+  financial_platform: { label: "Business / Licence ID", placeholder: "Company registration ID" },
+};
 
 export default function RegisterPage() {
   const router = useRouter();
   const [role, setRole] = useState<Role>("user");
+  const [professionalType, setProfessionalType] = useState<ProfessionalType>("investment_advisor");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -49,6 +65,7 @@ export default function RegisterPage() {
           role,
           ...(role === "advisor"
             ? {
+                professionalType,
                 sebiRegistrationNo: sebi.trim().toUpperCase(),
                 experienceYears: experienceYears ? Number(experienceYears) : undefined,
                 bio: bio.trim() || undefined,
@@ -81,7 +98,7 @@ export default function RegisterPage() {
         </div>
         <h1 style={{ margin: 0, marginBottom: 8, fontSize: 28 }}>Create your account</h1>
         <p className="theme-auth-muted" style={{ margin: 0, marginBottom: 28 }}>
-          Join as a community member or a SEBI-registered advisor.
+          Join as a community member or a finance professional.
         </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
@@ -90,7 +107,7 @@ export default function RegisterPage() {
             onClick={() => setRole("user")}
             className={`theme-role-option${role === "user" ? " active" : ""}`}
           >
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Normal User</div>
+            <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>Normal User</div>
             <div className="theme-role-option-desc">
               Track portfolio, expenses, learn & engage with the community.
             </div>
@@ -100,9 +117,9 @@ export default function RegisterPage() {
             onClick={() => setRole("advisor")}
             className={`theme-role-option${role === "advisor" ? " active" : ""}`}
           >
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>SEBI Advisor</div>
+            <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>Finance Professional</div>
             <div className="theme-role-option-desc">
-              Publish regulated sentiment, run courses, monetize insights.
+              Advisors, analysts, distributors, brokers, creators & more.
             </div>
           </button>
         </div>
@@ -194,12 +211,29 @@ export default function RegisterPage() {
 
           {role === "advisor" && (
             <div className="theme-panel-muted" style={{ marginBottom: 16 }}>
-              <p style={{ margin: 0, marginBottom: 12, fontSize: 13, fontWeight: 600 }}>
-                SEBI Advisor Details
+              <p style={{ margin: 0, marginBottom: 12, fontSize: 13, fontWeight: 500 }}>
+                Professional Details
               </p>
 
+              <label className="theme-label" htmlFor="register-profession">
+                Profession
+              </label>
+              <select
+                id="register-profession"
+                className="theme-input"
+                value={professionalType}
+                onChange={(e) => setProfessionalType(e.target.value as ProfessionalType)}
+                style={{ marginBottom: 16 }}
+              >
+                {PROFESSIONAL_TYPES.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+
               <label className="theme-label" htmlFor="register-sebi">
-                SEBI Registration Number
+                {REG_FIELD[professionalType].label}
               </label>
               <input
                 id="register-sebi"
@@ -207,7 +241,7 @@ export default function RegisterPage() {
                 type="text"
                 value={sebi}
                 onChange={(e) => setSebi(e.target.value.toUpperCase())}
-                placeholder="INA000012345"
+                placeholder={REG_FIELD[professionalType].placeholder}
                 required
                 style={{ marginBottom: 16 }}
               />

@@ -15,6 +15,11 @@ export type AuthPayload = {
 
 const JWT_EXPIRES_IN = "7d";
 
+/**
+ * Resolve at call time — not module load — so `next build` can collect page
+ * data for API routes without JWT_SECRET in the build environment (Vercel).
+ * Runtime still fails fast if the secret is missing when signing/verifying.
+ */
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
   if (!secret) {

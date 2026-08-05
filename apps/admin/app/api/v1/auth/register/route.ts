@@ -4,10 +4,13 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { err, parseBody } from "@/lib/api-helpers";
 import { createSession, signAccessToken } from "@/lib/auth";
+import { isProfessionalType, type ProfessionalType } from "@/lib/professional-types";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[+]?[0-9]{10,15}$/;
-const SEBI_REGEX = /^INA[0-9]{9}$/i;
+// Generic registration / licence / ARN / member-code format — covers every
+// professional type (SEBI INA/INH/INP, AMFI ARN, broker codes, platform IDs).
+const REG_NO_REGEX = /^[A-Z0-9][A-Z0-9-]{4,39}$/;
 
 type RegisterBody = {
   fullName?: string;
@@ -16,7 +19,9 @@ type RegisterBody = {
   phone?: string;
   password?: string;
   role?: "user" | "advisor";
+  professionalType?: string;
   sebiRegistrationNo?: string;
+  registrationNo?: string;
   experienceYears?: number;
   bio?: string;
 };
@@ -91,14 +96,18 @@ export async function POST(req: NextRequest) {
     }
 
     let sebiRegistrationNo: string | null = null;
+    let professionalType: ProfessionalType = "investment_advisor";
     if (role === "advisor") {
-      sebiRegistrationNo = (body.sebiRegistrationNo ?? "").trim().toUpperCase();
-      if (!SEBI_REGEX.test(sebiRegistrationNo)) {
-        warn("rejected: invalid SEBI registration number");
-        return err("Valid SEBI registration number is required (format: INA followed by 9 digits)");
+      professionalType = isProfessionalType(body.professionalType)
+        ? body.professionalType
+        : "investment_advisor";
+      sebiRegistrationNo = (body.sebiRegistrationNo ?? body.registrationNo ?? "").trim().toUpperCase();
+      if (!REG_NO_REGEX.test(sebiRegistrationNo)) {
+        warn("rejected: invalid registration number");
+        return err("A valid registration / licence / ARN number is required");
       }
     }
-    log("field validation passed", { role });
+    log("field validation passed", { role, professionalType });
 
     // ── Uniqueness checks ────────────────────────────────────────────
     const existingUser = await prisma.user.findFirst({
@@ -156,6 +165,7 @@ export async function POST(req: NextRequest) {
           data: {
             userId: created.id,
             sebiRegistrationNo,
+            professionalType,
             experienceYears: typeof body.experienceYears === "number" ? body.experienceYears : null,
             bio: body.bio?.trim() || null,
             // Advisor accounts start PENDING — they cannot access the console

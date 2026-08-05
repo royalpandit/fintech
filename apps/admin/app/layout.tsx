@@ -3,6 +3,7 @@ import "./theme.css";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import ThemeInitScript from "@/components/theme/theme-init-script";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import ChatWidget from "@/components/chat-widget";
 
 export const metadata = {
   title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
@@ -17,7 +18,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeInitScript />
       </head>
       <body className="theme-root" style={{ margin: 0 }}>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <ChatWidget />
+        </ThemeProvider>
       </body>
     </html>
   );

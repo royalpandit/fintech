@@ -20,6 +20,7 @@ interface Agent {
   model: string;
   temperature: number;
   isActive: boolean;
+  isSiteAssistant: boolean;
   createdAt: string;
   createdBy: { fullName: string };
   _count: { sessions: number };
@@ -83,6 +84,14 @@ export default function AgentsPage() {
     load();
   }
 
+  async function setAssistant(a: Agent) {
+    await api(`/api/v1/admin/agents/${a.id}`, {
+      method: "PUT",
+      body: JSON.stringify({ isSiteAssistant: !a.isSiteAssistant, ...(a.isSiteAssistant ? {} : { isActive: true }) }),
+    });
+    load();
+  }
+
   async function del() {
     if (!deleteId) return;
     await api(`/api/v1/admin/agents/${deleteId}`, { method: "DELETE" });
@@ -117,7 +126,8 @@ export default function AgentsPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))", gap: 16 }}>
           {agents.map(a => (
             <div key={a.id} style={{ background: "var(--surface)", borderRadius: 12, border: "1px solid var(--border)", padding: "20px 22px", position: "relative" }}>
-              {!a.isActive && <span style={{ position: "absolute", top: 14, right: 14, fontSize: 10, fontWeight: 700, background: "#fce8e6", color: "#c5221f", padding: "2px 8px", borderRadius: 10 }}>INACTIVE</span>}
+              {!a.isActive && <span style={{ position: "absolute", top: 14, right: 14, fontSize: 10, fontWeight: 600, background: "#fce8e6", color: "#c5221f", padding: "2px 8px", borderRadius: 10 }}>INACTIVE</span>}
+              {a.isSiteAssistant && a.isActive && <span style={{ position: "absolute", top: 14, right: 14, fontSize: 10, fontWeight: 600, background: "#e6f4ea", color: "#1e8e3e", padding: "2px 8px", borderRadius: 10 }}>💬 CHATBOT</span>}
               <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 10 }}>
                 <div style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,#e8f0fe,#d2e3fc)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>🤖</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -130,7 +140,10 @@ export default function AgentsPage() {
               </p>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border)", paddingTop: 12 }}>
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{a._count.sessions} chats</span>
-                <div style={{ display: "flex", gap: 6 }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <button onClick={() => setAssistant(a)} title="Use this agent as the site-wide chatbot" style={{ fontSize: 11, padding: "4px 12px", border: `1px solid ${a.isSiteAssistant ? "#1e8e3e" : "var(--border)"}`, borderRadius: 20, background: a.isSiteAssistant ? "#e6f4ea" : "var(--surface)", cursor: "pointer", fontWeight: 500, color: a.isSiteAssistant ? "#1e8e3e" : "var(--text-muted)" }}>
+                    {a.isSiteAssistant ? "💬 Chatbot ✓" : "Set as chatbot"}
+                  </button>
                   <button onClick={() => toggle(a)} style={{ fontSize: 11, padding: "4px 12px", border: "1px solid var(--border)", borderRadius: 20, background: "var(--surface)", cursor: "pointer", fontWeight: 500, color: a.isActive ? "#1e8e3e" : "var(--text-muted)" }}>
                     {a.isActive ? "● Active" : "○ Inactive"}
                   </button>
