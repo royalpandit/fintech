@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FiArrowLeft } from "react-icons/fi";
-import TradingTerminal from "@/components/trading/trading-terminal";
+import ChartWorkspace from "@/components/trading/chart-workspace";
 import type { WatchlistItem } from "@/components/trading/trading-terminal-types";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ export default function MarketsChartPage({
         <span className="user-page-back-icon"><FiArrowLeft size={14} /></span>
         Back to Markets
       </Link>
-      <TradingTerminal initialSymbol={initialSymbol} />
+      <ChartWorkspace initialSymbol={initialSymbol} />
     </div>
   );
 }

@@ -349,11 +349,23 @@ function OverviewPanel({
 
 // ── Main Terminal ─────────────────────────────────────────────────────────────
 
-export default function TradingTerminal({ initialSymbol }: { initialSymbol?: WatchlistItem } = {}) {
-  return <TradingTerminalInner initialSymbol={initialSymbol} />;
+export default function TradingTerminal({
+  initialSymbol,
+  onSymbolChange,
+}: {
+  initialSymbol?: WatchlistItem;
+  onSymbolChange?: (s: WatchlistItem) => void;
+} = {}) {
+  return <TradingTerminalInner initialSymbol={initialSymbol} onSymbolChange={onSymbolChange} />;
 }
 
-function TradingTerminalInner({ initialSymbol }: { initialSymbol?: WatchlistItem }) {
+function TradingTerminalInner({
+  initialSymbol,
+  onSymbolChange,
+}: {
+  initialSymbol?: WatchlistItem;
+  onSymbolChange?: (s: WatchlistItem) => void;
+}) {
   const router = useRouter();
   const { lists: storeLists, version: storeVersion } = useWatchlistStore();
   const [watchlist,       setWatchlist]       = useState<WatchlistItem[]>(
@@ -362,6 +374,10 @@ function TradingTerminalInner({ initialSymbol }: { initialSymbol?: WatchlistItem
       : DEFAULT_WATCHLIST,
   );
   const [selected,        setSelected]        = useState<WatchlistItem>(initialSymbol ?? DEFAULT_WATCHLIST[0]);
+  // Let a parent (e.g. the Chart Analyst panel) follow the active instrument.
+  useEffect(() => {
+    onSymbolChange?.(selected);
+  }, [selected, onSymbolChange]);
   const [timeframe,       setTimeframe]       = useState<TimeframeOption>(DEFAULT_TIMEFRAME);
   const [period,          setPeriod]          = useState(() => defaultPeriodForTimeframe(DEFAULT_TIMEFRAME));
   const [showTfMenu,      setShowTfMenu]      = useState(false);

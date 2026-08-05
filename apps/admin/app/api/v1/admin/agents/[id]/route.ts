@@ -23,10 +23,19 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (!auth) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { name, description, avatar, systemPrompt, model, temperature, isActive } = body;
+  const { name, description, avatar, systemPrompt, model, temperature, isActive, isSiteAssistant } = body;
+  const id = Number(params.id);
+
+  // Only one agent can be the site assistant — clear the flag on the others first.
+  if (isSiteAssistant === true) {
+    await prisma.geminiAgent.updateMany({
+      where: { isSiteAssistant: true, id: { not: id } },
+      data: { isSiteAssistant: false },
+    });
+  }
 
   const agent = await prisma.geminiAgent.update({
-    where: { id: Number(params.id) },
+    where: { id },
     data: {
       ...(name && { name: name.trim() }),
       ...(description && { description: description.trim() }),
@@ -35,6 +44,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       ...(model && { model }),
       ...(typeof temperature === "number" && { temperature: Math.max(0, Math.min(2, temperature)) }),
       ...(typeof isActive === "boolean" && { isActive }),
+      ...(typeof isSiteAssistant === "boolean" && { isSiteAssistant }),
     },
   });
 

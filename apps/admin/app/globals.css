@@ -9564,3 +9564,9 @@ body.terminal-active .us-content {
 .admin-search-result:hover {
   background: var(--surface-2);
 }
+
+/* AI agents lab — card hover (CSS instead of JS handlers on a server component) */
+.lab-agent-card:hover {
+  border-color: #6366f1 !important;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12) !important;
+}

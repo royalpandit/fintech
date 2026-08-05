@@ -380,8 +380,60 @@ html[data-theme="dark"] .lp-nav-backdrop--open {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: var(--bg);
   position: relative;
+  overflow: hidden;
+  /* Branded ambient wash so the page no longer feels empty behind the card */
+  background:
+    radial-gradient(
+      900px 560px at 12% -8%,
+      color-mix(in srgb, var(--brand-primary) 22%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      820px 620px at 112% 16%,
+      color-mix(in srgb, var(--brand-accent) 20%, transparent),
+      transparent 55%
+    ),
+    var(--bg);
+}
+
+/* Drifting blurred colour blobs */
+.theme-auth-page::before {
+  content: "";
+  position: absolute;
+  inset: -25%;
+  background:
+    radial-gradient(closest-side, color-mix(in srgb, var(--brand-primary) 34%, transparent), transparent)
+      16% 28% / 42% 42% no-repeat,
+    radial-gradient(closest-side, color-mix(in srgb, var(--brand-accent) 30%, transparent), transparent)
+      84% 20% / 38% 38% no-repeat,
+    radial-gradient(closest-side, color-mix(in srgb, var(--brand-primary) 22%, transparent), transparent)
+      70% 90% / 46% 46% no-repeat;
+  filter: blur(72px);
+  animation: theme-auth-drift 24s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Faint dot grid, faded toward the edges */
+.theme-auth-page::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--brand-primary) 42%, transparent) 1px,
+    transparent 1.5px
+  );
+  background-size: 30px 30px;
+  opacity: 0.16;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 20%, transparent 78%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 20%, transparent 78%);
+  pointer-events: none;
+}
+
+@keyframes theme-auth-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-3%, 2%, 0) scale(1.06); }
 }
 
 .theme-auth-page > .theme-header-btn {
@@ -392,14 +444,31 @@ html[data-theme="dark"] .lp-nav-backdrop--open {
 }
 
 .theme-auth-card {
+  position: relative;
+  z-index: 1;
   width: 100%;
   border-radius: 24px;
-  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.12);
   padding: 40px;
+  /* Slight glass so the ambient colour reads through the card edges */
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  animation: theme-auth-card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes theme-auth-card-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to { opacity: 1; transform: none; }
 }
 
 html[data-theme="dark"] .theme-auth-card {
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-auth-page::before { animation: none; }
+  .theme-auth-card { animation: none; }
 }
 
 .theme-auth-muted {
