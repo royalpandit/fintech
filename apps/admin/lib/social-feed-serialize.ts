@@ -19,7 +19,13 @@ type DbPost = {
   createdAt: Date;
   updatedAt: Date;
   userId: number;
-  user: { id: number; fullName: string; uuid: string };
+  user: {
+    id: number;
+    fullName: string;
+    uuid: string;
+    role?: string | null;
+    advisorProfile?: { verificationStatus: string } | null;
+  };
   images: { id: number; url: string; sortOrder: number }[];
   videos: { id: number; url: string; sortOrder: number }[];
   symbols: {
@@ -61,7 +67,14 @@ export function serializeSocialPost(
     article_body: post.articleBody,
     created_at: post.createdAt.toISOString(),
     updated_at: post.updatedAt.toISOString(),
-    user: post.user,
+    user: {
+      id: post.user.id,
+      fullName: post.user.fullName,
+      uuid: post.user.uuid,
+      is_advisor:
+        post.user.role === "advisor" &&
+        post.user.advisorProfile?.verificationStatus === "approved",
+    },
     images: post.images.map((i) => ({ id: i.id, url: i.url, sort_order: i.sortOrder })),
     videos: post.videos.map((v) => ({ id: v.id, url: v.url, sort_order: v.sortOrder })),
     symbols: post.symbols.map((s) => ({
@@ -87,7 +100,15 @@ export function serializeSocialPost(
 }
 
 export const socialPostInclude = {
-  user: { select: { id: true, fullName: true, uuid: true } },
+  user: {
+    select: {
+      id: true,
+      fullName: true,
+      uuid: true,
+      role: true,
+      advisorProfile: { select: { verificationStatus: true } },
+    },
+  },
   images: { orderBy: { sortOrder: "asc" as const } },
   videos: { orderBy: { sortOrder: "asc" as const } },
   symbols: { orderBy: { sortOrder: "asc" as const } },

@@ -159,6 +159,29 @@ html[data-theme="dark"] .finuer-logo-dark {
   background: var(--bg);
 }
 
+/* Mobile nav controls — hidden on desktop, revealed in the <=1024px drawer. */
+.admin-nav-hamburger,
+.admin-nav-close {
+  display: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.admin-nav-close {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+.admin-nav-overlay {
+  display: none;
+}
+
 /* Desktop app-shell: lock the layout to the viewport so the sidebar and the
    main content each scroll independently (each with its own mini scrollbar),
    instead of the whole page scrolling as one block. Mobile (<=1024px) keeps the
@@ -934,15 +957,39 @@ th {
   .admin-shell {
     display: block;
   }
+  /* The sidebar becomes an off-canvas slide-in drawer (opened by the header
+     hamburger) instead of a full-width block stacked on top of the content. */
   .admin-sidebar {
-    width: 100%;
-    min-height: auto;
-    border-bottom: 1px solid var(--border);
-    /* On desktop the sidebar is a sticky column; once it's stacked full-width
-       on top of the content, sticky makes it overlap the header/page on scroll.
-       Make it flow normally. */
-    position: static;
-    top: auto;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 84vw;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    z-index: 120;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+    border-bottom: none;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.35);
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .admin-sidebar-open {
+    transform: translateX(0);
+  }
+  .admin-nav-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+    background: rgba(15, 23, 42, 0.45);
+  }
+  .admin-nav-hamburger,
+  .admin-nav-close {
+    display: grid;
   }
   .grid-4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3470,6 +3517,33 @@ body.terminal-active .us-content {
   font-weight: 700;
   cursor: pointer;
 }
+.trades-fhead-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text) !important;
+  font-size: 13px !important;
+  padding: 0;
+}
+.trades-fhead-chev {
+  display: none;
+  color: var(--text-muted);
+}
+/* Desktop: filter body always visible. Mobile: collapse it behind the toggle. */
+.trades-fbody {
+  display: block;
+}
+@media (max-width: 760px) {
+  .trades-fhead-chev {
+    display: inline-flex;
+  }
+  .trades-fbody {
+    display: none;
+  }
+  .trades-fbody.open {
+    display: block;
+  }
+}
 .trades-fgroup {
   margin-bottom: 14px;
 }
@@ -4433,27 +4507,30 @@ body.terminal-active .us-content {
 
 @media (max-width: 1023px) {
   .user-stat-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .user-stat-grid-5 {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+  /* minmax(0,1fr) lets the stacked column actually shrink, so wide children
+     (charts / tables) scroll inside their own box instead of pushing the
+     whole page sideways. */
   .user-split-chart {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 767px) {
   .user-stat-grid,
   .user-stat-grid-5 {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .user-split-2,
   .user-split-hero,
   .user-split-chart,
   .user-layout-rail {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .user-rail-sticky {
@@ -4481,7 +4558,7 @@ body.terminal-active .us-content {
 @media (max-width: 479px) {
   .user-stat-grid,
   .user-stat-grid-5 {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .paper-trade-grid {
@@ -5147,7 +5224,8 @@ body.terminal-active .us-content {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 16px;
 }
 
@@ -5189,6 +5267,18 @@ body.terminal-active .us-content {
 .wl-panel-page {
   height: 100%;
   min-height: 480px;
+}
+
+/* Mobile: full-width header controls + less dead space in the card. */
+@media (max-width: 560px) {
+  .wl-page-markets-link {
+    flex: 1 1 100%;
+    text-align: center;
+  }
+  .wl-page-card,
+  .wl-panel-page {
+    min-height: 340px;
+  }
 }
 
 .wl-panel-head-page {
@@ -8634,6 +8724,25 @@ body.terminal-active .us-content {
   gap: 12px;
   margin-bottom: 16px;
 }
+/* The hub header is a left-aligned row (the shared rule centres it for the
+   create-form title only). */
+.comm-hub-top .comm-hub-title {
+  text-align: left;
+  margin-top: 0;
+}
+/* Mobile: stack the header and let the button sit full-width below the title
+   instead of squeezing/wrapping beside it. */
+@media (max-width: 560px) {
+  .comm-hub-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .comm-hub-top .comm-btn-primary {
+    justify-content: center;
+    width: 100%;
+  }
+}
 
 .comm-search-bar {
   display: flex;
@@ -9569,4 +9678,57 @@ body.terminal-active .us-content {
 .lab-agent-card:hover {
   border-color: #6366f1 !important;
   box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12) !important;
+}
+
+/* ── Mutual funds: table on desktop, cards on mobile (no horizontal scroll) ── */
+.mf-mobile { display: none; }
+@media (max-width: 700px) {
+  .mf-desktop { display: none; }
+  .mf-mobile { display: block; }
+}
+.mf-card {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+}
+.mf-card:first-child { border-top: none; }
+.mf-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mf-card-name { font-size: 13.5px; font-weight: 600; color: var(--text); line-height: 1.35; }
+.mf-card-amc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.mf-card-cat {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.mf-card-nav { text-align: right; flex-shrink: 0; }
+.mf-card-nav-label { display: block; font-size: 10px; color: var(--text-muted); }
+.mf-card-nav-val { display: block; font-size: 15px; font-weight: 600; color: var(--text); margin-top: 2px; }
+.mf-card-returns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.mf-card-returns > div {
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 7px 6px;
+  text-align: center;
+  font-size: 12.5px;
+}
+.mf-card-returns > div > span {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+  font-weight: 600;
 }

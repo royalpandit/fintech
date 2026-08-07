@@ -171,13 +171,20 @@ export default async function PostDetailPage({ params }: { params: { id: string 
 
   const sColor = SENTIMENT_COLORS[post.sentiment];
 
+  // Structured trades (entry/target/SL) live under /user/trades, so send the
+  // back link there; plain sentiment posts go back to /user/markets.
+  const isTrade =
+    post.entryPriceMin != null || post.targetPrice != null || post.stopLossPrice != null;
+  const backHref = isTrade ? "/user/trades" : "/user/markets";
+  const backLabel = isTrade ? "Trades" : "Markets";
+
   return (
     <section>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 18, alignItems: "start" }}>
         <div>
-          <Link href="/user/markets" className="user-page-back-link" style={{ marginBottom: 12 }}>
+          <Link href={backHref} className="user-page-back-link" style={{ marginBottom: 12 }}>
             <span className="user-page-back-icon"><FiArrowLeft size={14} /></span>
-            Markets
+            {backLabel}
           </Link>
 
           <article
@@ -444,8 +451,9 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                 paddingTop: 16,
                 borderTop: "1px solid var(--border)",
                 display: "flex",
-                gap: 16,
+                gap: 10,
                 alignItems: "center",
+                flexWrap: "wrap",
               }}
             >
               <AuthGate
@@ -456,24 +464,41 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                 <button
                   type="button"
                   style={{
-                    padding: "8px 14px",
+                    height: 34,
+                    padding: "0 14px",
                     borderRadius: 8,
                     background: "var(--surface-2)",
                     color: "var(--text)",
-                    border: "none",
+                    border: "1px solid var(--border)",
                     fontSize: 12,
-                    fontWeight: 700,
+                    fontWeight: 600,
                     cursor: "pointer",
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 6,
+                    lineHeight: 1,
                   }}
                 >
-                  <FiHeart size={13} /> {post._count.reactions} Like
+                  <FiHeart size={14} /> {post._count.reactions} Like
                 </button>
               </AuthGate>
-              <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <FiMessageSquare size={13} /> {post._count.comments} comments
+              <span
+                style={{
+                  height: 34,
+                  padding: "0 14px",
+                  borderRadius: 8,
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  fontSize: 12,
+                  color: "var(--text-muted)",
+                  fontWeight: 600,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  lineHeight: 1,
+                }}
+              >
+                <FiMessageSquare size={14} /> {post._count.comments} comments
               </span>
               <span style={{ flex: 1 }} />
               <AuthGate

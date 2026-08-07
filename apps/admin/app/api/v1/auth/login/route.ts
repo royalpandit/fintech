@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { err, parseBody } from "@/lib/api-helpers";
 import { createSession, signAccessToken } from "@/lib/auth";
+import { normalizeIndianMobile } from "@/lib/phone";
 
 export async function POST(req: NextRequest) {
   const body = await parseBody<{
@@ -20,10 +21,16 @@ export async function POST(req: NextRequest) {
   }
 
   const isEmail = identifier.includes("@");
+  // For phone logins, match on the canonical last-10-digits so a number stored
+  // as "+9199..." or bare "99..." both resolve; fall back to the raw string
+  // for any non-Indian formats.
+  const mobile = isEmail ? null : normalizeIndianMobile(identifier);
   const user = await prisma.user.findFirst({
     where: isEmail
       ? { email: identifier.toLowerCase() }
-      : { phone: identifier.replace(/\s|-/g, "") },
+      : mobile
+        ? { phone: { endsWith: mobile } }
+        : { phone: identifier.replace(/\s|-/g, "") },
     select: {
       id: true,
       uuid: true,

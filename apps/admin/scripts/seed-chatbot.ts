@@ -24,7 +24,7 @@ const AGENT = {
   name: "Finn — Finuer Assistant",
   description: "Your friendly guide to Finuer, markets, and investing basics.",
   avatar: "🤖",
-  model: "gemini-2.5-flash",
+  model: "gemini-flash-latest",
   temperature: 0.6,
   systemPrompt: `You are "Finn", the built-in assistant for Finuer — an Indian investing & finance-community app.
 

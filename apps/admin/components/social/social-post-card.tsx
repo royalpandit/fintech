@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   FiHeart,
@@ -139,9 +140,30 @@ export default function SocialPostCard({
     <article className="sf-post-card finuer-card">
       <header className="sf-post-head">
         <div className="sf-post-head-left">
-          <div className="sf-avatar sf-avatar-feed">{getInitials(post.user.fullName)}</div>
+          {post.user.is_advisor ? (
+            <Link
+              href={`/user/advisors/${post.user.id}`}
+              className="sf-avatar sf-avatar-feed"
+              style={{ textDecoration: "none" }}
+              aria-label={`View ${post.user.fullName}'s profile`}
+            >
+              {getInitials(post.user.fullName)}
+            </Link>
+          ) : (
+            <div className="sf-avatar sf-avatar-feed">{getInitials(post.user.fullName)}</div>
+          )}
           <div className="sf-post-meta">
-            <span className="sf-post-author">{post.user.fullName}</span>
+            {post.user.is_advisor ? (
+              <Link
+                href={`/user/advisors/${post.user.id}`}
+                className="sf-post-author"
+                style={{ textDecoration: "none" }}
+              >
+                {post.user.fullName}
+              </Link>
+            ) : (
+              <span className="sf-post-author">{post.user.fullName}</span>
+            )}
             <span className="sf-post-time">{formatRelativeTime(post.created_at)}</span>
           </div>
         </div>

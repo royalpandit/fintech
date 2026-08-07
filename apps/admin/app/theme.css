@@ -1116,3 +1116,283 @@ html[data-theme="dark"] .time-range-item.active {
   color: #fff;
 }
 
+
+/* ══════════════════════════════════════════════════════════════════
+   SPLIT-VIEW AUTH  (login / register)
+   Full-screen: brand/visual panel (left) + form panel (right).
+   Emerald brand theme to match the landing page. No entrance animation.
+   The form stays on the same side for both sign in and sign up.
+   Collapses to a single form column on mobile.
+══════════════════════════════════════════════════════════════════ */
+.auth-stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  /* Match the landing page's emerald brand theme (see landing.css). */
+  --brand-primary: #10b981;
+  --brand-accent: #14b8a6;
+  --brand-success: #16a34a;
+  --auth-gradient: linear-gradient(135deg, #059669 0%, #10b981 55%, #34d399 100%);
+  background: var(--bg);
+}
+.auth-split {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1.04fr 1fr; /* brand (left) · form (right) */
+  overflow: hidden;
+  background: var(--surface);
+}
+
+/* ── Brand / visual panel ── */
+.auth-brand-panel {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 40px 44px;
+  color: #fff;
+  /* Emerald gradient matching the landing page's primary gradient. */
+  background:
+    radial-gradient(700px 480px at 12% -10%, rgba(255, 255, 255, 0.18), transparent 55%),
+    linear-gradient(150deg, #047857 0%, #059669 34%, #10b981 72%, #34d399 100%);
+}
+/* Subtle dot grid */
+.auth-brand-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.5) 1px, transparent 1.6px);
+  background-size: 26px 26px;
+  opacity: 0.08;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 60% 30%, #000 20%, transparent 80%);
+  mask-image: radial-gradient(ellipse 80% 70% at 60% 30%, #000 20%, transparent 80%);
+  pointer-events: none;
+}
+.auth-brand-top { position: relative; z-index: 2; }
+
+/* White wordmark (replaces the PNG logo, which has a baked-in dark box). */
+.auth-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.auth-wordmark-mark { width: 46px; height: 42px; flex-shrink: 0; }
+.auth-wordmark-text {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.6px;
+  color: #fff;
+}
+
+/* ── Auto-scrolling phone demo ── */
+.auth-brand-visual {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 6px 0;
+}
+.auth-phone { transform: none; }
+.auth-phone-frame {
+  position: relative;
+  width: 264px;
+  height: 508px;
+  max-height: 100%;
+  border-radius: 40px;
+  background: #0a0f1a;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  padding: 12px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.35);
+}
+.auth-phone-notch {
+  position: absolute;
+  top: 14px; left: 50%;
+  transform: translateX(-50%);
+  width: 92px; height: 18px;
+  border-radius: 0 0 12px 12px;
+  background: #0a0f1a;
+  z-index: 3;
+}
+.auth-phone-screen {
+  position: relative;
+  height: 100%;
+  border-radius: 30px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #0b1220 0%, #0a1a16 100%);
+}
+.auth-phone-track {
+  display: flex;
+  flex-direction: column;
+  padding: 0 14px;
+  animation: auth-phone-scroll 24s linear infinite;
+}
+.auth-phone:hover .auth-phone-track { animation-play-state: paused; }
+@keyframes auth-phone-scroll {
+  from { transform: translateY(0); }
+  to { transform: translateY(-50%); }
+}
+.auth-ph-set {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 12px; /* uniform spacing so the -50% loop is seamless */
+}
+/* Fade the cards out at the top & bottom edges of the screen. */
+.auth-phone-fade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    #0b1220 0%,
+    transparent 15%,
+    transparent 85%,
+    #0a1a16 100%
+  );
+}
+
+/* Phone cards */
+.auth-ph-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 12px 13px;
+  color: #e6edf5;
+}
+.auth-ph-label { font-size: 10.5px; color: #9fb0c3; }
+.auth-ph-value {
+  font-size: 21px; font-weight: 600;
+  margin: 2px 0 7px; letter-spacing: -0.4px; color: #fff;
+}
+.auth-ph-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px; font-weight: 600;
+  padding: 3px 8px; border-radius: 999px;
+  background: rgba(52, 211, 153, 0.22); color: #6ee7b7;
+}
+.auth-ph-spark {
+  display: flex; align-items: flex-end; gap: 3px;
+  height: 30px; margin-top: 10px;
+}
+.auth-ph-spark span {
+  flex: 1; border-radius: 2px 2px 0 0;
+  background: linear-gradient(180deg, #34d399, rgba(52, 211, 153, 0.25));
+}
+.auth-ph-card-head {
+  font-size: 11px; font-weight: 600;
+  color: #9fb0c3; margin-bottom: 6px;
+}
+.auth-ph-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11.5px; padding: 4px 0;
+}
+.auth-ph-row + .auth-ph-row { border-top: 1px solid rgba(255, 255, 255, 0.07); }
+.auth-ph-tkr { font-weight: 600; color: #eaf1f8; }
+.auth-ph-idx { color: #c6d2df; font-size: 11px; }
+.auth-ph-up { color: #6ee7b7; font-weight: 600; }
+.auth-ph-down { color: #fca5a5; font-weight: 600; }
+.auth-ph-post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.auth-ph-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 10px; font-weight: 600;
+  background: linear-gradient(135deg, #059669, #34d399); color: #fff;
+}
+.auth-ph-post-name { font-size: 11px; font-weight: 600; color: #eaf1f8; }
+.auth-ph-post-time { font-size: 9.5px; color: #8296ab; }
+.auth-ph-post-text { margin: 0; font-size: 11px; line-height: 1.5; color: #c6d2df; }
+.auth-ph-agent { display: flex; align-items: center; gap: 10px; }
+.auth-ph-agent-avatar {
+  width: 30px; height: 30px; border-radius: 9px;
+  background: rgba(255, 255, 255, 0.12);
+  display: grid; place-items: center; font-size: 16px; flex-shrink: 0;
+}
+.auth-ph-agent-name { font-size: 11px; font-weight: 600; color: #eaf1f8; }
+.auth-ph-agent-msg {
+  font-size: 10.5px; color: #9fb0c3; margin-top: 2px;
+  display: inline-flex; align-items: center; gap: 3px;
+}
+
+.auth-brand-content { position: relative; z-index: 1; margin-top: 12px; }
+.auth-brand-headline {
+  font-size: 27px; font-weight: 600; line-height: 1.2;
+  letter-spacing: -0.5px; margin: 0 0 10px; max-width: 380px;
+}
+.auth-brand-sub {
+  font-size: 14px; line-height: 1.6; opacity: 0.9;
+  margin: 0; max-width: 400px;
+}
+.auth-brand-footer {
+  position: relative; z-index: 1;
+  margin-top: 22px; font-size: 11.5px; opacity: 0.72;
+}
+
+/* ── Form panel ── */
+.auth-form-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+}
+.auth-form-topbar { position: absolute; top: 16px; right: 18px; z-index: 3; }
+.auth-form-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 44px 40px;
+}
+.auth-form-inner { width: 100%; max-width: 380px; }
+.auth-form-inner.auth-form-wide { max-width: 460px; }
+.auth-form-mobile-logo { display: none; margin-bottom: 22px; }
+
+/* Segmented Sign in / Sign up tabs */
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  margin-bottom: 26px;
+}
+.auth-tab {
+  text-align: center;
+  padding: 9px 0;
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.auth-tab-active {
+  background: var(--surface);
+  color: var(--brand-primary);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+/* Keep auth CTAs at weight 600 (house style), overriding the global 700. */
+.auth-stage .theme-btn-primary { font-weight: 600; }
+
+/* ── Mobile: single full-screen form column ── */
+@media (max-width: 900px) {
+  .auth-split {
+    grid-template-columns: 1fr;
+  }
+  .auth-brand-panel { display: none; }
+  .auth-form-mobile-logo { display: flex; }
+  .auth-form-scroll { padding: 44px 22px; align-items: flex-start; }
+}
+@media (max-width: 420px) {
+  .auth-form-scroll { padding: 34px 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-phone-track { animation: none !important; }
+}

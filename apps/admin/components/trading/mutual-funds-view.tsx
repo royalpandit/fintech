@@ -157,7 +157,9 @@ export default function MutualFundsView() {
       )}
 
       <article style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden" }}>
-        <div style={{ overflowX: "auto" }}>
+        {/* Desktop: table. Mobile: card list (see .mf-mobile below) so there's
+            no horizontal scroll to reach the return columns. */}
+        <div className="mf-desktop" style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ color: "var(--text-muted)", fontSize: 11, textAlign: "left" }}>
@@ -194,6 +196,39 @@ export default function MutualFundsView() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile card list */}
+        <div className="mf-mobile">
+          {loading ? (
+            <div style={{ padding: 24, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>Loading funds…</div>
+          ) : sorted.length === 0 ? (
+            <div style={{ padding: 24, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>No funds matched “{q.trim()}”.</div>
+          ) : (
+            sorted.map((f) => {
+              const ret = returns[f.code];
+              return (
+                <div key={f.code} className="mf-card">
+                  <div className="mf-card-head">
+                    <div style={{ minWidth: 0 }}>
+                      <div className="mf-card-name">{f.name}</div>
+                      {f.amc && <div className="mf-card-amc">{f.amc}</div>}
+                      <div className="mf-card-cat">{cleanCategory(f.category)}</div>
+                    </div>
+                    <div className="mf-card-nav">
+                      <span className="mf-card-nav-label">NAV ₹</span>
+                      <span className="mf-card-nav-val">{f.nav != null ? inr(f.nav) : "—"}</span>
+                    </div>
+                  </div>
+                  <div className="mf-card-returns">
+                    <div><span>3M</span><ReturnCell v={ret?.r3m ?? null} /></div>
+                    <div><span>6M</span><ReturnCell v={ret?.r6m ?? null} /></div>
+                    <div><span>1Y</span><ReturnCell v={ret?.r1y ?? null} /></div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </article>
     </section>

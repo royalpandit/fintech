@@ -106,10 +106,10 @@ export default async function UserAdvisorsPage({
             letterSpacing: -0.5,
           }}
         >
-          Finance Professionals
+          Finance Professionals &amp; Businesses
         </h1>
         <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
-          Search verified analysts, portfolio managers, advisory firms and more
+          Search verified analysts, portfolio managers, advisory firms, listed companies &amp; platforms
         </p>
       </div>
 

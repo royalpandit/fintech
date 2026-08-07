@@ -68,25 +68,6 @@ export default function UserFinuerBasketClient() {
         subtitle="Curated model portfolios — returns are calculated automatically from holdings vs benchmark."
       />
 
-      <UserPageStatsGrid>
-        <UserPageStatCard label="Active Baskets" value={loading ? "—" : String(baskets.length)} color="#0ea5e9" />
-        <UserPageStatCard
-          label="Outperforming"
-          value={loading ? "—" : String(stats.outperforming)}
-          color="#22c55e"
-        />
-        <UserPageStatCard
-          label="Avg Return"
-          value={
-            loading || stats.avg == null
-              ? "—"
-              : `${stats.avg >= 0 ? "+" : ""}${stats.avg.toFixed(2)}%`
-          }
-          color="#8b5cf6"
-        />
-        <UserPageStatCard label="Markets" value={loading ? "—" : String(markets.length)} color="#f59e0b" />
-      </UserPageStatsGrid>
-
       <div className="finuer-basket-filters-bar" style={{ marginBottom: 12 }}>
         <div className="finuer-basket-filter-field" style={{ flex: "1 1 220px" }}>
           <span className="finuer-basket-filter-label">Search</span>
@@ -160,6 +141,26 @@ export default function UserFinuerBasketClient() {
           </select>
         </div>
       </div>
+
+      {/* Stat cards go after the search bar and filters. */}
+      <UserPageStatsGrid>
+        <UserPageStatCard label="Active Baskets" value={loading ? "—" : String(baskets.length)} color="#0ea5e9" />
+        <UserPageStatCard
+          label="Outperforming"
+          value={loading ? "—" : String(stats.outperforming)}
+          color="#22c55e"
+        />
+        <UserPageStatCard
+          label="Avg Return"
+          value={
+            loading || stats.avg == null
+              ? "—"
+              : `${stats.avg >= 0 ? "+" : ""}${stats.avg.toFixed(2)}%`
+          }
+          color="#8b5cf6"
+        />
+        <UserPageStatCard label="Markets" value={loading ? "—" : String(markets.length)} color="#f59e0b" />
+      </UserPageStatsGrid>
 
       {loading ? (
         <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Loading baskets…</p>

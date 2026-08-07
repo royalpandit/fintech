@@ -3,8 +3,9 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import FinuerLogo from "@/components/brand/finuer-logo";
-import ThemeHeaderButton from "@/components/theme/theme-header-button";
+import PasswordField from "@/components/auth/password-field";
+import AltLoginMethods from "@/components/auth/alt-login-methods";
+import AuthSplitLayout from "@/components/auth/auth-split-layout";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -41,18 +42,13 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="theme-auth-page">
-      <ThemeHeaderButton />
-      <div className="theme-auth-card" style={{ maxWidth: 440, width: "100%" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-          <FinuerLogo href="/" height={44} />
-        </div>
-        <h1 style={{ margin: 0, marginBottom: 8, fontSize: 28 }}>Sign in</h1>
-        <p className="theme-auth-muted" style={{ margin: 0, marginBottom: 28 }}>
-          Use your registered email or phone to continue.
-        </p>
+    <AuthSplitLayout variant="sign-in">
+      <h1 style={{ margin: 0, marginBottom: 8, fontSize: 26 }}>Welcome back</h1>
+      <p className="theme-auth-muted" style={{ margin: 0, marginBottom: 26, fontSize: 14 }}>
+        Sign in with your registered email or phone to continue.
+      </p>
 
-        <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}>
           <label className="theme-label" htmlFor="login-identifier">
             Email or Phone
           </label>
@@ -68,19 +64,13 @@ export default function LoginPage() {
             style={{ marginBottom: 20 }}
           />
 
-          <label className="theme-label" htmlFor="login-password">
-            Password
-          </label>
-          <input
+          <PasswordField
             id="login-password"
-            className="theme-input"
-            type="password"
+            label="Password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={setPassword}
             placeholder="Enter your password"
             autoComplete="current-password"
-            required
-            style={{ marginBottom: 20 }}
           />
 
           {error && <div className="theme-error" style={{ marginBottom: 20 }}>{error}</div>}
@@ -88,26 +78,20 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            style={{ width: "100%", padding: "14px 16px", background: loading ? "#93a4c8" : "#2563eb", color: "#fff", borderRadius: 12, border: "none", cursor: loading ? "not-allowed" : "pointer", fontSize: 16, fontWeight: 600 }}
+            style={{ width: "100%", padding: "14px 16px", background: loading ? "#6ee7b7" : "linear-gradient(135deg, #059669 0%, #10b981 55%, #34d399 100%)", color: "#fff", borderRadius: 12, border: "none", cursor: loading ? "not-allowed" : "pointer", fontSize: 16, fontWeight: 600 }}
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
-        <p className="theme-auth-muted" style={{ marginTop: 24, textAlign: "center", fontSize: 14 }}>
-          Don&apos;t have an account?{" "}
-          <Link href="/register" style={{ color: "var(--brand-primary)", fontWeight: 600 }}>
-            Create one
-          </Link>
-        </p>
+      <AltLoginMethods mode="sign in" />
 
-        <p className="theme-auth-muted" style={{ marginTop: 12, textAlign: "center", fontSize: 13, opacity: 0.85 }}>
-          or{" "}
-          <Link href="/" style={{ color: "var(--brand-primary)", fontWeight: 600 }}>
-            browse without an account →
-          </Link>
-        </p>
-      </div>
-    </main>
+      <p className="theme-auth-muted" style={{ marginTop: 20, textAlign: "center", fontSize: 13, opacity: 0.85 }}>
+        or{" "}
+        <Link href="/" style={{ color: "var(--brand-primary)", fontWeight: 600 }}>
+          browse without an account →
+        </Link>
+      </p>
+    </AuthSplitLayout>
   );
 }

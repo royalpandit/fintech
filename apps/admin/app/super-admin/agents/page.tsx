@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from "react";
 
+// Use the "-latest" aliases: they always track Google's current model, so they
+// don't 404 when a specific dated version (2.0-flash, 2.5-flash, …) is retired.
 const MODELS = [
-  { value: "gemini-2.5-flash",                  label: "Gemini 2.5 Flash" },
-  { value: "gemini-3-flash-preview",             label: "Gemini 3 Flash Preview" },
-  { value: "gemini-2.5-flash-preview-05-20",    label: "Gemini 2.5 Flash Preview (05-20)" },
-  { value: "gemini-2.0-flash",                  label: "Gemini 2.0 Flash" },
-  { value: "gemini-2.0-flash-lite",             label: "Gemini 2.0 Flash Lite" },
-  { value: "gemini-1.5-flash-002",              label: "Gemini 1.5 Flash" },
+  { value: "gemini-flash-latest",      label: "Gemini Flash (latest) — recommended" },
+  { value: "gemini-flash-lite-latest", label: "Gemini Flash Lite (latest) — fastest" },
+  { value: "gemini-pro-latest",        label: "Gemini Pro (latest) — most capable" },
 ];
 
 interface Agent {
@@ -26,9 +25,11 @@ interface Agent {
   _count: { sessions: number };
 }
 
+const AVATAR_PRESETS = ["🤖", "💬", "📈", "💡", "🧠", "🦉", "🎯", "🛡️", "🚀", "💹", "🧾", "🔍"];
+
 const empty = () => ({
-  name: "", description: "", systemPrompt: "",
-  model: "gemini-2.5-flash", temperature: 0.7, isActive: true,
+  name: "", description: "", systemPrompt: "", avatar: "🤖",
+  model: "gemini-flash-latest", temperature: 0.7, isActive: true,
 });
 
 function getToken() {
@@ -50,6 +51,17 @@ export default function AgentsPage() {
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState("");
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [query, setQuery]       = useState("");
+
+  const shown = agents.filter((a) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      a.name.toLowerCase().includes(q) ||
+      (a.description || "").toLowerCase().includes(q) ||
+      a.model.toLowerCase().includes(q)
+    );
+  });
 
   async function load() {
     setLoading(true);
@@ -62,7 +74,7 @@ export default function AgentsPage() {
 
   function openCreate() { setForm(empty()); setEditId(null); setError(""); setOpen(true); }
   function openEdit(a: Agent) {
-    setForm({ name: a.name, description: a.description, systemPrompt: a.systemPrompt, model: a.model, temperature: a.temperature, isActive: a.isActive });
+    setForm({ name: a.name, description: a.description, systemPrompt: a.systemPrompt, avatar: a.avatar || "🤖", model: a.model, temperature: a.temperature, isActive: a.isActive });
     setEditId(a.id); setError(""); setOpen(true);
   }
 
@@ -103,15 +115,42 @@ export default function AgentsPage() {
   return (
     <div style={{ padding: "28px 32px", minHeight: "100vh", background: "var(--surface-2)" }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 20 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: "var(--text)" }}>AI Agents</h1>
           <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-muted)" }}>Create custom Gemini agents — like Gemini Gems — for Virtual Lab users</p>
         </div>
-        <button onClick={openCreate} style={{ padding: "10px 22px", background: "#1a73e8", color: "#fff", border: "none", borderRadius: 24, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+        <button onClick={openCreate} style={{ padding: "10px 22px", background: "#1a73e8", color: "#fff", border: "none", borderRadius: 24, fontWeight: 600, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>
           Create agent
         </button>
       </div>
+
+      {/* Search */}
+      {(agents.length > 0 || query) && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
+          <div style={{ position: "relative", flex: 1, minWidth: 240, maxWidth: 460 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}>
+              <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+              <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search agents by name, description or model…"
+              style={{ width: "100%", height: 42, paddingLeft: 40, paddingRight: 36, borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", fontSize: 14, outline: "none", boxSizing: "border-box" }}
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery("")} aria-label="Clear search"
+                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: 4 }}>×</button>
+            )}
+          </div>
+          {query && (
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              {shown.length} of {agents.length}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Agent cards */}
       {loading ? (
@@ -122,9 +161,14 @@ export default function AgentsPage() {
           <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", margin: "0 0 6px" }}>No agents yet</p>
           <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>Create your first agent to get started</p>
         </div>
+      ) : shown.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "64px 0", color: "var(--text-muted)" }}>
+          <div style={{ fontSize: 40 }}>🔍</div>
+          <p style={{ marginTop: 12, fontSize: 14 }}>No agents match “{query.trim()}”.</p>
+        </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))", gap: 16 }}>
-          {agents.map(a => (
+          {shown.map(a => (
             <div key={a.id} style={{ background: "var(--surface)", borderRadius: 12, border: "1px solid var(--border)", padding: "20px 22px", position: "relative" }}>
               {!a.isActive && <span style={{ position: "absolute", top: 14, right: 14, fontSize: 10, fontWeight: 600, background: "#fce8e6", color: "#c5221f", padding: "2px 8px", borderRadius: 10 }}>INACTIVE</span>}
               {a.isSiteAssistant && a.isActive && <span style={{ position: "absolute", top: 14, right: 14, fontSize: 10, fontWeight: 600, background: "#e6f4ea", color: "#1e8e3e", padding: "2px 8px", borderRadius: 10 }}>💬 CHATBOT</span>}
@@ -174,6 +218,25 @@ export default function AgentsPage() {
                 <input value={form.name} onChange={e => f("name", e.target.value)}
                   placeholder="e.g. Volatility Calendar"
                   style={{ width: "100%", padding: "12px 14px", border: "1.5px solid var(--border)", borderRadius: 8, fontSize: 14, outline: "none", color: "var(--text)", boxSizing: "border-box" }} />
+              </div>
+
+              {/* Icon */}
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>Icon</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <span style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,#ede9fe,#c7d2fe)", display: "grid", placeItems: "center", fontSize: 24, flexShrink: 0 }}>{form.avatar}</span>
+                  <input value={form.avatar} onChange={e => f("avatar", e.target.value.slice(0, 4))} maxLength={4}
+                    aria-label="Agent icon emoji"
+                    style={{ width: 64, textAlign: "center", padding: "10px", border: "1.5px solid var(--border)", borderRadius: 8, fontSize: 18, outline: "none", boxSizing: "border-box" }} />
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {AVATAR_PRESETS.map(em => (
+                      <button key={em} type="button" onClick={() => f("avatar", em)}
+                        style={{ width: 34, height: 34, borderRadius: 8, border: form.avatar === em ? "2px solid #1a73e8" : "1px solid var(--border)", background: "var(--surface)", fontSize: 18, cursor: "pointer", lineHeight: 1 }}>
+                        {em}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Description */}
