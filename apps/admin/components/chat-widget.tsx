@@ -10,6 +10,16 @@ type Msg = { role: "user" | "model"; content: string };
 // The chatbot shows everywhere EXCEPT the admin / super-admin / moderator consoles.
 const HIDDEN_PREFIXES = ["/super-admin", "/admin", "/moderator"];
 
+const BUBBLE_SIZE = 56;
+
+// Keep the draggable bubble fully on-screen (8px margin from every edge).
+function clampBubble(x: number, y: number) {
+  const m = 8;
+  const maxX = window.innerWidth - BUBBLE_SIZE - m;
+  const maxY = window.innerHeight - BUBBLE_SIZE - m;
+  return { x: Math.min(Math.max(m, x), maxX), y: Math.min(Math.max(m, y), maxY) };
+}
+
 export default function ChatWidget() {
   const pathname = usePathname();
   const hidden = HIDDEN_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
@@ -22,6 +32,49 @@ export default function ChatWidget() {
   const [needsLogin, setNeedsLogin] = useState(false);
   const sessionRef = useRef<number>(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Draggable launcher position (persisted). null until measured on the client.
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const dragRef = useRef<{ sx: number; sy: number; ox: number; oy: number; moved: boolean } | null>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const upd = () => setIsMobile(mq.matches);
+    upd();
+    mq.addEventListener("change", upd);
+    return () => mq.removeEventListener("change", upd);
+  }, []);
+
+  // Restore a saved position, else default to bottom-right — lifted above the
+  // mobile bottom nav bar so it never covers the tabs.
+  useEffect(() => {
+    if (hidden) return;
+    try {
+      const saved = localStorage.getItem("chat-bubble-pos");
+      if (saved) {
+        const p = JSON.parse(saved);
+        if (typeof p?.x === "number" && typeof p?.y === "number") {
+          setPos(clampBubble(p.x, p.y));
+          return;
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    const mobile = window.matchMedia("(max-width: 767px)").matches;
+    const bottomGap = mobile ? 84 : 24; // clear the mobile bottom tab bar
+    setPos(
+      clampBubble(window.innerWidth - BUBBLE_SIZE - 20, window.innerHeight - BUBBLE_SIZE - bottomGap),
+    );
+  }, [hidden]);
+
+  // Keep it on-screen when the viewport resizes / rotates.
+  useEffect(() => {
+    const onResize = () => setPos((p) => (p ? clampBubble(p.x, p.y) : p));
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => {
     if (hidden) return;
@@ -106,26 +159,69 @@ export default function ChatWidget() {
     }
   }
 
+  function onPointerDown(e: React.PointerEvent<HTMLButtonElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    dragRef.current = {
+      sx: e.clientX,
+      sy: e.clientY,
+      ox: e.clientX - rect.left,
+      oy: e.clientY - rect.top,
+      moved: false,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+  function onPointerMove(e: React.PointerEvent<HTMLButtonElement>) {
+    const d = dragRef.current;
+    if (!d) return;
+    if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 6) d.moved = true;
+    if (d.moved) setPos(clampBubble(e.clientX - d.ox, e.clientY - d.oy));
+  }
+  function onPointerUp() {
+    const d = dragRef.current;
+    dragRef.current = null;
+    if (!d) return;
+    if (d.moved) {
+      // Persist the dragged position.
+      setPos((p) => {
+        if (p) {
+          try {
+            localStorage.setItem("chat-bubble-pos", JSON.stringify(p));
+          } catch {
+            /* ignore */
+          }
+        }
+        return p;
+      });
+    } else {
+      // A tap (no drag) opens the chat.
+      setOpen(true);
+    }
+  }
+
   return (
     <>
-      {/* Launcher bubble */}
+      {/* Launcher bubble — draggable; tap to open */}
       {!open && (
         <button
           type="button"
-          onClick={() => setOpen(true)}
-          aria-label={`Chat with ${agent.name}`}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          aria-label={`Chat with ${agent.name} (drag to move)`}
+          title={`Chat with ${agent.name} · drag to move`}
           style={{
             position: "fixed",
-            bottom: 22,
-            right: 22,
-            width: 56,
-            height: 56,
+            ...(pos ? { left: pos.x, top: pos.y } : { right: 20, bottom: isMobile ? 84 : 24 }),
+            width: BUBBLE_SIZE,
+            height: BUBBLE_SIZE,
             borderRadius: 999,
             border: "none",
             background: "linear-gradient(135deg,#2563eb,#10b981)",
             color: "#fff",
             fontSize: 26,
-            cursor: "pointer",
+            cursor: "grab",
+            touchAction: "none",
+            userSelect: "none",
             boxShadow: "0 8px 26px rgba(37,99,235,0.36)",
             zIndex: 300,
             display: "grid",
@@ -141,10 +237,10 @@ export default function ChatWidget() {
         <div
           style={{
             position: "fixed",
-            bottom: 22,
+            bottom: isMobile ? 84 : 22,
             right: 22,
             width: "min(380px, calc(100vw - 32px))",
-            height: "min(560px, calc(100vh - 100px))",
+            height: isMobile ? "calc(100vh - 168px)" : "min(560px, calc(100vh - 100px))",
             background: "var(--surface)",
             border: "1px solid var(--border)",
             borderRadius: 16,

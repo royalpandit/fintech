@@ -276,7 +276,7 @@ export default async function UserDashboardPage({
     <section>
       <div className="user-layout-rail">
         {/* ═══ MAIN ═══ */}
-        <div>
+        <div style={{ minWidth: 0 }}>
           {/* Header */}
           <div
             style={{

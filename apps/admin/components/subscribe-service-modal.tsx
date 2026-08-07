@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { FiX } from "react-icons/fi";
-import { yearlySavingsPct } from "@/lib/subscription-services";
+// Import from the prisma-free module directly — importing from
+// "@/lib/subscription-services" drags PrismaClient into the browser bundle
+// (crashes any page mounting this modal, e.g. the advisor profile).
+import { yearlySavingsPct } from "@/lib/service-categories";
 
 type ServicePlan = "monthly" | "yearly";
 

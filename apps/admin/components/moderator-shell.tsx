@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { FiMenu, FiX } from "react-icons/fi";
 import ThemeToggleMenu from "@/components/theme/theme-toggle-menu";
 import ThemeHeaderButton from "@/components/theme/theme-header-button";
 import { ADMIN_MODULES, ADMIN_MODULE_ROUTE_MAP } from "../lib/admin-nav";
@@ -45,8 +46,34 @@ export default function ModeratorShell({
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
 
   const initials = getInitials(currentUser.fullName);
+
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1024px)");
+    const apply = () => {
+      document.body.style.overflow = mq.matches && navOpen ? "hidden" : "";
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => {
+      mq.removeEventListener("change", apply);
+      document.body.style.overflow = "";
+    };
+  }, [navOpen]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setNavOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -61,7 +88,22 @@ export default function ModeratorShell({
 
   return (
     <div className="admin-shell advisor-scope" style={{ ["--advisor-primary" as any]: "#2563eb" }}>
-      <aside className="admin-sidebar" style={{ background: "var(--surface-2)", padding: "20px 14px" }}>
+      {navOpen && (
+        <div className="admin-nav-overlay" onClick={() => setNavOpen(false)} aria-hidden="true" />
+      )}
+      <aside
+        className={`admin-sidebar${navOpen ? " admin-sidebar-open" : ""}`}
+        style={{ background: "var(--surface-2)", padding: "20px 14px" }}
+      >
+        <button
+          type="button"
+          className="admin-nav-close"
+          aria-label="Close menu"
+          onClick={() => setNavOpen(false)}
+          style={{ marginLeft: "auto", marginBottom: 8 }}
+        >
+          <FiX size={20} />
+        </button>
         {/* Profile card */}
         <div className="profile-card">
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
@@ -161,7 +203,16 @@ export default function ModeratorShell({
           className="admin-header"
           style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, maxWidth: 420 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, maxWidth: 420 }}>
+            <button
+              type="button"
+              className="admin-nav-hamburger"
+              aria-label="Open navigation menu"
+              aria-expanded={navOpen}
+              onClick={() => setNavOpen(true)}
+            >
+              <FiMenu size={20} />
+            </button>
             <div style={{ position: "relative", width: "100%" }}>
               <svg
                 width="14"

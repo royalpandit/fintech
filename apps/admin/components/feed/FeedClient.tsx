@@ -1034,6 +1034,9 @@ export default function FeedClient({
   // Feed filters (client-side: sort + direction/asset/risk/access).
   const [filters, setFilters] = useState<FeedFilters>(DEFAULT_FEED_FILTERS);
 
+  // Which feed the tabs are showing.
+  const [tab, setTab] = useState<"foryou" | "community" | "advisors">("foryou");
+
   function applyFilters(posts: FeedPost[]): FeedPost[] {
     const out = posts.filter((p) => {
       if (filters.sentiment !== "all" && p.sentiment !== filters.sentiment) return false;
@@ -1094,7 +1097,9 @@ export default function FeedClient({
     const sentinel = sentinelRef.current;
     if (sentinel) observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [fetchMore, nextCursor]);
+    // `tab` is included so the observer re-attaches to the sentinel when it
+    // mounts on the Advisors / For-You-fallback tabs.
+  }, [fetchMore, nextCursor, tab]);
 
   // ── Like ─────────────────────────────────────────────────
   async function toggleLike(postId: number) {
@@ -1282,115 +1287,173 @@ export default function FeedClient({
   const filteredDiscover = applyFilters(discoverPosts);
   const hasFollowed = filteredFollowed.length > 0;
 
+  // Discover feed (all approved advisors) + infinite scroll — reused by the
+  // "Advisors" tab and as the "For You" fallback when you follow nobody.
+  function renderDiscoverFeed() {
+    return (
+      <>
+        <div style={{ display: "grid", gap: 12 }}>
+          {filteredDiscover.length === 0 && !loadingMore ? (
+            <article
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                borderRadius: 14,
+                padding: 32,
+                textAlign: "center",
+                color: "var(--text-muted)",
+                fontSize: 13,
+              }}
+            >
+              {discoverPosts.length === 0
+                ? "No posts yet — check back soon."
+                : "No posts match your filters."}
+            </article>
+          ) : (
+            filteredDiscover.map(renderPost)
+          )}
+        </div>
+
+        <div ref={sentinelRef} style={{ height: 1 }} />
+
+        {loadingMore && (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "20px 0",
+              color: "var(--text-muted)",
+              fontSize: 13,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span
+              style={{
+                width: 16,
+                height: 16,
+                borderRadius: "50%",
+                border: "2px solid var(--border)",
+                borderTopColor: "#0ea5e9",
+                animation: "spin 0.7s linear infinite",
+                display: "inline-block",
+              }}
+            />
+            Loading more…
+          </div>
+        )}
+
+        {!nextCursor && discoverPosts.length > 0 && (
+          <p style={{ textAlign: "center", padding: "20px 0", color: "var(--text-muted)", fontSize: 12 }}>
+            You&apos;re all caught up.
+          </p>
+        )}
+      </>
+    );
+  }
+
+  const TABS = [
+    { key: "foryou" as const, label: "For You" },
+    { key: "community" as const, label: "Community" },
+    { key: "advisors" as const, label: "Advisors" },
+  ];
+
   return (
     <>
       <div className="user-layout-rail">
         {/* Feed column */}
         <div>
-          <SocialFeedSection
-            isAuthed={isAuthed}
-            userName={currentUserName ?? "You"}
-          />
-
-          {/* Feed header: section label + filter on the same row */}
+          {/* Tabs: For You (advisors you follow) · Community · Advisors (discover) */}
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 10,
+              gap: 4,
+              marginBottom: 16,
+              borderBottom: "1px solid var(--border)",
             }}
           >
-            <h2
-              style={{
-                margin: 0,
-                fontSize: 11,
-                fontWeight: 700,
-                color: "var(--text-muted)",
-                textTransform: "uppercase",
-                letterSpacing: 1,
-              }}
-            >
-              {hasFollowed ? "Following" : "Latest posts"}
-            </h2>
-            <FeedFilter value={filters} onChange={setFilters} />
+            {TABS.map((t) => {
+              const active = tab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setTab(t.key)}
+                  style={{
+                    appearance: "none",
+                    border: "none",
+                    background: "transparent",
+                    padding: "10px 16px",
+                    marginBottom: -1,
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    color: active ? "var(--brand-primary, #0ea5e9)" : "var(--text-muted)",
+                    borderBottom: `2px solid ${active ? "var(--brand-primary, #0ea5e9)" : "transparent"}`,
+                  }}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Following section */}
-          {hasFollowed && (
+          {tab === "community" ? (
+            <SocialFeedSection isAuthed={isAuthed} userName={currentUserName ?? "You"} />
+          ) : (
             <>
-              <div style={{ display: "grid", gap: 12, marginBottom: 20 }}>
-                {filteredFollowed.map(renderPost)}
-              </div>
-              <SectionLabel>Discover</SectionLabel>
-            </>
-          )}
-
-          {/* Discover / global */}
-          <div style={{ display: "grid", gap: 12 }}>
-            {filteredDiscover.length === 0 && !loadingMore ? (
-              <article
+              {/* Filter row (advisor feeds) */}
+              <div
                 style={{
-                  background: "var(--surface)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 14,
-                  padding: 32,
-                  textAlign: "center",
-                  color: "var(--text-muted)",
-                  fontSize: 13,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 10,
                 }}
               >
-                {discoverPosts.length === 0
-                  ? "No posts yet — check back soon."
-                  : "No posts match your filters."}
-              </article>
-            ) : (
-              filteredDiscover.map(renderPost)
-            )}
-          </div>
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "var(--text-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                  }}
+                >
+                  {tab === "foryou" ? "For You" : "All advisors"}
+                </h2>
+                <FeedFilter value={filters} onChange={setFilters} />
+              </div>
 
-          {/* Infinite scroll sentinel */}
-          <div ref={sentinelRef} style={{ height: 1 }} />
-
-          {loadingMore && (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "20px 0",
-                color: "var(--text-muted)",
-                fontSize: 13,
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              <span
-                style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: "50%",
-                  border: "2px solid var(--border)",
-                  borderTopColor: "#0ea5e9",
-                  animation: "spin 0.7s linear infinite",
-                  display: "inline-block",
-                }}
-              />
-              Loading more…
-            </div>
-          )}
-
-          {!nextCursor && discoverPosts.length > 0 && (
-            <p
-              style={{
-                textAlign: "center",
-                padding: "20px 0",
-                color: "var(--text-muted)",
-                fontSize: 12,
-              }}
-            >
-              You&apos;re all caught up.
-            </p>
+              {tab === "foryou" ? (
+                hasFollowed ? (
+                  <div style={{ display: "grid", gap: 12 }}>{filteredFollowed.map(renderPost)}</div>
+                ) : (
+                  <>
+                    <article
+                      style={{
+                        background: "var(--surface)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 14,
+                        padding: 20,
+                        marginBottom: 16,
+                        textAlign: "center",
+                        color: "var(--text-muted)",
+                        fontSize: 13,
+                      }}
+                    >
+                      Follow advisors to personalise this feed. Meanwhile, here&apos;s what&apos;s
+                      trending across all advisors:
+                    </article>
+                    {renderDiscoverFeed()}
+                  </>
+                )
+              ) : (
+                renderDiscoverFeed()
+              )}
+            </>
           )}
         </div>
 

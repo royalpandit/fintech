@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { FiHeart, FiMessageSquare, FiStar } from "react-icons/fi";
+import { FiHeart, FiMessageSquare, FiStar, FiChevronDown } from "react-icons/fi";
 import { CheckCircle } from "@/components/advisor-ui/icons";
 import TradePanel from "@/components/trades/trade-panel";
 import {
@@ -122,6 +122,8 @@ export default function TradesClient({
   const [asset, setAsset] = useState("all");
   const [quick, setQuick] = useState<Quick>("none");
   const [filters, setFilters] = useState<FeedFilters>(DEFAULT_FEED_FILTERS);
+  // Collapsed by default on mobile (the toggle only shows on small screens).
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const sponsoredIds = useMemo(
     () => new Set(featuredAdvisors.map((a) => a.id)),
@@ -182,14 +184,27 @@ export default function TradesClient({
         <aside className="trades-sidebar">
           <div className="trades-fcard">
             <div className="trades-fhead">
-              <span>Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}</span>
+              <button
+                type="button"
+                className="trades-fhead-toggle"
+                onClick={() => setFiltersOpen((o) => !o)}
+                aria-expanded={filtersOpen}
+              >
+                <span>Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}</span>
+                <FiChevronDown
+                  size={16}
+                  className="trades-fhead-chev"
+                  style={{ transform: filtersOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}
+                />
+              </button>
               {activeFilterCount > 0 && (
-                <button type="button" onClick={resetAll}>
+                <button type="button" onClick={resetAll} className="trades-freset">
                   Reset
                 </button>
               )}
             </div>
 
+            <div className={`trades-fbody${filtersOpen ? " open" : ""}`}>
             <div className="trades-fgroup">
               <div className="trades-flabel">Asset</div>
               <div className="trades-fopts">
@@ -242,6 +257,7 @@ export default function TradesClient({
                 </div>
               </div>
             ))}
+            </div>
           </div>
         </aside>
 

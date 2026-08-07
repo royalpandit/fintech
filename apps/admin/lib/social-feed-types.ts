@@ -29,6 +29,9 @@ export type SocialPost = {
     id: number;
     fullName: string;
     uuid: string;
+    // True only for approved advisors — the feed links their name/avatar to
+    // their public advisor profile (/user/advisors/[id]).
+    is_advisor: boolean;
   };
   images: { id: number; url: string; sort_order: number }[];
   videos: { id: number; url: string; sort_order: number }[];

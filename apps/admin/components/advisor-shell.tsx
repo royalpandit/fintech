@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { FiMenu, FiX } from "react-icons/fi";
 import FinuerLogo from "@/components/brand/finuer-logo";
 import ThemeToggleMenu from "@/components/theme/theme-toggle-menu";
 import ThemeHeaderButton from "@/components/theme/theme-header-button";
@@ -55,6 +56,32 @@ export default function AdvisorShell({
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1024px)");
+    const apply = () => {
+      document.body.style.overflow = mq.matches && navOpen ? "hidden" : "";
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => {
+      mq.removeEventListener("change", apply);
+      document.body.style.overflow = "";
+    };
+  }, [navOpen]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setNavOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // While unverified, every feature link routes to the verification page so the
   // advisor must "verify first" before opening posts, subscribers, etc. The
@@ -82,9 +109,31 @@ export default function AdvisorShell({
 
   return (
     <div className="admin-shell advisor-scope">
-      <aside className="admin-sidebar" style={{ background: "var(--surface-2)", padding: "20px 14px" }}>
-        <div style={{ marginBottom: 16, paddingLeft: 4 }}>
+      {navOpen && (
+        <div className="admin-nav-overlay" onClick={() => setNavOpen(false)} aria-hidden="true" />
+      )}
+      <aside
+        className={`admin-sidebar${navOpen ? " admin-sidebar-open" : ""}`}
+        style={{ background: "var(--surface-2)", padding: "20px 14px" }}
+      >
+        <div
+          style={{
+            marginBottom: 16,
+            paddingLeft: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <FinuerLogo href="/" height={34} />
+          <button
+            type="button"
+            className="admin-nav-close"
+            aria-label="Close menu"
+            onClick={() => setNavOpen(false)}
+          >
+            <FiX size={20} />
+          </button>
         </div>
         {/* Profile card at the top */}
         <div className="profile-card">
@@ -216,7 +265,16 @@ export default function AdvisorShell({
           style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
         >
           {/* Functional search (stocks + page nav, ⌘K) */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, maxWidth: 460 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, maxWidth: 460 }}>
+            <button
+              type="button"
+              className="admin-nav-hamburger"
+              aria-label="Open navigation menu"
+              aria-expanded={navOpen}
+              onClick={() => setNavOpen(true)}
+            >
+              <FiMenu size={20} />
+            </button>
             {!needsVerification && <AdvisorSearch />}
           </div>
 

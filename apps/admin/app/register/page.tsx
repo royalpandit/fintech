@@ -2,25 +2,47 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import FinuerLogo from "@/components/brand/finuer-logo";
-import ThemeHeaderButton from "@/components/theme/theme-header-button";
+import PasswordField from "@/components/auth/password-field";
+import AltLoginMethods from "@/components/auth/alt-login-methods";
+import AuthSplitLayout from "@/components/auth/auth-split-layout";
 import { PROFESSIONAL_TYPES, type ProfessionalType } from "@/lib/professional-types";
+import { normalizeIndianMobile } from "@/lib/phone";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Role = "user" | "advisor";
 
-// The registration/licence field adapts to the chosen profession.
-const REG_FIELD: Record<ProfessionalType, { label: string; placeholder: string }> = {
-  research_analyst: { label: "SEBI Research Analyst No.", placeholder: "INH000012345" },
-  investment_advisor: { label: "SEBI RIA Registration No.", placeholder: "INA000012345" },
-  portfolio_manager: { label: "SEBI PMS Registration No.", placeholder: "INP000012345" },
-  wealth_manager: { label: "Registration / Licence No.", placeholder: "Your licence number" },
-  advisory_firm: { label: "SEBI Firm Registration No.", placeholder: "INA / INH number" },
-  mutual_fund_distributor: { label: "AMFI ARN", placeholder: "ARN-123456" },
-  stock_broker: { label: "Broker / Member Code", placeholder: "NSE-BR-004567" },
-  finance_creator: { label: "Handle / Website / ID", placeholder: "@yourhandle or website" },
-  listed_company: { label: "Listing ID / CIN", placeholder: "NSE:SYMBOL or CIN" },
-  financial_platform: { label: "Business / Licence ID", placeholder: "Company registration ID" },
+// Group 1 — regulated professionals/entities: a registration number is MANDATORY.
+// The placeholder hints the expected format per profession.
+const GROUP1_PLACEHOLDER: Partial<Record<ProfessionalType, string>> = {
+  research_analyst: "INH000001234",
+  investment_advisor: "INA000012345",
+  portfolio_manager: "INP000001234",
+  advisory_firm: "INH… / INA…",
+  mutual_fund_distributor: "ARN-123456",
+};
+const GROUP1 = new Set<ProfessionalType>([
+  "research_analyst",
+  "investment_advisor",
+  "portfolio_manager",
+  "advisory_firm",
+  "mutual_fund_distributor",
+]);
+
+// Group 2 — no individual registration number; ask for identifying details instead.
+type AltField = { key: string; label: string; placeholder: string; optional?: boolean };
+const GROUP2_FIELDS: Partial<Record<ProfessionalType, AltField[]>> = {
+  wealth_manager: [{ key: "companyName", label: "Company Name", placeholder: "Your firm / company" }],
+  stock_broker: [
+    { key: "brokerName", label: "Broker Name", placeholder: "e.g. Zerodha, Angel One" },
+    { key: "employeeId", label: "Employee ID (optional)", placeholder: "Optional", optional: true },
+  ],
+  finance_creator: [{ key: "socialHandle", label: "Social Media Handle", placeholder: "@yourhandle or channel link" }],
+  listed_company: [
+    { key: "companyName", label: "Company Name", placeholder: "Registered company name" },
+    { key: "symbol", label: "NSE / BSE Symbol", placeholder: "e.g. ZENITH" },
+  ],
+  financial_platform: [{ key: "platformName", label: "Platform Name", placeholder: "Your platform / product name" }],
 };
 
 export default function RegisterPage() {
@@ -33,26 +55,47 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [sebi, setSebi] = useState("");
+  const [details, setDetails] = useState<Record<string, string>>({});
   const [experienceYears, setExperienceYears] = useState("");
   const [bio, setBio] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const isGroup1 = GROUP1.has(professionalType);
+  const altFields = GROUP2_FIELDS[professionalType] ?? [];
+  const setDetail = (k: string, v: string) => setDetails((d) => ({ ...d, [k]: v }));
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
+    if (fullName.trim().length < 2) {
+      setError("Please enter your full name");
+      return;
+    }
+    if (!EMAIL_REGEX.test(email.trim())) {
+      setError("Please enter a valid email address");
+      return;
+    }
+    const mobile = normalizeIndianMobile(phone);
+    if (!mobile) {
+      setError("Enter a valid 10-digit mobile number");
       return;
     }
     if (password.length < 8) {
       setError("Password must be at least 8 characters");
       return;
     }
+    if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+      setError("Password must include both letters and numbers");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
 
     setLoading(true);
-
     try {
       const response = await fetch("/api/v1/auth/register", {
         method: "POST",
@@ -60,13 +103,15 @@ export default function RegisterPage() {
         body: JSON.stringify({
           fullName: fullName.trim(),
           email: email.trim().toLowerCase(),
-          phone: phone.trim(),
+          phone: mobile,
           password,
           role,
           ...(role === "advisor"
             ? {
                 professionalType,
-                sebiRegistrationNo: sebi.trim().toUpperCase(),
+                ...(isGroup1
+                  ? { sebiRegistrationNo: sebi.trim().toUpperCase() }
+                  : { details }),
                 experienceYears: experienceYears ? Number(experienceYears) : undefined,
                 bio: bio.trim() || undefined,
               }
@@ -90,16 +135,11 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="theme-auth-page">
-      <ThemeHeaderButton />
-      <div className="theme-auth-card" style={{ maxWidth: 520, width: "100%" }}>
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
-          <FinuerLogo href="/" height={44} />
-        </div>
-        <h1 style={{ margin: 0, marginBottom: 8, fontSize: 28 }}>Create your account</h1>
-        <p className="theme-auth-muted" style={{ margin: 0, marginBottom: 28 }}>
-          Join as a community member or a finance professional.
-        </p>
+    <AuthSplitLayout variant="sign-up" wide>
+      <h1 style={{ margin: 0, marginBottom: 8, fontSize: 26 }}>Create your account</h1>
+      <p className="theme-auth-muted" style={{ margin: 0, marginBottom: 24, fontSize: 14 }}>
+        Join as a community member or a finance professional.
+      </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
           <button
@@ -160,51 +200,62 @@ export default function RegisterPage() {
               <label className="theme-label" htmlFor="register-phone">
                 Phone
               </label>
-              <input
-                id="register-phone"
-                className="theme-input"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+919999999999"
-                autoComplete="tel"
-                required
-                style={{ marginBottom: 16 }}
-              />
+              <div style={{ position: "relative", marginBottom: 16 }}>
+                <span
+                  style={{
+                    position: "absolute",
+                    left: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    fontSize: 15,
+                    color: "var(--text-muted)",
+                    pointerEvents: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  +91
+                  <span style={{ width: 1, height: 18, background: "var(--border)" }} />
+                </span>
+                <input
+                  id="register-phone"
+                  className="theme-input"
+                  type="tel"
+                  inputMode="numeric"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  placeholder="10-digit mobile"
+                  autoComplete="tel"
+                  maxLength={10}
+                  required
+                  style={{ marginBottom: 0, paddingLeft: 62 }}
+                />
+              </div>
             </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <label className="theme-label" htmlFor="register-password">
-                Password
-              </label>
-              <input
+              <PasswordField
                 id="register-password"
-                className="theme-input"
-                type="password"
+                label="Password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={setPassword}
                 placeholder="Min 8 chars, letters + numbers"
                 autoComplete="new-password"
-                required
-                style={{ marginBottom: 16 }}
+                marginBottom={16}
               />
             </div>
             <div>
-              <label className="theme-label" htmlFor="register-confirm">
-                Confirm Password
-              </label>
-              <input
+              <PasswordField
                 id="register-confirm"
-                className="theme-input"
-                type="password"
+                label="Confirm Password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={setConfirmPassword}
                 placeholder="Re-enter password"
                 autoComplete="new-password"
-                required
-                style={{ marginBottom: 16 }}
+                marginBottom={16}
               />
             </div>
           </div>
@@ -232,19 +283,41 @@ export default function RegisterPage() {
                 ))}
               </select>
 
-              <label className="theme-label" htmlFor="register-sebi">
-                {REG_FIELD[professionalType].label}
-              </label>
-              <input
-                id="register-sebi"
-                className="theme-input"
-                type="text"
-                value={sebi}
-                onChange={(e) => setSebi(e.target.value.toUpperCase())}
-                placeholder={REG_FIELD[professionalType].placeholder}
-                required
-                style={{ marginBottom: 16 }}
-              />
+              {isGroup1 ? (
+                <>
+                  <label className="theme-label" htmlFor="register-reg">
+                    Registration No.
+                  </label>
+                  <input
+                    id="register-reg"
+                    className="theme-input"
+                    type="text"
+                    value={sebi}
+                    onChange={(e) => setSebi(e.target.value.toUpperCase())}
+                    placeholder={GROUP1_PLACEHOLDER[professionalType] ?? "Registration number"}
+                    required
+                    style={{ marginBottom: 16 }}
+                  />
+                </>
+              ) : (
+                altFields.map((f) => (
+                  <div key={f.key}>
+                    <label className="theme-label" htmlFor={`register-${f.key}`}>
+                      {f.label}
+                    </label>
+                    <input
+                      id={`register-${f.key}`}
+                      className="theme-input"
+                      type="text"
+                      value={details[f.key] ?? ""}
+                      onChange={(e) => setDetail(f.key, e.target.value)}
+                      placeholder={f.placeholder}
+                      required={!f.optional}
+                      style={{ marginBottom: 16 }}
+                    />
+                  </div>
+                ))
+              )}
 
               <label className="theme-label" htmlFor="register-exp">
                 Years of Experience
@@ -269,14 +342,14 @@ export default function RegisterPage() {
                 className="theme-input"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                placeholder="Your advisory focus, strategy, credentials..."
+                placeholder="Your focus, strategy, credentials..."
                 rows={3}
                 style={{ marginBottom: 12, resize: "vertical" }}
               />
 
               <p className="theme-muted" style={{ margin: 0, fontSize: 12 }}>
                 Your account will be created as <strong>Pending Verification</strong>. An admin will
-                review your SEBI registration before your advisor capabilities are enabled.
+                review your details before your professional capabilities are enabled.
               </p>
             </div>
           )}
@@ -300,13 +373,7 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <p className="theme-auth-muted" style={{ marginTop: 24, textAlign: "center", fontSize: 14 }}>
-          Already have an account?{" "}
-          <Link href="/login" style={{ color: "var(--brand-primary)", fontWeight: 600 }}>
-            Sign in
-          </Link>
-        </p>
-      </div>
-    </main>
+      <AltLoginMethods mode="sign up" />
+    </AuthSplitLayout>
   );
 }

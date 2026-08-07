@@ -5,12 +5,30 @@ import { prisma } from "@/lib/prisma";
 import { err, parseBody } from "@/lib/api-helpers";
 import { createSession, signAccessToken } from "@/lib/auth";
 import { isProfessionalType, type ProfessionalType } from "@/lib/professional-types";
+import { normalizeIndianMobile } from "@/lib/phone";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_REGEX = /^[+]?[0-9]{10,15}$/;
 // Generic registration / licence / ARN / member-code format — covers every
 // professional type (SEBI INA/INH/INP, AMFI ARN, broker codes, platform IDs).
 const REG_NO_REGEX = /^[A-Z0-9][A-Z0-9-]{4,39}$/;
+
+// Group 1 — regulated professionals/entities: a registration number is required.
+// Group 2 (everything else): no individual registration — we generate a unique
+// internal id and keep the identifying details the user supplied.
+const GROUP1_TYPES = new Set<ProfessionalType>([
+  "research_analyst",
+  "investment_advisor",
+  "portfolio_manager",
+  "advisory_firm",
+  "mutual_fund_distributor",
+]);
+const GROUP2_PREFIX: Partial<Record<ProfessionalType, string>> = {
+  wealth_manager: "WEALTH",
+  stock_broker: "BROKER",
+  finance_creator: "CREATOR",
+  listed_company: "LISTCO",
+  financial_platform: "PLATFORM",
+};
 
 type RegisterBody = {
   fullName?: string;
@@ -22,6 +40,7 @@ type RegisterBody = {
   professionalType?: string;
   sebiRegistrationNo?: string;
   registrationNo?: string;
+  details?: Record<string, string>;
   experienceYears?: number;
   bio?: string;
 };
@@ -65,7 +84,8 @@ export async function POST(req: NextRequest) {
 
     const fullName = (body.fullName ?? body.name ?? "").trim();
     const email = (body.email ?? "").trim().toLowerCase();
-    const phone = (body.phone ?? "").trim();
+    // Canonical 10-digit Indian mobile (null when invalid — validated below).
+    const phone = normalizeIndianMobile(body.phone);
     const password = body.password ?? "";
     const role: "user" | "advisor" = body.role === "advisor" ? "advisor" : "user";
 
@@ -85,9 +105,9 @@ export async function POST(req: NextRequest) {
       warn("rejected: invalid email format", { email: maskEmail(email) });
       return err("Valid email is required");
     }
-    if (!PHONE_REGEX.test(phone.replace(/\s|-/g, ""))) {
-      warn("rejected: invalid phone format", { phone: maskPhone(phone) });
-      return err("Valid phone number is required");
+    if (!phone) {
+      warn("rejected: invalid phone format");
+      return err("Enter a valid 10-digit mobile number");
     }
     const passwordError = validatePasswordStrength(password);
     if (passwordError) {
@@ -97,21 +117,39 @@ export async function POST(req: NextRequest) {
 
     let sebiRegistrationNo: string | null = null;
     let professionalType: ProfessionalType = "investment_advisor";
+    let verificationDetails: Record<string, string> | null = null;
     if (role === "advisor") {
       professionalType = isProfessionalType(body.professionalType)
         ? body.professionalType
         : "investment_advisor";
-      sebiRegistrationNo = (body.sebiRegistrationNo ?? body.registrationNo ?? "").trim().toUpperCase();
-      if (!REG_NO_REGEX.test(sebiRegistrationNo)) {
-        warn("rejected: invalid registration number");
-        return err("A valid registration / licence / ARN number is required");
+
+      if (GROUP1_TYPES.has(professionalType)) {
+        sebiRegistrationNo = (body.sebiRegistrationNo ?? body.registrationNo ?? "").trim().toUpperCase();
+        if (!REG_NO_REGEX.test(sebiRegistrationNo)) {
+          warn("rejected: invalid registration number");
+          return err("A valid registration / licence / ARN number is required");
+        }
+      } else {
+        // No individual registration number — generate a unique internal id and
+        // keep the identifying details the user provided.
+        const prefix = GROUP2_PREFIX[professionalType] ?? "PRO";
+        sebiRegistrationNo = `${prefix}-${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
+        if (body.details && typeof body.details === "object") {
+          verificationDetails = Object.fromEntries(
+            Object.entries(body.details)
+              .filter(([, v]) => v != null && String(v).trim() !== "")
+              .map(([k, v]) => [k, String(v).slice(0, 200)]),
+          );
+        }
       }
     }
     log("field validation passed", { role, professionalType });
 
     // ── Uniqueness checks ────────────────────────────────────────────
     const existingUser = await prisma.user.findFirst({
-      where: { OR: [{ email }, { phone }] },
+      // Match the phone on its last 10 digits so numbers stored either as
+      // "+9199..." or bare "99..." still collide.
+      where: { OR: [{ email }, { phone: { endsWith: phone } }] },
       select: { id: true, email: true, phone: true },
     });
     if (existingUser) {
@@ -144,7 +182,7 @@ export async function POST(req: NextRequest) {
         data: {
           fullName,
           email,
-          phone: phone.replace(/\s|-/g, ""),
+          phone,
           passwordHash,
           role,
           status: "active",
@@ -166,6 +204,7 @@ export async function POST(req: NextRequest) {
             userId: created.id,
             sebiRegistrationNo,
             professionalType,
+            verificationDetails: verificationDetails ?? undefined,
             experienceYears: typeof body.experienceYears === "number" ? body.experienceYears : null,
             bio: body.bio?.trim() || null,
             // Advisor accounts start PENDING — they cannot access the console

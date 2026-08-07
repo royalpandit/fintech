@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { FiMenu, FiX } from "react-icons/fi";
 import FinuerLogo from "@/components/brand/finuer-logo";
 import ThemeToggleMenu from "@/components/theme/theme-toggle-menu";
 import ThemeHeaderButton from "@/components/theme/theme-header-button";
@@ -32,8 +33,37 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
 
   const initials = getInitials(currentUser.fullName);
+
+  // Close the mobile nav drawer whenever the route changes.
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname]);
+
+  // Lock body scroll while the mobile drawer is open.
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1024px)");
+    const apply = () => {
+      document.body.style.overflow = mq.matches && navOpen ? "hidden" : "";
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => {
+      mq.removeEventListener("change", apply);
+      document.body.style.overflow = "";
+    };
+  }, [navOpen]);
+
+  // Escape closes the drawer.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setNavOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -70,12 +100,36 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
         } as React.CSSProperties
       }
     >
+      {navOpen && (
+        <div
+          className="admin-nav-overlay"
+          onClick={() => setNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       <aside
-        className="admin-sidebar"
+        className={`admin-sidebar${navOpen ? " admin-sidebar-open" : ""}`}
         style={{ background: "var(--surface-2)", padding: "18px 14px" }}
       >
-        <div style={{ marginBottom: 18, paddingLeft: 4 }}>
+        <div
+          style={{
+            marginBottom: 18,
+            paddingLeft: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <FinuerLogo href="/" height={44} />
+          <button
+            type="button"
+            className="admin-nav-close"
+            aria-label="Close menu"
+            onClick={() => setNavOpen(false)}
+          >
+            <FiX size={20} />
+          </button>
         </div>
 
         {/* Profile card — identity only (revenue/growth moved to the dashboard) */}
@@ -157,7 +211,16 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
           className="admin-header"
           style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, maxWidth: 460 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, maxWidth: 460 }}>
+            <button
+              type="button"
+              className="admin-nav-hamburger"
+              aria-label="Open navigation menu"
+              aria-expanded={navOpen}
+              onClick={() => setNavOpen(true)}
+            >
+              <FiMenu size={20} />
+            </button>
             <CommandPalette />
           </div>
 
