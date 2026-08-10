@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (!user) return err("Invalid credentials", 401);
+  if (!user.passwordHash) return err("This account uses Google or OTP login. Please use those options.", 401);
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) return err("Invalid credentials", 401);
