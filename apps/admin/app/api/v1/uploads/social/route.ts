@@ -1,14 +1,23 @@
 import { NextRequest } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import { randomUUID } from "crypto";
 import { ok, err } from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/auth";
+import { uploadToR2 } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
 
-const IMAGE_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
-const VIDEO_TYPES = new Set(["video/mp4", "video/quicktime", "video/webm"]);
+const IMAGE_TYPES: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+const VIDEO_TYPES: Record<string, string> = {
+  "video/mp4": "mp4",
+  "video/quicktime": "mov",
+  "video/webm": "webm",
+};
+
 const MAX_IMAGE = 10 * 1024 * 1024;
 const MAX_VIDEO = 50 * 1024 * 1024;
 
@@ -28,36 +37,15 @@ export async function POST(req: NextRequest) {
   if (!(file instanceof File)) return err("file is required");
 
   const isVideo = kind === "video";
-  const allowed = isVideo ? VIDEO_TYPES : IMAGE_TYPES;
-  if (!allowed.has(file.type)) {
-    return err(`Unsupported ${isVideo ? "video" : "image"} format`);
-  }
+  const typeMap = isVideo ? VIDEO_TYPES : IMAGE_TYPES;
+  const ext = typeMap[file.type];
+  if (!ext) return err(`Unsupported ${isVideo ? "video" : "image"} format`);
 
   const max = isVideo ? MAX_VIDEO : MAX_IMAGE;
-  if (file.size > max) {
-    return err(`File too large (max ${isVideo ? "50MB" : "10MB"})`);
-  }
+  if (file.size > max) return err(`File too large (max ${isVideo ? "50MB" : "10MB"})`);
 
-  const ext =
-    file.type === "image/jpeg" || file.type === "image/jpg"
-      ? "jpg"
-      : file.type === "image/png"
-        ? "png"
-        : file.type === "image/webp"
-          ? "webp"
-          : file.type === "video/quicktime"
-            ? "mov"
-            : file.type === "video/webm"
-              ? "webm"
-              : "mp4";
-
-  const dir = path.join(process.cwd(), "public", "uploads", "social", String(auth.userId));
-  await mkdir(dir, { recursive: true });
-  const filename = `${randomUUID()}.${ext}`;
-  const abs = path.join(dir, filename);
   const buf = Buffer.from(await file.arrayBuffer());
-  await writeFile(abs, buf);
+  const url = await uploadToR2(buf, file.type, `social/${auth.userId}`, ext);
 
-  const url = `/uploads/social/${auth.userId}/${filename}`;
   return ok({ url });
 }

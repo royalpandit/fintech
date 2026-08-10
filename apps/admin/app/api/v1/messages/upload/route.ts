@@ -1,13 +1,10 @@
 import { NextRequest } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import { randomUUID } from "crypto";
 import { ok, err } from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/auth";
+import { uploadToR2 } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
 
-// Images render inline as previews; everything else is offered as a download.
 const IMAGE_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/jpg": "jpg",
@@ -28,8 +25,8 @@ const DOC_TYPES: Record<string, string> = {
   "text/csv": "csv",
 };
 
-const MAX_IMAGE = 10 * 1024 * 1024; // 10MB
-const MAX_DOC = 25 * 1024 * 1024; // 25MB
+const MAX_IMAGE = 10 * 1024 * 1024;
+const MAX_DOC = 25 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req);
@@ -52,19 +49,11 @@ export async function POST(req: NextRequest) {
   }
 
   const max = isImage ? MAX_IMAGE : MAX_DOC;
-  if (file.size > max) {
-    return err(`File too large (max ${isImage ? "10MB" : "25MB"})`);
-  }
+  if (file.size > max) return err(`File too large (max ${isImage ? "10MB" : "25MB"})`);
 
   const ext = isImage ? IMAGE_TYPES[file.type] : DOC_TYPES[file.type];
-  const dir = path.join(process.cwd(), "public", "uploads", "chat", String(auth.userId));
-  await mkdir(dir, { recursive: true });
-  const filename = `${randomUUID()}.${ext}`;
-  await writeFile(path.join(dir, filename), Buffer.from(await file.arrayBuffer()));
+  const buf = Buffer.from(await file.arrayBuffer());
+  const url = await uploadToR2(buf, file.type, `chat/${auth.userId}`, ext);
 
-  return ok({
-    url: `/uploads/chat/${auth.userId}/${filename}`,
-    type: isImage ? "image" : "file",
-    name: file.name,
-  });
+  return ok({ url, type: isImage ? "image" : "file", name: file.name });
 }
