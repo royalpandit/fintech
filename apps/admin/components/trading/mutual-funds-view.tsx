@@ -12,7 +12,13 @@ type MutualFund = {
   date: string;
 };
 
-type Returns = { r3m: number | null; r6m: number | null; r1y: number | null };
+type Returns = {
+  r3m: number | null;
+  r6m: number | null;
+  r1y: number | null;
+  r3y: number | null;
+  r5y: number | null;
+};
 
 function cleanCategory(c: string): string {
   const m = c.match(/\(([^)]+)\)/);
@@ -25,6 +31,8 @@ const inr = (n: number) =>
 const SORTS = [
   { key: "name", label: "Name" },
   { key: "r1y", label: "1Y return" },
+  { key: "r3y", label: "3Y return" },
+  { key: "r5y", label: "5Y return" },
   { key: "r6m", label: "6M return" },
   { key: "r3m", label: "3M return" },
 ] as const;
@@ -169,13 +177,15 @@ export default function MutualFundsView() {
                 <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>3M</th>
                 <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>6M</th>
                 <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>1Y</th>
+                <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>3Y</th>
+                <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>5Y</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>Loading funds…</td></tr>
+                <tr><td colSpan={8} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>Loading funds…</td></tr>
               ) : sorted.length === 0 ? (
-                <tr><td colSpan={6} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>No funds matched “{q.trim()}”.</td></tr>
+                <tr><td colSpan={8} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>No funds matched “{q.trim()}”.</td></tr>
               ) : (
                 sorted.map((f) => {
                   const ret = returns[f.code];
@@ -190,6 +200,8 @@ export default function MutualFundsView() {
                       <td style={{ padding: "12px 16px", textAlign: "right" }}><ReturnCell v={ret?.r3m ?? null} /></td>
                       <td style={{ padding: "12px 16px", textAlign: "right" }}><ReturnCell v={ret?.r6m ?? null} /></td>
                       <td style={{ padding: "12px 16px", textAlign: "right" }}><ReturnCell v={ret?.r1y ?? null} /></td>
+                      <td style={{ padding: "12px 16px", textAlign: "right" }}><ReturnCell v={ret?.r3y ?? null} /></td>
+                      <td style={{ padding: "12px 16px", textAlign: "right" }}><ReturnCell v={ret?.r5y ?? null} /></td>
                     </tr>
                   );
                 })
@@ -224,6 +236,8 @@ export default function MutualFundsView() {
                     <div><span>3M</span><ReturnCell v={ret?.r3m ?? null} /></div>
                     <div><span>6M</span><ReturnCell v={ret?.r6m ?? null} /></div>
                     <div><span>1Y</span><ReturnCell v={ret?.r1y ?? null} /></div>
+                    <div><span>3Y</span><ReturnCell v={ret?.r3y ?? null} /></div>
+                    <div><span>5Y</span><ReturnCell v={ret?.r5y ?? null} /></div>
                   </div>
                 </div>
               );

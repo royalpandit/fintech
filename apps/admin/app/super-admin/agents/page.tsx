@@ -27,9 +27,21 @@ interface Agent {
 
 const AVATAR_PRESETS = ["🤖", "💬", "📈", "💡", "🧠", "🦉", "🎯", "🛡️", "🚀", "💹", "🧾", "🔍"];
 
+const DOC_CAPABILITY = `
+
+# Documents
+Users can attach PDF or Word (.docx) files. When a document is included in a message, read it carefully, summarize key points, and explain any tables clearly. Do not invent figures that are not in the document.`;
+
 const empty = () => ({
-  name: "", description: "", systemPrompt: "", avatar: "🤖",
-  model: "gemini-flash-latest", temperature: 0.7, isActive: true,
+  name: "",
+  description: "",
+  systemPrompt:
+    "# Role & Objective\nYou are a helpful finance assistant for Finuer users.\n\n# Style\nBe clear, concise, and use Indian market context when relevant." +
+    DOC_CAPABILITY,
+  avatar: "🤖",
+  model: "gemini-flash-latest",
+  temperature: 0.7,
+  isActive: true,
 });
 
 function getToken() {
@@ -118,7 +130,9 @@ export default function AgentsPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 20 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: "var(--text)" }}>AI Agents</h1>
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-muted)" }}>Create custom Gemini agents — like Gemini Gems — for Virtual Lab users</p>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-muted)" }}>
+            Create custom Gemini agents for Virtual Lab — every agent supports PDF / Word (.docx) attachments
+          </p>
         </div>
         <button onClick={openCreate} style={{ padding: "10px 22px", background: "#1a73e8", color: "#fff", border: "none", borderRadius: 24, fontWeight: 600, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>
           Create agent
@@ -252,8 +266,11 @@ export default function AgentsPage() {
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>Instructions</label>
                 <textarea value={form.systemPrompt} onChange={e => f("systemPrompt", e.target.value)}
                   rows={10}
-                  placeholder={"# Role & Objective\nYou are a…\n\n# Core Constraints\n1. …\n2. …"}
+                  placeholder={"# Role & Objective\nYou are a…\n\n# Documents\nUsers can attach PDF or Word (.docx)…"}
                   style={{ width: "100%", padding: "12px 14px", border: "1.5px solid var(--border)", borderRadius: 8, fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit", lineHeight: 1.6, color: "var(--text)", boxSizing: "border-box" }} />
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--text-muted)", lineHeight: 1.45 }}>
+                  PDF / Word attach is built into every chat UI — keep a short Documents section so the model handles uploads well.
+                </p>
               </div>
 
               {/* Model + Temperature — collapsed "advanced" row */}

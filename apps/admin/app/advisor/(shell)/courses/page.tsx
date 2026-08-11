@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { FiGlobe, FiEdit3 } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
+import { canType } from "@/lib/capabilities-server";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,14 @@ export default async function AdvisorCoursesPage() {
   const token = cookies().get("access_token")?.value ?? null;
   const auth = await requireAuthToken(token);
   if (!auth) redirect("/login");
+
+  const profile = await prisma.advisorProfile.findUnique({
+    where: { userId: auth.userId },
+    select: { professionalType: true },
+  });
+  if (!(await canType(profile?.professionalType ?? null, "course.sell"))) {
+    redirect("/advisor/dashboard");
+  }
 
   const courses = await prisma.course.findMany({
     where: { advisorUserId: auth.userId, deletedAt: null },

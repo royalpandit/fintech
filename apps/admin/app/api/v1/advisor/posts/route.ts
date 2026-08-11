@@ -248,6 +248,9 @@ export async function POST(req: NextRequest) {
   // Optional boost chosen at create time. Only activates for auto-approved posts
   // (a flagged post can't be promoted). No payment is processed.
   const boostTierObj = getBoostTier(body.boostTier);
+  if (boostTierObj && !(await canType(profile?.professionalType ?? null, "post.boost"))) {
+    return err("Boosting posts is not available for your professional type", 403);
+  }
   const willBoost = Boolean(boostTierObj) && complianceStatus === "approved";
   const boostedUntil =
     willBoost && boostTierObj

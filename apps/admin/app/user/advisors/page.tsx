@@ -119,7 +119,7 @@ export default async function UserAdvisorsPage({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateColumns: typeFilter === "listed_company" ? "repeat(3, 1fr)" : "repeat(4, 1fr)",
           gap: 12,
           marginBottom: 20,
         }}
@@ -128,7 +128,10 @@ export default async function UserAdvisorsPage({
           { label: "Verified Professionals", value: totalAdvisors.toLocaleString(), color: "#10b981" },
           { label: "Avg Accuracy", value: "78%", color: "#0ea5e9" },
           { label: "Posts (30d)", value: advisorMetrics.reduce((s, m) => s + (m._sum.postsCount ?? 0), 0).toLocaleString(), color: "#f59e0b" },
-          { label: "Total Subscribers", value: advisorMetrics.reduce((s, m) => s + (m._sum.subscribersCount ?? 0), 0).toLocaleString(), color: "#7c3aed" },
+          // Listed companies do not sell subscriptions — hide the subs aggregate for that filter.
+          ...(typeFilter === "listed_company"
+            ? []
+            : [{ label: "Total Subscribers", value: advisorMetrics.reduce((s, m) => s + (m._sum.subscribersCount ?? 0), 0).toLocaleString(), color: "#7c3aed" }]),
         ].map((s) => (
           <article
             key={s.label}
@@ -279,10 +282,13 @@ export default async function UserAdvisorsPage({
                   </p>
                 )}
 
+                {(() => {
+                  const isListed = adv.advisorProfile?.professionalType === "listed_company";
+                  return (
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gridTemplateColumns: isListed ? "repeat(2, 1fr)" : "repeat(3, 1fr)",
                     gap: 8,
                     paddingTop: 12,
                     marginTop: "auto",
@@ -296,12 +302,14 @@ export default async function UserAdvisorsPage({
                       {m?.posts ?? 0}
                     </p>
                   </div>
+                  {!isListed && (
                   <div>
                     <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>Subs</p>
                     <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
                       {m?.subs ?? 0}
                     </p>
                   </div>
+                  )}
                   <div>
                     <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>Exp</p>
                     <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
@@ -311,6 +319,8 @@ export default async function UserAdvisorsPage({
                     </p>
                   </div>
                 </div>
+                  );
+                })()}
 
                 <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
                   <Link

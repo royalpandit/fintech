@@ -2,10 +2,14 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
+import { advisorCan } from "@/lib/capabilities-server";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireRole(req, ["advisor"]);
   if (!auth) return err("Forbidden", 403);
+  if (!(await advisorCan(auth.userId, "course.sell"))) {
+    return err("Courses are not available for your professional type", 403);
+  }
 
   const courseId = Number(params.id);
   if (!Number.isFinite(courseId)) return err("Invalid id");

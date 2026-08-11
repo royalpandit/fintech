@@ -579,17 +579,19 @@ html {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 20px 20px max(28px, env(safe-area-inset-bottom));
+  padding: 16px 20px max(24px, env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
+  gap: 16px;
+  justify-content: flex-start; /* keep links + actions stacked — no empty mid-gap */
 }
 
 .lp-nav-drawer--mobile .lp-nav {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 4px;
-  margin-bottom: 24px;
+  gap: 2px;
+  margin-bottom: 0;
 }
 
 /* Each row eases in on its own beat */
@@ -600,8 +602,8 @@ html {
 }
 
 .lp-nav-drawer--mobile .lp-nav a {
-  padding: 14px 16px;
-  font-size: 1rem;
+  padding: 12px 14px;
+  font-size: 0.98rem;
   font-weight: 600;
   border-radius: var(--r-sm);
   white-space: normal;
@@ -620,9 +622,11 @@ html {
 .lp-nav-drawer--mobile .lp-header-actions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   align-items: stretch;
-  margin-top: auto;
+  margin-top: 4px; /* was auto — caused the huge whitespace */
+  padding-top: 16px;
+  border-top: 1px solid var(--lp-border);
 }
 
 .lp-nav-drawer--mobile .lp-btn-login {
@@ -2886,11 +2890,11 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
 
   /* Hero */
   .lp-hero {
-    padding: 44px 0 40px;
+    padding: 28px 0 28px;
   }
 
   .lp-hero-grid {
-    gap: 36px;
+    gap: 24px;
   }
 
   .lp-hero-visual {
@@ -2903,12 +2907,13 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
 
   /* Keep the phone tucked at the desktop's corner, just smaller */
   .lp-device-combo {
-    padding-right: 48px;
-    padding-bottom: 16px;
+    padding-right: 36px;
+    padding-bottom: 8px;
+    max-width: 100%;
   }
 
   .lp-device-phone {
-    width: 128px;
+    width: 112px;
   }
 
   /* Lighter ambient load on phones: fewer blobs, no particle layer */
@@ -2922,37 +2927,53 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
   .lp-bg-grid { opacity: 0.28; }
 
   .lp-hero h1 {
-    font-size: clamp(2rem, 8.4vw, 2.7rem);
+    font-size: clamp(1.85rem, 8vw, 2.4rem);
+    letter-spacing: -0.03em;
+    margin-bottom: 12px;
   }
 
   .lp-hero-lead {
-    font-size: 1rem;
+    font-size: 0.95rem;
+    line-height: 1.55;
     max-width: none;
-    margin-bottom: 28px;
+    margin-bottom: 20px;
   }
 
   .lp-hero-ctas {
     flex-direction: column;
     align-items: stretch;
-    margin-bottom: 32px;
+    gap: 10px;
+    margin-bottom: 22px;
   }
 
   .lp-hero-ctas .lp-btn-primary,
   .lp-hero-ctas .lp-btn-outline {
     justify-content: center;
     width: 100%;
-    padding: 15px 20px;
+    padding: 14px 18px;
+  }
+
+  .lp-trust-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+
+  .lp-trust-item {
+    font-size: 0.8rem;
+    gap: 8px;
   }
 
   .lp-social-proof {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 10px;
+    margin-top: 4px;
   }
 
   /* Ticker */
   .lp-ticker {
-    padding: 4px 0 40px;
+    padding: 0 0 28px;
   }
 
   .lp-ticker-row {
@@ -2972,50 +2993,57 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
     padding-right: var(--lp-gutter);
   }
 
-  /* Sections */
+  /* Sections — tighter rhythm on mobile */
   .lp-section {
-    padding: 48px 0;
+    padding: 40px 0;
   }
 
   .lp-section-head {
-    margin-bottom: 32px;
+    margin-bottom: 22px;
   }
 
   .lp-section-head h2 {
-    font-size: 1.65rem;
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  .lp-section-head p {
+    margin-top: 8px;
+    font-size: 0.92rem;
+    line-height: 1.5;
   }
 
   .lp-features-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 12px;
   }
 
   .lp-feature-card {
-    padding: 24px;
+    padding: 20px;
   }
 
   .lp-split {
-    gap: 36px;
+    gap: 28px;
   }
 
   .lp-split.surface {
     width: 100%;
-    padding: 28px 22px;
+    padding: 24px 18px;
     border-radius: var(--r-xl);
   }
 
   .lp-split-title {
-    font-size: 1.65rem;
+    font-size: 1.45rem;
   }
 
   .lp-advisors-head {
     flex-direction: column;
     align-items: stretch;
-    gap: 20px;
+    gap: 16px;
   }
 
   .lp-advisors-head .lp-section-head {
-    text-align: center;
+    text-align: left;
   }
 
   .lp-advisors-head .lp-btn-outline {
@@ -3025,64 +3053,67 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
 
   .lp-advisor-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 12px;
   }
 
   /* Carousels — flatten the perspective so cards stay legible */
   .lp-coverflow-stage {
-    height: 400px;
+    height: 360px;
     perspective: 1100px;
   }
 
   .lp-deck-tabs {
-    margin-bottom: 26px;
+    margin-bottom: 20px;
+    gap: 8px;
   }
 
   .lp-deck-tab {
-    padding: 9px 16px;
-    font-size: 0.8rem;
+    padding: 8px 14px;
+    font-size: 0.78rem;
   }
 
   .lp-deck-stage {
-    height: 400px;
+    height: 360px;
     perspective: 1200px;
   }
 
   .lp-deck-caption {
     flex-direction: column;
     align-items: flex-start;
-    gap: 18px;
-    margin-top: 22px;
+    gap: 14px;
+    margin-top: 18px;
   }
 
   .lp-modal-card {
-    padding: 30px 24px 26px;
+    padding: 28px 20px 22px;
     border-radius: var(--r-xl);
   }
 
   .lp-modal-card h2 {
-    font-size: 1.45rem;
+    font-size: 1.35rem;
   }
 
   .lp-community-stats {
     flex-direction: row;
-    gap: 24px;
+    flex-wrap: wrap;
+    gap: 16px 20px;
   }
 
-  .lp-stat strong { font-size: 1.6rem; }
+  .lp-stat strong { font-size: 1.45rem; }
 
   .lp-cta {
-    padding-bottom: 64px;
+    padding-bottom: 48px;
   }
 
   .lp-cta-inner {
-    padding: 48px 24px;
+    padding: 36px 20px;
     border-radius: var(--r-xl);
   }
 
   .lp-cta-btns {
     flex-direction: column;
     align-items: stretch;
+    gap: 10px;
   }
 
   .lp-cta-btns .lp-btn-primary {
@@ -3091,17 +3122,50 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
   }
 
   .lp-footer {
-    padding: 48px 0 32px;
+    padding: 40px 0 28px;
   }
 
   .lp-footer-grid {
-    grid-template-columns: 1fr;
-    gap: 32px;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 20px;
+  }
+
+  .lp-footer-brand {
+    grid-column: 1 / -1;
+    margin-bottom: 4px;
+  }
+
+  .lp-footer-brand p {
+    margin-top: 10px;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    max-width: 36ch;
+  }
+
+  .lp-footer-col h4 {
+    margin-bottom: 10px;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+  }
+
+  .lp-footer-col a,
+  .lp-footer-col li {
+    font-size: 0.88rem;
+    line-height: 1.7;
+  }
+
+  .lp-footer-social {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
   }
 
   .lp-footer-bottom {
     flex-direction: column;
     text-align: center;
+    gap: 8px;
+    margin-top: 28px;
+    padding-top: 20px;
   }
 
   /* Mock panels scroll horizontally again and stop floating */
@@ -3144,17 +3208,37 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
   }
 
   .lp-hero h1 {
-    font-size: 1.95rem;
+    font-size: 1.85rem;
     letter-spacing: -0.03em;
+    margin-bottom: 10px;
+  }
+
+  .lp-hero-lead {
+    margin-bottom: 16px;
+    font-size: 0.92rem;
+  }
+
+  .lp-hero {
+    padding: 22px 0 20px;
   }
 
   .lp-trust-row {
     grid-template-columns: 1fr;
-    gap: 11px;
+    gap: 10px;
+    margin-bottom: 18px;
   }
 
   .lp-trust-item {
     font-size: 0.78rem;
+  }
+
+  .lp-footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 16px;
+  }
+
+  .lp-footer-brand {
+    grid-column: 1 / -1;
   }
 
   .lp-ticker-card {

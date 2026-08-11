@@ -6,7 +6,13 @@ export const dynamic = "force-dynamic";
 
 // Compute trailing returns for mutual-fund schemes from mfapi.in's free
 // historical-NAV feed. Per-scheme cached for 6h (NAV updates once a day).
-type Returns = { r3m: number | null; r6m: number | null; r1y: number | null };
+type Returns = {
+  r3m: number | null;
+  r6m: number | null;
+  r1y: number | null;
+  r3y: number | null;
+  r5y: number | null;
+};
 
 const cache = new Map<string, { data: Returns; at: number }>();
 const TTL = 6 * 60 * 60 * 1000;
@@ -32,7 +38,7 @@ async function returnsFor(code: string): Promise<Returns> {
   const cached = cache.get(code);
   if (cached && Date.now() - cached.at < TTL) return cached.data;
 
-  const empty: Returns = { r3m: null, r6m: null, r1y: null };
+  const empty: Returns = { r3m: null, r6m: null, r1y: null, r3y: null, r5y: null };
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8_000);
@@ -50,6 +56,7 @@ async function returnsFor(code: string): Promise<Returns> {
     if (!Number.isFinite(latest) || latest <= 0) return empty;
     const now = Date.now();
     const month = 30 * 86_400_000;
+    const year = 365 * 86_400_000;
     const pct = (old: number | null) =>
       old && old > 0 ? Number((((latest - old) / old) * 100).toFixed(2)) : null;
 
@@ -57,6 +64,8 @@ async function returnsFor(code: string): Promise<Returns> {
       r3m: pct(navAt(rows, now - 3 * month)),
       r6m: pct(navAt(rows, now - 6 * month)),
       r1y: pct(navAt(rows, now - 12 * month)),
+      r3y: pct(navAt(rows, now - 3 * year)),
+      r5y: pct(navAt(rows, now - 5 * year)),
     };
     cache.set(code, { data, at: Date.now() });
     return data;

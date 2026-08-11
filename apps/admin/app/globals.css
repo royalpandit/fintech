@@ -3263,9 +3263,12 @@ body.terminal-active .us-content {
 }
 
 .finuer-basket-card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  padding: 18px;
+  overflow: hidden;
   transition:
     box-shadow 0.2s ease,
     transform 0.2s ease;
@@ -3274,9 +3277,13 @@ body.terminal-active .us-content {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
   transform: translateY(-2px);
 }
+.finuer-basket-card--compact {
+  gap: 10px;
+  padding: 16px;
+}
 .finuer-basket-card-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
 }
 .finuer-basket-card-icon {
@@ -3298,21 +3305,37 @@ body.terminal-active .us-content {
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
+  line-height: 1.25;
 }
 .finuer-basket-card-desc {
-  margin: 3px 0 0;
+  margin: 4px 0 0;
   font-size: 12.5px;
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.finuer-basket-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  align-self: center;
 }
 .finuer-basket-plan-badge {
-  flex-shrink: 0;
-  padding: 3px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 10px;
   border-radius: 999px;
   font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  line-height: 1;
 }
 .finuer-basket-plan-badge--free {
   background: rgba(16, 185, 129, 0.14);
@@ -3346,6 +3369,49 @@ body.terminal-active .us-content {
   padding: 12px 14px;
   border-radius: 12px;
   background: var(--surface-2);
+}
+.finuer-basket-rebalance-note {
+  margin: 8px 0 0;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.finuer-basket-lock-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  text-align: center;
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.finuer-basket-lock-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+}
+.finuer-basket-lock-copy {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  max-width: 220px;
+}
+.finuer-basket-lock-cta {
+  margin-top: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--brand-primary, #10b981);
+  color: #fff;
+  font-weight: 600;
+  font-size: 12px;
+  text-decoration: none;
+  pointer-events: auto;
 }
 .finuer-basket-hero-return-label {
   margin: 0;
@@ -4119,12 +4185,13 @@ body.terminal-active .us-content {
   border-color: var(--primary, #0ea5e9);
 }
 .mkt-add-wl-compact {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   gap: 0;
   justify-content: center;
-  border-radius: 9px;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
 .mkt-row:hover {
   background: var(--surface-2);

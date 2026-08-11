@@ -2,12 +2,16 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
+import { advisorCan } from "@/lib/capabilities-server";
 
 export const dynamic = "force-dynamic";
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireRole(req, ["advisor"]);
   if (!auth) return err("Forbidden", 403);
+  if (!(await advisorCan(auth.userId, "report.sell"))) {
+    return err("Reports are not available for your professional type", 403);
+  }
 
   const id = Number(params.id);
   if (!Number.isInteger(id)) return err("Invalid report id");

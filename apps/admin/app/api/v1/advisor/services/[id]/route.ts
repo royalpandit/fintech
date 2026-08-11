@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
 import { isServiceCategory } from "@/lib/subscription-services";
+import { advisorCan } from "@/lib/capabilities-server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,9 @@ async function owned(advisorUserId: number, id: number) {
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireRole(req, ["advisor"]);
   if (!auth) return err("Forbidden", 403);
+  if (!(await advisorCan(auth.userId, "monetize.paid_subscription"))) {
+    return err("Paid subscriptions are not available for your professional type", 403);
+  }
   const id = Number(params.id);
   if (!(await owned(auth.userId, id))) return err("Service not found", 404);
 
@@ -33,7 +37,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (isServiceCategory(body.category)) data.category = body.category;
   if (typeof body.description === "string") data.description = body.description.trim() || null;
   if (typeof body.price === "number" && body.price >= 0) data.price = body.price;
-  if ("yearlyPrice" in body) data.yearlyPrice = typeof body.yearlyPrice === "number" && body.yearlyPrice > 0 ? body.yearlyPrice : null;
+  if ("yearlyPrice" in body)
+    data.yearlyPrice =
+      typeof body.yearlyPrice === "number" && body.yearlyPrice > 0 ? body.yearlyPrice : null;
   if (typeof body.hasTrial === "boolean") data.hasTrial = body.hasTrial;
   if (typeof body.trialDays === "number" && body.trialDays > 0) data.trialDays = Math.round(body.trialDays);
   if (typeof body.paused === "boolean") data.paused = body.paused;
@@ -46,12 +52,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireRole(req, ["advisor"]);
   if (!auth) return err("Forbidden", 403);
+  if (!(await advisorCan(auth.userId, "monetize.paid_subscription"))) {
+    return err("Paid subscriptions are not available for your professional type", 403);
+  }
   const id = Number(params.id);
   if (!(await owned(auth.userId, id))) return err("Service not found", 404);
 
   // Guard: block deletion while active subscribers exist unless ?force=true.
   const force = new URL(req.url).searchParams.get("force") === "true";
-  const active = await prisma.serviceSubscription.count({ where: { serviceId: id, status: "active" } });
+  const active = await prisma.serviceSubscription.count({
+    where: { serviceId: id, status: "active" },
+  });
   if (active > 0 && !force) {
     return err(`This service has ${active} active subscriber(s). Confirm to delete anyway.`, 409);
   }

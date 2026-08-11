@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
+import { advisorCan } from "@/lib/capabilities-server";
 
 async function assertOwn(courseId: number, advisorUserId: number) {
   return prisma.course.findFirst({
@@ -13,6 +14,9 @@ async function assertOwn(courseId: number, advisorUserId: number) {
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireRole(req, ["advisor"]);
   if (!auth) return err("Forbidden", 403);
+  if (!(await advisorCan(auth.userId, "course.sell"))) {
+    return err("Courses are not available for your professional type", 403);
+  }
 
   const courseId = Number(params.id);
   if (!Number.isFinite(courseId)) return err("Invalid id");
@@ -32,6 +36,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireRole(req, ["advisor"]);
   if (!auth) return err("Forbidden", 403);
+  if (!(await advisorCan(auth.userId, "course.sell"))) {
+    return err("Courses are not available for your professional type", 403);
+  }
 
   const courseId = Number(params.id);
   if (!Number.isFinite(courseId)) return err("Invalid id");
@@ -81,6 +88,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireRole(req, ["advisor"]);
   if (!auth) return err("Forbidden", 403);
+  if (!(await advisorCan(auth.userId, "course.sell"))) {
+    return err("Courses are not available for your professional type", 403);
+  }
 
   const courseId = Number(params.id);
   if (!Number.isFinite(courseId)) return err("Invalid id");

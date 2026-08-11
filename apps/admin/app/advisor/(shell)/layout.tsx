@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireAuthToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import AdvisorShell from "@/components/advisor-shell";
+import { canType } from "@/lib/capabilities-server";
 
 export default async function AdvisorShellLayout({
   children,
@@ -31,6 +32,7 @@ export default async function AdvisorShellLayout({
             sebiRegistrationNo: true,
             verificationFormSubmittedAt: true,
             profileImageUrl: true,
+            professionalType: true,
           },
         },
       },
@@ -59,6 +61,17 @@ export default async function AdvisorShellLayout({
     redirect("/advisor/pending");
   }
 
+  const caps = {
+    paidSubs: await canType(user.advisorProfile?.professionalType ?? null, "monetize.paid_subscription"),
+    courses: await canType(user.advisorProfile?.professionalType ?? null, "course.sell"),
+    reports: await canType(user.advisorProfile?.professionalType ?? null, "report.sell"),
+  };
+  const hiddenModules = [
+    ...(!caps.paidSubs ? ["Subscription Services"] : []),
+    ...(!caps.courses ? ["Courses"] : []),
+    ...(!caps.reports ? ["Reports"] : []),
+  ];
+
   return (
     <AdvisorShell
       currentUser={{
@@ -77,6 +90,7 @@ export default async function AdvisorShellLayout({
         current: todayMetric?.earningsAmount ? Number(todayMetric.earningsAmount) : 0,
         previous: yesterdayMetric?.earningsAmount ? Number(yesterdayMetric.earningsAmount) : 0,
       }}
+      hiddenModules={hiddenModules}
     >
       {children}
     </AdvisorShell>

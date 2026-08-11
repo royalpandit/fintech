@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { ok, err } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
 import { uploadToR2 } from "@/lib/r2";
+import { advisorCan } from "@/lib/capabilities-server";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,9 @@ const MAX_SIZE = 25 * 1024 * 1024;
 export async function POST(req: NextRequest) {
   const auth = await requireRole(req, ["advisor"]);
   if (!auth) return err("Forbidden", 403);
+  if (!(await advisorCan(auth.userId, "report.sell"))) {
+    return err("Only SEBI Research Analysts and Advisory Firms can upload reports", 403);
+  }
 
   let form: FormData;
   try {

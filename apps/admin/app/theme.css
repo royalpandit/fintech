@@ -1143,6 +1143,9 @@ html[data-theme="dark"] .time-range-item.active {
   overflow: hidden;
   background: var(--surface);
 }
+.auth-split > * {
+  min-height: 0; /* allow form column to scroll instead of growing past the viewport */
+}
 
 /* ── Brand / visual panel ── */
 .auth-brand-panel {
@@ -1337,18 +1340,31 @@ html[data-theme="dark"] .time-range-item.active {
   position: relative;
   display: flex;
   flex-direction: column;
+  min-height: 0; /* grid child must shrink so overflow scroll works */
+  height: 100%;
+  overflow: hidden;
   background: var(--surface);
 }
 .auth-form-topbar { position: absolute; top: 16px; right: 18px; z-index: 3; }
 .auth-form-scroll {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 44px 40px;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow-y: scroll; /* always show vertical scrollbar track on register/login */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  display: block; /* avoid flex centering that eats scroll range */
+  padding: 44px 40px 56px;
 }
-.auth-form-inner { width: 100%; max-width: 380px; }
+.auth-form-inner {
+  width: 100%;
+  max-width: 380px;
+  margin-left: auto;
+  margin-right: auto;
+  /* no vertical margin:auto — that breaks scrolling on tall signup forms */
+}
 .auth-form-inner.auth-form-wide { max-width: 460px; }
 .auth-form-mobile-logo { display: none; margin-bottom: 22px; }
 
@@ -1388,10 +1404,10 @@ html[data-theme="dark"] .time-range-item.active {
   }
   .auth-brand-panel { display: none; }
   .auth-form-mobile-logo { display: flex; }
-  .auth-form-scroll { padding: 44px 22px; align-items: flex-start; }
+  .auth-form-scroll { padding: 44px 22px 48px; }
 }
 @media (max-width: 420px) {
-  .auth-form-scroll { padding: 34px 18px; }
+  .auth-form-scroll { padding: 34px 18px 40px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .auth-phone-track { animation: none !important; }

@@ -23,6 +23,8 @@ type AdvisorShellProps = {
   walletBalance: number;
   todayDelta: { current: number; previous: number };
   needsVerification?: boolean;
+  /** Modules to hide from the sidebar (e.g. Subscription Services for listed companies). */
+  hiddenModules?: string[];
 };
 
 function getInitials(name: string): string {
@@ -51,12 +53,14 @@ export default function AdvisorShell({
   walletBalance,
   todayDelta,
   needsVerification = false,
+  hiddenModules = [],
 }: AdvisorShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const hiddenSet = new Set(hiddenModules);
 
   useEffect(() => {
     setNavOpen(false);
@@ -220,6 +224,7 @@ export default function AdvisorShell({
 
         <nav className="admin-nav">
           {ADVISOR_NAV_GROUPS.flatMap((g) => g.modules).map((moduleName) => {
+            if (hiddenSet.has(moduleName)) return null;
             const href = ADVISOR_MODULE_ROUTE_MAP[moduleName];
             if (!href) return null;
             const active = pathname === href || pathname.startsWith(href + "/");

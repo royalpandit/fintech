@@ -11,6 +11,7 @@ import SubscribeButton from "@/components/subscribe-button";
 import { marketPostAudienceWhere } from "@/lib/post-visibility";
 import { professionalTypeLabel } from "@/lib/professional-types";
 import { computeAnalystPerformance } from "@/lib/trades";
+import { can } from "@/lib/capabilities";
 import MessageAdvisorButton from "./MessageAdvisorButton";
 
 export const dynamic = "force-dynamic";
@@ -72,6 +73,12 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
 
   if (!advisor || !advisor.advisorProfile) notFound();
 
+  const professionalType = advisor.advisorProfile.professionalType;
+  // Chart: Paid subscriptions ❌ for listed companies (and creators / brokers).
+  const offersSubscriptions = can(professionalType, "monetize.paid_subscription");
+  const offersCourses = can(professionalType, "course.sell");
+  const offersTradeStats = can(professionalType, "post.entry_target_sl");
+
   // Current user's follow state for this advisor
   const isFollowing = auth
     ? Boolean(
@@ -86,14 +93,15 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
       )
     : false;
 
-  const isSubscribed = auth
-    ? (
-        await prisma.subscription.findUnique({
-          where: { userId_advisorUserId: { userId: auth.userId, advisorUserId } },
-          select: { status: true },
-        })
-      )?.status === "active"
-    : false;
+  const isSubscribed =
+    offersSubscriptions && auth
+      ? (
+          await prisma.subscription.findUnique({
+            where: { userId_advisorUserId: { userId: auth.userId, advisorUserId } },
+            select: { status: true },
+          })
+        )?.status === "active"
+      : false;
 
   const thirty = new Date();
   thirty.setDate(thirty.getDate() - 30);
@@ -279,14 +287,17 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
                 <MessageAdvisorButton
                   advisorId={advisorUserId}
                   isFollowing={isFollowing}
+                  allowsSubscribe={offersSubscriptions}
                 />
-                <SubscribeButton advisorId={advisorUserId} initialSubscribed={isSubscribed} />
+                {offersSubscriptions ? (
+                  <SubscribeButton advisorId={advisorUserId} initialSubscribed={isSubscribed} />
+                ) : null}
               </>
             ) : (
               <AuthGate
                 isAuthenticated={false}
                 promptTitle="Sign in to follow"
-                promptDescription="Follow this advisor to get their latest sentiment in your feed."
+                promptDescription="Follow this profile to get their latest updates in your feed."
               >
                 <button
                   type="button"
@@ -301,7 +312,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
                     cursor: "pointer",
                   }}
                 >
-                  Follow + Subscribe
+                  {offersSubscriptions ? "Follow + Subscribe" : "Follow"}
                 </button>
               </AuthGate>
             )}
@@ -342,19 +353,33 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateColumns: offersSubscriptions ? "repeat(4, 1fr)" : "repeat(3, 1fr)",
           gap: 12,
           marginBottom: 20,
         }}
       >
         {[
-          { label: "Active Subscribers", value: subscriberCount.toLocaleString(), color: "#0ea5e9" },
+          ...(offersSubscriptions
+            ? [{ label: "Active Subscribers", value: subscriberCount.toLocaleString(), color: "#0ea5e9" }]
+            : []),
           {
-            label: "Win Rate",
-            value: performance.winRatePct != null ? `${performance.winRatePct.toFixed(0)}%` : "—",
+            label: offersTradeStats ? "Win Rate" : "Posts",
+            value: offersTradeStats
+              ? performance.winRatePct != null
+                ? `${performance.winRatePct.toFixed(0)}%`
+                : "—"
+              : posts.length.toLocaleString(),
             color: "#16a34a",
           },
-          { label: "Total Trades", value: performance.total.toLocaleString(), color: "#7c3aed" },
+          {
+            label: offersTradeStats ? "Total Trades" : "Experience",
+            value: offersTradeStats
+              ? performance.total.toLocaleString()
+              : advisor.advisorProfile.experienceYears
+                ? `${advisor.advisorProfile.experienceYears}y`
+                : "—",
+            color: "#7c3aed",
+          },
           {
             label: "Member Since",
             value: advisor.createdAt.toLocaleDateString("en-US", {
@@ -383,8 +408,8 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
         ))}
       </div>
 
-      {/* Analyst track record (Trades Phase 3) */}
-      {performance.total > 0 && (
+      {/* Analyst track record (Trades Phase 3) — SEBI analysts only per matrix */}
+      {offersTradeStats && performance.total > 0 && (
         <article
           style={{
             background: "var(--surface)",
@@ -532,8 +557,8 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
         )}
       </div>
 
-      {/* Courses */}
-      {courses.length > 0 && (
+      {/* Courses — chart: listed companies ❌ sell courses */}
+      {offersCourses && courses.length > 0 && (
         <>
           <h2 style={{ margin: "0 0 14px", fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
             Courses ({courses.length})

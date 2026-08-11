@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FiTrendingUp } from "react-icons/fi";
 import BoostPicker from "@/components/posts/boost-picker";
@@ -20,6 +20,19 @@ export default function BoostButton({
   const [tier, setTier] = useState<BoostTierId | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [canBoost, setCanBoost] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/v1/advisor/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const caps: string[] = d?.capabilities ?? [];
+        setCanBoost(caps.includes("post.boost"));
+      })
+      .catch(() => {});
+  }, []);
+
+  if (!canBoost) return null;
 
   const active = isBoostActive(boostedUntil);
   const until = boostedUntil ? new Date(boostedUntil) : null;
