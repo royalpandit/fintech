@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/auth";
 import { getSubPlan } from "@/lib/subscription-plans";
+import { canType } from "@/lib/capabilities-server";
 
 export async function POST(
   req: NextRequest,
@@ -17,8 +18,21 @@ export async function POST(
 
   const advisor = await prisma.user.findFirst({
     where: { id: advisorId, role: "advisor" },
+    select: {
+      id: true,
+      advisorProfile: { select: { professionalType: true } },
+    },
   });
   if (!advisor) return err("Advisor not found", 404);
+
+  // Listed companies (and other types without paid-sub capability) cannot take subscribers.
+  const canSellSubs = await canType(
+    advisor.advisorProfile?.professionalType ?? null,
+    "monetize.paid_subscription",
+  );
+  if (!canSellSubs) {
+    return err("This profile does not offer subscriptions", 403);
+  }
 
   // Optional: subscribe to a specific analyst service. Recorded in
   // service_subscriptions; the flat subscription below still grants chat access.

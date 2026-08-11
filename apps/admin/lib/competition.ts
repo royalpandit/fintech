@@ -422,6 +422,7 @@ export type UserCompetitionContext = {
   isAnalyst: boolean;
   isCreator: boolean;
   isFinancialProfessional: boolean;
+  hasFinuerPro?: boolean;
 };
 
 export function resolveEligibleRoleKeys(ctx: UserCompetitionContext): CompetitionRoleKey[] {
@@ -459,7 +460,9 @@ export function canUserAccessCompetition(
   ctx: UserCompetitionContext,
 ): boolean {
   if (visibility === "public" || visibility === "hidden") return visibility === "public";
-  if (visibility === "pro_members") return true;
+  if (visibility === "pro_members") {
+    return Boolean(ctx.hasFinuerPro);
+  }
   if (visibility === "financial_professionals") {
     return ctx.authRole === "advisor" || ctx.isFinancialProfessional;
   }

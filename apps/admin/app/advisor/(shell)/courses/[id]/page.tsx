@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { FiStar } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
+import { canType } from "@/lib/capabilities-server";
 import CourseEditor from "./course-editor";
 import LessonsManager from "./lessons-manager";
 
@@ -18,6 +19,14 @@ export default async function AdvisorCourseDetailPage({ params }: { params: { id
   const token = cookies().get("access_token")?.value ?? null;
   const auth = await requireAuthToken(token);
   if (!auth) redirect("/login");
+
+  const profile = await prisma.advisorProfile.findUnique({
+    where: { userId: auth.userId },
+    select: { professionalType: true },
+  });
+  if (!(await canType(profile?.professionalType ?? null, "course.sell"))) {
+    redirect("/advisor/dashboard");
+  }
 
   const courseId = Number(params.id);
   if (!Number.isFinite(courseId)) notFound();

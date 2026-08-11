@@ -41,6 +41,7 @@ type BasketDetail = Omit<FinuerBasketCardData, "performance"> & {
   methodology?: string | null;
   lastRebalancedAt?: string | null;
   updatedAt?: string;
+  locked?: boolean;
   stocks: Stock[];
   rebalanceEvents?: RebalanceEvent[];
   performance: PerformanceDetail;
@@ -116,18 +117,45 @@ export default function UserFinuerBasketDetailClient() {
 
   const p = basket.performance;
   const totalWeight = (basket.stocks ?? []).reduce((s, x) => s + (x.weightPct ?? 0), 0);
+  const isLocked = Boolean(basket.locked);
 
   return (
     <UserPageSection>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <UserPageBackLink href="/user/finuer-basket">Back to Finuer Basket</UserPageBackLink>
-        <BasketActions basketId={basket.id} />
+        {!isLocked ? <BasketActions basketId={basket.id} /> : null}
       </div>
 
       <div style={{ marginTop: 12, marginBottom: 16 }}>
-        <FinuerBasketCard basket={basket} timePeriod={timePeriod} linkable={false} />
+        <FinuerBasketCard basket={basket} timePeriod={timePeriod} linkable={false} variant="compact" />
       </div>
 
+      {isLocked ? (
+        <div className="user-page-card" style={{ padding: 24, textAlign: "center" }}>
+          <p style={{ margin: "0 0 8px", fontWeight: 700, fontSize: 16 }}>Finuer Pro required</p>
+          <p style={{ margin: "0 0 14px", fontSize: 13, color: "var(--text-muted)" }}>
+            Holdings, methodology, and full performance for this premium basket are available on Finuer Pro.
+          </p>
+          <a
+            href="/user/subscriptions?tab=finuer-pro"
+            style={{
+              display: "inline-block",
+              padding: "10px 16px",
+              borderRadius: 8,
+              background: "var(--brand-primary, #10b981)",
+              color: "#fff",
+              fontWeight: 600,
+              fontSize: 13,
+              textDecoration: "none",
+            }}
+          >
+            View Pro plans
+          </a>
+        </div>
+      ) : null}
+
+      {!isLocked ? (
+      <>
       <nav
         style={{
           display: "flex",
@@ -361,6 +389,8 @@ export default function UserFinuerBasketDetailClient() {
             </tbody>
           </table>
         </div>
+      ) : null}
+      </>
       ) : null}
     </UserPageSection>
   );

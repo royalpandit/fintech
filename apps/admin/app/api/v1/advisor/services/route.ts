@@ -3,19 +3,34 @@ import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
 import { advisorServices, isServiceCategory } from "@/lib/subscription-services";
+import { canType } from "@/lib/capabilities-server";
 
 export const dynamic = "force-dynamic";
+
+async function advisorCanMonetize(userId: number) {
+  const profile = await prisma.advisorProfile.findUnique({
+    where: { userId },
+    select: { professionalType: true },
+  });
+  return canType(profile?.professionalType ?? null, "monetize.paid_subscription");
+}
 
 // Analyst subscription services (plans/bundles). Analyst-only.
 export async function GET(req: NextRequest) {
   const auth = await requireRole(req, ["advisor"]);
   if (!auth) return err("Forbidden", 403);
+  if (!(await advisorCanMonetize(auth.userId))) {
+    return err("Paid subscriptions are not available for your professional type", 403);
+  }
   return ok({ data: await advisorServices(auth.userId) });
 }
 
 export async function POST(req: NextRequest) {
   const auth = await requireRole(req, ["advisor"]);
   if (!auth) return err("Forbidden", 403);
+  if (!(await advisorCanMonetize(auth.userId))) {
+    return err("Paid subscriptions are not available for your professional type (e.g. listed companies)", 403);
+  }
 
   const body = await parseBody<{
     name?: string;

@@ -11,9 +11,15 @@ type Props = {
   advisorId: number;
   isFollowing?: boolean;
   services?: AdvisorServiceCard[];
+  /** When false (e.g. listed companies), never open Subscribe modals. */
+  allowsSubscribe?: boolean;
 };
 
-export default function MessageAdvisorButton({ advisorId, services = [] }: Props) {
+export default function MessageAdvisorButton({
+  advisorId,
+  services = [],
+  allowsSubscribe = true,
+}: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -21,7 +27,9 @@ export default function MessageAdvisorButton({ advisorId, services = [] }: Props
   const [showLegacyPlans, setShowLegacyPlans] = useState(false);
   const [error, setError] = useState("");
 
-  const availableServices = services.filter((s) => s.canSubscribe && !s.isSubscribed);
+  const availableServices = allowsSubscribe
+    ? services.filter((s) => s.canSubscribe && !s.isSubscribed)
+    : [];
   const hasServices = availableServices.length > 0;
 
   async function tryOpenChat(): Promise<"ok" | "gated" | "error"> {
@@ -44,6 +52,10 @@ export default function MessageAdvisorButton({ advisorId, services = [] }: Props
   }
 
   function openSubscribeFlow() {
+    if (!allowsSubscribe) {
+      setError("This profile does not offer subscriptions. You can follow them instead.");
+      return;
+    }
     if (availableServices.length === 1) {
       setSingleService(availableServices[0]);
       return;
@@ -145,7 +157,7 @@ export default function MessageAdvisorButton({ advisorId, services = [] }: Props
         />
       )}
 
-      {showLegacyPlans && !hasServices && (
+      {showLegacyPlans && allowsSubscribe && !hasServices && (
         <SubscribePlansModal
           advisorId={advisorId}
           title="Subscribe to chat"

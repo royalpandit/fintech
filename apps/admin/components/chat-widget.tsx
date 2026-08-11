@@ -3,12 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  DocumentAttachButton,
+  DocumentAttachChip,
+  useDocumentAttach,
+} from "@/components/agents/document-attach";
 
 type Agent = { id: number; name: string; avatar: string; description: string };
 type Msg = { role: "user" | "model"; content: string };
 
-// The chatbot shows everywhere EXCEPT the admin / super-admin / moderator consoles.
-const HIDDEN_PREFIXES = ["/super-admin", "/admin", "/moderator"];
+// Hidden on staff consoles. Also requires a logged-in user / advisor / admin
+// (see `loggedIn` below) so landing, login, and register stay bubble-free for guests.
+const HIDDEN_PREFIXES = ["/super-admin", "/admin", "/moderator", "/login", "/register"];
+const CHAT_ROLES = new Set(["user", "advisor", "admin", "super_admin"]);
 
 const BUBBLE_SIZE = 56;
 
@@ -22,9 +29,10 @@ function clampBubble(x: number, y: number) {
 
 export default function ChatWidget() {
   const pathname = usePathname();
-  const hidden = HIDDEN_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  const pathHidden = HIDDEN_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
 
   const [agent, setAgent] = useState<Agent | null>(null);
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -32,6 +40,17 @@ export default function ChatWidget() {
   const [needsLogin, setNeedsLogin] = useState(false);
   const sessionRef = useRef<number>(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const {
+    fileRef,
+    docAttachment,
+    uploadingDoc,
+    docError,
+    clearDoc,
+    onPickDocument,
+    buildDocMessage,
+  } = useDocumentAttach();
+
+  const hidden = pathHidden || loggedIn !== true;
 
   // Draggable launcher position (persisted). null until measured on the client.
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
@@ -76,6 +95,24 @@ export default function ChatWidget() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  // Only show the bubble when a user / advisor / admin session is active.
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/v1/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!alive) return;
+        const role = j?.user?.role as string | undefined;
+        setLoggedIn(Boolean(role && CHAT_ROLES.has(role)));
+      })
+      .catch(() => {
+        if (alive) setLoggedIn(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [pathname]);
+
   useEffect(() => {
     if (hidden) return;
     fetch("/api/v1/assistant")
@@ -90,13 +127,18 @@ export default function ChatWidget() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, open]);
 
-  if (hidden || !agent) return null;
+  // Wait for auth check so the bubble never flashes on public pages.
+  if (loggedIn === null || hidden || !agent) return null;
 
   async function send() {
-    const text = input.trim();
-    if (!text || sending) return;
+    const typed = input.trim();
+    if ((!typed && !docAttachment) || sending || uploadingDoc) return;
+
+    const { display, messageForModel } = buildDocMessage(typed);
+
     setInput("");
-    setMessages((m) => [...m, { role: "user", content: text }, { role: "model", content: "" }]);
+    clearDoc();
+    setMessages((m) => [...m, { role: "user", content: display }, { role: "model", content: "" }]);
     setSending(true);
 
     const appendToModel = (chunk: string) =>
@@ -118,7 +160,7 @@ export default function ChatWidget() {
       const res = await fetch(`/api/v1/agents/${agent!.id}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, sessionId: sessionRef.current || undefined }),
+        body: JSON.stringify({ message: messageForModel, sessionId: sessionRef.current || undefined }),
       });
       if (res.status === 401) {
         setNeedsLogin(true);
@@ -311,28 +353,47 @@ export default function ChatWidget() {
               </Link>
             </div>
           ) : (
-          <div style={{ display: "flex", gap: 8, padding: 12, borderTop: "1px solid var(--border)" }}>
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void send();
-                }
-              }}
-              placeholder="Type a message…"
-              disabled={sending}
-              style={{ flex: 1, height: 40, padding: "0 12px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--text)", fontSize: 13, outline: "none" }}
-            />
-            <button
-              type="button"
-              onClick={() => void send()}
-              disabled={sending || !input.trim()}
-              style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "none", background: "var(--accent-blue, #2563eb)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: sending ? "wait" : "pointer", opacity: !input.trim() ? 0.6 : 1 }}
-            >
-              Send
-            </button>
+          <div style={{ borderTop: "1px solid var(--border)" }}>
+            {(docAttachment || docError || uploadingDoc) ? (
+              <div style={{ padding: "8px 12px 0" }}>
+                <DocumentAttachChip
+                  docAttachment={docAttachment}
+                  uploadingDoc={uploadingDoc}
+                  docError={docError}
+                  onClear={clearDoc}
+                />
+              </div>
+            ) : null}
+            <div style={{ display: "flex", gap: 8, padding: 12, alignItems: "center" }}>
+              <DocumentAttachButton
+                fileRef={fileRef}
+                disabled={sending}
+                uploadingDoc={uploadingDoc}
+                onPick={(f) => void onPickDocument(f)}
+                size={40}
+              />
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void send();
+                  }
+                }}
+                placeholder={docAttachment ? "Add a question about the doc…" : "Type a message…"}
+                disabled={sending || uploadingDoc}
+                style={{ flex: 1, height: 40, padding: "0 12px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--text)", fontSize: 13, outline: "none" }}
+              />
+              <button
+                type="button"
+                onClick={() => void send()}
+                disabled={sending || uploadingDoc || (!input.trim() && !docAttachment)}
+                style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "none", background: "var(--accent-blue, #2563eb)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: sending ? "wait" : "pointer", opacity: !input.trim() && !docAttachment ? 0.6 : 1 }}
+              >
+                Send
+              </button>
+            </div>
           </div>
           )}
         </div>

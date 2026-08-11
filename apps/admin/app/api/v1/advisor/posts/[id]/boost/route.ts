@@ -3,12 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
 import { getBoostTier } from "@/lib/post-boost";
+import { advisorCan } from "@/lib/capabilities-server";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireRole(req, ["advisor"]);
   if (!auth) return err("Forbidden", 403);
+  if (!(await advisorCan(auth.userId, "post.boost"))) {
+    return err("Boosting posts is not available for your professional type", 403);
+  }
 
   const id = Number(params.id);
   if (!Number.isInteger(id)) return err("Invalid post id");

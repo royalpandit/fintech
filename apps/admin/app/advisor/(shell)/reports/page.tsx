@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { FiFileText, FiDownload } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
+import { canType } from "@/lib/capabilities-server";
 import ReportComposer from "./report-composer";
 import DeleteReportButton from "./delete-report-button";
 
@@ -23,6 +24,14 @@ export default async function AdvisorReportsPage() {
   const token = cookies().get("access_token")?.value ?? null;
   const auth = await requireAuthToken(token);
   if (!auth) redirect("/login");
+
+  const profile = await prisma.advisorProfile.findUnique({
+    where: { userId: auth.userId },
+    select: { professionalType: true },
+  });
+  if (!(await canType(profile?.professionalType ?? null, "report.sell"))) {
+    redirect("/advisor/dashboard");
+  }
 
   const reports = await prisma.advisorReport.findMany({
     where: { advisorUserId: auth.userId, deletedAt: null },

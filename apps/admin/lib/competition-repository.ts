@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { UserRole } from "@/lib/auth";
+import { userHasFinuerPro } from "@/lib/finuer-pro";
 import {
   deriveEffectiveStatus,
   getParticipationEnd,
@@ -78,6 +79,7 @@ export class CompetitionRepository {
       isAnalyst: advisorProfile?.professionalType === "research_analyst",
       isCreator: basketCount + postCount + groupCount > 0,
       isFinancialProfessional,
+      hasFinuerPro: await userHasFinuerPro(userId, authRole),
     };
   }
 

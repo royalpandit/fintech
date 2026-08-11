@@ -2,12 +2,16 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
+import { advisorCan } from "@/lib/capabilities-server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const auth = await requireRole(req, ["advisor"]);
   if (!auth) return err("Forbidden", 403);
+  if (!(await advisorCan(auth.userId, "course.sell"))) {
+    return err("Courses are not available for your professional type", 403);
+  }
 
   const courses = await prisma.course.findMany({
     where: { advisorUserId: auth.userId, deletedAt: null },
@@ -23,6 +27,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await requireRole(req, ["advisor"]);
   if (!auth) return err("Forbidden", 403);
+  if (!(await advisorCan(auth.userId, "course.sell"))) {
+    return err("Courses are not available for your professional type (e.g. listed companies)", 403);
+  }
 
   const body = await parseBody<{
     title?: string;

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
+import { advisorCan } from "@/lib/capabilities-server";
 
 async function assertOwned(courseId: number, lessonId: number, userId: number) {
   const lesson = await prisma.courseLesson.findFirst({
@@ -20,6 +21,9 @@ export async function PATCH(
 ) {
   const auth = await requireRole(req, ["advisor"]);
   if (!auth) return err("Forbidden", 403);
+  if (!(await advisorCan(auth.userId, "course.sell"))) {
+    return err("Courses are not available for your professional type", 403);
+  }
 
   const courseId = Number(params.id);
   const lessonId = Number(params.lessonId);
@@ -73,6 +77,9 @@ export async function DELETE(
 ) {
   const auth = await requireRole(req, ["advisor"]);
   if (!auth) return err("Forbidden", 403);
+  if (!(await advisorCan(auth.userId, "course.sell"))) {
+    return err("Courses are not available for your professional type", 403);
+  }
 
   const courseId = Number(params.id);
   const lessonId = Number(params.lessonId);

@@ -71,14 +71,16 @@ export default function NewPostPage() {
 
   // Only SEBI-tier professionals may post Entry/Target/SL (buy-sell) calls — the
   // API enforces this; here we hide the trade fields for everyone else. Optimistic
-  // until the profile loads.
+  // until the profile loads. Same for post.boost.
   const [canTrade, setCanTrade] = useState(true);
+  const [canBoost, setCanBoost] = useState(true);
   useEffect(() => {
     fetch("/api/v1/advisor/profile")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         const caps: string[] = d?.capabilities ?? [];
         setCanTrade(caps.includes("post.entry_target_sl"));
+        setCanBoost(caps.includes("post.boost"));
       })
       .catch(() => {});
   }, []);
@@ -650,13 +652,15 @@ export default function NewPostPage() {
               )}
             </div>
 
-            <div style={{ marginTop: 20 }}>
-              <label className="metric-label">Boost this post (optional)</label>
-              <p style={{ margin: "2px 0 8px", fontSize: 12, color: "var(--text-muted)" }}>
-                Promote your post to the top of the feed. Boost activates once the post is approved.
-              </p>
-              <BoostPicker selected={boostTier} onSelect={setBoostTier} includeNone />
-            </div>
+            {canBoost ? (
+              <div style={{ marginTop: 20 }}>
+                <label className="metric-label">Boost this post (optional)</label>
+                <p style={{ margin: "2px 0 8px", fontSize: 12, color: "var(--text-muted)" }}>
+                  Promote your post to the top of the feed. Boost activates once the post is approved.
+                </p>
+                <BoostPicker selected={boostTier} onSelect={setBoostTier} includeNone />
+              </div>
+            ) : null}
 
             <div style={{ marginTop: 20 }}>
               <label

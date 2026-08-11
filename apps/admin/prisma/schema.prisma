@@ -2009,14 +2009,17 @@ model NotificationPreference {
 }
 
 model UserPreference {
-  id               Int      @id @default(autoincrement())
-  userId           Int      @unique @map("user_id")
-  theme            String   @default("light") @db.VarChar(20)
-  language         String   @default("en") @db.VarChar(10)
-  defaultCurrency  String   @default("INR") @map("default_currency") @db.VarChar(10)
-  biometricEnabled Boolean  @default(false) @map("biometric_enabled")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  id               Int       @id @default(autoincrement())
+  userId           Int       @unique @map("user_id")
+  theme            String    @default("light") @db.VarChar(20)
+  language         String    @default("en") @db.VarChar(10)
+  defaultCurrency  String    @default("INR") @map("default_currency") @db.VarChar(10)
+  biometricEnabled Boolean   @default(false) @map("biometric_enabled")
+  /// Finuer Pro entitlement (admin-granted until Razorpay is wired).
+  finuerProPlanId     String?   @map("finuer_pro_plan_id") @db.VarChar(40)
+  finuerProExpiresAt  DateTime? @map("finuer_pro_expires_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

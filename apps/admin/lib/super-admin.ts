@@ -8,6 +8,7 @@ export const SUPER_ADMIN_MODULES = [
   "AI & Compliance",
   "Analytics",
   "Subscriptions",
+  "Finuer Pro Plans",
   "Payments",
   "Courses",
   "AI Stock Picks",
@@ -30,6 +31,7 @@ export const MODULE_ROUTE_MAP: Record<string, string> = {
   "AI Agents": "/super-admin/agents",
   Analytics: "/super-admin/analytics",
   Subscriptions: "/super-admin/subscriptions",
+  "Finuer Pro Plans": "/super-admin/plans",
   Payments: "/super-admin/payments",
   Courses: "/super-admin/courses",
   "AI Stock Picks": "/super-admin/stock-picks",
@@ -55,7 +57,7 @@ export const NAV_GROUPS: { heading: string; modules: string[] }[] = [
     heading: "Products",
     modules: ["AI Stock Picks", "Finuer Basket", "Competition", "Courses"],
   },
-  { heading: "Revenue", modules: ["Subscriptions", "Payments"] },
+  { heading: "Revenue", modules: ["Subscriptions", "Finuer Pro Plans", "Payments"] },
   { heading: "System", modules: ["Notifications", "Audit Logs", "Settings"] },
 ];
 

@@ -64,3 +64,17 @@ export async function matrixForType(type: ProfessionalType): Promise<
     return { capability, allowed, defaultAllowed: def, changed: allowed !== def };
   });
 }
+
+/** Load advisor professional type for capability checks. */
+export async function advisorProfessionalType(userId: number) {
+  const profile = await prisma.advisorProfile.findUnique({
+    where: { userId },
+    select: { professionalType: true },
+  });
+  return profile?.professionalType ?? null;
+}
+
+/** Whether this advisor user currently holds a capability (defaults + DB overrides). */
+export async function advisorCan(userId: number, cap: Capability): Promise<boolean> {
+  return canType(await advisorProfessionalType(userId), cap);
+}

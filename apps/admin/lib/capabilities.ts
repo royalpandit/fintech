@@ -2,8 +2,9 @@
 // Capability model — encodes the "Roles and permissions in finuer" matrix.
 //
 // This is the SINGLE SOURCE OF TRUTH for what each professional type may do.
-// Nothing here is wired into enforcement yet — call `can()` at feature gates
-// (post composer, subscription setup, boost, etc.) once the matrix is agreed.
+// Defaults match the Roles & Permissions chart. Call `can()` / `canType()` at
+// feature gates (subscriptions, courses, trade posts, etc.). Super-admin can
+// override per type in the Permissions editor (DB matrix).
 //
 // Open decisions baked in (change here, not at call sites):
 //   [1] RIA (investment_advisor) is placed in the "advisor_distributor" tier per

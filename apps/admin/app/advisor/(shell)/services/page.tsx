@@ -1,7 +1,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireAuthToken } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { advisorServices } from "@/lib/subscription-services";
+import { canType } from "@/lib/capabilities-server";
 import ServicesClient from "./services-client";
 import FeaturePromote from "./feature-promote";
 
@@ -11,6 +13,14 @@ export default async function AdvisorServicesPage() {
   const token = cookies().get("access_token")?.value ?? null;
   const auth = await requireAuthToken(token);
   if (!auth || auth.role !== "advisor") redirect("/login");
+
+  const profile = await prisma.advisorProfile.findUnique({
+    where: { userId: auth.userId },
+    select: { professionalType: true },
+  });
+  if (!(await canType(profile?.professionalType ?? null, "monetize.paid_subscription"))) {
+    redirect("/advisor/dashboard");
+  }
 
   const services = await advisorServices(auth.userId);
 
