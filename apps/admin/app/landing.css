@@ -1,88 +1,6 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
-
-/* ═══════════════════════════════════════════════════════════════════════
-   Emerald design tokens — SCOPED to the landing only, so the rest of the app
-   keeps its existing theme. Mirrors the :root/dark blocks from the redesign's
-   theme.css. Only these variables are pulled in; no app-wide theme change.
-   ═══════════════════════════════════════════════════════════════════════ */
-.landing-root {
-  --brand-primary: #10b981;
-  --brand-primary-dark: #059669;
-  --brand-primary-deep: #047857;
-  --brand-accent: #14b8a6;
-  --brand-navy: #0b1220;
-  --brand-success: #16a34a;
-  --brand-danger: #ef4444;
-  --brand-warning: #f59e0b;
-  --brand-primary-rgb: 16, 185, 129;
-  --r-xs: 8px;
-  --r-sm: 12px;
-  --r-md: 16px;
-  --r-lg: 20px;
-  --r-xl: 24px;
-  --r-2xl: 32px;
-  --r-pill: 999px;
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --dur-fast: 0.16s;
-  --dur-base: 0.28s;
-  --dur-slow: 0.6s;
-  --bg: #ffffff;
-  --surface: #ffffff;
-  --band: #f7faf9;
-  --sidebar-bg: #ffffff;
-  --border: #e6ebe9;
-  --border-strong: #d4dcd9;
-  --text: #0b1720;
-  --text-muted: #5f6b76;
-  --hover: #f2f6f4;
-  --surface-2: #f6f8f7;
-  --primary: var(--brand-primary);
-  --primary-2: var(--brand-accent);
-  --primary-text: var(--brand-primary-deep);
-  --primary-soft: rgba(16, 185, 129, 0.1);
-  --primary-soft-2: rgba(16, 185, 129, 0.16);
-  --success: var(--brand-success);
-  --danger: var(--brand-danger);
-  --warning: var(--brand-warning);
-  --shadow-xs: 0 1px 2px rgba(11, 23, 32, 0.04);
-  --shadow-sm: 0 2px 8px rgba(11, 23, 32, 0.05);
-  --shadow-md: 0 8px 24px rgba(11, 23, 32, 0.07);
-  --shadow-lg: 0 18px 48px rgba(11, 23, 32, 0.09);
-  --shadow-xl: 0 32px 80px rgba(11, 23, 32, 0.12);
-  --shadow-primary: 0 10px 30px rgba(16, 185, 129, 0.28);
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.65);
-  --glass-blur: blur(16px) saturate(180%);
-  --nav-active-gradient: linear-gradient(135deg, #059669 0%, #10b981 55%, #34d399 100%);
-  --nav-active-shadow: 0 4px 14px rgba(16, 185, 129, 0.28);
-}
-
-html[data-theme="dark"] .landing-root {
-  --bg: #0a0a0a;
-  --surface: #161616;
-  --band: #101010;
-  --sidebar-bg: #0e0e0e;
-  --border: #262626;
-  --border-strong: #333333;
-  --text: #f5f5f5;
-  --text-muted: #a3a3a3;
-  --hover: #202020;
-  --surface-2: #202020;
-  --primary: #34d399;
-  --primary-text: #6ee7b7;
-  --primary-soft: rgba(52, 211, 153, 0.15);
-  --primary-soft-2: rgba(52, 211, 153, 0.22);
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.45);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.55);
-  --shadow-xl: 0 32px 80px rgba(0, 0, 0, 0.65);
-  --shadow-primary: 0 10px 30px rgba(16, 185, 129, 0.32);
-  --glass-bg: rgba(22, 22, 22, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.08);
-}
+/* Type comes from Geist, self-hosted via next/font in app/layout.tsx.
+   The old Google Fonts @import for Inter was removed — it was a render-
+   blocking third-party request for a font we no longer use. */
 
 /* ═══════════════════════════════════════════════════════════════════════
    Finuer landing — premium fintech surface
@@ -108,8 +26,8 @@ html[data-theme="dark"] .landing-root {
   --lp-container: min(1200px, calc(100% - 48px));
   --lp-gutter: 24px;
 
-  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+  font-family: var(--font-sans);
+  font-feature-settings: "cv01", "ss01";
   color: var(--lp-text);
   background: var(--lp-bg);
   -webkit-font-smoothing: antialiased;
@@ -157,10 +75,7 @@ html {
   position: sticky;
   top: 0;
   z-index: 100;
-  /* Subtle glass even at rest — light frost so the hero reads through it */
-  background: color-mix(in srgb, var(--lp-bg) 52%, transparent);
-  -webkit-backdrop-filter: blur(8px) saturate(140%);
-  backdrop-filter: blur(8px) saturate(140%);
+  background: transparent;
   border-bottom: 1px solid transparent;
   transition:
     background-color var(--dur-base) var(--ease-out),
@@ -259,7 +174,7 @@ html {
 
 .lp-nav a.is-active {
   color: var(--lp-text);
-  font-weight: 650;
+  font-weight: 560;
 }
 
 .lp-nav-chevron {
@@ -279,73 +194,12 @@ html {
   flex-shrink: 0;
 }
 
-/* ── StockLink-style top-bar controls ───────────────────────────────────── */
-/* Single theme toggle button */
-.lp-theme-toggle {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 1px solid var(--lp-border);
-  background: var(--lp-surface);
-  color: var(--lp-muted);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition:
-    background-color var(--dur-fast) var(--ease-out),
-    border-color var(--dur-fast) var(--ease-out),
-    color var(--dur-fast) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
-}
-.lp-theme-toggle:hover {
-  color: var(--lp-primary-text);
-  border-color: var(--lp-primary);
-  background: var(--band);
-  transform: rotate(-12deg);
-}
-.lp-theme-toggle:active {
-  transform: scale(0.94);
-}
-
-/* "Start Now" pill with circular arrow */
-.lp-btn-start {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  text-decoration: none;
-  padding: 6px 7px 6px 17px;
-  border-radius: var(--r-pill);
-  background: var(--lp-gradient);
-  color: #fff;
-  font-size: 0.85rem;
-  font-weight: 700;
-  white-space: nowrap;
-  box-shadow: var(--shadow-primary);
-  transition:
-    transform var(--dur-fast) var(--ease-out),
-    box-shadow var(--dur-fast) var(--ease-out);
-}
-.lp-btn-start:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 16px 40px rgba(16, 185, 129, 0.36);
-}
-.lp-start-arrow {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.22);
-  color: #fff;
-}
-
 /* ── Buttons ─────────────────────────────────────────────────────────── */
 .lp-btn-login {
   text-decoration: none;
   color: var(--lp-text);
   font-size: 0.875rem;
-  font-weight: 650;
+  font-weight: 560;
   padding: 9px 16px;
   border-radius: var(--r-pill);
   transition:
@@ -367,7 +221,7 @@ html {
   background-size: 160% 160%;
   color: #fff;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.01em;
   padding: 12px 22px;
   border-radius: var(--r-pill);
@@ -427,7 +281,7 @@ html {
   background: var(--lp-surface);
   color: var(--lp-text);
   font-size: 0.875rem;
-  font-weight: 650;
+  font-weight: 560;
   padding: 12px 22px;
   border-radius: var(--r-pill);
   border: 1px solid var(--lp-border);
@@ -552,7 +406,7 @@ html {
 
 .lp-nav-drawer-title {
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--lp-text);
 }
@@ -579,19 +433,17 @@ html {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 16px 20px max(24px, env(safe-area-inset-bottom));
+  padding: 20px 20px max(28px, env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  justify-content: flex-start; /* keep links + actions stacked — no empty mid-gap */
 }
 
 .lp-nav-drawer--mobile .lp-nav {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 2px;
-  margin-bottom: 0;
+  gap: 4px;
+  margin-bottom: 24px;
 }
 
 /* Each row eases in on its own beat */
@@ -602,8 +454,8 @@ html {
 }
 
 .lp-nav-drawer--mobile .lp-nav a {
-  padding: 12px 14px;
-  font-size: 0.98rem;
+  padding: 14px 16px;
+  font-size: 1rem;
   font-weight: 600;
   border-radius: var(--r-sm);
   white-space: normal;
@@ -622,11 +474,9 @@ html {
 .lp-nav-drawer--mobile .lp-header-actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   align-items: stretch;
-  margin-top: 4px; /* was auto — caused the huge whitespace */
-  padding-top: 16px;
-  border-top: 1px solid var(--lp-border);
+  margin-top: auto;
 }
 
 .lp-nav-drawer--mobile .lp-btn-login {
@@ -658,124 +508,10 @@ html {
   to { opacity: 1; }
 }
 
-/* ── Route-transition curtain (Log in / Start Now) ───────────────────── */
-/* Portalled to <body>, so it must NOT rely on .landing-root-scoped tokens —
-   all colours/easings here are literal on purpose. */
-.lp-route-curtain {
-  position: fixed;
-  inset: 0;
-  z-index: 10100;
-  display: grid;
-  place-items: center;
-  /* A living, multi-stop emerald→teal gradient that keeps flowing */
-  background: linear-gradient(
-    125deg,
-    #064e3b 0%,
-    #047857 18%,
-    #059669 36%,
-    #10b981 54%,
-    #14b8a6 72%,
-    #2dd4bf 86%,
-    #34d399 100%
-  );
-  background-size: 280% 280%;
-  /* Grows from the exact click point while the gradient drifts */
-  clip-path: circle(0% at var(--rt-x, 50%) var(--rt-y, 50%));
-  animation:
-    lp-curtain-open 0.6s cubic-bezier(0.65, 0, 0.35, 1) forwards,
-    lp-curtain-flow 5s ease-in-out infinite;
-  will-change: clip-path, background-position;
-}
-
-/* Soft radial glow that blooms behind the wordmark */
-.lp-route-curtain::before {
-  content: "";
-  position: absolute;
-  width: 70vmax;
-  height: 70vmax;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.24), transparent 62%);
-  opacity: 0;
-  animation: lp-curtain-glow 0.9s ease-out 0.18s forwards;
-  pointer-events: none;
-}
-
-/* Light sheen sweeping across the fill */
-.lp-route-curtain::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    100deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.16) 50%,
-    transparent 70%
-  );
-  transform: translateX(-100%);
-  animation: lp-curtain-sheen 1s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
-  pointer-events: none;
-}
-
-.lp-route-curtain-inner {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  color: #fff;
-  text-align: center;
-}
-
-.lp-route-mark {
-  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: clamp(2.4rem, 7vw, 4rem);
-  font-weight: 900;
-  letter-spacing: -0.045em;
-  line-height: 1;
-  opacity: 0;
-  transform: translateY(16px) scale(0.9);
-  filter: blur(8px);
-  animation: lp-curtain-reveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.14s forwards;
-  text-shadow: 0 8px 34px rgba(0, 0, 0, 0.2);
-}
-
-.lp-route-label {
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.92);
-  opacity: 0;
-  transform: translateY(10px);
-  animation: lp-curtain-reveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.32s forwards;
-}
-
-@keyframes lp-curtain-open {
-  from { clip-path: circle(0% at var(--rt-x, 50%) var(--rt-y, 50%)); }
-  to { clip-path: circle(150% at var(--rt-x, 50%) var(--rt-y, 50%)); }
-}
-
-@keyframes lp-curtain-flow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-@keyframes lp-curtain-glow {
-  to { opacity: 1; }
-}
-
-@keyframes lp-curtain-sheen {
-  to { transform: translateX(100%); }
-}
-
-@keyframes lp-curtain-reveal {
-  to { opacity: 1; transform: none; filter: blur(0); }
-}
-
 /* ── Hero ────────────────────────────────────────────────────────────── */
 .lp-hero {
   position: relative;
-  padding: 64px 0 48px;
+  padding: 88px 0 72px;
   isolation: isolate;
 }
 
@@ -798,7 +534,7 @@ html {
   border: 1px solid var(--lp-primary-soft);
   color: var(--lp-primary-text);
   font-size: 0.78rem;
-  font-weight: 650;
+  font-weight: 560;
   letter-spacing: -0.005em;
   margin-bottom: 24px;
   box-shadow: var(--shadow-xs);
@@ -814,8 +550,8 @@ html {
 
 .lp-hero h1 {
   margin: 0 0 22px;
-  font-size: clamp(2.4rem, 5vw, 3.9rem);
-  font-weight: 800;
+  font-size: clamp(2.1rem, 4vw, 3.05rem);
+  font-weight: var(--fw-heading-strong);
   line-height: 1.04;
   letter-spacing: -0.038em;
 }
@@ -827,12 +563,43 @@ html {
   color: transparent;
 }
 
+/* Premium glow — scoped to a single word (currently "Succeed").
+   The clipped-text fill can't take a text-shadow, so the halo is a blurred
+   duplicate of the word sitting behind it via ::before. It breathes slowly
+   rather than pulsing, which keeps it elegant instead of flashy. */
+.lp-glow-text {
+  position: relative;
+  display: inline-block;
+  isolation: isolate;
+}
+
+.lp-glow-text::before {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  color: var(--primary);
+  filter: blur(18px);
+  opacity: 0.45;
+  pointer-events: none;
+  animation: glow-breathe 4.5s var(--ease-in-out) infinite;
+}
+
+@keyframes glow-breathe {
+  0%, 100% { opacity: 0.34; filter: blur(16px); }
+  50% { opacity: 0.6; filter: blur(22px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-glow-text::before { animation: none; opacity: 0.4; }
+}
+
 .lp-hero-lead {
   margin: 0 0 34px;
-  font-size: 1.1rem;
-  line-height: 1.7;
+  font-size: 1.18rem;
+  line-height: 1.72;
   color: var(--lp-muted);
-  max-width: 540px;
+  max-width: 560px;
 }
 
 .lp-hero-ctas {
@@ -853,10 +620,10 @@ html {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 0.92rem;
+  font-weight: 500;
   color: var(--lp-text);
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .lp-trust-icon {
@@ -868,7 +635,7 @@ html {
   display: grid;
   place-items: center;
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 600;
   flex-shrink: 0;
   margin-top: 1px;
 }
@@ -894,7 +661,7 @@ html {
   display: grid;
   place-items: center;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #fff;
   transition: transform var(--dur-base) var(--ease-out);
 }
@@ -913,16 +680,16 @@ html {
 
 .lp-stars {
   font-size: 0.95rem;
-  font-weight: 750;
+  font-weight: var(--fw-heading);
   color: var(--lp-text);
   letter-spacing: -0.01em;
 }
 
 .lp-stars small {
   display: block;
-  font-weight: 500;
+  font-weight: 450;
   color: var(--lp-muted);
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   letter-spacing: 0;
 }
 
@@ -931,207 +698,103 @@ html {
   position: relative;
 }
 
-/* ── Hero device combo: desktop dashboard + phone beside it ──────────── */
-.lp-device-combo {
-  position: relative;
-  /* Phone lives mostly to the right of the desktop, so it overlaps just the
-     corner and lets the aurora show around it */
-  padding-right: 104px;
-  padding-bottom: 14px;
-}
-
-.lp-device-desktop {
-  position: relative;
-  z-index: 1;
-}
-
-/* The desktop dashboard fills its column without any inner scrollbars */
-.lp-device-desktop .lp-dashboard-mock {
-  width: 100%;
-  max-width: 100%;
-}
-
-.lp-device-phone {
-  position: absolute;
-  right: -8px;
-  bottom: -8px;
-  z-index: 4;
-  width: 150px;
-  animation: float-y 7s var(--ease-in-out) infinite;
-}
-
-.lp-phone {
-  width: 100%;
-}
-
-.lp-phone-frame {
-  position: relative;
-  border-radius: 26px;
-  /* Thin bezel so the screen dominates and less background is hidden */
-  padding: 4px;
-  background: linear-gradient(158deg, #2b3644, #0d131c);
-  box-shadow:
-    0 20px 44px rgba(11, 23, 32, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
-  /* Rest tilt mirrors the desktop; straightens on hover */
-  transform: perspective(1000px) rotateY(-9deg) rotateX(4deg);
-  transition:
-    transform 0.7s var(--ease-spring),
-    box-shadow 0.7s var(--ease-out);
-  will-change: transform;
-}
-
-.lp-phone-notch {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 44px;
-  height: 5px;
-  border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.3);
-  z-index: 2;
-}
-
-.lp-phone-screen {
-  border-radius: 22px;
-  background: var(--lp-surface);
-  padding: 18px 13px 11px;
-  overflow: hidden;
-}
-
-.lp-phone-head {
+/* Centered row of stat cards above the dashboard mock. In flow rather than
+   absolutely positioned, so there is no overlap at any width. */
+.lp-float-row {
   display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 16px;
+  margin-bottom: 26px;
+  flex-wrap: wrap;
+}
+
+.lp-float-card {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  gap: 10px;
+  padding: 14px 18px;
+  border-radius: var(--r-md);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg);
+  font-size: 0.78rem;
+}
+
+.lp-float-card--returns {
+  flex-direction: column;
+  gap: 2px;
+  animation: float-y 6s var(--ease-in-out) infinite;
+}
+
+.lp-float-card--verified {
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  animation: float-y 7.5s var(--ease-in-out) infinite 0.8s;
 }
 
-.lp-phone-greet {
-  font-size: 11px;
-  font-weight: 650;
-  color: var(--lp-muted);
-}
-
-.lp-phone-chip {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 3px 7px;
-  border-radius: var(--r-pill);
-  background: var(--lp-primary-soft);
-  color: var(--lp-primary-text);
-}
-
-.lp-phone-chip.up { color: var(--lp-primary-text); }
-
-.lp-phone-value {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
+.lp-float-card--verified strong {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
   color: var(--lp-text);
 }
 
-.lp-phone-sub {
-  font-size: 10.5px;
-  font-weight: 650;
-  margin-bottom: 10px;
+.lp-float-label {
+  color: var(--lp-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
 }
 
-.lp-phone-sub.up { color: var(--lp-green); }
-
-.lp-phone-spark {
-  height: 46px;
-  margin-bottom: 12px;
+.lp-float-value {
+  font-size: 1.3rem;
+  font-weight: var(--fw-heading-strong);
+  letter-spacing: -0.02em;
+  color: var(--lp-green);
 }
 
-.lp-phone-spark svg {
-  width: 100%;
-  height: 100%;
+.lp-float-spark {
   display: block;
+  height: 4px;
+  width: 64px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--lp-primary), var(--brand-accent));
 }
 
-.lp-phone-list {
-  height: 92px;
-  overflow: hidden;
-  margin-bottom: 12px;
-  -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent);
-  mask-image: linear-gradient(180deg, #000 82%, transparent);
-}
-
-.lp-phone-scroll {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  --lp-scroll-shift: -74px;
-  animation: lp-auto-scroll 9s var(--ease-in-out) infinite;
-}
-
-.lp-phone-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.lp-phone-dot {
-  width: 8px;
-  height: 8px;
+.lp-float-check {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: var(--lp-primary);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
   flex-shrink: 0;
-}
-
-.lp-phone-item-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-}
-
-.lp-phone-item-main strong {
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--lp-text);
-}
-
-.lp-phone-item-main span {
-  font-size: 9px;
-  color: var(--lp-muted);
-}
-
-.lp-phone-item-chg {
-  font-size: 10px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.lp-phone-item-chg.up { color: var(--lp-green); }
-
-.lp-phone-tabbar {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  padding-top: 10px;
-  border-top: 1px solid var(--lp-border);
-}
-
-.lp-phone-tabbar span {
-  width: 18px;
-  height: 5px;
-  border-radius: var(--r-pill);
-  background: var(--lp-border);
-}
-
-.lp-phone-tabbar span.is-active {
-  background: var(--lp-primary);
-  width: 22px;
 }
 
 .lp-mock-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   max-width: 100%;
+  /* Scroll still works where it's needed (narrow screens) but the bars
+     themselves are never painted — they were framing the mock on both sides. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.lp-mock-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* On desktop the mock fits, so nothing should scroll or clip at all —
+   this also lets the stat cards overhang the mock's edges freely. */
+.lp-hero-visual .lp-mock-scroll {
+  overflow: visible;
 }
 
 .lp-mock-scroll > * {
@@ -1149,7 +812,7 @@ html {
 
 /* ── Ticker ──────────────────────────────────────────────────────────── */
 .lp-ticker {
-  padding: 8px 0 40px;
+  padding: 8px 0 64px;
 }
 
 .lp-ticker-row {
@@ -1186,8 +849,8 @@ html {
 }
 
 .lp-ticker-name {
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: 0.76rem;
+  font-weight: 600;
   color: var(--lp-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1196,15 +859,15 @@ html {
 
 .lp-ticker-price {
   font-size: 1.25rem;
-  font-weight: 750;
+  font-weight: var(--fw-heading);
   letter-spacing: -0.02em;
   margin-bottom: 4px;
   font-variant-numeric: tabular-nums;
 }
 
 .lp-ticker-chg {
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.88rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1223,7 +886,7 @@ html {
   flex-shrink: 0;
   align-self: center;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--lp-primary-text);
   text-decoration: none;
   white-space: nowrap;
@@ -1236,7 +899,7 @@ html {
 
 /* ── Sections ────────────────────────────────────────────────────────── */
 .lp-section {
-  padding: 72px 0;
+  padding: 104px 0;
 }
 
 .lp-section--tight {
@@ -1251,14 +914,14 @@ html {
 
 .lp-section-head {
   text-align: center;
-  max-width: 680px;
-  margin: 0 auto 44px;
+  max-width: 880px;
+  margin: 0 auto 64px;
 }
 
 .lp-kicker {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--lp-primary-text);
   margin-bottom: 14px;
@@ -1266,8 +929,8 @@ html {
 
 .lp-section-head h2 {
   margin: 0 0 16px;
-  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
-  font-weight: 750;
+  font-size: clamp(1.65rem, 2.6vw, 2.15rem);
+  font-weight: var(--fw-heading);
   letter-spacing: -0.032em;
   line-height: 1.15;
 }
@@ -1275,8 +938,8 @@ html {
 .lp-section-head p {
   margin: 0;
   color: var(--lp-muted);
-  line-height: 1.7;
-  font-size: 1.05rem;
+  line-height: 1.72;
+  font-size: 1.12rem;
 }
 
 /* ── Feature grid ────────────────────────────────────────────────────── */
@@ -1348,20 +1011,20 @@ html {
 .lp-feature-card h3 {
   margin: 0 0 10px;
   font-size: 1.12rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 
 .lp-feature-card p {
-  margin: 0 0 20px;
-  font-size: 0.9rem;
+  margin: 0 0 22px;
+  font-size: 0.99rem;
   color: var(--lp-muted);
-  line-height: 1.65;
+  line-height: 1.68;
 }
 
 .lp-feature-link {
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--lp-primary-text);
   text-decoration: none;
   display: inline-flex;
@@ -1385,7 +1048,7 @@ html {
   background: var(--lp-primary-soft);
   color: var(--lp-primary-text);
   font-size: 0.62rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   vertical-align: middle;
@@ -1412,8 +1075,8 @@ html {
 }
 
 .lp-split-title {
-  font-size: clamp(1.8rem, 3vw, 2.35rem);
-  font-weight: 750;
+  font-size: clamp(1.55rem, 2.4vw, 2rem);
+  font-weight: var(--fw-heading);
   letter-spacing: -0.032em;
   line-height: 1.15;
   margin: 0 0 14px;
@@ -1421,9 +1084,9 @@ html {
 
 .lp-split-lead {
   color: var(--lp-muted);
-  line-height: 1.7;
+  line-height: 1.72;
   margin: 0;
-  font-size: 1.02rem;
+  font-size: 1.1rem;
 }
 
 .lp-checklist {
@@ -1439,8 +1102,8 @@ html {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 0.94rem;
-  font-weight: 550;
+  font-size: 1.02rem;
+  font-weight: 450;
   color: var(--lp-text);
 }
 
@@ -1453,7 +1116,7 @@ html {
   display: grid;
   place-items: center;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 600;
   flex-shrink: 0;
 }
 
@@ -1497,7 +1160,7 @@ html {
   display: grid;
   place-items: center;
   font-size: 2.1rem;
-  font-weight: 750;
+  font-weight: var(--fw-heading);
   letter-spacing: -0.02em;
   color: var(--lp-primary-text);
 }
@@ -1514,7 +1177,7 @@ html {
   display: grid;
   place-items: center;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   box-shadow: var(--shadow-sm);
 }
 
@@ -1525,27 +1188,27 @@ html {
 .lp-advisor-body h3 {
   margin: 0 0 5px;
   font-size: 1.02rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.015em;
 }
 
 .lp-advisor-meta {
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   color: var(--lp-muted);
   margin-bottom: 12px;
   font-variant-numeric: tabular-nums;
 }
 
 .lp-advisor-tags {
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 0.88rem;
+  font-weight: 500;
   color: var(--lp-text);
   margin-bottom: 14px;
 }
 
 .lp-advisor-return {
   font-size: 1.65rem;
-  font-weight: 800;
+  font-weight: var(--fw-heading-strong);
   letter-spacing: -0.03em;
   color: var(--lp-green);
   margin-bottom: 16px;
@@ -1554,8 +1217,8 @@ html {
 
 .lp-advisor-return small {
   display: block;
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 500;
   color: var(--lp-muted);
   letter-spacing: 0;
 }
@@ -1566,7 +1229,7 @@ html {
   border-radius: var(--r-pill);
   border: 1px solid var(--lp-border);
   background: var(--lp-surface);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
   text-decoration: none;
@@ -1596,7 +1259,7 @@ html {
 .lp-stat strong {
   display: block;
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: var(--fw-heading-strong);
   letter-spacing: -0.03em;
   background: var(--lp-gradient);
   -webkit-background-clip: text;
@@ -1606,14 +1269,14 @@ html {
 }
 
 .lp-stat span {
-  font-size: 0.82rem;
+  font-size: 0.92rem;
   color: var(--lp-muted);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* ── CTA banner ──────────────────────────────────────────────────────── */
 .lp-cta {
-  padding: 0 0 72px;
+  padding: 0 0 104px;
 }
 
 .lp-cta-inner {
@@ -1642,8 +1305,8 @@ html {
 .lp-cta-inner h2 {
   position: relative;
   margin: 0 0 14px;
-  font-size: clamp(1.9rem, 3.4vw, 2.85rem);
-  font-weight: 800;
+  font-size: clamp(1.7rem, 2.8vw, 2.3rem);
+  font-weight: var(--fw-heading-strong);
   letter-spacing: -0.032em;
 }
 
@@ -1701,9 +1364,9 @@ html {
 
 .lp-footer-brand p {
   margin: 16px 0 22px;
-  font-size: 0.9rem;
+  font-size: 0.98rem;
   color: var(--lp-muted);
-  line-height: 1.65;
+  line-height: 1.7;
   max-width: 280px;
 }
 
@@ -1723,7 +1386,7 @@ html {
   text-decoration: none;
   color: var(--lp-muted);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   transition:
     transform var(--dur-base) var(--ease-out),
     color var(--dur-base) var(--ease-out),
@@ -1738,8 +1401,8 @@ html {
 
 .lp-footer-col h4 {
   margin: 0 0 16px;
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-size: 0.9rem;
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 
@@ -1747,8 +1410,8 @@ html {
   display: block;
   text-decoration: none;
   color: var(--lp-muted);
-  font-size: 0.885rem;
-  margin-bottom: 12px;
+  font-size: 0.96rem;
+  margin-bottom: 13px;
   width: fit-content;
   transition:
     color var(--dur-fast) var(--ease-out),
@@ -1766,9 +1429,9 @@ html {
   border-radius: var(--r-md);
   background: var(--lp-surface);
   padding: 18px;
-  font-size: 0.76rem;
+  font-size: 0.85rem;
   color: var(--lp-muted);
-  line-height: 1.55;
+  line-height: 1.6;
 }
 
 .lp-sebi-box strong {
@@ -1786,7 +1449,7 @@ html {
   gap: 12px;
   padding-top: 28px;
   border-top: 1px solid var(--lp-border);
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   color: var(--lp-muted);
 }
 
@@ -1802,28 +1465,40 @@ html {
   color: var(--lp-text);
 }
 
+/* The "Good morning, Rohan" panel.
+   Same card design — only the motion changed: it eases in on load, then
+   breathes on a slow loop. The float is applied to a wrapper transform via
+   the keyframe so it composes with the tilt instead of fighting it. */
 .lp-mock--tilt {
-  transform: perspective(1600px) rotateY(-6deg) rotateX(3deg);
-  transition:
-    transform 0.75s var(--ease-spring),
-    box-shadow 0.75s var(--ease-out);
-  will-change: transform;
+  --mock-tilt: perspective(1400px) rotateY(-5deg) rotateX(3deg);
+  transform: var(--mock-tilt);
+  transition: transform 0.7s var(--ease-out), box-shadow 0.7s var(--ease-out);
+  animation:
+    mock-enter 0.9s var(--ease-out) both,
+    mock-breathe 9s var(--ease-in-out) 0.9s infinite;
 }
 
-/* Hovering anywhere in the combo settles both devices upright together with a
-   gentle spring + lift, so the phone and desktop feel like one live scene. */
-@media (hover: hover) and (min-width: 1101px) {
-  .lp-device-combo:hover .lp-mock--tilt {
-    transform: perspective(1600px) rotateY(0deg) rotateX(0deg) translateY(-6px);
-    box-shadow: 0 40px 90px rgba(11, 23, 32, 0.16);
-  }
+.lp-mock--tilt:hover {
+  --mock-tilt: perspective(1400px) rotateY(0deg) rotateX(0deg);
+  box-shadow: var(--shadow-xl), 0 0 60px rgba(52, 211, 153, 0.12);
+  /* Pause the loop on hover so the straighten reads cleanly */
+  animation-play-state: paused;
+}
 
-  .lp-device-combo:hover .lp-phone-frame {
-    transform: perspective(1000px) rotateY(0deg) rotateX(0deg) translateY(-8px) scale(1.03);
-    box-shadow:
-      0 30px 60px rgba(11, 23, 32, 0.4),
-      0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+@keyframes mock-enter {
+  from {
+    opacity: 0;
+    transform: var(--mock-tilt) translateY(26px) scale(0.97);
   }
+  to {
+    opacity: 1;
+    transform: var(--mock-tilt) translateY(0) scale(1);
+  }
+}
+
+@keyframes mock-breathe {
+  0%, 100% { transform: var(--mock-tilt) translateY(0); }
+  50% { transform: var(--mock-tilt) translateY(-10px); }
 }
 
 .lp-mock-chrome {
@@ -1889,7 +1564,7 @@ html {
 
 .lp-mock-user {
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.02em;
   margin-bottom: 18px;
 }
@@ -1928,7 +1603,7 @@ html {
 
 .lp-mock-tile-value {
   font-size: 15px;
-  font-weight: 750;
+  font-weight: var(--fw-heading);
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
@@ -1938,7 +1613,7 @@ html {
 .lp-mock-tile-delta {
   font-size: 9.5px;
   color: var(--lp-muted);
-  font-weight: 700;
+  font-weight: 600;
   margin-top: 2px;
 }
 
@@ -1946,7 +1621,7 @@ html {
 
 .lp-mock-tile-caption {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 7px;
 }
 
@@ -1992,25 +1667,6 @@ html {
 .lp-mock-row:last-child { border-bottom: none; }
 .lp-mock-row .up { color: var(--lp-green); }
 
-/* Auto-scrolling holdings list — cycles on load to make the demo feel live */
-.lp-mock-scrollbox {
-  height: 78px;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(180deg, #000 80%, transparent);
-  mask-image: linear-gradient(180deg, #000 80%, transparent);
-}
-
-.lp-mock-autoscroll {
-  --lp-scroll-shift: -58px;
-  animation: lp-auto-scroll 9s var(--ease-in-out) infinite;
-}
-
-@keyframes lp-auto-scroll {
-  0%, 14% { transform: translateY(0); }
-  50%, 64% { transform: translateY(var(--lp-scroll-shift, -60px)); }
-  100% { transform: translateY(0); }
-}
-
 /* Virtual Lab mock */
 .lp-mock-labhead {
   display: flex;
@@ -2046,8 +1702,8 @@ html {
   font-variant-numeric: tabular-nums;
 }
 
-.lp-mock-table td.sym { font-weight: 700; }
-.lp-mock-table td.up { color: var(--lp-green); font-weight: 700; }
+.lp-mock-table td.sym { font-weight: 600; }
+.lp-mock-table td.up { color: var(--lp-green); font-weight: 600; }
 
 .lp-mock-actions {
   display: flex;
@@ -2060,7 +1716,7 @@ html {
   padding: 11px;
   border-radius: var(--r-xs);
   color: #fff;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 11px;
   text-align: center;
   letter-spacing: 0.04em;
@@ -2074,7 +1730,7 @@ html {
   display: flex;
   border-bottom: 1px solid var(--lp-border);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .lp-mock-tab {
@@ -2144,7 +1800,7 @@ html {
 .lp-mock-tag {
   padding: 6px 0;
   color: var(--lp-primary-text);
-  font-weight: 650;
+  font-weight: 560;
   font-size: 10px;
 }
 
@@ -2408,10 +2064,7 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
 @media (prefers-reduced-motion: reduce) {
   .lp-bg-blob,
   .lp-bg-grid,
-  .lp-bg-particle,
-  .lp-mock-autoscroll,
-  .lp-phone-scroll,
-  .lp-device-phone {
+  .lp-bg-particle {
     animation: none !important;
   }
 
@@ -2505,7 +2158,7 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
   background: var(--lp-primary-soft);
   color: var(--lp-primary-text);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.02em;
   margin-bottom: 18px;
 }
@@ -2513,7 +2166,7 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
 .lp-modal-card h2 {
   margin: 0 0 10px;
   font-size: 1.75rem;
-  font-weight: 800;
+  font-weight: var(--fw-heading-strong);
   letter-spacing: -0.032em;
   line-height: 1.15;
 }
@@ -2521,8 +2174,8 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
 .lp-modal-card > p {
   margin: 0 0 22px;
   color: var(--lp-muted);
-  font-size: 0.95rem;
-  line-height: 1.65;
+  font-size: 1.03rem;
+  line-height: 1.68;
 }
 
 .lp-modal-list {
@@ -2538,8 +2191,8 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
   display: flex;
   align-items: center;
   gap: 11px;
-  font-size: 0.89rem;
-  font-weight: 550;
+  font-size: 0.98rem;
+  font-weight: 450;
 }
 
 .lp-modal-actions {
@@ -2718,13 +2371,13 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
 }
 
 .lp-deck-tab {
-  padding: 10px 20px;
+  padding: 11px 22px;
   border-radius: var(--r-pill);
   border: 1px solid var(--lp-border);
   background: var(--lp-surface);
   color: var(--lp-muted);
-  font-size: 0.85rem;
-  font-weight: 650;
+  font-size: 0.93rem;
+  font-weight: 560;
   cursor: pointer;
   transition:
     background-color var(--dur-base) var(--ease-out),
@@ -2786,16 +2439,16 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
 .lp-deck-copy h3 {
   margin: 0 0 6px;
   font-size: 1.2rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 
 .lp-deck-copy p {
   margin: 0;
   color: var(--lp-muted);
-  font-size: 0.92rem;
-  line-height: 1.6;
-  max-width: 520px;
+  font-size: 1.02rem;
+  line-height: 1.65;
+  max-width: 560px;
 }
 
 .lp-deck-nav {
@@ -2818,9 +2471,11 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
     gap: 48px;
   }
 
-  .lp-mock--tilt,
-  .lp-phone-frame {
-    transform: none;
+  /* Flatten the tilt on narrower screens. Must stay a valid transform
+     function (not `none`) because the enter/breathe keyframes compose it
+     with translate — `none translateY(...)` would be invalid. */
+  .lp-mock--tilt {
+    --mock-tilt: perspective(1400px);
   }
 
   .lp-features-grid {
@@ -2835,17 +2490,14 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
     grid-template-columns: 1fr 1fr;
   }
 
-  /* Full-width hero visual now — give the dashboard room and nudge the phone */
-  .lp-device-combo {
-    max-width: 620px;
-    margin-inline: auto;
-  }
+
 }
 
 @media (max-width: 768px) {
   .landing-root {
     --lp-container: 100%;
-    --lp-gutter: 20px;
+    /* Wider gutter — 20px was the main reason mobile felt cramped */
+    --lp-gutter: 24px;
   }
 
   .landing-container {
@@ -2858,11 +2510,6 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
   .lp-header-inner,
   .lp-header--scrolled .lp-header-inner {
     min-height: 62px;
-  }
-
-  /* Rein the enlarged brand mark back in on small headers */
-  .lp-brand-logo {
-    height: 40px !important;
   }
 
   /* The bar is glass at all scroll positions on mobile, since the hero
@@ -2890,30 +2537,42 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
 
   /* Hero */
   .lp-hero {
-    padding: 28px 0 28px;
+    padding: 52px 0 56px;
   }
 
   .lp-hero-grid {
-    gap: 24px;
+    gap: 48px;
   }
 
   .lp-hero-visual {
     order: 2;
+    /* Stat cards are hidden at this width, so the headroom isn't needed */
+    padding-top: 0;
   }
 
   .lp-hero-copy {
     order: 1;
   }
 
-  /* Keep the phone tucked at the desktop's corner, just smaller */
-  .lp-device-combo {
-    padding-right: 36px;
-    padding-bottom: 8px;
-    max-width: 100%;
+  /* Now that the pair sits in flow above the mock they no longer collide,
+     so they stay visible on phones — just tighter. */
+  .lp-float-row {
+    gap: 10px;
+    margin-bottom: 20px;
   }
 
-  .lp-device-phone {
-    width: 112px;
+  .lp-float-card {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 12px 14px;
+  }
+
+  .lp-float-value {
+    font-size: 1.15rem;
+  }
+
+  .lp-float-card--verified strong {
+    font-size: 0.78rem;
   }
 
   /* Lighter ambient load on phones: fewer blobs, no particle layer */
@@ -2927,53 +2586,38 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
   .lp-bg-grid { opacity: 0.28; }
 
   .lp-hero h1 {
-    font-size: clamp(1.85rem, 8vw, 2.4rem);
-    letter-spacing: -0.03em;
-    margin-bottom: 12px;
+    font-size: clamp(2rem, 8.4vw, 2.7rem);
   }
 
   .lp-hero-lead {
-    font-size: 0.95rem;
-    line-height: 1.55;
+    font-size: 1.02rem;
+    line-height: 1.75;
     max-width: none;
-    margin-bottom: 20px;
+    margin-bottom: 32px;
   }
 
   .lp-hero-ctas {
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
-    margin-bottom: 22px;
+    margin-bottom: 32px;
   }
 
   .lp-hero-ctas .lp-btn-primary,
   .lp-hero-ctas .lp-btn-outline {
     justify-content: center;
     width: 100%;
-    padding: 14px 18px;
-  }
-
-  .lp-trust-row {
-    grid-template-columns: 1fr;
-    gap: 10px;
-    margin-bottom: 22px;
-  }
-
-  .lp-trust-item {
-    font-size: 0.8rem;
-    gap: 8px;
+    padding: 15px 20px;
   }
 
   .lp-social-proof {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
-    margin-top: 4px;
+    gap: 12px;
   }
 
   /* Ticker */
   .lp-ticker {
-    padding: 0 0 28px;
+    padding: 4px 0 40px;
   }
 
   .lp-ticker-row {
@@ -2993,57 +2637,50 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
     padding-right: var(--lp-gutter);
   }
 
-  /* Sections — tighter rhythm on mobile */
+  /* Sections */
   .lp-section {
-    padding: 40px 0;
+    padding: 76px 0;
   }
 
   .lp-section-head {
-    margin-bottom: 22px;
+    margin-bottom: 44px;
   }
 
   .lp-section-head h2 {
-    font-size: 1.5rem;
-    letter-spacing: -0.02em;
-  }
-
-  .lp-section-head p {
-    margin-top: 8px;
-    font-size: 0.92rem;
-    line-height: 1.5;
+    font-size: 1.65rem;
   }
 
   .lp-features-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 20px;
   }
 
   .lp-feature-card {
-    padding: 20px;
+    padding: 28px 26px;
   }
 
   .lp-split {
-    gap: 28px;
+    gap: 44px;
   }
 
   .lp-split.surface {
     width: 100%;
-    padding: 24px 18px;
+    padding: 36px 26px;
     border-radius: var(--r-xl);
   }
 
   .lp-split-title {
-    font-size: 1.45rem;
+    font-size: 1.65rem;
   }
 
   .lp-advisors-head {
     flex-direction: column;
     align-items: stretch;
-    gap: 16px;
+    gap: 20px;
   }
 
   .lp-advisors-head .lp-section-head {
-    text-align: left;
+    text-align: center;
   }
 
   .lp-advisors-head .lp-btn-outline {
@@ -3053,67 +2690,66 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
 
   .lp-advisor-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 20px;
   }
 
   /* Carousels — flatten the perspective so cards stay legible */
   .lp-coverflow-stage {
-    height: 360px;
+    height: 400px;
     perspective: 1100px;
   }
 
   .lp-deck-tabs {
-    margin-bottom: 20px;
-    gap: 8px;
+    margin-bottom: 26px;
   }
 
   .lp-deck-tab {
-    padding: 8px 14px;
-    font-size: 0.78rem;
+    padding: 9px 16px;
+    font-size: 0.8rem;
   }
 
   .lp-deck-stage {
-    height: 360px;
+    height: 560px;
     perspective: 1200px;
   }
 
   .lp-deck-caption {
     flex-direction: column;
     align-items: flex-start;
-    gap: 14px;
-    margin-top: 18px;
+    gap: 18px;
+    margin-top: 22px;
   }
 
   .lp-modal-card {
-    padding: 28px 20px 22px;
+    padding: 30px 24px 26px;
     border-radius: var(--r-xl);
   }
 
   .lp-modal-card h2 {
-    font-size: 1.35rem;
+    font-size: 1.45rem;
   }
 
   .lp-community-stats {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 16px 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    margin: 30px 0;
   }
 
-  .lp-stat strong { font-size: 1.45rem; }
+  .lp-stat strong { font-size: 1.6rem; }
 
   .lp-cta {
-    padding-bottom: 48px;
+    padding-bottom: 64px;
   }
 
   .lp-cta-inner {
-    padding: 36px 20px;
+    padding: 56px 28px;
     border-radius: var(--r-xl);
   }
 
   .lp-cta-btns {
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
   }
 
   .lp-cta-btns .lp-btn-primary {
@@ -3122,55 +2758,22 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
   }
 
   .lp-footer {
-    padding: 40px 0 28px;
+    padding: 56px 0 36px;
   }
 
   .lp-footer-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 24px 20px;
-  }
-
-  .lp-footer-brand {
-    grid-column: 1 / -1;
-    margin-bottom: 4px;
-  }
-
-  .lp-footer-brand p {
-    margin-top: 10px;
-    font-size: 0.88rem;
-    line-height: 1.5;
-    max-width: 36ch;
-  }
-
-  .lp-footer-col h4 {
-    margin-bottom: 10px;
-    font-size: 0.78rem;
-    letter-spacing: 0.04em;
-  }
-
-  .lp-footer-col a,
-  .lp-footer-col li {
-    font-size: 0.88rem;
-    line-height: 1.7;
-  }
-
-  .lp-footer-social {
-    display: flex;
-    gap: 8px;
-    margin-top: 14px;
+    grid-template-columns: 1fr;
+    gap: 38px;
   }
 
   .lp-footer-bottom {
     flex-direction: column;
     text-align: center;
-    gap: 8px;
-    margin-top: 28px;
-    padding-top: 20px;
   }
 
   /* Mock panels scroll horizontally again and stop floating */
   .lp-mock-float {
-    overflow-x: auto;
+    overflow: visible;
   }
 
   .lp-mock-float > * {
@@ -3182,24 +2785,122 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
     padding-inline: var(--lp-gutter);
   }
 
+  /* ── Mock panels: fit the screen instead of forcing a 340px scroll ────
+     The old min-width overflowed any phone under ~390px, which is what made
+     the whole hero read as squashed. The panels now shrink to the column and
+     their internals reflow to single-column where they'd otherwise crush. */
   .lp-mock-scroll .lp-dashboard-mock {
-    min-width: 340px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .lp-mock-scroll {
+    overflow: visible;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+
+  .lp-dashboard-mock {
+    font-size: 11.5px;
+    border-radius: var(--r-lg);
+  }
+
+  /* Narrower icon rail frees ~20px for the content column */
+  .lp-mock-rail {
+    width: 44px;
+    padding: 10px 6px;
+  }
+
+  .lp-mock-rail-icon {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 7px;
+  }
+
+  .lp-mock-body {
+    padding: 14px 12px;
+  }
+
+  .lp-mock-shell {
+    min-height: 0;
+  }
+
+  /* Two-up tiles get too narrow to read a ₹ figure — stack them */
+  .lp-mock-stats {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .lp-mock-split {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .lp-mock-labhead {
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 12px;
+  }
+
+  /* Feed: drop the trending rail rather than squeeze it to 148px */
+  .lp-mock-feed {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-mock-trending {
+    border-left: none;
+    border-top: 1px solid var(--lp-border);
+  }
+
+  .lp-mock-tablewrap,
+  .lp-mock-actions {
+    padding-inline: 12px;
   }
 }
 
 @media (max-width: 480px) {
   .landing-root {
-    --lp-gutter: 16px;
+    /* 18px keeps an edge margin without starving the content column */
+    --lp-gutter: 18px;
   }
 
-  /* Phone overlaps the dashboard too tightly here — show desktop only */
-  .lp-device-combo {
-    padding-right: 0;
-    padding-bottom: 0;
+  /* Two glass cards side by side leaves ~150px each — stack them */
+  .lp-float-row {
+    flex-direction: column;
+    gap: 10px;
   }
 
-  .lp-device-phone {
+  .lp-float-card {
+    width: 100%;
+  }
+
+  .lp-float-card--returns {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .lp-float-spark {
     display: none;
+  }
+
+  /* Coverflow: 78vw left the neighbours clipping the active card */
+  .lp-cf-card {
+    width: min(280px, 86vw);
+  }
+
+  .lp-coverflow-controls {
+    gap: 14px;
+  }
+
+  /* Deck tabs wrapped to three cramped rows */
+  .lp-deck-tabs {
+    gap: 6px;
+  }
+
+  .lp-deck-tab {
+    padding: 9px 14px;
+    font-size: 0.85rem;
   }
 
   .lp-pill {
@@ -3208,37 +2909,18 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
   }
 
   .lp-hero h1 {
-    font-size: 1.85rem;
+    font-size: 1.95rem;
     letter-spacing: -0.03em;
-    margin-bottom: 10px;
-  }
-
-  .lp-hero-lead {
-    margin-bottom: 16px;
-    font-size: 0.92rem;
-  }
-
-  .lp-hero {
-    padding: 22px 0 20px;
   }
 
   .lp-trust-row {
     grid-template-columns: 1fr;
-    gap: 10px;
-    margin-bottom: 18px;
+    gap: 14px;
+    margin-bottom: 32px;
   }
 
   .lp-trust-item {
     font-size: 0.78rem;
-  }
-
-  .lp-footer-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 20px 16px;
-  }
-
-  .lp-footer-brand {
-    grid-column: 1 / -1;
   }
 
   .lp-ticker-card {
@@ -3252,11 +2934,11 @@ html[data-theme="dark"] .lp-bg-particle { opacity: 0; }
   }
 
   .lp-coverflow-stage {
-    height: 380px;
+    height: 400px;
   }
 
   .lp-deck-stage {
-    height: 330px;
+    height: 540px;
   }
 
   .lp-community-stats {

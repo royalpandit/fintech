@@ -8,7 +8,7 @@ import LandingBackground from "./landing-background";
 import LandingPopup from "./landing-popup";
 import AdvisorCarousel from "./advisor-carousel";
 import ProductSlider from "./product-slider";
-import { DashboardMock, FeedMock, PhoneMock, VirtualLabMock } from "./landing-mockups";
+import { DashboardMock, FeedMock, VirtualLabMock } from "./landing-mockups";
 import type { LandingAdvisor } from "./types";
 
 export type { LandingAdvisor };
@@ -105,7 +105,10 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
               All-in-One FinMedia Platform
             </div>
             <h1>
-              Learn. Invest. Connect. <span className="lp-gradient-text">Grow.</span>
+              Learn. Invest. Connect.{" "}
+              <span className="lp-gradient-text lp-glow-text" data-text="Succeed.">
+                Succeed.
+              </span>
             </h1>
             <p className="lp-hero-lead">
               Finuer brings together social investing, expert insights, virtual trading, and a
@@ -144,13 +147,25 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
           </Reveal>
 
           <Reveal variant="right" delay={140} className="lp-hero-visual">
-            <div className="lp-device-combo">
-              <div className="lp-device-desktop">
-                <DashboardMock />
+            {/* Stat cards sit in a centered row above the dashboard mock —
+                in normal flow, so they never overlap it. */}
+            <div className="lp-float-row" aria-hidden>
+              <div className="lp-float-card lp-float-card--returns">
+                <span className="lp-float-label">Portfolio</span>
+                <strong className="lp-float-value">+18.4%</strong>
+                <span className="lp-float-spark" />
               </div>
-              <div className="lp-device-phone">
-                <PhoneMock />
+              <div className="lp-float-card lp-float-card--verified">
+                <span className="lp-float-check">✓</span>
+                <div>
+                  <strong>SEBI Verified</strong>
+                  <span className="lp-float-label">Every advisor</span>
+                </div>
               </div>
+            </div>
+
+            <div className="lp-mock-scroll">
+              <DashboardMock />
             </div>
           </Reveal>
         </div>

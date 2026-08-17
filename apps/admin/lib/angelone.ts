@@ -37,9 +37,42 @@ export type {
 
 const BASE_URL = "https://apiconnect.angelone.in";
 
+/**
+ * Angel One credentials, all required to reach the market-data API.
+ *
+ * They were previously read with `process.env.X!`, which only silences the
+ * TypeScript null check — at runtime an unset variable is still undefined. On a
+ * fresh clone (.env is gitignored) that surfaced as
+ * "Cannot read properties of undefined (reading 'toUpperCase')" thrown from
+ * base32Decode, five frames from anything that named the missing variable, and
+ * rendered verbatim in the markets banner.
+ */
+const ANGELONE_ENV_VARS = [
+  "ANGELONE_API_KEY",
+  "ANGELONE_CLIENT_CODE",
+  "ANGELONE_MPIN",
+  "ANGELONE_TOTP_SECRET",
+] as const;
+
+type AngelOneCredentials = Record<(typeof ANGELONE_ENV_VARS)[number], string>;
+
+/** Throws a message that names exactly what is missing and where to put it. */
+function requireAngelOneCredentials(): AngelOneCredentials {
+  const missing = ANGELONE_ENV_VARS.filter(name => !process.env[name]?.trim());
+  if (missing.length > 0) {
+    throw new Error(
+      `Angel One market data is not configured — missing ${missing.join(", ")}. ` +
+        `Add these to apps/admin/.env (see .env.example) and restart the dev server.`,
+    );
+  }
+  return Object.fromEntries(
+    ANGELONE_ENV_VARS.map(name => [name, process.env[name]!.trim()]),
+  ) as AngelOneCredentials;
+}
+
 function base32Decode(encoded: string): Buffer {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const cleaned = encoded.toUpperCase().replace(/=+$/, "").replace(/\s/g, "");
+  const cleaned = String(encoded ?? "").toUpperCase().replace(/=+$/, "").replace(/\s/g, "");
   let bits = 0;
   let value = 0;
   const output: number[] = [];
@@ -89,6 +122,9 @@ function clientPublicIp() {
 }
 
 function commonHeaders(jwt: string, feed: string) {
+  // Only reachable after a successful login, so the check has already passed —
+  // it is repeated here so this function has no unchecked env reads either.
+  const creds = requireAngelOneCredentials();
   return {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -98,41 +134,23 @@ function commonHeaders(jwt: string, feed: string) {
     "X-ClientLocalIP": "192.168.1.1",
     "X-ClientPublicIP": clientPublicIp(),
     "X-MACAddress": "00:00:00:00:00:00",
-    "X-PrivateKey": process.env.ANGELONE_API_KEY!,
-    "X-ClientCode": process.env.ANGELONE_CLIENT_CODE!,
+    "X-PrivateKey": creds.ANGELONE_API_KEY,
+    "X-ClientCode": creds.ANGELONE_CLIENT_CODE,
     "X-FeedToken": feed,
   };
 }
 
 const SEARCH_SCRIP_PATH = "/rest/secure/angelbroking/order/v1/searchScrip";
 
-/**
- * AngelOne login needs all four credentials. Without them the TOTP step throws a
- * cryptic "Cannot read properties of undefined (reading 'toUpperCase')". This
- * guard surfaces the real cause with a clear "missing env var(s): ..." message.
- */
-function assertAngelOneConfig(): void {
-  const missing = [
-    "ANGELONE_API_KEY",
-    "ANGELONE_CLIENT_CODE",
-    "ANGELONE_MPIN",
-    "ANGELONE_TOTP_SECRET",
-  ].filter((name) => !process.env[name]?.trim());
-
-  if (missing.length) {
-    throw new Error(
-      `AngelOne is not configured — missing env var(s): ${missing.join(", ")}. ` +
-        `Add them to apps/admin/.env and restart the dev server.`,
-    );
-  }
-}
-
 async function login(): Promise<TokenCache> {
-  assertAngelOneConfig();
+  // Checked once, before any network call or TOTP maths, so a missing variable
+  // reports itself by name instead of failing somewhere downstream.
+  const creds = requireAngelOneCredentials();
+
   let lastError = "Authentication failed";
   // Try current window then adjacent windows to handle clock drift
   for (const offset of [0, -1, 1]) {
-    const totp = generateTOTP(process.env.ANGELONE_TOTP_SECRET!, offset);
+    const totp = generateTOTP(creds.ANGELONE_TOTP_SECRET, offset);
     const res = await fetch(
       `${BASE_URL}/rest/auth/angelbroking/user/v1/loginByPassword`,
       {
@@ -146,16 +164,17 @@ async function login(): Promise<TokenCache> {
           "X-ClientLocalIP": "192.168.1.1",
           "X-ClientPublicIP": clientPublicIp(),
           "X-MACAddress": "00:00:00:00:00:00",
-          "X-PrivateKey": process.env.ANGELONE_API_KEY!,
+          "X-PrivateKey": creds.ANGELONE_API_KEY,
         },
         body: JSON.stringify({
-          clientcode: process.env.ANGELONE_CLIENT_CODE,
-          password: process.env.ANGELONE_MPIN,
+          clientcode: creds.ANGELONE_CLIENT_CODE,
+          password: creds.ANGELONE_MPIN,
           totp,
         }),
       }
     );
     const data = await res.json();
+    console.log("[AngelOne] login attempt offset=%d status=%s msg=%s", offset, data.status, data.message);
     if (data.status && data.data?.jwtToken) {
       const token: TokenCache = {
         jwtToken: data.data.jwtToken,

@@ -1,5 +1,5 @@
 export const BRAND_NAME = "Finuer";
-export const BRAND_TAGLINE = "Learn. Invest. Connect. Grow.";
+export const BRAND_TAGLINE = "Learn. Invest. Connect. Succeed.";
 /** Dark wordmark + gradient icon — for light theme backgrounds */
 export const BRAND_LOGO_SRC = "/finuer-logo.png";
 /** White wordmark + gradient icon — for dark / black theme backgrounds */
