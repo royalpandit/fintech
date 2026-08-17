@@ -4,7 +4,8 @@ import Link from "next/link";
 import FinuerLogo from "@/components/brand/finuer-logo";
 import { BRAND_NAME } from "@/lib/brand";
 import ThemeToggleMenu from "@/components/theme/theme-toggle-menu";
-import ThemeHeaderButton from "@/components/theme/theme-header-button";
+import UserThemeToggle from "@/components/theme/user-theme-toggle";
+import { useTheme } from "@/components/theme/theme-provider";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState, useEffect, useRef } from "react";
 import type { ComponentType } from "react";
@@ -22,17 +23,17 @@ import {
   FiBookOpen,
   FiTarget,
   FiAward,
-  FiLayers,
   FiMessageSquare,
   FiMenu,
   FiCreditCard,
   FiX,
+  FiSearch,
   FiChevronRight,
-  FiActivity,
-  FiPackage,
 } from "react-icons/fi";
 import { TbRobot } from "react-icons/tb";
 import WatchlistStoreProvider from "@/components/watchlist/watchlist-store-provider";
+import GlobalSearchPanel from "@/components/search/global-search-panel";
+import PanelBackground from "@/components/motion/panel-background";
 
 type UserShellProps = {
   children: React.ReactNode;
@@ -65,8 +66,8 @@ type NavItem = {
 
 const MAIN_NAV: NavItem[] = [
   { label: "Feed", href: "/user/feed", Icon: FiHome },
-  { label: "Trades", href: "/user/trades", Icon: FiActivity },
   { label: "Finance Professionals", href: "/user/advisors", Icon: FiUsers },
+  { label: "Subscriptions", href: "/user/subscriptions", Icon: FiCreditCard },
   { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
   { label: "Messages", href: "/user/messages", Icon: FiMessageCircle },
   { label: "Community", href: "/user/community", Icon: FiMessageSquare },
@@ -77,10 +78,9 @@ const MAIN_NAV: NavItem[] = [
 const INVESTING_NAV: NavItem[] = [
   { label: "Dashboard", href: "/user/home", Icon: FiPieChart },
   { label: "Stock Basket", href: "/user/stock-picks", Icon: FiTarget },
-  { label: "Finuer Basket", href: "/user/finuer-basket", Icon: FiLayers },
-  { label: "Competitions", href: "/user/competition", Icon: FiAward },
+  { label: "Finuer Basket", href: "/user/finuer-basket", Icon: FiBriefcase },
+  { label: "Competition", href: "/user/competition", Icon: FiAward },
   { label: "Wallet", href: "/user/wallet", Icon: FiCreditCard },
-  { label: "Subscriptions", href: "/user/subscriptions", Icon: FiPackage },
   { label: "Watchlist", href: "/user/watchlist", Icon: FiStar },
   { label: "Portfolio", href: "/user/portfolio", Icon: FiBriefcase },
   { label: "Courses", href: "/user/courses", Icon: FiBookOpen },
@@ -90,8 +90,8 @@ const INVESTING_NAV: NavItem[] = [
 
 const BOTTOM_NAV: NavItem[] = [
   { label: "Feed", href: "/user/feed", Icon: FiHome },
-  { label: "Trades", href: "/user/trades", Icon: FiActivity },
-  { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
+  { label: "Pros", href: "/user/advisors", Icon: FiUsers },
+  { label: "Compete", href: "/user/competition", Icon: FiAward },
   { label: "Messages", href: "/user/messages", Icon: FiMessageCircle },
   { label: "Alerts", href: "/user/notifications", Icon: FiBell },
 ];
@@ -123,13 +123,18 @@ export default function UserShell({
 }: UserShellProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { enterThemedScope, exitThemedScope } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  // Full search panel (tabs + live results) opened by clicking the header search.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const desktopSearchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchRef = useRef<HTMLDivElement>(null);
 
   const initials = currentUser ? getInitials(currentUser.fullName) : "G";
   const pnlColor = todayPnL >= 0 ? "#16a34a" : "#dc2626";
@@ -167,6 +172,15 @@ export default function UserShell({
       router.replace("/user/feed");
     }
   }, [currentUser, isVerified, pathname, router]);
+
+  // Light mode is offered in this shell only — every other shell is locked to
+  // the product's dark appearance. Adopt the stored preference while the panel
+  // is mounted and hand the page back to dark on the way out; the stored choice
+  // survives so returning to /user restores it.
+  useEffect(() => {
+    enterThemedScope();
+    return () => exitThemedScope();
+  }, [enterThemedScope, exitThemedScope]);
 
   // Close menu on outside click
   useEffect(() => {
@@ -265,6 +279,11 @@ export default function UserShell({
     <div
       className={`us-root advisor-scope${sidebarCollapsed ? " us-sidebar-collapsed" : " us-sidebar-expanded"}`}
     >
+      {/* Ambient background — same animation as the landing page. Fixed,
+          pointer-events:none, and first in the DOM so every piece of shell
+          chrome paints above it. */}
+      <PanelBackground />
+
       {/* ── Header ── */}
       <header className="us-header">
         <div className="us-header-inner">
@@ -293,7 +312,17 @@ export default function UserShell({
 
           {/* Right zone — actions */}
           <div className="us-header-right">
-            <ThemeHeaderButton />
+            {/* Mobile search toggle */}
+            <button
+              className="us-icon-btn us-search-toggle"
+              type="button"
+              aria-label="Search"
+              onClick={() => setSearchOpen((v) => !v)}
+            >
+              <FiSearch size={18} />
+            </button>
+
+            <UserThemeToggle />
 
             {currentUser ? (
               <>

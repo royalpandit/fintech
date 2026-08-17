@@ -1,20 +1,8 @@
-"use client";
-
-import { FiMoon, FiSun } from "react-icons/fi";
-import { useTheme } from "./theme-provider";
-
+/**
+ * Theme switching was removed — the product is dark-only.
+ * Kept as a no-op so the header layouts in the shells and the landing page
+ * don't need to change.
+ */
 export default function ThemeHeaderButton() {
-  const { theme, toggleTheme } = useTheme();
-
-  return (
-    <button
-      type="button"
-      className="theme-header-btn"
-      onClick={toggleTheme}
-      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-      title={theme === "dark" ? "Light mode" : "Dark mode"}
-    >
-      {theme === "dark" ? <FiSun size={17} /> : <FiMoon size={17} />}
-    </button>
-  );
+  return null;
 }
