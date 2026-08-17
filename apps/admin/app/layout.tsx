@@ -6,6 +6,7 @@ import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import ThemeInitScript from "@/components/theme/theme-init-script";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import AmbientBackground from "@/components/motion/ambient-background";
+import ChatWidget from "@/components/chat-widget";
 
 export const metadata = {
   title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
@@ -29,7 +30,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             The landing page renders its own richer background and hides this
             one via CSS (see .landing-root rule in theme.css). */}
         <AmbientBackground />
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <ChatWidget />
+        </ThemeProvider>
       </body>
     </html>
   );
