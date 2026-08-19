@@ -10,4 +10,10 @@ export interface WatchlistItem {
   open?: number;
   high?: number;
   low?: number;
+  /**
+   * Previous session close. Kept so the websocket tick path can recompute
+   * change / changePct itself — it only ever updated `ltp`, which left the
+   * change figures frozen at whatever the last REST poll returned.
+   */
+  prevClose?: number;
 }

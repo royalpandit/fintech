@@ -144,13 +144,25 @@ export default function SocialPostCard({
             <Link
               href={`/user/advisors/${post.user.id}`}
               className="sf-avatar sf-avatar-feed"
-              style={{ textDecoration: "none" }}
+              style={{ textDecoration: "none", padding: 0, overflow: "hidden" }}
               aria-label={`View ${post.user.fullName}'s profile`}
             >
-              {getInitials(post.user.fullName)}
+              {post.user.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={post.user.avatar_url} alt="" className="sf-avatar-img" />
+              ) : (
+                getInitials(post.user.fullName)
+              )}
             </Link>
           ) : (
-            <div className="sf-avatar sf-avatar-feed">{getInitials(post.user.fullName)}</div>
+            <div className="sf-avatar sf-avatar-feed" style={{ padding: 0, overflow: "hidden" }}>
+              {post.user.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={post.user.avatar_url} alt="" className="sf-avatar-img" />
+              ) : (
+                getInitials(post.user.fullName)
+              )}
+            </div>
           )}
           <div className="sf-post-meta">
             {post.user.is_advisor ? (
@@ -368,7 +380,14 @@ export default function SocialPostCard({
           )}
           {comments.map(c => (
             <div key={c.id} className="sf-comment">
-              <div className="sf-comment-avatar">{getInitials(c.user.fullName)}</div>
+              <div className="sf-comment-avatar" style={{ padding: 0, overflow: "hidden" }}>
+                {c.user.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={c.user.avatar_url} alt="" className="sf-avatar-img" />
+                ) : (
+                  getInitials(c.user.fullName)
+                )}
+              </div>
               <div className="sf-comment-body">
                 <strong>{c.user.fullName}</strong>
                 <p>{c.content}</p>

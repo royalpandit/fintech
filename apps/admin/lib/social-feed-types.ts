@@ -32,6 +32,9 @@ export type SocialPost = {
     // True only for approved advisors — the feed links their name/avatar to
     // their public advisor profile (/user/advisors/[id]).
     is_advisor: boolean;
+    // Uploaded profile picture: an advisor's is on their advisor profile, a
+    // regular user's on the user row. Null falls back to initials.
+    avatar_url: string | null;
   };
   images: { id: number; url: string; sort_order: number }[];
   videos: { id: number; url: string; sort_order: number }[];

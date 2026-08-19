@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fetchPaperSummary,
   paperSymbolFromWatchlist,
@@ -27,12 +27,21 @@ export default function PaperHoldingsPanel({
     total_pnl: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  // First-fetch only — background refreshes shouldn't blank the panel.
+  const loadedOnce = useRef(false);
+  // `liveQuotes` is a fresh array each parent render; as a dependency it kept
+  // re-creating `load`, which re-fired the effect and left the panel looping in
+  // its loading state.
+  const quotesRef = useRef(liveQuotes);
+  quotesRef.current = liveQuotes;
 
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!loadedOnce.current) setLoading(true);
+    setError(null);
     try {
       const quotes =
-        liveQuotes
+        quotesRef.current
           ?.filter(q => q.ltp && q.ltp > 0)
           .map(q => ({
             symbol: paperSymbolFromWatchlist(q),
@@ -41,17 +50,31 @@ export default function PaperHoldingsPanel({
       const data = await fetchPaperSummary(quotes);
       setPositions(data.positions);
       setSummary(data.summary);
+    } catch {
+      setError("Failed to load holdings");
     } finally {
+      loadedOnce.current = true;
       setLoading(false);
     }
-  }, [liveQuotes]);
+  }, []);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load, refreshKey]);
 
-  if (loading && !positions.length) {
+  if (loading && !loadedOnce.current) {
     return <p className="tt-util-empty">Loading holdings…</p>;
+  }
+
+  if (error) {
+    return (
+      <div className="tt-util-empty tt-util-warn">
+        <p style={{ margin: "0 0 8px" }}>{error}</p>
+        <button type="button" className="tt-util-refresh" onClick={() => void load()}>
+          Retry
+        </button>
+      </div>
+    );
   }
 
   if (!positions.length) {

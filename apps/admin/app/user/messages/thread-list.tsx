@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { FiSearch } from "react-icons/fi";
+import ProfileAvatar from "@/components/user/profile-avatar";
 
 export type ThreadItem = {
   id: number;
   partnerName: string;
+  partnerAvatar?: string | null;
   preview: string;
   timeLabel: string;
 };
@@ -14,6 +16,7 @@ export type ThreadItem = {
 type SearchHit = {
   threadId: number;
   partnerName: string;
+  partnerAvatar?: string | null;
   snippet: string;
   createdAt: string | null;
   matchedIn: "message" | "name";
@@ -156,23 +159,13 @@ export default function ThreadList({ threads }: { threads: ThreadItem[] }) {
                 transition: "background 0.15s",
               }}
             >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  background:
-                    "linear-gradient(135deg, rgba(14,165,233,0.13), rgba(16,185,129,0.13))",
-                  color: "#0ea5e9",
-                  display: "grid",
-                  placeItems: "center",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  flexShrink: 0,
-                }}
-              >
-                {getInitials(t.partnerName)}
-              </div>
+              <ProfileAvatar
+                src={t.partnerAvatar}
+                name={t.partnerName}
+                size={44}
+                radius={12}
+                fontSize={13}
+              />
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
@@ -247,23 +240,13 @@ export default function ThreadList({ threads }: { threads: ThreadItem[] }) {
                 transition: "background 0.15s",
               }}
             >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  background:
-                    "linear-gradient(135deg, rgba(14,165,233,0.13), rgba(16,185,129,0.13))",
-                  color: "#0ea5e9",
-                  display: "grid",
-                  placeItems: "center",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  flexShrink: 0,
-                }}
-              >
-                {getInitials(h.partnerName)}
-              </div>
+              <ProfileAvatar
+                src={h.partnerAvatar}
+                name={h.partnerName}
+                size={44}
+                radius={12}
+                fontSize={13}
+              />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 3 }}

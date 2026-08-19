@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { FiHeart, FiMessageSquare, FiAlertTriangle } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import PostModerationActions from "@/components/views/market-post-moderation-actions";
+import ProfileAvatar from "@/components/user/profile-avatar";
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -29,7 +30,7 @@ export default async function MarketPostDetailView({
         select: {
           id: true,
           fullName: true,
-          advisorProfile: { select: { verificationStatus: true, sebiRegistrationNo: true } },
+          advisorProfile: { select: { verificationStatus: true, sebiRegistrationNo: true, profileImageUrl: true } },
         },
       },
       comments: {
@@ -116,15 +117,15 @@ export default async function MarketPostDetailView({
                   width: 44,
                   height: 44,
                   borderRadius: 999,
-                  background: "linear-gradient(120deg, #0b1f3a, #6c9fff)",
-                  color: "#fff",
-                  display: "grid",
-                  placeItems: "center",
-                  fontWeight: 600,
-                  fontSize: 12,
                 }}
               >
-                {getInitials(post.advisor.fullName)}
+                <ProfileAvatar
+                  src={post.advisor.advisorProfile?.profileImageUrl}
+                  name={post.advisor.fullName}
+                  size={44}
+                  radius={999}
+                  fontSize={14}
+                />
               </div>
               <div>
                 <p style={{ margin: 0, fontWeight: 600, fontSize: 22 }}>{post.advisor.fullName}</p>
@@ -283,15 +284,15 @@ export default async function MarketPostDetailView({
                   width: 44,
                   height: 44,
                   borderRadius: 999,
-                  background: "linear-gradient(120deg,#0b1f3a,#6c9fff)",
-                  color: "#fff",
-                  display: "grid",
-                  placeItems: "center",
-                  fontWeight: 600,
-                  fontSize: 12,
                 }}
               >
-                {getInitials(post.advisor.fullName)}
+                <ProfileAvatar
+                  src={post.advisor.advisorProfile?.profileImageUrl}
+                  name={post.advisor.fullName}
+                  size={36}
+                  radius={999}
+                  fontSize={12}
+                />
               </div>
               <div>
                 <p style={{ margin: 0, fontWeight: 600 }}>{post.advisor.fullName}</p>

@@ -4,6 +4,7 @@ import { FiSettings, FiUser, FiBell, FiSliders, FiLock } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import ThemeSettingsField from "@/components/theme/theme-settings-field";
+import NotificationPreferences from "@/components/user/notification-preferences";
 import AccountForm from "./account-form";
 
 export const dynamic = "force-dynamic";
@@ -75,32 +76,6 @@ export default async function UserSettingsPage() {
 
   if (!user) return null;
 
-  const notifSettings = [
-    { key: "marketAlerts", label: "Market sentiment alerts", value: notifPrefs?.marketAlerts ?? true },
-    {
-      key: "portfolioAlerts",
-      label: "Portfolio risk alerts",
-      value: notifPrefs?.portfolioAlerts ?? true,
-    },
-    { key: "budgetAlerts", label: "Budget breach alerts", value: notifPrefs?.budgetAlerts ?? true },
-    {
-      key: "advisorAlerts",
-      label: "Followed advisor activity",
-      value: notifPrefs?.advisorAlerts ?? true,
-    },
-    {
-      key: "socialAlerts",
-      label: "Comments and replies",
-      value: notifPrefs?.socialAlerts ?? true,
-    },
-  ];
-
-  const channels = [
-    { label: "In-app", value: notifPrefs?.inAppEnabled ?? true },
-    { label: "Push", value: notifPrefs?.pushEnabled ?? true },
-    { label: "Email", value: notifPrefs?.emailEnabled ?? true },
-  ];
-
   return (
     <section>
       <div style={{ marginBottom: 20 }}>
@@ -155,77 +130,18 @@ export default async function UserSettingsPage() {
             <FiBell size={16} /> Notifications
           </h3>
 
-          <p
-            style={{
-              margin: "0 0 8px",
-              fontSize: 11,
-              fontWeight: 700,
-              color: "var(--text-muted)",
-              textTransform: "uppercase",
-              letterSpacing: 0.5,
+          <NotificationPreferences
+            initial={{
+              inAppEnabled: notifPrefs?.inAppEnabled ?? true,
+              pushEnabled: notifPrefs?.pushEnabled ?? true,
+              emailEnabled: notifPrefs?.emailEnabled ?? true,
+              marketAlerts: notifPrefs?.marketAlerts ?? true,
+              portfolioAlerts: notifPrefs?.portfolioAlerts ?? true,
+              budgetAlerts: notifPrefs?.budgetAlerts ?? true,
+              socialAlerts: notifPrefs?.socialAlerts ?? true,
+              advisorAlerts: notifPrefs?.advisorAlerts ?? true,
             }}
-          >
-            Channels
-          </p>
-          <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
-            {channels.map((c) => (
-              <label
-                key={c.label}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  background: "var(--surface-2)",
-                  cursor: "pointer",
-                }}
-              >
-                <span style={{ fontSize: 13, fontWeight: 600 }}>{c.label}</span>
-                <input
-                  type="checkbox"
-                  defaultChecked={c.value}
-                  style={{ width: 18, height: 18, accentColor: "#0ea5e9" }}
-                />
-              </label>
-            ))}
-          </div>
-
-          <p
-            style={{
-              margin: "0 0 8px",
-              fontSize: 11,
-              fontWeight: 700,
-              color: "var(--text-muted)",
-              textTransform: "uppercase",
-              letterSpacing: 0.5,
-            }}
-          >
-            Categories
-          </p>
-          <div style={{ display: "grid", gap: 8 }}>
-            {notifSettings.map((n) => (
-              <label
-                key={n.key}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  background: "var(--surface-2)",
-                  cursor: "pointer",
-                }}
-              >
-                <span style={{ fontSize: 13, fontWeight: 600 }}>{n.label}</span>
-                <input
-                  type="checkbox"
-                  defaultChecked={n.value}
-                  style={{ width: 18, height: 18, accentColor: "#0ea5e9" }}
-                />
-              </label>
-            ))}
-          </div>
+          />
         </article>
 
         <article className="theme-panel-card">

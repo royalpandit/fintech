@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  FiArrowLeft,
   FiGlobe,
   FiHeart,
   FiLock,
@@ -28,6 +29,7 @@ import {
 import type { SocialPost } from "@/lib/social-feed-types";
 import { formatRelativeTime } from "@/lib/format-date";
 import CommunityPostImages from "@/components/community/community-post-images";
+import { useToast } from "@/components/toast";
 
 const SORTS: { id: CommunitySort; label: string }[] = [
   { id: "latest", label: "Latest" },
@@ -48,21 +50,44 @@ function PostRow({
   canInteract: boolean;
 }) {
   const [p, setP] = useState(post);
+  const toast = useToast();
 
+  // Both of these were fire-and-forget, so a 403 or network error left the row
+  // completely unchanged with nothing explaining why.
   async function toggleLike() {
     if (!canInteract) return;
-    const data = await likeCommunityPost(slug, p.id);
-    setP((prev) => ({
-      ...prev,
-      liked_by_me: data.liked,
-      like_count: data.like_count,
-    }));
+    try {
+      const data = await likeCommunityPost(slug, p.id);
+      setP((prev) => ({
+        ...prev,
+        liked_by_me: data.liked,
+        like_count: data.like_count,
+      }));
+    } catch (e) {
+      toast.show(e instanceof Error ? e.message : "Couldn't update your like", "error");
+    }
   }
 
   async function onShare() {
     if (!canInteract) return;
-    const data = await shareCommunityPost(slug, p.id);
-    setP((prev) => ({ ...prev, share_count: data.share_count }));
+    const url = `${window.location.origin}/user/community/${slug}/post/${p.id}`;
+    try {
+      const data = await shareCommunityPost(slug, p.id);
+      setP((prev) => ({ ...prev, share_count: data.share_count }));
+
+      if (typeof navigator.share === "function") {
+        try {
+          await navigator.share({ title: p.title ?? "Community post", url });
+          return;
+        } catch (e) {
+          if (e instanceof DOMException && e.name === "AbortError") return;
+        }
+      }
+      await navigator.clipboard?.writeText(url);
+      toast.show("Link copied", "success");
+    } catch (e) {
+      toast.show(e instanceof Error ? e.message : "Couldn't share this post", "error");
+    }
   }
 
   return (
@@ -88,6 +113,7 @@ function PostRow({
                 void toggleLike();
               }}
               disabled={!isAuthed || !canInteract}
+              title={isAuthed && !canInteract ? "Join this community to like posts" : undefined}
             >
               <FiHeart size={15} /> {p.like_count}
             </button>
@@ -100,6 +126,7 @@ function PostRow({
                 void onShare();
               }}
               disabled={!isAuthed || !canInteract}
+              title={isAuthed && !canInteract ? "Join this community to share posts" : undefined}
             >
               <FiShare2 size={15} /> Share
             </button>
@@ -184,26 +211,19 @@ export default function CommunityDetailClient({
 
   return (
     <div className="comm-detail">
-      <button
-        type="button"
-        onClick={() => router.back()}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          marginBottom: 12,
-          padding: "7px 12px",
-          borderRadius: 8,
-          border: "1px solid var(--border)",
-          background: "var(--surface)",
-          color: "var(--text)",
-          fontSize: 13,
-          fontWeight: 600,
-          cursor: "pointer",
-        }}
+      {/* Always return to the communities list. `router.back()` followed browser
+          history, so arriving from a post detail (or a deep link / refresh) sent
+          the user somewhere unrelated — or nowhere at all. */}
+      <Link
+        href="/user/community"
+        className="user-page-back-link"
+        style={{ marginBottom: 12 }}
       >
-        ← Back
-      </button>
+        <span className="user-page-back-icon">
+          <FiArrowLeft size={14} />
+        </span>
+        All communities
+      </Link>
       <div
         className="comm-detail-banner"
         style={

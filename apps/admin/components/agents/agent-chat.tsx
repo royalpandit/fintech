@@ -71,7 +71,22 @@ function MarkdownText({ text }: { text: string }) {
   );
 }
 
-export default function AgentChat({ agent }: { agent: Agent }) {
+function userInitials(name: string | null): string {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "You";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+export default function AgentChat({
+  agent,
+  userName = null,
+  userAvatar = null,
+}: {
+  agent: Agent;
+  userName?: string | null;
+  userAvatar?: string | null;
+}) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -232,14 +247,21 @@ export default function AgentChat({ agent }: { agent: Agent }) {
     }
   }
 
+  // Give the shell a definite height so the transcript scrolls internally
+  // instead of the whole page scrolling behind it.
+  useEffect(() => {
+    document.body.classList.add("agent-chat-active");
+    return () => document.body.classList.remove("agent-chat-active");
+  }, []);
+
   const modelLabel = agent.model.replace("gemini-", "Gemini ").replace(/-/g, " ");
   const canSend = Boolean(input.trim() || docAttachment) && !sending && !uploadingDoc;
 
   return (
     <div
+      className="agent-chat-root"
       style={{
         display: "flex",
-        height: "calc(100vh - 60px)",
         background: "var(--surface-2)",
         overflow: "hidden",
         position: "relative",
@@ -444,6 +466,7 @@ export default function AgentChat({ agent }: { agent: Agent }) {
                   }}
                 >
                   <div
+                    title={m.role === "user" ? userName ?? "You" : agent.name}
                     style={{
                       width: 32,
                       height: 32,
@@ -452,7 +475,10 @@ export default function AgentChat({ agent }: { agent: Agent }) {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: 16,
+                      fontSize: m.role === "user" ? 12 : 16,
+                      fontWeight: 700,
+                      letterSpacing: 0.2,
+                      overflow: "hidden",
                       background:
                         m.role === "user"
                           ? "linear-gradient(135deg,#6366f1,#4f46e5)"
@@ -460,7 +486,18 @@ export default function AgentChat({ agent }: { agent: Agent }) {
                       color: m.role === "user" ? "#fff" : "inherit",
                     }}
                   >
-                    {m.role === "user" ? "U" : agent.avatar}
+                    {m.role !== "user" ? (
+                      agent.avatar
+                    ) : userAvatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={userAvatar}
+                        alt={userName ?? "You"}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    ) : (
+                      userInitials(userName)
+                    )}
                   </div>
                   <div
                     style={{
@@ -476,23 +513,20 @@ export default function AgentChat({ agent }: { agent: Agent }) {
                     }}
                   >
                     {m.role === "model" ? (
-                      <>
-                        <MarkdownText text={m.content || "…"} />
-                        {m.streaming && (
-                          <span
-                            style={{
-                              display: "inline-block",
-                              width: 8,
-                              height: 16,
-                              background: "#6366f1",
-                              borderRadius: 2,
-                              marginLeft: 2,
-                              animation: "blink 1s step-end infinite",
-                              verticalAlign: "middle",
-                            }}
-                          />
-                        )}
-                      </>
+                      m.streaming && !m.content ? (
+                        // Nothing has streamed back yet — show that it's thinking
+                        // rather than an empty bubble with a stray ellipsis.
+                        <span className="agent-typing" aria-label={`${agent.name} is typing`}>
+                          <span />
+                          <span />
+                          <span />
+                        </span>
+                      ) : (
+                        <>
+                          <MarkdownText text={m.content} />
+                          {m.streaming && <span className="agent-caret" aria-hidden />}
+                        </>
+                      )
                     ) : (
                       <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</span>
                     )}

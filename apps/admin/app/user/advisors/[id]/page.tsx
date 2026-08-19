@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { FiHeart, FiMessageSquare, FiMessageCircle } from "react-icons/fi";
+import { FiHeart, FiMessageSquare, FiMessageCircle, FiArrowLeft } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
+import ProfileAvatar from "@/components/user/profile-avatar";
 import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
 import { CheckCircle } from "@/components/advisor-ui/icons";
@@ -141,13 +142,6 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
     }),
   ]);
 
-  const initials = advisor.fullName
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
   const accuracy = latestMetrics?.accuracyPct ? Number(latestMetrics.accuracyPct) : 0;
 
   // Analyst trade performance (Trades Phase 3) — computed from this advisor's
@@ -186,11 +180,11 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
 
   return (
     <section>
-      <Link
-        href="/user/advisors"
-        style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12, display: "inline-block" }}
-      >
-        ← All Finance Professionals
+      <Link href="/user/advisors" className="user-page-back-link">
+        <span className="user-page-back-icon">
+          <FiArrowLeft size={14} />
+        </span>
+        All Finance Professionals
       </Link>
 
       {/* Hero */}
@@ -204,22 +198,14 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
         }}
       >
         <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-          <div
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 18,
-              background: "linear-gradient(135deg, #0ea5e9, #10b981)",
-              color: "#fff",
-              display: "grid",
-              placeItems: "center",
-              fontSize: 28,
-              fontWeight: 600,
-              flexShrink: 0,
-            }}
-          >
-            {initials}
-          </div>
+          <ProfileAvatar
+            src={advisor.advisorProfile.profileImageUrl}
+            name={advisor.fullName}
+            size={80}
+            radius={18}
+            fontSize={28}
+            style={{ border: "2px solid rgba(255,255,255,0.18)" }}
+          />
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1
               style={{

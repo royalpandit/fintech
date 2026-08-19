@@ -114,6 +114,7 @@ export default async function NotificationsPage({
       <NotificationsClient
         notifications={notifications.map((n) => ({
           ...n,
+          data: (n.data ?? null) as { href?: string; kind?: string } | null,
           readAt: n.readAt?.toISOString() ?? null,
           createdAt: n.createdAt.toISOString(),
         }))}

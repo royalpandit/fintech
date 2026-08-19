@@ -134,7 +134,7 @@ export type SocialComment = {
   id: number;
   content: string;
   created_at: string;
-  user: { fullName: string };
+  user: { fullName: string; avatar_url?: string | null };
   replies: SocialComment[];
 };
 

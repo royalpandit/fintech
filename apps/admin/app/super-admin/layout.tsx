@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import AdminShell from "../../components/admin-shell";
 import { requireAuthToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { userAvatarSelect, resolveAvatarUrl } from "@/lib/user-avatar";
 
 export default async function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const token = cookies().get("access_token")?.value ?? null;
@@ -23,7 +24,7 @@ export default async function SuperAdminLayout({ children }: { children: React.R
 
   const user = await prisma.user.findUnique({
     where: { id: auth.userId },
-    select: { fullName: true, email: true, role: true, status: true },
+    select: { fullName: true, email: true, role: true, status: true, ...userAvatarSelect },
   });
 
   if (!user || user.status === "suspended") redirect("/login");
@@ -34,6 +35,7 @@ export default async function SuperAdminLayout({ children }: { children: React.R
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        avatarUrl: resolveAvatarUrl(user),
       }}
     >
       {children}

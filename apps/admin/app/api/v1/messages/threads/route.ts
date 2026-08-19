@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/auth";
+import { hasActiveAdvisorAccess } from "@/lib/subscription-services-server";
 
 export const dynamic = "force-dynamic";
 
@@ -57,7 +58,6 @@ export async function POST(req: NextRequest) {
   // Advisors: only users with an active monthly/yearly subscription can message
   // Regular users: need an accepted friend/connection request
   if (target.role === "advisor") {
-    const { hasActiveAdvisorAccess } = await import("@/lib/subscription-services-server");
     const active = await hasActiveAdvisorAccess(userId, targetUserId);
     if (!active) {
       return err("Subscribe to a plan to message this advisor", 403);

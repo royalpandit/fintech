@@ -1,4 +1,5 @@
 import Link from "next/link";
+import FlagPostButton from "@/components/posts/flag-post-button";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { FiHeart, FiMessageSquare } from "react-icons/fi";
@@ -126,13 +127,25 @@ export default async function AdvisorPostsPage({
             Draft, track, and manage every sentiment post you publish.
           </p>
         </div>
-        <Link
-          href="/advisor/posts/new"
-          className="btn-primary"
-          style={{ padding: "12px 20px" }}
-        >
-          + New Post
-        </Link>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {/* A trade is a post with entry/target/SL. That was only reachable by
+              opening "New Post" and scrolling, so there was no visible way to
+              "post a trade" at all. */}
+          <Link
+            href="/advisor/posts/new?trade=1"
+            className="btn-primary"
+            style={{ padding: "12px 20px" }}
+          >
+            + Post Trade
+          </Link>
+          <Link
+            href="/advisor/posts/new"
+            className="btn-secondary"
+            style={{ padding: "12px 20px" }}
+          >
+            + New Post
+          </Link>
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
@@ -168,6 +181,7 @@ export default async function AdvisorPostsPage({
                 <th>Status</th>
                 <th>Engagement</th>
                 <th>Created</th>
+                <th>Review</th>
               </tr>
             </thead>
             <tbody>
@@ -248,6 +262,12 @@ export default async function AdvisorPostsPage({
                       </span>
                     </td>
                     <td>{post.createdAt.toLocaleDateString()}</td>
+                    <td>
+                      <FlagPostButton
+                        postId={post.id}
+                        alreadyFlagged={post.complianceStatus === "flagged"}
+                      />
+                    </td>
                   </tr>
                 ))
               )}

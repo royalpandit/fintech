@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import type { Candle } from "@/lib/angelone-types";
 import {
   nseChartLocalization,
@@ -10,12 +10,21 @@ import {
 import type { ChartIndicatorOutput, IndicatorSeriesOutput } from "@/lib/indicators";
 import { lastPointsPerSeries } from "@/lib/indicators";
 import OiProfileOverlay from "./oi-profile-overlay";
+import ChartDrawingLayer from "./chart-drawing-layer";
 import type { OptionChainData } from "./option-chain-panel";
 import { toHeikinAshi, toRenko } from "./chart-transforms";
 
 export const OI_PROFILE_INDICATOR_ID = "oi-profile";
 
 type LowerPaneId = "volume" | "rsi" | "macd";
+
+/** Subset of the lightweight-charts time scale the drawing overlay needs. */
+type TimeScaleForDrawings = {
+  logicalToCoordinate?: (logical: number) => number | null;
+  coordinateToLogical?: (x: number) => number | null;
+  subscribeVisibleLogicalRangeChange?: (fn: () => void) => void;
+  unsubscribeVisibleLogicalRangeChange?: (fn: () => void) => void;
+};
 
 export type ChartType =
   | "candle" | "hollow" | "bar" | "line" | "line-markers" | "step"
@@ -53,6 +62,8 @@ type Props = {
   visibleBars?: number;
   /** Change to re-anchor viewport to the latest candles. */
   viewportResetKey?: string;
+  /** Per-instrument key (exchange:token) — scopes saved drawings. */
+  instrumentKey?: string;
   /** OI Profile overlay (option chain → price axis). */
   oiProfile?: {
     chain: OptionChainData | null;
@@ -71,6 +82,7 @@ type SeriesObj = {
   createPriceLine: AnyFn;
   removePriceLine: AnyFn;
   coordinateToPrice: AnyFn;
+  priceToCoordinate?: AnyFn;
   priceScale?: () => { applyOptions: (o: object) => void };
 };
 
@@ -404,6 +416,7 @@ export default function ChartWidget({
   chartIndicators,
   visibleBars = 120,
   viewportResetKey = "",
+  instrumentKey = "",
   oiProfile,
 }: Props) {
   const candles = useMemo(() => prepareCandles(rawCandles, chartType), [rawCandles, chartType]);
@@ -465,14 +478,30 @@ export default function ChartWidget({
     } catch { /* series not ready */ }
   }, [livePrice, liveTimestamp, liveSeq, candles, rawCandles, chartIndicators]);
 
-  // ── Eraser: wipe all drawn price lines ───────────────────────────────────
-  useEffect(() => {
-    if (activeTool !== "eraser") return;
+  // ── Eraser: remove the horizontal line nearest the click ─────────────────
+  // Selecting the tool used to wipe every line at once, which made it
+  // impossible to erase just one. The drawing layer calls this only when the
+  // click didn't land on one of its own shapes.
+  const eraseHlineNear = useCallback((y: number): boolean => {
     const series = seriesRef.current;
-    if (!series) return;
-    priceLinesRef.current.forEach(l => { try { series.removePriceLine(l); } catch { /**/ } });
-    priceLinesRef.current = [];
-  }, [activeTool]);
+    if (!series || !priceLinesRef.current.length) return false;
+    let bestIdx = -1;
+    let bestDist = 10;
+    priceLinesRef.current.forEach((line, i) => {
+      try {
+        const price = (line as { options?: () => { price?: number } }).options?.().price;
+        if (price == null) return;
+        const lineY = series.priceToCoordinate?.(price);
+        if (lineY == null) return;
+        const dist = Math.abs(lineY - y);
+        if (dist <= bestDist) { bestDist = dist; bestIdx = i; }
+      } catch { /**/ }
+    });
+    if (bestIdx < 0) return false;
+    try { series.removePriceLine(priceLinesRef.current[bestIdx]); } catch { /**/ }
+    priceLinesRef.current.splice(bestIdx, 1);
+    return true;
+  }, []);
 
   // ── Screenshot ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -745,7 +774,11 @@ export default function ChartWidget({
 
       // ── Click handler: H-lines ────────────────────────────────────────────
       chart.subscribeClick((param: { point?: { x: number; y: number }; time?: unknown }) => {
-        if (!param.point || !param.time) return;
+        // `param.time` is undefined whenever the click doesn't land on a bar
+        // (the empty right margin, gaps between sessions), which made the
+        // horizontal-line tool silently do nothing. Only the y coordinate
+        // matters here — a price line spans the whole chart.
+        if (!param.point) return;
         if (activeToolRef.current !== "hline") return;
         const series = seriesRef.current;
         if (!series) return;
@@ -793,12 +826,29 @@ export default function ChartWidget({
     prevBarCountRef.current = n;
   }, [viewportResetKey, visibleBars]);
 
+  // ── Crosshair mode ────────────────────────────────────────────────────────
+  // The "Crosshair" tool had no implementation at all — the chart always draws a
+  // crosshair on hover, so selecting it changed nothing. It now switches the
+  // crosshair to magnet mode, which snaps to the nearest OHLC value.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    try {
+      chart.applyOptions({
+        crosshair: { mode: activeTool === "crosshair" ? 1 : 0 },
+      });
+    } catch {
+      /* chart not ready */
+    }
+  }, [activeTool, candles]);
+
   // ── Cursor style ──────────────────────────────────────────────────────────
   useEffect(() => {
     const canvas = containerRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
     if (!canvas) return;
     const map: Record<string, string> = {
       hline: "crosshair", trend: "crosshair", vline: "crosshair",
+      rect: "crosshair", fib: "crosshair",
       pencil: "crosshair", eraser: "cell", text: "text",
     };
     canvas.style.cursor = map[activeTool] ?? "default";
@@ -823,6 +873,15 @@ export default function ChartWidget({
         }}
       >
         <div ref={mainPaneRef} style={{ position: "absolute", inset: 0 }} />
+        <ChartDrawingLayer
+          activeTool={activeTool}
+          chartRef={chartRef as RefObject<{ timeScale: () => TimeScaleForDrawings } | null>}
+          seriesRef={seriesRef as RefObject<{ priceToCoordinate?: (p: number) => number | null; coordinateToPrice?: (y: number) => number | null } | null>}
+          paneRef={mainPaneWrapRef}
+          instrumentKey={instrumentKey}
+          refreshKey={liveSeq ?? 0}
+          onEraseNear={eraseHlineNear}
+        />
         {oiProfile?.chain && (
           <OiProfileOverlay
             chain={oiProfile.chain}

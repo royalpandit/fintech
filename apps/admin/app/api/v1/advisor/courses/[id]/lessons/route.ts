@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notifyCourse } from "@/lib/notify";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
 import { advisorCan } from "@/lib/capabilities-server";
@@ -45,6 +46,20 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       durationSeconds: typeof body.durationSeconds === "number" ? body.durationSeconds : null,
     },
   });
+
+  // Tell everyone enrolled that there's new material.
+  const [course, enrolments] = await Promise.all([
+    prisma.course.findUnique({ where: { id: courseId }, select: { title: true } }),
+    prisma.courseEnrollment.findMany({ where: { courseId }, select: { userId: true } }),
+  ]);
+  for (const e of enrolments) {
+    await notifyCourse({
+      userId: e.userId,
+      courseId,
+      title: `New lesson in ${course?.title ?? "your course"}`,
+      message: title,
+    });
+  }
 
   return ok({ lesson });
 }

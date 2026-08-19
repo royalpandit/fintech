@@ -13,6 +13,7 @@ type ModeratorShellProps = {
   children: React.ReactNode;
   currentUser: {
     fullName: string;
+    avatarUrl?: string | null;
     email: string;
     role: string;
   };
@@ -121,7 +122,12 @@ export default function ModeratorShell({
                 flexShrink: 0,
               }}
             >
-              {initials}
+              {currentUser.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={currentUser.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
+              ) : (
+                initials
+              )}
             </div>
             <div style={{ minWidth: 0 }}>
               <div
@@ -329,7 +335,12 @@ export default function ModeratorShell({
                 cursor: "pointer",
               }}
             >
-              {initials}
+              {currentUser.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={currentUser.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
+              ) : (
+                initials
+              )}
             </button>
 
             {menuOpen && (

@@ -1,8 +1,11 @@
 node_modules/
 .next/
+.next-verify/
 dist/
 venv/
 .env
 
 # TypeScript incremental build cache — regenerated on every build
 *.tsbuildinfo
+# User-uploaded content — never commit test artifacts
+apps/admin/public/uploads/

@@ -37,18 +37,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={{ show }}>
       {children}
-      <div
-        style={{
-          position: "fixed",
-          top: 18,
-          right: 18,
-          zIndex: 400,
-          display: "flex",
-          flexDirection: "column",
-          gap: 10,
-          pointerEvents: "none",
-        }}
-      >
+      {/* Bottom-centre: the top-right corner is occupied by the header controls
+          (theme, notifications, avatar) and the bottom-right by the chat widget,
+          so a toast there covered the very buttons the user just clicked. */}
+      <div className="toast-stack">
         {toasts.map((t) => {
           const tone = TONE[t.kind];
           return (
@@ -60,7 +52,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 alignItems: "center",
                 gap: 10,
                 minWidth: 240,
-                maxWidth: 380,
+                maxWidth: "min(420px, calc(100vw - 32px))",
                 padding: "11px 14px",
                 borderRadius: 12,
                 background: tone.bg,
@@ -91,7 +83,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           );
         })}
       </div>
-      <style>{`@keyframes toast-in { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }`}</style>
+      <style>{`@keyframes toast-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }`}</style>
     </Ctx.Provider>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { notificationHref } from "@/lib/notification-href";
 
 type Notification = {
   id: number;
@@ -25,6 +27,7 @@ function relTime(iso: string): string {
 }
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread">("all");
@@ -46,6 +49,27 @@ export default function NotificationsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Keep the list current without a reload.
+  useEffect(() => {
+    const silent = async () => {
+      try {
+        const res = await fetch("/api/v1/notifications", { cache: "no-store" });
+        if (!res.ok) return;
+        const j = await res.json();
+        if (Array.isArray(j.data)) setItems(j.data);
+      } catch {
+        // offline — retry on the next tick
+      }
+    };
+    const id = setInterval(silent, 20_000);
+    const onFocus = () => void silent();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
 
   const unreadCount = items.filter((n) => !n.readAt).length;
 
@@ -128,7 +152,11 @@ export default function NotificationsPage() {
             <button
               key={n.id}
               type="button"
-              onClick={() => markOne(n.id)}
+              onClick={() => {
+                void markOne(n.id);
+                const href = notificationHref(n.data);
+                if (href) router.push(href);
+              }}
               style={{
                 display: "flex",
                 gap: 12,
@@ -142,7 +170,7 @@ export default function NotificationsPage() {
                 borderBottomWidth: 1,
                 borderBottomStyle: "solid",
                 borderBottomColor: "var(--border)",
-                cursor: "pointer",
+                cursor: notificationHref(n.data) ? "pointer" : "default",
               }}
             >
               <span

@@ -6,6 +6,7 @@ import {
   serializeCompetition,
 } from "@/lib/competition";
 import { competitionRepository } from "@/lib/competition-repository";
+import { sweepCompetitionStatuses } from "@/lib/competition-lifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,10 @@ export async function GET(req: NextRequest) {
   if (tab === "my" && !auth) {
     return NextResponse.json({ ok: false, error: "Authentication required" }, { status: 401 });
   }
+
+  // Reconcile any statuses that have drifted from their dates before listing,
+  // so "live"/"upcoming"/"completed" mean what they say.
+  await sweepCompetitionStatuses();
 
   const rows = await competitionRepository.listCompetitions(filters);
 

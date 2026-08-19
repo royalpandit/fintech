@@ -1,4 +1,5 @@
 import type { FinuerRebalanceAction, Prisma } from "@prisma/client";
+import { notifyBasketRebalance } from "@/lib/notify";
 import { prisma } from "@/lib/prisma";
 import {
   fetchEntryPrice,
@@ -323,6 +324,8 @@ export class FinuerBasketRepository {
       return created;
     });
 
+    await announceRebalance(basketId, `Added ${stock.symbol}`);
+
     return stock;
   }
 
@@ -348,8 +351,8 @@ export class FinuerBasketRepository {
     const newWeight = data.weightPct !== undefined ? data.weightPct : oldWeight;
     const weightChanged = data.weightPct !== undefined && oldWeight !== newWeight;
 
-    return prisma.$transaction(async (tx) => {
-      const updated = await tx.finuerBasketStock.update({
+    const updated = await prisma.$transaction(async (tx) => {
+      const row = await tx.finuerBasketStock.update({
         where: { id: stockId },
         data: {
           ...(data.symbol !== undefined ? { symbol: data.symbol.trim().toUpperCase() } : {}),
@@ -366,8 +369,8 @@ export class FinuerBasketRepository {
           data: {
             basketId,
             action: rebalanceAction(oldWeight, newWeight, false, false),
-            symbol: updated.symbol,
-            stockName: updated.stockName,
+            symbol: row.symbol,
+            stockName: row.stockName,
             oldWeight,
             newWeight,
             reason: data.reason?.trim() || null,
@@ -379,8 +382,19 @@ export class FinuerBasketRepository {
         });
       }
 
-      return updated;
+      return row;
     });
+
+    // Announce outside the transaction — a notification fan-out must never
+    // hold a DB transaction open.
+    if (weightChanged) {
+      await announceRebalance(
+        basketId,
+        `${updated.symbol} weight ${oldWeight ?? 0}% → ${newWeight ?? 0}%`,
+      );
+    }
+
+    return updated;
   }
 
   async deleteBasketStock(basketId: number, stockId: number, reason?: string | null) {
@@ -389,7 +403,7 @@ export class FinuerBasketRepository {
     });
     if (!existing) throw new Error("Stock not found");
 
-    return prisma.$transaction(async (tx) => {
+    const removed = await prisma.$transaction(async (tx) => {
       await tx.finuerBasketRebalanceEvent.create({
         data: {
           basketId,
@@ -412,6 +426,10 @@ export class FinuerBasketRepository {
         data: { deletedAt: new Date() },
       });
     });
+
+    await announceRebalance(basketId, `Removed ${existing.symbol}`);
+
+    return removed;
   }
 
   async updateBasket(
@@ -489,6 +507,26 @@ export class FinuerBasketRepository {
 
   getSortField(timePeriod: FinuerBasketTimePeriod) {
     return getReturnField(timePeriod);
+  }
+}
+
+/**
+ * Tell everyone who saved this basket that it was rebalanced. Best-effort and
+ * always called *after* the mutation's transaction has committed.
+ */
+async function announceRebalance(basketId: number, summary: string): Promise<void> {
+  try {
+    const basket = await prisma.finuerBasket.findUnique({
+      where: { id: basketId },
+      select: { basketName: true },
+    });
+    await notifyBasketRebalance({
+      basketId,
+      basketName: basket?.basketName ?? "A basket you follow",
+      summary,
+    });
+  } catch {
+    // Never fail a rebalance because the notification couldn't be sent.
   }
 }
 

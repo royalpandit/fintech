@@ -14,11 +14,11 @@ export async function GET(
     where: { postId, parentId: null, deletedAt: null },
     orderBy: { createdAt: "asc" },
     include: {
-      user: { select: { fullName: true } },
+      user: { select: { fullName: true, avatarUrl: true, advisorProfile: { select: { profileImageUrl: true } } } },
       replies: {
         where: { deletedAt: null },
         orderBy: { createdAt: "asc" },
-        include: { user: { select: { fullName: true } } },
+        include: { user: { select: { fullName: true, avatarUrl: true, advisorProfile: { select: { profileImageUrl: true } } } } },
       },
     },
   });
@@ -28,12 +28,12 @@ export async function GET(
       id: c.id,
       content: c.content,
       created_at: c.createdAt.toISOString(),
-      user: c.user,
+      user: { fullName: c.user.fullName, avatar_url: c.user.advisorProfile?.profileImageUrl ?? c.user.avatarUrl ?? null },
       replies: c.replies.map(r => ({
         id: r.id,
         content: r.content,
         created_at: r.createdAt.toISOString(),
-        user: r.user,
+        user: { fullName: r.user.fullName, avatar_url: r.user.advisorProfile?.profileImageUrl ?? r.user.avatarUrl ?? null },
         replies: [],
       })),
     })),
@@ -64,7 +64,7 @@ export async function POST(
       content,
       parentId: body.parentId,
     },
-    include: { user: { select: { fullName: true } } },
+    include: { user: { select: { fullName: true, avatarUrl: true, advisorProfile: { select: { profileImageUrl: true } } } } },
   });
 
   return ok({
@@ -72,7 +72,7 @@ export async function POST(
       id: comment.id,
       content: comment.content,
       created_at: comment.createdAt.toISOString(),
-      user: comment.user,
+      user: { fullName: comment.user.fullName, avatar_url: comment.user.advisorProfile?.profileImageUrl ?? comment.user.avatarUrl ?? null },
       replies: [],
     },
   });

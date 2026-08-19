@@ -23,6 +23,7 @@ import PremiumPostOverlay from "@/components/posts/premium-post-overlay";
 import PremiumUnlockModal from "@/components/posts/premium-unlock-modal";
 import { usePremiumPostUnlock } from "@/components/posts/use-premium-post-unlock";
 import FeedFilter, { DEFAULT_FEED_FILTERS, type FeedFilters } from "@/components/feed/feed-filter";
+import ProfileAvatar from "@/components/user/profile-avatar";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -31,7 +32,7 @@ type Reply = {
   content: string;
   createdAt: string;
   deletedAt: string | null;
-  user: { fullName: string };
+  user: { fullName: string; avatarUrl?: string | null };
 };
 
 type Comment = {
@@ -39,7 +40,7 @@ type Comment = {
   content: string;
   createdAt: string;
   deletedAt: string | null;
-  user: { fullName: string };
+  user: { fullName: string; avatarUrl?: string | null };
   replies: Reply[];
   _count: { replies: number };
 };
@@ -72,7 +73,7 @@ type FeedPost = {
   advisor: {
     id: number;
     fullName: string;
-    advisorProfile: { sebiRegistrationNo: string | null } | null;
+    advisorProfile: { sebiRegistrationNo: string | null; profileImageUrl?: string | null } | null;
   } | null;
   _count: { reactions: number; comments: number };
 };
@@ -86,8 +87,10 @@ export type FeedClientProps = {
   initialFollowedIds: number[];
   initialLikedPostIds: number[];
   currentUserName?: string | null;
+  currentUserAvatar?: string | null;
   suggestedAdvisors: {
     userId: number;
+    profileImageUrl?: string | null;
     user: { id: number; fullName: string; _count: { followers: number } } | null;
   }[];
   trendingSymbols: { marketSymbol: string | null; _count: { _all: number } }[];
@@ -131,22 +134,13 @@ function CommentBubble({
 }) {
   return (
     <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-      <div
-        style={{
-          width: 26,
-          height: 26,
-          borderRadius: 6,
-          background: "linear-gradient(135deg, rgba(14,165,233,0.13), rgba(16,185,129,0.13))",
-          color: "#0ea5e9",
-          display: "grid",
-          placeItems: "center",
-          fontSize: 9,
-          fontWeight: 600,
-          flexShrink: 0,
-        }}
-      >
-        {getInitials(comment.user.fullName)}
-      </div>
+      <ProfileAvatar
+        src={comment.user.avatarUrl}
+        name={comment.user.fullName}
+        size={26}
+        radius={6}
+        fontSize={9}
+      />
       <div style={{ flex: 1 }}>
         <div
           style={{
@@ -248,7 +242,6 @@ function PostCard({
   const [postState, setPostState] = useState(post);
   const menuRef = useRef<HTMLDivElement>(null);
   const sColor = SENTIMENT_COLORS[postState.sentiment] ?? "#64748b";
-  const initials = getInitials(postState.advisor?.fullName ?? "??");
   const when = postState.publishedAt ?? postState.createdAt;
 
   const premium = usePremiumPostUnlock({
@@ -296,21 +289,15 @@ function PostCard({
       <div style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "center" }}>
         <Link
           href={`/user/advisors/${post.advisor?.id}`}
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: 9,
-            background: "linear-gradient(135deg, rgba(14,165,233,0.13), rgba(16,185,129,0.13))",
-            color: "#0ea5e9",
-            display: "grid",
-            placeItems: "center",
-            fontSize: 12,
-            fontWeight: 600,
-            flexShrink: 0,
-            textDecoration: "none",
-          }}
+          style={{ display: "flex", flexShrink: 0, textDecoration: "none" }}
         >
-          {initials}
+          <ProfileAvatar
+            src={postState.advisor?.advisorProfile?.profileImageUrl}
+            name={postState.advisor?.fullName ?? "??"}
+            size={38}
+            radius={9}
+            fontSize={12}
+          />
         </Link>
 
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -990,6 +977,7 @@ export default function FeedClient({
   userId,
   initialFollowedIds,
   initialLikedPostIds,
+  currentUserAvatar,
   currentUserName,
   suggestedAdvisors,
   trendingSymbols,
@@ -1400,7 +1388,11 @@ export default function FeedClient({
           </div>
 
           {tab === "community" ? (
-            <SocialFeedSection isAuthed={isAuthed} userName={currentUserName ?? "You"} />
+            <SocialFeedSection
+              isAuthed={isAuthed}
+              userName={currentUserName ?? "You"}
+              userAvatar={currentUserAvatar ?? null}
+            />
           ) : (
             <>
               {/* Filter row (advisor feeds) */}
@@ -1485,22 +1477,15 @@ export default function FeedClient({
                     >
                       <Link
                         href={`/user/advisors/${advisorId}`}
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 8,
-                          background:
-                            "linear-gradient(135deg, rgba(14,165,233,0.13), rgba(16,185,129,0.13))",
-                          color: "#0ea5e9",
-                          display: "grid",
-                          placeItems: "center",
-                          fontSize: 11,
-                          fontWeight: 600,
-                          flexShrink: 0,
-                          textDecoration: "none",
-                        }}
+                        style={{ display: "flex", flexShrink: 0, textDecoration: "none" }}
                       >
-                        {getInitials(sa.user?.fullName ?? "??")}
+                        <ProfileAvatar
+                          src={sa.profileImageUrl}
+                          name={sa.user?.fullName ?? "??"}
+                          size={36}
+                          radius={8}
+                          fontSize={11}
+                        />
                       </Link>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div

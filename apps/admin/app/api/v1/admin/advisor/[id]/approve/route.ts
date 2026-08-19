@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notifyVerificationDecision } from "@/lib/notify";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
 
@@ -35,6 +36,12 @@ export async function POST(
       data: { role: "advisor" },
     });
   }
+
+  await notifyVerificationDecision({
+    advisorUserId,
+    approved: status === "approved",
+    note: body.action === "reject" ? body.reason : null,
+  });
 
   await prisma.auditLog.create({
     data: {

@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FiSearch, FiMessageCircle } from "react-icons/fi";
+import ProfileAvatar from "@/components/user/profile-avatar";
 
-type Contact = { id: number; fullName: string };
+type Contact = { id: number; fullName: string; avatarUrl?: string | null };
 
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -124,22 +125,13 @@ export default function NewChatSearch({ contacts }: { contacts: Contact[] }) {
                     width: "100%",
                   }}
                 >
-                  <span
-                    style={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: 10,
-                      background: "linear-gradient(135deg, rgba(14,165,233,0.13), rgba(16,185,129,0.13))",
-                      color: "#0ea5e9",
-                      display: "grid",
-                      placeItems: "center",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {getInitials(c.fullName)}
-                  </span>
+                  <ProfileAvatar
+                    src={c.avatarUrl}
+                    name={c.fullName}
+                    size={38}
+                    radius={10}
+                    fontSize={12}
+                  />
                   <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>
                     {c.fullName}
                   </span>

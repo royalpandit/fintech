@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notifyTradeStatus } from "@/lib/notify";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireAuth, requireRole } from "@/lib/auth";
 import {
@@ -45,6 +46,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       sentiment: true,
       entryPriceMin: true,
       entryPriceMax: true,
+      title: true,
+      marketSymbol: true,
+      advisorUserId: true,
+      advisor: { select: { fullName: true } },
     },
   });
   if (!post) return err("Trade not found", 404);
@@ -97,6 +102,20 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       ? [prisma.marketPost.update({ where: { id: postId }, data: marketData })]
       : []),
   ]);
+
+  // Tell everyone who could have acted on this call that it moved.
+  if (nextStatus) {
+    await notifyTradeStatus({
+      postId,
+      postTitle: post.title,
+      symbol: post.marketSymbol,
+      advisorUserId: post.advisorUserId,
+      advisorName: post.advisor?.fullName ?? "An advisor you follow",
+      status: nextStatus,
+      returnPct:
+        typeof marketData.exitReturnPct === "number" ? marketData.exitReturnPct : null,
+    });
+  }
 
   return ok({ data: update, tradeStatus: nextStatus ?? null });
 }

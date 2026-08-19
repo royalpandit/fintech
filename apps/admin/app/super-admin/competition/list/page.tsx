@@ -15,7 +15,23 @@ type Row = {
   effectiveStatus: string;
   visibility: string;
   resultDeclaredAt?: string | null;
+  participationStartDate?: string | null;
+  startDate?: string | null;
 };
+
+/** Plain-words reason a row won't appear on the public "Live" tab. */
+function liveVisibilityIssue(row: Row): string | null {
+  const now = Date.now();
+  if (row.status === "draft") return "Draft — not published";
+  if (row.status === "cancelled") return "Cancelled";
+  if (row.visibility === "hidden") return "Hidden — users can't see this";
+  if (row.resultDeclaredAt) return "Result declared — under Completed";
+  if (row.endDate && new Date(row.endDate).getTime() < now)
+    return "Ended — under Completed";
+  const opensAt = row.participationStartDate ?? row.startDate;
+  if (opensAt && new Date(opensAt).getTime() > now) return "Starts later — under Upcoming";
+  return null;
+}
 
 export default function CompetitionListPage() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -96,7 +112,19 @@ export default function CompetitionListPage() {
                   <td style={tdStyle}>{row.participantCount}</td>
                   <td style={tdStyle}>{new Date(row.participationEndDate).toLocaleDateString()}</td>
                   <td style={tdStyle}>{new Date(row.endDate).toLocaleDateString()}</td>
-                  <td style={tdStyle}>{row.effectiveStatus || row.status}</td>
+                  <td style={tdStyle}>
+                    {row.effectiveStatus || row.status}
+                    {(() => {
+                      const issue = liveVisibilityIssue(row);
+                      return issue ? (
+                        <span className="comp-not-live" title={issue}>
+                          Not on Live · {issue}
+                        </span>
+                      ) : (
+                        <span className="comp-is-live">Visible on Live</span>
+                      );
+                    })()}
+                  </td>
                   <td style={tdStyle}>{row.visibility}</td>
                   <td style={tdStyle}>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>

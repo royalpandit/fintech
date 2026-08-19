@@ -4,10 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { FiMessageCircle, FiSearch, FiRadio } from "react-icons/fi";
 import BroadcastComposer from "./broadcast-composer";
+import ProfileAvatar from "@/components/user/profile-avatar";
 
 export type AdvisorThread = {
   id: number;
   partnerName: string;
+  partnerAvatar?: string | null;
   preview: string;
   timeLabel: string;
   serviceNames: string[];
@@ -139,22 +141,13 @@ export default function AdvisorMessagesClient({
                 transition: "background 0.15s",
               }}
             >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  background: "linear-gradient(135deg, rgba(14,165,233,0.13), rgba(16,185,129,0.13))",
-                  color: "#0ea5e9",
-                  display: "grid",
-                  placeItems: "center",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  flexShrink: 0,
-                }}
-              >
-                {getInitials(t.partnerName)}
-              </div>
+              <ProfileAvatar
+                src={t.partnerAvatar}
+                name={t.partnerName}
+                size={44}
+                radius={12}
+                fontSize={13}
+              />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{t.partnerName}</span>

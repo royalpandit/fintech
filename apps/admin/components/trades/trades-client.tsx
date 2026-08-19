@@ -11,6 +11,7 @@ import {
   type FeedFilters,
 } from "@/components/feed/feed-filter";
 import { formatRelativeTime } from "@/lib/format-date";
+import ProfileAvatar from "@/components/user/profile-avatar";
 
 type Trade = {
   id: number;
@@ -38,7 +39,7 @@ type Trade = {
   advisor: {
     id: number;
     fullName: string;
-    advisorProfile: { sebiRegistrationNo: string | null } | null;
+    advisorProfile: { sebiRegistrationNo: string | null; profileImageUrl?: string | null } | null;
   } | null;
   _count: { reactions: number; comments: number };
 };
@@ -111,11 +112,13 @@ function AdvisorRailCard({ a }: { a: AdvisorCard }) {
 export default function TradesClient({
   trades,
   isAuthed,
+  likedPostIds = [],
   featuredAdvisors,
   topAdvisors,
 }: {
   trades: Trade[];
   isAuthed: boolean;
+  likedPostIds?: number[];
   featuredAdvisors: AdvisorCard[];
   topAdvisors: AdvisorCard[];
 }) {
@@ -124,6 +127,57 @@ export default function TradesClient({
   const [filters, setFilters] = useState<FeedFilters>(DEFAULT_FEED_FILTERS);
   // Collapsed by default on mobile (the toggle only shows on small screens).
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // ── Likes ────────────────────────────────────────────────────────────────
+  // Optimistic toggle against /api/v1/market/posts/[id]/like, rolled back if
+  // the request fails so the heart never disagrees with the server.
+  const [liked, setLiked] = useState<Set<number>>(() => new Set(likedPostIds));
+  const [likeCounts, setLikeCounts] = useState<Map<number, number>>(
+    () => new Map(trades.map((t) => [t.id, t._count.reactions])),
+  );
+  const [likeBusy, setLikeBusy] = useState<Set<number>>(() => new Set());
+
+  async function toggleLike(postId: number) {
+    if (!isAuthed || likeBusy.has(postId)) return;
+    const wasLiked = liked.has(postId);
+
+    setLikeBusy((prev) => new Set(prev).add(postId));
+    setLiked((prev) => {
+      const next = new Set(prev);
+      if (wasLiked) next.delete(postId);
+      else next.add(postId);
+      return next;
+    });
+    setLikeCounts((prev) => {
+      const next = new Map(prev);
+      next.set(postId, Math.max(0, (next.get(postId) ?? 0) + (wasLiked ? -1 : 1)));
+      return next;
+    });
+
+    try {
+      const res = await fetch(`/api/v1/market/posts/${postId}/like`, { method: "POST" });
+      if (!res.ok) throw new Error("like failed");
+    } catch {
+      // Roll back
+      setLiked((prev) => {
+        const next = new Set(prev);
+        if (wasLiked) next.add(postId);
+        else next.delete(postId);
+        return next;
+      });
+      setLikeCounts((prev) => {
+        const next = new Map(prev);
+        next.set(postId, Math.max(0, (next.get(postId) ?? 0) + (wasLiked ? 1 : -1)));
+        return next;
+      });
+    } finally {
+      setLikeBusy((prev) => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+    }
+  }
 
   const sponsoredIds = useMemo(
     () => new Set(featuredAdvisors.map((a) => a.id)),
@@ -295,21 +349,15 @@ export default function TradesClient({
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                       <Link
                         href={`/user/advisors/${t.advisor?.id}`}
-                        style={{
-                          width: 42,
-                          height: 42,
-                          borderRadius: 12,
-                          background: "linear-gradient(135deg, rgba(14,165,233,0.13), rgba(16,185,129,0.13))",
-                          color: "#0ea5e9",
-                          display: "grid",
-                          placeItems: "center",
-                          fontSize: 13,
-                          fontWeight: 600,
-                          flexShrink: 0,
-                          textDecoration: "none",
-                        }}
+                        style={{ display: "flex", flexShrink: 0, textDecoration: "none" }}
                       >
-                        {initials(t.advisor?.fullName ?? "??")}
+                        <ProfileAvatar
+                          src={t.advisor?.advisorProfile?.profileImageUrl}
+                          name={t.advisor?.fullName ?? "??"}
+                          size={42}
+                          radius={12}
+                          fontSize={13}
+                        />
                       </Link>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
@@ -358,13 +406,30 @@ export default function TradesClient({
                       }}
                     />
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 12, fontSize: 12, color: "var(--text-muted)" }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                        <FiHeart size={14} /> {t._count.reactions}
-                      </span>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: 12, color: "var(--text-muted)" }}>
+                      {(() => {
+                        const isLiked = liked.has(t.id);
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => toggleLike(t.id)}
+                            disabled={!isAuthed}
+                            title={isAuthed ? (isLiked ? "Unlike" : "Like") : "Sign in to like"}
+                            aria-pressed={isLiked}
+                            className="trade-act"
+                            style={{ color: isLiked ? "#e11d48" : "var(--text-muted)" }}
+                          >
+                            <FiHeart
+                              size={14}
+                              style={{ fill: isLiked ? "#e11d48" : "none" }}
+                            />
+                            {likeCounts.get(t.id) ?? t._count.reactions}
+                          </button>
+                        );
+                      })()}
+                      <Link href={`/user/markets/${t.id}#comments`} className="trade-act">
                         <FiMessageSquare size={14} /> {t._count.comments}
-                      </span>
+                      </Link>
                       <span style={{ flex: 1 }} />
                       <Link
                         href={`/user/markets/${t.id}`}

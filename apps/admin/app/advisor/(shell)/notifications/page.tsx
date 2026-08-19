@@ -1,4 +1,5 @@
 import Link from "next/link";
+import NotificationFeed from "@/components/notifications/notification-feed";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -112,58 +113,20 @@ export default async function AdvisorNotificationsPage({
       </div>
 
       <article className="card" style={{ marginTop: 16, padding: 0 }}>
-        {notifications.length === 0 ? (
-          <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>
-            No notifications here.
-          </div>
-        ) : (
-          <div>
-            {notifications.map((n, i) => (
-              <div
-                key={n.id}
-                style={{
-                  padding: "16px 20px",
-                  borderBottom:
-                    i === notifications.length - 1 ? "none" : "1px solid var(--border)",
-                  background: n.readAt ? "transparent" : "rgba(34,197,94,0.12)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 16,
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      alignItems: "center",
-                      marginBottom: 4,
-                    }}
-                  >
-                    {!n.readAt && (
-                      <span
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: 999,
-                          background: "#10b981",
-                        }}
-                      />
-                    )}
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: 14 }}>{n.title}</p>
-                    {channelTag(n.channel)}
-                  </div>
-                  <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5 }}>
-                    {n.message}
-                  </p>
-                </div>
-                <span style={{ fontSize: 12, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                  {relTime(n.createdAt)}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+        <NotificationFeed
+          initial={notifications.map((n) => ({
+            id: n.id,
+            channel: n.channel,
+            title: n.title,
+            message: n.message,
+            data: (n.data ?? null) as { href?: unknown; kind?: unknown } | null,
+            readAt: n.readAt ? n.readAt.toISOString() : null,
+            createdAt: n.createdAt.toISOString(),
+          }))}
+          audience="advisor"
+          accent="#10b981"
+          filter={(filter === "unread" || filter === "read" ? filter : "all") as "all" | "unread" | "read"}
+        />
       </article>
     </section>
   );

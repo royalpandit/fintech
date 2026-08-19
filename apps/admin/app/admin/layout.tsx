@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import ModeratorShell from "../../components/moderator-shell";
 import { requireAuthToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { userAvatarSelect, resolveAvatarUrl } from "@/lib/user-avatar";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const token = cookies().get("access_token")?.value ?? null;
@@ -28,7 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const [user, pendingAdvisors, pendingPosts, openReports, todayActions] = await Promise.all([
     prisma.user.findUnique({
       where: { id: auth.userId },
-      select: { fullName: true, email: true, role: true, status: true },
+      select: { fullName: true, email: true, role: true, status: true, ...userAvatarSelect },
     }),
     prisma.advisorProfile.count({ where: { verificationStatus: "pending" } }),
     prisma.marketPost.count({
@@ -50,6 +51,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        avatarUrl: resolveAvatarUrl(user),
       }}
       pendingQueueCount={pendingQueueCount}
       todayActionsCount={todayActions}

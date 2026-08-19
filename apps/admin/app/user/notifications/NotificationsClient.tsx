@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { notificationHref, type NotificationData } from "@/lib/notification-href";
 import { FiCheckCircle, FiCheck, FiUserPlus, FiUserCheck, FiX } from "react-icons/fi";
 
 type Notification = {
@@ -9,9 +10,12 @@ type Notification = {
   channel: string;
   title: string;
   message: string;
+  data?: NotificationData;
   readAt: string | null;
   createdAt: string;
 };
+
+
 
 const CHANNEL_COLORS: Record<string, { bg: string; fg: string }> = {
   in_app: { bg: "#dbeafe", fg: "#1e40af" },
@@ -67,6 +71,31 @@ export default function NotificationsClient({
 
     await fetch(`/api/v1/notifications/${id}/read`, { method: "PATCH" });
   }
+
+  // Pull new notifications in the background so the list doesn't need a reload.
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/v1/notifications", { cache: "no-store" });
+      if (!res.ok) return;
+      const json = await res.json();
+      const rows: Notification[] = json.data ?? [];
+      if (!Array.isArray(rows)) return;
+      setNotifications(rows);
+      setUnreadCount(rows.filter((n) => !n.readAt).length);
+    } catch {
+      // offline — try again on the next tick
+    }
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(refresh, 20_000);
+    const onFocus = () => void refresh();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [refresh]);
 
   async function markAll() {
     if (markingAll || unreadCount === 0) return;
@@ -338,9 +367,13 @@ export default function NotificationsClient({
         ) : (
           visible.map((n, i) => {
             const cc = CHANNEL_COLORS[n.channel] ?? CHANNEL_COLORS.in_app;
+            const href = notificationHref(n.data, "user");
+            const RowTag = (href ? Link : "div") as React.ElementType;
             return (
-              <div
+              <RowTag
                 key={n.id}
+                {...(href ? { href, onClick: () => void markOne(n.id) } : {})}
+                className={href ? "notif-row notif-row-link" : "notif-row"}
                 style={{
                   padding: "14px 18px",
                   borderBottom: i === visible.length - 1 ? "none" : "1px solid var(--border)",
@@ -349,6 +382,8 @@ export default function NotificationsClient({
                   gap: 12,
                   alignItems: "flex-start",
                   transition: "background 0.2s",
+                  textDecoration: "none",
+                  color: "inherit",
                 }}
               >
                 {!n.readAt && (
@@ -443,7 +478,7 @@ export default function NotificationsClient({
                     </button>
                   )}
                 </div>
-              </div>
+              </RowTag>
             );
           })
         )}

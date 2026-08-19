@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ToastProvider } from "@/components/toast";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { FiMenu, FiX } from "react-icons/fi";
@@ -109,7 +110,43 @@ export default function AdvisorShell({
     }
   };
 
-  const totalUnread = (badges.Notifications ?? 0) + (badges.Comments ?? 0);
+  // The badge counts come from a server render, so a notification arriving
+  // while the advisor sits on a page would stay invisible until a full reload.
+  // Poll the unread count and refresh it whenever the tab regains focus.
+  const [liveUnread, setLiveUnread] = useState<number | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const pull = async () => {
+      try {
+        const res = await fetch("/api/v1/advisor/notifications?filter=unread", {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        const count =
+          typeof json.unreadCount === "number"
+            ? json.unreadCount
+            : Array.isArray(json.data)
+              ? json.data.length
+              : null;
+        if (!cancelled && count != null) setLiveUnread(count);
+      } catch {
+        // offline — retry on the next tick
+      }
+    };
+    void pull();
+    const id = setInterval(pull, 20_000);
+    const onFocus = () => void pull();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
+
+  const totalUnread =
+    (liveUnread ?? badges.Notifications ?? 0) + (badges.Comments ?? 0);
 
   return (
     <div className="admin-shell advisor-scope">
@@ -468,7 +505,7 @@ export default function AdvisorShell({
               </Link>
             </div>
           )}
-          {children}
+          <ToastProvider>{children}</ToastProvider>
         </main>
       </section>
     </div>

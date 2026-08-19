@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notifyAdvisorPost, notifyPostFlagged, notifyPostQueued } from "@/lib/notify";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
 import { parsePostAccessType } from "@/lib/post-access";
@@ -239,23 +240,34 @@ export async function POST(req: NextRequest) {
   ];
   const matchedPhrase = forbiddenPhrases.find((p) => lowerContent.includes(p));
 
-  // Verified advisors with clean rule-pass content are auto-approved and published
-  // immediately. Flagged content goes to the admin queue. Admins can demote any
-  // approved post later via the moderation route.
-  const complianceStatus = matchedPhrase ? "flagged" : "approved";
+  // Whether clean content publishes straight away, or waits for an admin.
+  //
+  // Every new post waits for a moderator. Content that trips the phrase scan is
+  // flagged; everything else is pending. Nothing is auto-approved — posts used
+  // to publish instantly, which bypassed the moderation queue entirely.
+  const complianceStatus = matchedPhrase ? "flagged" : "pending";
   const complianceRiskScore = matchedPhrase ? 8.5 : 2.0;
+  // Neither state is live, so a new post never publishes on creation.
+  const holdsForReview = true;
 
-  // Optional boost chosen at create time. Only activates for auto-approved posts
-  // (a flagged post can't be promoted). No payment is processed.
+  // Boost at create time is no longer possible: every new post waits for review,
+  // and an unapproved post can't be promoted. Say so rather than accepting the
+  // choice and silently dropping it — /advisor/posts/[id]/boost handles it once
+  // the post is approved.
   const boostTierObj = getBoostTier(body.boostTier);
-  if (boostTierObj && !(await canType(profile?.professionalType ?? null, "post.boost"))) {
-    return err("Boosting posts is not available for your professional type", 403);
+  if (boostTierObj) {
+    if (!(await canType(profile?.professionalType ?? null, "post.boost"))) {
+      return err("Boosting posts is not available for your professional type", 403);
+    }
+    if (!saveDraft) {
+      return err(
+        "Posts are reviewed before going live, so they can't be boosted yet. Publish first, then boost it from the post page.",
+        409,
+      );
+    }
   }
-  const willBoost = Boolean(boostTierObj) && complianceStatus === "approved";
-  const boostedUntil =
-    willBoost && boostTierObj
-      ? new Date(Date.now() + boostTierObj.days * 24 * 60 * 60 * 1000)
-      : null;
+  const willBoost = false;
+  const boostedUntil = null;
 
   const post = await prisma.marketPost.create({
     data: {
@@ -287,8 +299,8 @@ export async function POST(req: NextRequest) {
           : null,
       // Draft → unpublished. Flagged → unpublished (awaits review). Scheduled →
       // unpublished until due. Otherwise publish now.
-      publishedAt: saveDraft || matchedPhrase || scheduledAt ? null : new Date(),
-      scheduledAt: saveDraft || matchedPhrase ? null : scheduledAt,
+      publishedAt: saveDraft || holdsForReview || scheduledAt ? null : new Date(),
+      scheduledAt: saveDraft || holdsForReview ? null : scheduledAt,
       boostedUntil: saveDraft ? null : boostedUntil,
       boostTier: !saveDraft && willBoost && boostTierObj ? boostTierObj.id : null,
       audience,
@@ -350,6 +362,43 @@ export async function POST(req: NextRequest) {
   });
   }
   // ──────────────────────────────────────────────────────────────────────
+
+  // Queued for review — without this the advisor just watches it not appear.
+  if (!saveDraft && complianceStatus === "pending") {
+    await notifyPostQueued({
+      advisorUserId: auth.userId,
+      postId: post.id,
+      postTitle: post.title,
+    });
+  }
+
+  // Held for compliance — the advisor would otherwise just see it not appear.
+  if (matchedPhrase) {
+    await notifyPostFlagged({
+      advisorUserId: auth.userId,
+      postId: post.id,
+      postTitle: post.title,
+      reason: `Flagged phrase: "${matchedPhrase}"`,
+    });
+  }
+
+  // Fan out to the advisor's followers + active subscribers. Only for posts
+  // that actually went live — drafts, flagged and scheduled posts stay quiet
+  // (scheduled ones notify when publishDueScheduledPosts releases them).
+  if (post.publishedAt) {
+    const advisorUser = await prisma.user.findUnique({
+      where: { id: auth.userId },
+      select: { fullName: true },
+    });
+    await notifyAdvisorPost({
+      advisorUserId: auth.userId,
+      advisorName: advisorUser?.fullName ?? "An advisor you follow",
+      postId: post.id,
+      postTitle: post.title,
+      isTrade:
+        post.entryPriceMin != null || post.targetPrice != null || post.stopLossPrice != null,
+    });
+  }
 
   return ok({
     id: post.id,

@@ -22,7 +22,11 @@ export default async function UserFeedPage() {
   const currentUser = userId
     ? await prisma.user.findUnique({
         where: { id: userId },
-        select: { fullName: true },
+        select: {
+          fullName: true,
+          avatarUrl: true,
+          advisorProfile: { select: { profileImageUrl: true } },
+        },
       })
     : null;
 
@@ -60,7 +64,7 @@ export default async function UserFeedPage() {
         select: {
           id: true,
           fullName: true,
-          advisorProfile: { select: { sebiRegistrationNo: true } },
+          advisorProfile: { select: { sebiRegistrationNo: true, profileImageUrl: true } },
         },
       },
       _count: { select: { reactions: true, comments: true } },
@@ -182,6 +186,9 @@ export default async function UserFeedPage() {
         initialFollowedIds={followedIds}
         initialLikedPostIds={likedPostIds}
         currentUserName={currentUser?.fullName ?? null}
+        currentUserAvatar={
+          currentUser?.advisorProfile?.profileImageUrl ?? currentUser?.avatarUrl ?? null
+        }
         suggestedAdvisors={suggestedAdvisors}
         trendingSymbols={trendingSymbols}
       />

@@ -38,12 +38,14 @@ export default function PostComposerModal({
   onClose,
   onPosted,
   userName,
+  userAvatar = null,
   isAuthed,
 }: {
   open: boolean;
   onClose: () => void;
   onPosted: (post: import("@/lib/social-feed-types").SocialPost) => void;
   userName: string;
+  userAvatar?: string | null;
   isAuthed: boolean;
 }) {
   const [mode, setMode] = useState<Mode>("post");
@@ -210,7 +212,14 @@ export default function PostComposerModal({
       >
         <header className="sf-composer-head">
           <div className="sf-composer-user">
-            <div className="sf-avatar">{getInitials(userName)}</div>
+            <div className="sf-avatar" style={{ padding: 0, overflow: "hidden" }}>
+              {userAvatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={userAvatar} alt="" className="sf-avatar-img" />
+              ) : (
+                getInitials(userName)
+              )}
+            </div>
             <div>
               <div className="sf-composer-name">{userName || "Guest"}</div>
               <div className="sf-composer-sub">Share your insights</div>

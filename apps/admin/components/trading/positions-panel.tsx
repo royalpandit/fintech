@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fetchPaperSummary,
   paperSymbolFromWatchlist,
@@ -18,16 +18,25 @@ export default function PositionsPanel({
   const [positions, setPositions] = useState<PaperPosition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Show the loading state only on the first fetch. Background refreshes used
+  // to flip the panel back to "Loading…" every time, which with zero positions
+  // meant a visible flicker on every poll.
+  const loadedOnce = useRef(false);
+  // Quotes arrive as a fresh array on every parent render. Holding them in a
+  // ref keeps `load` stable — as a dependency they re-created it constantly,
+  // re-firing the effect and leaving the panel stuck reloading.
+  const quotesRef = useRef(liveQuotes);
+  quotesRef.current = liveQuotes;
   const [summary, setSummary] = useState<{ unrealized_pnl?: number; total_equity?: number } | null>(
     null,
   );
 
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!loadedOnce.current) setLoading(true);
     setError(null);
     try {
       const quotes =
-        liveQuotes
+        quotesRef.current
           ?.filter(q => q.ltp && q.ltp > 0)
           .map(q => ({
             symbol: paperSymbolFromWatchlist(q),
@@ -44,22 +53,30 @@ export default function PositionsPanel({
     } catch {
       setError("Failed to load positions");
     } finally {
+      loadedOnce.current = true;
       setLoading(false);
     }
-  }, [liveQuotes]);
+  }, []);
 
   useEffect(() => {
-    load();
+    void load();
     const id = setInterval(load, 15_000);
     return () => clearInterval(id);
   }, [load, refreshKey]);
 
-  if (loading && !positions.length) {
+  if (loading && !loadedOnce.current) {
     return <p className="tt-util-empty">Loading positions…</p>;
   }
 
   if (error) {
-    return <p className="tt-util-empty tt-util-warn">{error}</p>;
+    return (
+      <div className="tt-util-empty tt-util-warn">
+        <p style={{ margin: "0 0 8px" }}>{error}</p>
+        <button type="button" className="tt-util-refresh" onClick={() => void load()}>
+          Retry
+        </button>
+      </div>
+    );
   }
 
   if (!positions.length) {
