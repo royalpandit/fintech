@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { FiBookOpen, FiStar, FiUsers, FiClock } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
+import ProfileAvatar from "@/components/user/profile-avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function CoursesPage() {
           select: {
             id: true,
             fullName: true,
-            advisorProfile: { select: { sebiRegistrationNo: true } },
+            advisorProfile: { select: { sebiRegistrationNo: true, profileImageUrl: true } },
           },
         },
         lessons: { select: { durationSeconds: true } },
@@ -179,22 +180,13 @@ export default async function CoursesPage() {
                         marginBottom: 10,
                       }}
                     >
-                      <div
-                        style={{
-                          width: 22,
-                          height: 22,
-                          borderRadius: 5,
-                          background:
-                            "linear-gradient(135deg, rgba(14,165,233,0.15), rgba(16,185,129,0.15))",
-                          color: "#0ea5e9",
-                          display: "grid",
-                          placeItems: "center",
-                          fontSize: 8,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {getInitials(c.advisor.fullName)}
-                      </div>
+                      <ProfileAvatar
+                        src={c.advisor.advisorProfile?.profileImageUrl}
+                        name={c.advisor.fullName}
+                        size={22}
+                        radius={5}
+                        fontSize={8}
+                      />
                       <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{c.advisor.fullName}</span>
                     </div>
 

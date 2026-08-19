@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
+import { notifyReportResolved } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       resolvedAt: status === "open" ? null : new Date(),
     },
   });
+
+  // Tell the person who filed it what happened.
+  if (status !== "open" && status !== existing.status) {
+    await notifyReportResolved({
+      userId: report.reporterUserId,
+      outcome:
+        report.resolutionNote ||
+        (status === "resolved"
+          ? "We reviewed your report and took action on the content."
+          : "We reviewed your report and found no violation."),
+    });
+  }
 
   await prisma.auditLog.create({
     data: {

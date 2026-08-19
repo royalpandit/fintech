@@ -19,15 +19,19 @@ export default function ChartWorkspace({ initialSymbol }: { initialSymbol?: Watc
   const [active, setActive] = useState<WatchlistItem>(initialSymbol ?? NIFTY);
 
   return (
-    <>
-      <TradingTerminal initialSymbol={initialSymbol} onSymbolChange={setActive} />
+    <div className="chart-page-scroll">
+      <div className="chart-page-terminal">
+        <TradingTerminal initialSymbol={initialSymbol} onSymbolChange={setActive} />
+      </div>
       {active?.token && active?.exchange && (
-        <ChartAnalyzer
-          symbol={active.display || active.tradingSymbol}
-          token={active.token}
-          exchange={active.exchange}
-        />
+        <div className="chart-page-analyzer">
+          <ChartAnalyzer
+            symbol={active.display || active.tradingSymbol}
+            token={active.token}
+            exchange={active.exchange}
+          />
+        </div>
       )}
-    </>
+    </div>
   );
 }

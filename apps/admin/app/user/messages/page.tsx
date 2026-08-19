@@ -5,6 +5,7 @@ import { FiMessageCircle } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import { sendDueBroadcasts } from "@/lib/broadcast";
+import { userAvatarSelect, resolveAvatarUrl } from "@/lib/user-avatar";
 import NewChatSearch from "./new-chat-search";
 import ThreadList, { type ThreadItem } from "./thread-list";
 
@@ -36,7 +37,7 @@ export default async function MessagesPage() {
       orderBy: { createdAt: "desc" },
       include: {
         participants: {
-          include: { user: { select: { id: true, fullName: true } } },
+          include: { user: { select: { id: true, fullName: true, ...userAvatarSelect } } },
         },
         messages: {
           where: { deletedAt: null },
@@ -50,13 +51,14 @@ export default async function MessagesPage() {
     prisma.subscription.findMany({
       where: { userId, status: "active", endDate: { gt: new Date() } },
       orderBy: { startDate: "desc" },
-      select: { advisor: { select: { id: true, fullName: true } } },
+      select: { advisor: { select: { id: true, fullName: true, ...userAvatarSelect } } },
     }),
   ]);
 
   const contacts = activeSubs
     .map((s) => s.advisor)
-    .filter((a): a is { id: number; fullName: string } => Boolean(a));
+    .filter((a): a is NonNullable<typeof a> => Boolean(a))
+    .map((a) => ({ id: a.id, fullName: a.fullName, avatarUrl: resolveAvatarUrl(a) }));
 
   // Flatten threads for the client-side searchable list.
   const threadItems: ThreadItem[] = threads.map((t) => {
@@ -72,6 +74,7 @@ export default async function MessagesPage() {
     return {
       id: t.id,
       partnerName: partner?.fullName ?? "Unknown",
+      partnerAvatar: resolveAvatarUrl(partner),
       preview: lastMsg
         ? lastMsg.senderUserId === userId
           ? `You: ${body}`

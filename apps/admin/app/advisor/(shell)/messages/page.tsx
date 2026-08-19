@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { userAvatarSelect, resolveAvatarUrl } from "@/lib/user-avatar";
 import { requireAuthToken } from "@/lib/auth";
 import { sendDueBroadcasts } from "@/lib/broadcast";
 import { advisorServices, subscriberServiceNames } from "@/lib/subscription-services";
@@ -32,7 +33,7 @@ export default async function AdvisorMessagesPage() {
       where: { participants: { some: { userId } } },
       orderBy: { createdAt: "desc" },
       include: {
-        participants: { include: { user: { select: { id: true, fullName: true } } } },
+        participants: { include: { user: { select: { id: true, fullName: true, ...userAvatarSelect } } } },
         messages: { where: { deletedAt: null }, orderBy: { createdAt: "desc" }, take: 1 },
       },
     }),
@@ -54,6 +55,7 @@ export default async function AdvisorMessagesPage() {
     return {
       id: t.id,
       partnerName: partner?.fullName ?? "Unknown",
+      partnerAvatar: resolveAvatarUrl(partner),
       preview: lastMsg ? `${prefix}${body}` : "No messages yet",
       timeLabel: lastMsg ? relTime(lastMsg.createdAt) : "",
       serviceNames: partner ? serviceNames.get(partner.id) ?? [] : [],

@@ -19,11 +19,18 @@ export async function POST(req: NextRequest) {
     create: { userId, brokerName: body.broker_name },
   });
 
-  await prisma.portfolio.upsert({
-    where: { id: account.id },
-    update: {},
-    create: { userId, source: "broker", name: body.broker_name },
+  // Give the broker its own portfolio, matched on (user, name). Keying the
+  // upsert on `account.id` treated a broker-account id as a portfolio id, so it
+  // could overwrite an unrelated user's portfolio row.
+  const existingPortfolio = await prisma.portfolio.findFirst({
+    where: { userId, source: "broker", name: body.broker_name, deletedAt: null },
+    select: { id: true },
   });
+  if (!existingPortfolio) {
+    await prisma.portfolio.create({
+      data: { userId, source: "broker", name: body.broker_name },
+    });
+  }
 
-  return ok({ connected: true, broker: body.broker_name });
+  return ok({ connected: true, broker: body.broker_name, account_id: account.id });
 }

@@ -16,6 +16,7 @@ type AdminShellProps = {
   children: React.ReactNode;
   currentUser: {
     fullName: string;
+    avatarUrl?: string | null;
     email: string;
     role: string;
   };
@@ -140,6 +141,7 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
                 width: 40,
                 height: 40,
                 borderRadius: 999,
+                overflow: "hidden",
                 background: "linear-gradient(135deg, #10b981, #14b8a6)",
                 color: "#fff",
                 display: "grid",
@@ -149,7 +151,12 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
                 flexShrink: 0,
               }}
             >
-              {initials}
+              {currentUser.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={currentUser.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
+              ) : (
+                initials
+              )}
             </div>
             <div style={{ minWidth: 0 }}>
               <div
@@ -262,6 +269,7 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
                 width: 38,
                 height: 38,
                 borderRadius: 999,
+                overflow: "hidden",
                 background: "linear-gradient(135deg, #10b981, #14b8a6)",
                 color: "#fff",
                 display: "grid",
@@ -272,7 +280,12 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
                 cursor: "pointer",
               }}
             >
-              {initials}
+              {currentUser.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={currentUser.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
+              ) : (
+                initials
+              )}
             </button>
 
             {menuOpen && (

@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notifyPaperOrder } from "@/lib/notify";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/auth";
 import {
@@ -84,6 +85,16 @@ export async function POST(req: NextRequest) {
 
     const wallet = await prisma.virtualWallet.findUnique({ where: { userId: auth.userId } });
 
+    await notifyPaperOrder({
+      userId: auth.userId,
+      symbol: body.symbol,
+      side: body.side,
+      quantity: Number(body.quantity),
+      filled: Boolean(result.executed),
+      price: result.executionPrice ?? null,
+      reason: result.executed ? null : result.message,
+    });
+
     return ok({
       order: serializePaperOrder(result.order),
       executed: result.executed,
@@ -92,7 +103,18 @@ export async function POST(req: NextRequest) {
       new_balance: wallet ? Number(wallet.balance) : null,
     });
   } catch (e) {
-    return err(e instanceof Error ? e.message : "Order failed", 400);
+    const reason = e instanceof Error ? e.message : "Order failed";
+    // A rejected order is exactly the case the user needs telling about — this
+    // is how every paper order silently failed before.
+    await notifyPaperOrder({
+      userId: auth.userId,
+      symbol: String(body.symbol),
+      side: String(body.side),
+      quantity: Number(body.quantity),
+      filled: false,
+      reason,
+    });
+    return err(reason, 400);
   }
 }
 

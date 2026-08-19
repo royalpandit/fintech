@@ -4,6 +4,7 @@ import { FiBookOpen, FiClock, FiUsers, FiStar, FiCheckCircle } from "react-icons
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import CourseDetailClient from "./CourseDetailClient";
+import ProfileAvatar from "@/components/user/profile-avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function CourseDetailPage({
         select: {
           id: true,
           fullName: true,
-          advisorProfile: { select: { sebiRegistrationNo: true } },
+          advisorProfile: { select: { sebiRegistrationNo: true, profileImageUrl: true } },
         },
       },
       lessons: {
@@ -145,20 +146,16 @@ export default async function CourseDetailPage({
               >
                 <div
                   style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 7,
-                    background:
-                      "linear-gradient(135deg, rgba(14,165,233,0.13), rgba(16,185,129,0.13))",
-                    color: "#0ea5e9",
-                    display: "grid",
-                    placeItems: "center",
-                    fontSize: 9,
-                    fontWeight: 600,
-                    flexShrink: 0,
+                    display: "contents",
                   }}
                 >
-                  {getInitials(course.advisor.fullName)}
+                  <ProfileAvatar
+                    src={course.advisor.advisorProfile?.profileImageUrl}
+                    name={course.advisor.fullName}
+                    size={28}
+                    radius={7}
+                    fontSize={9}
+                  />
                 </div>
                 <span style={{ fontSize: 13, color: "var(--text)", fontWeight: 600 }}>
                   {course.advisor.fullName}

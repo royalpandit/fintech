@@ -34,6 +34,7 @@ import { TbRobot } from "react-icons/tb";
 import WatchlistStoreProvider from "@/components/watchlist/watchlist-store-provider";
 import GlobalSearchPanel from "@/components/search/global-search-panel";
 import PanelBackground from "@/components/motion/panel-background";
+import { ToastProvider } from "@/components/toast";
 
 type UserShellProps = {
   children: React.ReactNode;
@@ -116,7 +117,7 @@ function formatINRCompact(n: number) {
 export default function UserShell({
   children,
   currentUser,
-  unreadNotifications,
+  unreadNotifications: initialUnreadNotifications,
   walletBalance,
   todayPnL,
   todayPnLPct,
@@ -124,6 +125,44 @@ export default function UserShell({
   const pathname = usePathname();
   const router = useRouter();
   const { enterThemedScope, exitThemedScope } = useTheme();
+
+  // The badge is server-rendered once per navigation, so a notification that
+  // arrives while the user sits on a page would otherwise stay invisible until
+  // a full reload. Poll the unread count and refresh it on tab focus.
+  const [unreadNotifications, setUnreadNotifications] = useState(
+    initialUnreadNotifications,
+  );
+  useEffect(() => {
+    setUnreadNotifications(initialUnreadNotifications);
+  }, [initialUnreadNotifications]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    let cancelled = false;
+    const pull = async () => {
+      try {
+        const res = await fetch("/api/v1/notifications?unread=true", {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!cancelled && Array.isArray(json.data)) {
+          setUnreadNotifications(json.data.length);
+        }
+      } catch {
+        // offline — retry on the next tick
+      }
+    };
+    void pull();
+    const id = setInterval(pull, 20_000);
+    const onFocus = () => void pull();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [currentUser]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -613,7 +652,9 @@ export default function UserShell({
         <main className="us-main theme-page">
           <div className="us-content theme-page">
             {currentUser ? (
-              <WatchlistStoreProvider>{children}</WatchlistStoreProvider>
+              <WatchlistStoreProvider>
+                <ToastProvider>{children}</ToastProvider>
+              </WatchlistStoreProvider>
             ) : (
               children
             )}

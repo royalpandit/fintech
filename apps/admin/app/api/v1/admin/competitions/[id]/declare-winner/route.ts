@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireRole } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { notifyCompetition } from "@/lib/notify";
 import { serializeCompetition } from "@/lib/competition";
 import { competitionRepository } from "@/lib/competition-repository";
 
@@ -21,6 +23,29 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   try {
     const row = await competitionRepository.declareWinner(Number(id), winningOptionId);
+
+    // Everyone who predicted deserves to hear the result.
+    try {
+      const competitionId = Number(id);
+      const predictions = await prisma.competitionPrediction.findMany({
+        where: { competitionId },
+        select: { userId: true, optionId: true },
+      });
+      for (const p of predictions) {
+        const won = p.optionId === winningOptionId;
+        await notifyCompetition({
+          userId: p.userId,
+          competitionId,
+          title: won ? "You called it 🎉" : "Competition result is in",
+          message: won
+            ? `Your prediction on "${row?.title ?? "the competition"}" was correct.`
+            : `"${row?.title ?? "The competition"}" has been settled — see the result.`,
+        });
+      }
+    } catch {
+      // Never fail the declaration because notifications couldn't be sent.
+    }
+
     return NextResponse.json({ ok: true, data: serializeCompetition(row!) });
   } catch (e) {
     return NextResponse.json(

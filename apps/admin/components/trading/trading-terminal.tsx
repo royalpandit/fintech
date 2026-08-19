@@ -12,6 +12,7 @@ import TradingUtilityShell from "./trading-utility-shell";
 import { allWatchlistItems, refresh, useWatchlistStore } from "@/lib/watchlist-store";
 import type { UtilityPanelId } from "./trading-utility-types";
 import type { WatchlistItem } from "./trading-terminal-types";
+import ChartSettingsPanel from "@/components/trading/chart-settings-panel";
 import AddToWatchlistButton from "@/components/watchlist/add-to-watchlist-button";
 import {
   DEFAULT_TIMEFRAME,
@@ -76,9 +77,9 @@ const DEFAULT_WATCHLIST: WatchlistItem[] = [
 // ── Drawing tools ─────────────────────────────────────────────────────────────
 
 const DRAW_TOOLS = [
-  { id: "cursor",    title: "Cursor",
+  { id: "cursor",    title: "Cursor (pan & zoom)",
     icon: <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M2 1l10 5.5-5.5 1L5 13z"/></svg> },
-  { id: "crosshair", title: "Crosshair",
+  { id: "crosshair", title: "Crosshair (magnet — snaps to OHLC)",
     icon: <svg width="14" height="14" viewBox="0 0 14 14" stroke="currentColor" strokeWidth="1.5" fill="none"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/><circle cx="7" cy="7" r="2"/></svg> },
   { id: "hline",     title: "Horizontal Line",
     icon: <svg width="14" height="14" viewBox="0 0 14 14" stroke="currentColor" strokeWidth="1.5"><line x1="1" y1="7" x2="13" y2="7"/><circle cx="13" cy="7" r="1.5" fill="currentColor"/></svg> },
@@ -99,6 +100,36 @@ const DRAW_TOOLS = [
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Back out the previous close from a quote. The feed doesn't send `close`, but
+ * `netChange` is `ltp - prevClose`, so the close is recoverable.
+ */
+function closeFromQuote(q: { ltp?: number; netChange?: number }): number | undefined {
+  if (q.ltp == null || q.netChange == null) return undefined;
+  const close = q.ltp - q.netChange;
+  return close > 0 ? close : undefined;
+}
+
+/**
+ * Recompute ltp + change + changePct from the previous close.
+ *
+ * The live tick only carries a price, so without this the header kept showing
+ * the change from the last REST poll (typically +0.00% / +₹0) while the price
+ * moved underneath it.
+ */
+function deriveChange(
+  prev: { prevClose?: number; change?: number; changePct?: number },
+  ltp: number,
+): { ltp: number; change?: number; changePct?: number } {
+  const base = prev.prevClose;
+  if (!base || base <= 0) {
+    // No close to compare against — leave the existing figures alone.
+    return { ltp };
+  }
+  const change = ltp - base;
+  return { ltp, change, changePct: (change / base) * 100 };
+}
 
 function fmtP(n: number | undefined) {
   if (n === undefined || n === null) return "—";
@@ -374,6 +405,16 @@ function TradingTerminalInner({
       : DEFAULT_WATCHLIST,
   );
   const [selected,        setSelected]        = useState<WatchlistItem>(initialSymbol ?? DEFAULT_WATCHLIST[0]);
+
+  // The full-bleed terminal layout in globals.css hangs off `body.terminal-active`
+  // (it gives .us-body/.us-main/.us-content a definite height). Without the class
+  // the terminal's `height: 100%` resolved against auto-height ancestors, so the
+  // chart overflowed the shell and got clipped at the viewport edge.
+  useEffect(() => {
+    document.body.classList.add("terminal-active");
+    return () => document.body.classList.remove("terminal-active");
+  }, []);
+
   // Let a parent (e.g. the Chart Analyst panel) follow the active instrument.
   useEffect(() => {
     onSymbolChange?.(selected);
@@ -382,6 +423,7 @@ function TradingTerminalInner({
   const [period,          setPeriod]          = useState(() => defaultPeriodForTimeframe(DEFAULT_TIMEFRAME));
   const [showTfMenu,      setShowTfMenu]      = useState(false);
   const [showChartMenu,   setShowChartMenu]   = useState(false);
+  const [showSettings,    setShowSettings]    = useState(false);
   const [showIndModal,    setShowIndModal]    = useState(false);
   const [activeIndicatorIds, setActiveIndicatorIds] = useState<Set<string>>(new Set());
 
@@ -532,7 +574,7 @@ function TradingTerminalInner({
 
       setWatchlist(prev => prev.map(item => {
         const q = quoteMap.get(item.token);
-        return q ? { ...item, ltp: q.ltp, open: q.open, high: q.high, low: q.low, change: q.netChange, changePct: q.percentChange } : item;
+        return q ? { ...item, ltp: q.ltp, open: q.open, high: q.high, low: q.low, change: q.netChange, changePct: q.percentChange, prevClose: closeFromQuote(q) ?? item.prevClose } : item;
       }));
 
       const matchQuotes: { symbol: string; ltp: number }[] = [];
@@ -551,6 +593,8 @@ function TradingTerminalInner({
           ...prev,
           ltp: q.ltp, open: q.open, high: q.high, low: q.low,
           change: q.netChange, changePct: q.percentChange,
+          // Keep the close around so tick updates can derive change themselves.
+          prevClose: closeFromQuote(q) ?? prev.prevClose,
         }));
         pushLiveTick(q.ltp, liveVol);
         setCandleError(prev =>
@@ -602,14 +646,14 @@ function TradingTerminalInner({
       setWatchlist(prev =>
         prev.map(item =>
           item.token === tick.token
-            ? { ...item, ltp }
+            ? { ...item, ...deriveChange(item, ltp) }
             : item,
         ),
       );
 
       const sel = selectedRef.current;
       if (sel.token === tick.token) {
-        setSelected(prev => ({ ...prev, ltp }));
+        setSelected(prev => ({ ...prev, ...deriveChange(prev, ltp) }));
         pushLiveTick(ltp, tick.volume);
         setCandleError(prev => (prev?.includes("rate limit") ? null : prev));
       }
@@ -678,9 +722,12 @@ function TradingTerminalInner({
     });
   }, [candles, timeframe.aggregate, liveTick, liveSessionVol]);
 
+  // Bumping the nonce re-anchors the viewport without changing symbol/timeframe,
+  // which is what the settings panel's "Reset zoom" does.
+  const [viewportNonce, setViewportNonce] = useState(0);
   const chartViewportKey = useMemo(
-    () => `${selected.token}:${timeframe.id}:${period.days}`,
-    [selected.token, timeframe.id, period.days],
+    () => `${selected.token}:${timeframe.id}:${period.days}:${viewportNonce}`,
+    [selected.token, timeframe.id, period.days, viewportNonce],
   );
 
   const chartVisibleBars = useMemo(() => defaultVisibleBars(timeframe), [timeframe]);
@@ -940,7 +987,7 @@ function TradingTerminalInner({
       return baseWatchlist.map(it => {
         const old = byKey.get(`${it.exchange}:${it.token}`);
         return old
-          ? { ...it, ltp: old.ltp, change: old.change, changePct: old.changePct, open: old.open, high: old.high, low: old.low }
+          ? { ...it, ltp: old.ltp, change: old.change, changePct: old.changePct, open: old.open, high: old.high, low: old.low, prevClose: old.prevClose }
           : it;
       });
     });
@@ -952,7 +999,7 @@ function TradingTerminalInner({
       return items.map(it => {
         const old = byKey.get(`${it.exchange}:${it.token}`);
         return old
-          ? { ...it, ltp: old.ltp, change: old.change, changePct: old.changePct, open: old.open, high: old.high, low: old.low }
+          ? { ...it, ltp: old.ltp, change: old.change, changePct: old.changePct, open: old.open, high: old.high, low: old.low, prevClose: old.prevClose }
           : it;
       });
     });
@@ -977,9 +1024,27 @@ function TradingTerminalInner({
           </button>
         ))}
         <div style={{ flex: 1 }} />
-        <button type="button" title="Settings" style={{ width: 30, height: 30, border: "none", borderRadius: 6, cursor: "pointer", background: "transparent", color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
+        <button
+          type="button"
+          title="Chart settings"
+          aria-expanded={showSettings}
+          onClick={() => setShowSettings(v => !v)}
+          style={{ width: 30, height: 30, border: "none", borderRadius: 6, cursor: "pointer", background: showSettings ? "rgba(14,165,233,0.16)" : "transparent", color: showSettings ? "#0ea5e9" : "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}
+        >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
         </button>
+
+        {showSettings && (
+          <ChartSettingsPanel
+            symbol={selected}
+            timeframeId={timeframe.id}
+            onClose={() => setShowSettings(false)}
+            onResetViewport={() => {
+              setViewportNonce(n => n + 1);
+              setShowSettings(false);
+            }}
+          />
+        )}
       </div>
 
       {/* ── CHART + RIGHT UTILITY (watchlist via drawer only) ─────────────── */}
@@ -1143,6 +1208,7 @@ function TradingTerminalInner({
                       chartIndicators={chartIndicators}
                       visibleBars={chartVisibleBars}
                       viewportResetKey={chartViewportKey}
+                      instrumentKey={`${selected.exchange}:${selected.token}:${timeframe.id}`}
                       oiProfile={
                         oiProfileActive
                           ? {

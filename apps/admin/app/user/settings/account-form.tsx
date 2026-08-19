@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FiCamera, FiUser } from "react-icons/fi";
+import { IMAGE_ACCEPT_ATTR } from "@/lib/upload-types";
 
 type Props = {
   user: { fullName: string; email: string; phone: string; avatarUrl: string | null };
@@ -49,10 +50,6 @@ export default function AccountForm({ user }: Props) {
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setMsg({ text: "Please choose an image file.", ok: false });
-      return;
-    }
     setUploading(true);
     setMsg(null);
     try {
@@ -123,7 +120,7 @@ export default function AccountForm({ user }: Props) {
           )}
         </div>
         <div>
-          <input ref={fileRef} type="file" accept="image/*" onChange={onPick} style={{ display: "none" }} />
+          <input ref={fileRef} type="file" accept={IMAGE_ACCEPT_ATTR} onChange={onPick} style={{ display: "none" }} />
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
@@ -164,7 +161,7 @@ export default function AccountForm({ user }: Props) {
             </button>
           )}
           <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
-            JPG or PNG, up to 10MB.
+            JPG, PNG, WebP, GIF or AVIF — up to 10MB.
           </p>
         </div>
       </div>

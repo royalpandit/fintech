@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { FiArrowLeft } from "react-icons/fi";
 import PostAccessSelector from "@/components/posts/post-access-selector";
@@ -72,6 +72,17 @@ export default function NewPostPage() {
   // Only SEBI-tier professionals may post Entry/Target/SL (buy-sell) calls — the
   // API enforces this; here we hide the trade fields for everyone else. Optimistic
   // until the profile loads. Same for post.boost.
+  // Arriving from "+ Post Trade" — surface the entry/target/SL block instead of
+  // leaving the advisor to find it.
+  const searchParams = useSearchParams();
+  const tradeIntent = searchParams.get("trade") === "1";
+  const tradeSectionRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (tradeIntent) {
+      tradeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [tradeIntent]);
+
   const [canTrade, setCanTrade] = useState(true);
   const [canBoost, setCanBoost] = useState(true);
   useEffect(() => {
@@ -324,6 +335,18 @@ export default function NewPostPage() {
               </div>
               {canTrade && (
                 <>
+              <div
+                ref={tradeSectionRef}
+                style={{ gridColumn: "1 / -1", scrollMarginTop: 80 }}
+              >
+                <p className="metric-label" style={{ marginBottom: 4 }}>
+                  Trade details
+                </p>
+                <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
+                  Fill entry, target and stop loss to publish this as a trade call.
+                  Leave them blank for a plain analysis post.
+                </p>
+              </div>
               <div>
                 <label className="metric-label">Horizon</label>
                 <select

@@ -31,14 +31,42 @@ export default function BasketActions({ basketId }: { basketId: number }) {
     }
   }
 
-  function share() {
-    const url = typeof window !== "undefined" ? window.location.href : "";
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1600);
-      });
+  async function copyLink(url: string) {
+    try {
+      await navigator.clipboard?.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      /* clipboard blocked — nothing useful left to try */
     }
+  }
+
+  /**
+   * Open the device's share sheet so the link can go to WhatsApp, mail, etc.
+   * This used to copy to the clipboard unconditionally, which is the fallback
+   * — not the behaviour a Share button should have where the OS provides one.
+   */
+  async function share() {
+    if (typeof window === "undefined") return;
+    const url = window.location.href;
+    const title = document.title || "Finuer Basket";
+
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title,
+          text: "Take a look at this basket on Finuer",
+          url,
+        });
+        return;
+      } catch (e) {
+        // The user dismissing the sheet is not a failure — don't then copy.
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        // Anything else (unsupported scheme, permission) falls through to copy.
+      }
+    }
+
+    await copyLink(url);
   }
 
   return (

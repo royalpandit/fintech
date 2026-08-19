@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { sweepSubscriptionLifecycle } from "@/lib/subscription-sweep";
 import { requireAuthToken } from "@/lib/auth";
 import { categoryLabel, isSubscriptionActive } from "@/lib/subscription-services";
 import SubscriptionsBrowser, {
@@ -36,6 +37,9 @@ export default async function UserSubscriptionsPage() {
   const token = cookies().get("access_token")?.value ?? null;
   const auth = await requireAuthToken(token);
   if (!auth) redirect("/login");
+
+  // Warn about anything lapsing, and flip what already has.
+  await sweepSubscriptionLifecycle(auth.userId);
 
   // Per-service subscriptions (new model)
   const serviceSubscriptions = await prisma.serviceSubscription.findMany({

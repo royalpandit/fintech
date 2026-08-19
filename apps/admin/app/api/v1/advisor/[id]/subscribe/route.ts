@@ -4,6 +4,7 @@ import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/auth";
 import { getSubPlan } from "@/lib/subscription-plans";
 import { canType } from "@/lib/capabilities-server";
+import { notifyNewSubscriber } from "@/lib/notify";
 
 export async function POST(
   req: NextRequest,
@@ -98,6 +99,19 @@ export async function POST(
       ...(endDate ? { endDate } : {}),
     },
   });
+
+  // Let the advisor know they picked up a subscriber.
+  if (subscription.status === "active") {
+    const subscriber = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { fullName: true },
+    });
+    await notifyNewSubscriber({
+      advisorUserId: advisorId,
+      subscriberName: subscriber?.fullName ?? "Someone",
+      planLabel: plan?.id ?? null,
+    });
+  }
 
   return ok({
     advisor_id: advisorId,

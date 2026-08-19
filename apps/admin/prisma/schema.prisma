@@ -425,6 +425,7 @@ model User {
   payoutRequests       PayoutRequest[]       @relation("payoutOwner")
   payoutReviews        PayoutRequest[]       @relation("payoutReviewer")
   notifications        Notification[]
+  pushSubscriptions    WebPushSubscription[]
   auditLogs            AuditLog[]
   riskProfile          RiskProfile?
   chatSessions         AiChatSession[]
@@ -1641,6 +1642,11 @@ model ServiceSubscription {
 model Subscription {
   id                     Int                @id @default(autoincrement())
   userId                 Int                @map("user_id")
+  /// Deprecated — trials live on ServiceSubscription.isTrial. Declared only so
+  /// the schema matches the database: the column exists in Postgres, and
+  /// omitting it made `prisma db push` offer to DROP it. All existing rows hold
+  /// the default `false`, so it can be removed safely later with a migration.
+  isTrial                Boolean            @default(false) @map("is_trial")
   advisorUserId          Int                @map("advisor_user_id")
   amount                 Decimal            @db.Decimal(12, 2)
   currency               String             @default("INR") @db.VarChar(10)
@@ -1727,6 +1733,23 @@ model Notification {
 
   @@index([userId, createdAt(sort: Desc)])
   @@map("notifications")
+}
+
+/// Browser push endpoints. One row per browser/device a user has allowed.
+model WebPushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?  @map("user_agent") @db.VarChar(300)
+  createdAt DateTime @default(now()) @map("created_at")
+  lastUsedAt DateTime? @map("last_used_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("web_push_subscriptions")
 }
 
 model AuditLog {

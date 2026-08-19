@@ -1,5 +1,31 @@
 {
   "framework": "nextjs",
   "buildCommand": "npm run build",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "crons": [
+    {
+      "path": "/api/v1/cron?job=price-alerts",
+      "schedule": "*/2 4-10 * * 1-5"
+    },
+    {
+      "path": "/api/v1/cron?job=scheduled-posts",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/v1/cron?job=broadcasts",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/v1/cron?job=competitions",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/v1/cron?job=subscriptions",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/v1/cron?job=email-digest",
+      "schedule": "0 13 * * *"
+    }
+  ]
 }

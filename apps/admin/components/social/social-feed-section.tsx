@@ -22,9 +22,11 @@ import type { SocialComment } from "@/lib/social-feed-client";
 export default function SocialFeedSection({
   isAuthed,
   userName,
+  userAvatar = null,
 }: {
   isAuthed: boolean;
   userName: string;
+  userAvatar?: string | null;
 }) {
   const [composerOpen, setComposerOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
@@ -196,6 +198,7 @@ export default function SocialFeedSection({
         onClose={() => setComposerOpen(false)}
         onPosted={handlePosted}
         userName={userName}
+        userAvatar={userAvatar}
         isAuthed={isAuthed}
       />
 

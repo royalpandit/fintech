@@ -13,6 +13,7 @@ import {
   FiSmile,
 } from "react-icons/fi";
 import EmojiPicker from "@/components/social/emoji-picker";
+import ProfileAvatar from "@/components/user/profile-avatar";
 
 type Message = {
   id: number;
@@ -25,7 +26,7 @@ type Message = {
   broadcastId?: number | null;
   createdAt: string;
   deletedAt: string | null;
-  sender: { id: number; fullName: string };
+  sender: { id: number; fullName: string; avatarUrl?: string | null };
 };
 
 type PendingAttachment = { url: string; type: "image" | "file"; name: string };
@@ -33,7 +34,7 @@ type PendingAttachment = { url: string; type: "image" | "file"; name: string };
 type Props = {
   threadId: number;
   userId: number;
-  partner: { id: number; fullName: string } | null;
+  partner: { id: number; fullName: string; avatarUrl?: string | null } | null;
   initialMessages: Message[];
   backHref?: string;
 };
@@ -88,10 +89,7 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
   };
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = ""; // allow re-picking the same file
-    if (!file) return;
+  const uploadFile = useCallback(async (file: File) => {
     setUploadError("");
     setUploading(true);
     try {
@@ -109,7 +107,37 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
     } finally {
       setUploading(false);
     }
+  }, []);
+
+  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file) return;
+    await uploadFile(file);
   }
+
+  // Paste a screenshot (Ctrl/Cmd+V) straight into the composer. Clipboard images
+  // arrive as a blob with a generic name — the upload route keys off the MIME
+  // type, but we still give it a real filename so the attachment chip reads well.
+  const onPaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      if (uploading || sending) return;
+      const items = Array.from(e.clipboardData?.items ?? []);
+      const imageItem = items.find((it) => it.kind === "file" && it.type.startsWith("image/"));
+      if (!imageItem) return; // plain text paste — let the textarea handle it
+
+      const blob = imageItem.getAsFile();
+      if (!blob) return;
+      e.preventDefault();
+
+      const ext = (blob.type.split("/")[1] || "png").replace("jpeg", "jpg");
+      const named = new File([blob], blob.name || `pasted-image.${ext}`, {
+        type: blob.type,
+      });
+      void uploadFile(named);
+    },
+    [uploading, sending, uploadFile],
+  );
 
   // Scroll to bottom on load and new messages
   useEffect(() => {
@@ -126,8 +154,15 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
       const json = await res.json();
       const newMsgs: Message[] = json.data ?? [];
       if (newMsgs.length > 0) {
-        setMessages((prev) => [...prev, ...newMsgs]);
-        lastIdRef.current = newMsgs[newMsgs.length - 1].id;
+        setMessages((prev) => {
+          const seen = new Set(prev.map((m) => m.id));
+          const fresh = newMsgs.filter((m) => !seen.has(m.id));
+          return fresh.length ? [...prev, ...fresh] : prev;
+        });
+        lastIdRef.current = Math.max(
+          lastIdRef.current,
+          newMsgs[newMsgs.length - 1].id,
+        );
       }
     } catch {
       // network error — silently ignore
@@ -176,11 +211,13 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
       if (res.ok) {
         const json = await res.json();
         const real: Message = json.data;
-        // Replace optimistic message with real one
-        setMessages((prev) =>
-          prev.map((m) => (m.id === optimistic.id ? real : m)),
-        );
-        lastIdRef.current = real.id;
+        setMessages((prev) => {
+          // Drop any copy the poller already appended, then swap the
+          // optimistic placeholder for the real row (keeping its position).
+          const withoutDupe = prev.filter((m) => m.id !== real.id);
+          return withoutDupe.map((m) => (m.id === optimistic.id ? real : m));
+        });
+        lastIdRef.current = Math.max(lastIdRef.current, real.id);
       }
     } catch {
       // Remove optimistic on failure
@@ -235,23 +272,13 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
 
         {partner ? (
           <>
-            <div
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 10,
-                background:
-                  "linear-gradient(135deg, rgba(14,165,233,0.13), rgba(16,185,129,0.13))",
-                color: "#0ea5e9",
-                display: "grid",
-                placeItems: "center",
-                fontSize: 12,
-                fontWeight: 600,
-                flexShrink: 0,
-              }}
-            >
-              {getInitials(partner.fullName)}
-            </div>
+            <ProfileAvatar
+              src={partner.avatarUrl}
+              name={partner.fullName}
+              size={38}
+              radius={10}
+              fontSize={12}
+            />
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
                 {partner.fullName}
@@ -336,28 +363,28 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
                     marginBottom: 6,
                   }}
                 >
-                  {!isMine && (
-                    <div
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 7,
-                        background:
-                          "linear-gradient(135deg, rgba(14,165,233,0.13), rgba(16,185,129,0.13))",
-                        color: "#0ea5e9",
-                        display: "grid",
-                        placeItems: "center",
-                        fontSize: 9,
-                        fontWeight: 600,
-                        flexShrink: 0,
-                        marginRight: 8,
-                        alignSelf: "flex-end",
-                      }}
-                    >
-                      {getInitials(m.sender.fullName)}
-                    </div>
-                  )}
-                  <div style={{ maxWidth: "70%" }}>
+                  {/* Avatar sits in a row with the bubble only — keeping it out
+                      of the timestamp's column is what makes it line up with the
+                      bottom of the bubble instead of drifting below it. */}
+                  <div
+                    style={{
+                      maxWidth: "70%",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: isMine ? "flex-end" : "flex-start",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+                      {!isMine && (
+                        <ProfileAvatar
+                          src={m.sender.avatarUrl}
+                          name={m.sender.fullName}
+                          size={28}
+                          radius={7}
+                          fontSize={9}
+                        />
+                      )}
+                      <div style={{ minWidth: 0 }}>
                     <div
                       style={{
                         padding: "10px 14px",
@@ -449,13 +476,16 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
                         </>
                       )}
                     </div>
+                      </div>
+                    </div>
                     <div
                       style={{
                         fontSize: 10,
                         color: "var(--text-muted)",
                         marginTop: 3,
-                        textAlign: isMine ? "right" : "left",
                         paddingInline: 2,
+                        // Clear the avatar gutter so the time sits under the bubble.
+                        marginLeft: isMine ? 0 : 36,
                       }}
                     >
                       {timeLabel(m.createdAt)}
@@ -594,13 +624,14 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onPaste={onPaste}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
               }
             }}
-            placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
+            placeholder="Type a message… (Enter to send, Shift+Enter for new line, paste to attach an image)"
             rows={1}
             style={{
               flex: 1,

@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Lets a verification build write somewhere other than `.next`, so running
+  // `next build` never clobbers the chunks a live `next dev` is still serving
+  // (which shows up in the browser as a suddenly unstyled page).
+  //   NEXT_DIST_DIR=.next-verify npx next build
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   experimental: {
     serverComponentsExternalPackages: [
       "smartapi-javascript",

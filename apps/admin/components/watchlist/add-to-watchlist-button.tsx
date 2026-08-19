@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiStar } from "react-icons/fi";
 import type { WatchlistItem } from "@/components/trading/trading-terminal-types";
+import { instrumentKey } from "@/lib/watchlist-db";
+import { useToast } from "@/components/toast";
 import {
   activeWatchlist,
   addWatchlistItem,
   createWatchlist,
   getWatchlistSnapshot,
   refresh,
+  removeWatchlistItem,
   useWatchlistStore,
 } from "@/lib/watchlist-store";
 
@@ -26,22 +29,69 @@ export default function AddToWatchlistButton({
   compact = false,
 }: Props) {
   const { lists, activeId } = useWatchlistStore();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [pickerListId, setPickerListId] = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  // Which lists already hold this instrument — drives the filled star and lets
+  // the picker mark the lists it's already in.
+  const key = item.token ? instrumentKey(item.exchange, item.token) : null;
+  const holdings = useMemo(() => {
+    if (!key) return [];
+    return lists.flatMap((list) => {
+      const stored = list.items.find((it) => it.instrument_key === key);
+      return stored ? [{ listId: list.id, listName: list.name, stored }] : [];
+    });
+  }, [lists, key]);
+  const listIdsHolding = useMemo(
+    () => new Set(holdings.map((h) => h.listId)),
+    [holdings],
+  );
+  const isWatchlisted = holdings.length > 0;
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // The star can only reflect reality once the lists are loaded — pull them in
+  // on mount rather than waiting for the user to open the picker.
+  useEffect(() => {
+    if (!getWatchlistSnapshot().lists.length) void refresh({ silent: true });
+  }, []);
+
   useEffect(() => {
     if (!open) return;
+    // Default the picker to a list that doesn't already have it.
     const active = activeWatchlist(lists, activeId);
-    setPickerListId(active?.id ?? lists[0]?.id ?? null);
-  }, [open, lists, activeId]);
+    const preferred =
+      (active && !listIdsHolding.has(active.id) ? active.id : null) ??
+      lists.find((l) => !listIdsHolding.has(l.id))?.id ??
+      active?.id ??
+      lists[0]?.id ??
+      null;
+    setPickerListId(preferred);
+  }, [open, lists, activeId, listIdsHolding]);
+
+  // A filled star means "remove me" — that's what users expect from a toggle.
+  // Only when it's in several lists do we fall back to the picker.
+  async function handleRemove() {
+    if (removing || holdings.length !== 1) return;
+    const [only] = holdings;
+    setRemoving(true);
+    try {
+      await removeWatchlistItem(only.listId, only.stored);
+      toast.show(`${item.display} removed from ${only.listName}`, "info");
+    } catch (e) {
+      toast.show(e instanceof Error ? e.message : "Failed to remove", "error");
+    } finally {
+      setRemoving(false);
+    }
+  }
 
   async function handleOpen() {
     if (!mounted) return;
@@ -51,7 +101,7 @@ export default function AddToWatchlistButton({
       snap = getWatchlistSnapshot();
     }
     if (!snap.lists.length) {
-      alert(snap.error ?? "Sign in to save watchlists");
+      toast.show(snap.error ?? "Sign in to save watchlists", "error");
       return;
     }
     setOpen(true);
@@ -59,12 +109,14 @@ export default function AddToWatchlistButton({
 
   async function handleAdd() {
     if (pickerListId == null) return;
+    const listName = lists.find((l) => l.id === pickerListId)?.name ?? "watchlist";
     setSaving(true);
     try {
       await addWatchlistItem(pickerListId, item);
       setOpen(false);
+      toast.show(`${item.display} added to ${listName}`, "success");
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to add");
+      toast.show(e instanceof Error ? e.message : "Failed to add", "error");
     } finally {
       setSaving(false);
     }
@@ -80,8 +132,9 @@ export default function AddToWatchlistButton({
       setShowCreate(false);
       setOpen(false);
       setNewListName("");
+      toast.show(`${item.display} added to ${name}`, "success");
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to create watchlist");
+      toast.show(e instanceof Error ? e.message : "Failed to create watchlist", "error");
     } finally {
       setSaving(false);
     }
@@ -93,16 +146,30 @@ export default function AddToWatchlistButton({
     <>
       <button
         type="button"
-        className={`mkt-add-wl${compact ? " mkt-add-wl-compact" : ""}${className ? ` ${className}` : ""}`}
-        title="Add to watchlist"
+        className={`mkt-add-wl${compact ? " mkt-add-wl-compact" : ""}${
+          isWatchlisted ? " mkt-add-wl-on" : ""
+        }${className ? ` ${className}` : ""}`}
+        title={
+          isWatchlisted
+            ? holdings.length === 1
+              ? `Remove from ${holdings[0].listName}`
+              : "In several watchlists — choose one to add to"
+            : "Add to watchlist"
+        }
+        aria-pressed={isWatchlisted}
+        disabled={removing}
         onClick={e => {
           e.preventDefault();
           e.stopPropagation();
-          void handleOpen();
+          if (isWatchlisted && holdings.length === 1) void handleRemove();
+          else void handleOpen();
         }}
       >
-        <FiStar size={compact ? 16 : 14} />
-        {label ? <span>{label}</span> : null}
+        <FiStar
+          size={compact ? 16 : 14}
+          style={isWatchlisted ? { fill: "currentColor" } : undefined}
+        />
+        {label ? <span>{isWatchlisted ? "Added" : label}</span> : null}
       </button>
 
       {open && (
@@ -113,17 +180,22 @@ export default function AddToWatchlistButton({
               {item.display} · {item.exchange}
             </p>
             <div className="wl-picker-list">
-              {lists.map(list => (
-                <label key={list.id} className="wl-picker-item">
-                  <input
-                    type="radio"
-                    name="mkt-wl-pick"
-                    checked={pickerListId === list.id}
-                    onChange={() => setPickerListId(list.id)}
-                  />
-                  <span>{list.name}</span>
-                </label>
-              ))}
+              {lists.map(list => {
+                const already = listIdsHolding.has(list.id);
+                return (
+                  <label key={list.id} className="wl-picker-item">
+                    <input
+                      type="radio"
+                      name="mkt-wl-pick"
+                      checked={pickerListId === list.id}
+                      disabled={already}
+                      onChange={() => setPickerListId(list.id)}
+                    />
+                    <span>{list.name}</span>
+                    {already && <span className="wl-picker-added">Added</span>}
+                  </label>
+                );
+              })}
             </div>
             <button
               type="button"

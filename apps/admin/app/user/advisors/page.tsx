@@ -7,6 +7,7 @@ import AuthGate from "@/components/auth-gate";
 import FollowToggle from "@/components/FollowToggle";
 import { CheckCircle } from "@/components/advisor-ui/icons";
 import { professionalTypeLabel, isProfessionalType } from "@/lib/professional-types";
+import ProfileAvatar from "@/components/user/profile-avatar";
 import FinanceProSearchBar from "./search-bar";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export default async function UserAdvisorsPage({
   const thirty = new Date();
   thirty.setDate(thirty.getDate() - 30);
 
-  const [advisors, advisorMetrics, totalAdvisors] = await Promise.all([
+  const [advisors, totalAdvisors] = await Promise.all([
     prisma.user.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -51,15 +52,11 @@ export default async function UserAdvisorsPage({
             experienceYears: true,
             bio: true,
             expertiseTags: true,
+            profileImageUrl: true,
             verifiedAt: true,
           },
         },
       },
-    }),
-    prisma.advisorMetricDaily.groupBy({
-      by: ["advisorUserId"],
-      where: { day: { gte: thirty } },
-      _sum: { subscribersCount: true, accuracyPct: true, postsCount: true },
     }),
     prisma.user.count({
       where: {
@@ -70,16 +67,39 @@ export default async function UserAdvisorsPage({
     }),
   ]);
 
-  const metricsByAdvisor = new Map(
-    advisorMetrics.map((m) => [
-      m.advisorUserId,
-      {
-        subs: m._sum.subscribersCount ?? 0,
-        accuracy: m._sum.accuracyPct ? Number(m._sum.accuracyPct) : 0,
-        posts: m._sum.postsCount ?? 0,
+  // Live counts for the listed advisors. The advisor_metric_daily rollup was
+  // previously summed over 30 days, which double-counts snapshot metrics like
+  // subscriber count (and is empty until the rollup job runs) — so both cards
+  // and the stats strip read straight from the source tables instead.
+  const advisorIds = advisors.map((a) => a.id);
+  const [postRows, subRows, postsLast30] = await Promise.all([
+    prisma.marketPost.groupBy({
+      by: ["advisorUserId"],
+      where: {
+        advisorUserId: { in: advisorIds },
+        complianceStatus: "approved",
+        deletedAt: null,
+        publishedAt: { not: null },
       },
-    ]),
-  );
+      _count: { _all: true },
+    }),
+    prisma.subscription.groupBy({
+      by: ["advisorUserId"],
+      where: { advisorUserId: { in: advisorIds }, status: "active" },
+      _count: { _all: true },
+    }),
+    prisma.marketPost.count({
+      where: {
+        complianceStatus: "approved",
+        deletedAt: null,
+        publishedAt: { gte: thirty },
+      },
+    }),
+  ]);
+
+  const postsByAdvisor = new Map(postRows.map((r) => [r.advisorUserId, r._count._all]));
+  const subsByAdvisor = new Map(subRows.map((r) => [r.advisorUserId, r._count._all]));
+  const totalSubscribers = subRows.reduce((s, r) => s + r._count._all, 0);
 
   // Current user's real follow state for the listed advisors
   const followingSet = new Set<number>();
@@ -127,11 +147,11 @@ export default async function UserAdvisorsPage({
         {[
           { label: "Verified Professionals", value: totalAdvisors.toLocaleString(), color: "#10b981" },
           { label: "Avg Accuracy", value: "78%", color: "#0ea5e9" },
-          { label: "Posts (30d)", value: advisorMetrics.reduce((s, m) => s + (m._sum.postsCount ?? 0), 0).toLocaleString(), color: "#f59e0b" },
+          { label: "Posts (30d)", value: postsLast30.toLocaleString(), color: "#f59e0b" },
           // Listed companies do not sell subscriptions — hide the subs aggregate for that filter.
           ...(typeFilter === "listed_company"
             ? []
-            : [{ label: "Total Subscribers", value: advisorMetrics.reduce((s, m) => s + (m._sum.subscribersCount ?? 0), 0).toLocaleString(), color: "#7c3aed" }]),
+            : [{ label: "Total Subscribers", value: totalSubscribers.toLocaleString(), color: "#7c3aed" }]),
         ].map((s) => (
           <article
             key={s.label}
@@ -179,26 +199,10 @@ export default async function UserAdvisorsPage({
           </article>
         ) : (
           advisors.map((adv) => {
-            const m = metricsByAdvisor.get(adv.id);
-            const initials = adv.fullName
-              .split(" ")
-              .map((p) => p[0])
-              .slice(0, 2)
-              .join("")
-              .toUpperCase();
+            const postCount = postsByAdvisor.get(adv.id) ?? 0;
+            const subCount = subsByAdvisor.get(adv.id) ?? 0;
             return (
-              <article
-                key={adv.id}
-                style={{
-                  background: "var(--surface)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 14,
-                  padding: 18,
-                  display: "flex",
-                  flexDirection: "column",
-                  height: "100%",
-                }}
-              >
+              <article key={adv.id} className="fp-card">
                 <Link
                   href={`/user/advisors/${adv.id}`}
                   style={{
@@ -210,22 +214,13 @@ export default async function UserAdvisorsPage({
                     marginBottom: 12,
                   }}
                 >
-                  <div
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 12,
-                      background: "linear-gradient(135deg, rgba(14,165,233,0.13), rgba(16,185,129,0.13))",
-                      color: "#0ea5e9",
-                      display: "grid",
-                      placeItems: "center",
-                      fontSize: 14,
-                      fontWeight: 600,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {initials}
-                  </div>
+                  <ProfileAvatar
+                    src={adv.advisorProfile?.profileImageUrl}
+                    name={adv.fullName}
+                    size={48}
+                    radius={12}
+                    fontSize={14}
+                  />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
@@ -249,94 +244,49 @@ export default async function UserAdvisorsPage({
                   </div>
                 </Link>
 
-                <div
-                  style={{
-                    display: "inline-block",
-                    marginBottom: 10,
-                    padding: "3px 10px",
-                    borderRadius: 999,
-                    background: "var(--surface-2)",
-                    border: "1px solid var(--border)",
-                    color: "var(--text)",
-                    fontSize: 11,
-                    fontWeight: 600,
-                  }}
-                >
-                  {professionalTypeLabel(adv.advisorProfile?.professionalType)}
+                <div className="fp-card-tags">
+                  <span className="fp-card-type">
+                    {professionalTypeLabel(adv.advisorProfile?.professionalType)}
+                  </span>
+                  {adv.advisorProfile?.expertiseTags?.slice(0, 2).map((tag) => (
+                    <span key={tag} className="fp-card-tag">
+                      {tag}
+                    </span>
+                  ))}
                 </div>
 
                 {adv.advisorProfile?.bio && (
-                  <p
-                    style={{
-                      margin: "0 0 12px",
-                      fontSize: 12,
-                      color: "var(--text)",
-                      lineHeight: 1.5,
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {adv.advisorProfile.bio}
-                  </p>
+                  <p className="fp-card-bio">{adv.advisorProfile.bio}</p>
                 )}
 
                 {(() => {
                   const isListed = adv.advisorProfile?.professionalType === "listed_company";
+                  const years = adv.advisorProfile?.experienceYears;
                   return (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: isListed ? "repeat(2, 1fr)" : "repeat(3, 1fr)",
-                    gap: 8,
-                    paddingTop: 12,
-                    marginTop: "auto",
-                    borderTop: "1px solid var(--border)",
-                    fontSize: 11,
-                  }}
-                >
-                  <div>
-                    <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>Posts</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
-                      {m?.posts ?? 0}
-                    </p>
-                  </div>
-                  {!isListed && (
-                  <div>
-                    <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>Subs</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
-                      {m?.subs ?? 0}
-                    </p>
-                  </div>
-                  )}
-                  <div>
-                    <p style={{ margin: 0, color: "var(--text-muted)", fontWeight: 600 }}>Exp</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
-                      {adv.advisorProfile?.experienceYears
-                        ? `${adv.advisorProfile.experienceYears}y`
-                        : "—"}
-                    </p>
-                  </div>
-                </div>
+                    <div
+                      className="fp-card-stats"
+                      style={{ gridTemplateColumns: isListed ? "repeat(2, 1fr)" : "repeat(3, 1fr)" }}
+                    >
+                      <div>
+                        <p className="fp-card-stat-label">Posts</p>
+                        <p className="fp-card-stat-value">{postCount}</p>
+                      </div>
+                      {!isListed && (
+                        <div>
+                          <p className="fp-card-stat-label">Subs</p>
+                          <p className="fp-card-stat-value">{subCount}</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="fp-card-stat-label">Exp</p>
+                        <p className="fp-card-stat-value">{years ? `${years}y` : "—"}</p>
+                      </div>
+                    </div>
                   );
                 })()}
 
-                <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
-                  <Link
-                    href={`/user/advisors/${adv.id}`}
-                    style={{
-                      flex: 1,
-                      textAlign: "center",
-                      padding: "8px 14px",
-                      borderRadius: 8,
-                      background: "var(--surface-2)",
-                      color: "var(--text)",
-                      fontWeight: 700,
-                      fontSize: 12,
-                      textDecoration: "none",
-                    }}
-                  >
+                <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                  <Link href={`/user/advisors/${adv.id}`} className="fp-card-view">
                     View
                   </Link>
                   <AuthGate

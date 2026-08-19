@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { userAvatarSelect, resolveAvatarUrl } from "@/lib/user-avatar";
 import { ok, err } from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/auth";
 
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
         userId: { not: userId },
         user: { fullName: { contains: q, mode: "insensitive" } },
       },
-      select: { threadId: true, user: { select: { fullName: true } } },
+      select: { threadId: true, user: { select: { fullName: true, ...userAvatarSelect } } },
       take: MAX_RESULTS,
     }),
   ]);
@@ -61,15 +62,19 @@ export async function GET(req: NextRequest) {
   ];
   const partners = await prisma.dmThreadParticipant.findMany({
     where: { threadId: { in: involved }, userId: { not: userId } },
-    select: { threadId: true, user: { select: { fullName: true } } },
+    select: { threadId: true, user: { select: { fullName: true, ...userAvatarSelect } } },
   });
   const nameByThread = new Map(
     partners.map((p) => [p.threadId, p.user?.fullName ?? "Unknown"]),
+  );
+  const avatarByThread = new Map(
+    partners.map((p) => [p.threadId, resolveAvatarUrl(p.user)]),
   );
 
   type Row = {
     threadId: number;
     partnerName: string;
+    partnerAvatar: string | null;
     snippet: string;
     createdAt: string | null;
     matchedIn: "message" | "name";
@@ -78,6 +83,7 @@ export async function GET(req: NextRequest) {
   const rows: Row[] = messageHits.map((m) => ({
     threadId: m.threadId,
     partnerName: nameByThread.get(m.threadId) ?? "Unknown",
+    partnerAvatar: avatarByThread.get(m.threadId) ?? null,
     snippet: m.senderUserId === userId ? `You: ${m.contentEnc}` : m.contentEnc,
     createdAt: m.createdAt.toISOString(),
     matchedIn: "message" as const,
@@ -91,6 +97,7 @@ export async function GET(req: NextRequest) {
     rows.push({
       threadId: n.threadId,
       partnerName: n.user?.fullName ?? "Unknown",
+      partnerAvatar: resolveAvatarUrl(n.user),
       snippet: "",
       createdAt: null,
       matchedIn: "name",

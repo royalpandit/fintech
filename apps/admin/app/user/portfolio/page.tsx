@@ -11,6 +11,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
+import ConnectBrokerButton from "@/components/portfolio/connect-broker-button";
 import PaperPortfolioSection from "@/components/paper/paper-portfolio-section";
 import AreaChart from "@/components/advisor-ui/area-chart";
 import DonutChart from "@/components/advisor-ui/donut-chart";
@@ -183,21 +184,10 @@ export default async function PortfolioPage() {
               promptTitle="Sign in to connect"
               promptDescription="Sign up to securely link your broker account."
             >
-              <button
-                type="button"
-                style={{
-                  padding: "12px 22px",
-                  borderRadius: 12,
-                  background: "rgba(255,255,255,0.95)",
-                  color: "#064e3b",
-                  fontWeight: 600,
-                  fontSize: 14,
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                {isAuthed ? "Connect Broker" : "Get started — free"}
-              </button>
+              <ConnectBrokerButton
+                label={isAuthed ? "Connect Broker" : "Get started — free"}
+                connectedBrokers={brokerAccounts.map((b) => b.brokerName)}
+              />
             </AuthGate>
           </div>
           <div style={{ display: "grid", gap: 8 }}>

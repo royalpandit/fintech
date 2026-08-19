@@ -93,6 +93,16 @@ export default async function TradesPage() {
 
   const serialized = serializeMarketFeedPosts(posts, userId, unlocked);
 
+  // Which of these trades the viewer has already liked — drives the filled heart.
+  const likedPostIds = userId
+    ? (
+        await prisma.marketReaction.findMany({
+          where: { userId, type: "like", postId: { in: posts.map((p) => p.id) } },
+          select: { postId: true },
+        })
+      ).map((r) => r.postId)
+    : [];
+
   // ── Advisor promotion rail ────────────────────────────────────────────────
   // "Featured Analysts" are advisors who paid to be promoted (featuredUntil in
   // the future). When there aren't enough, we backfill the rail with the most
@@ -157,6 +167,7 @@ export default async function TradesPage() {
     <TradesClient
       trades={JSON.parse(JSON.stringify(serialized))}
       isAuthed={isAuthed}
+      likedPostIds={likedPostIds}
       featuredAdvisors={featuredAdvisors}
       topAdvisors={topAdvisors}
     />

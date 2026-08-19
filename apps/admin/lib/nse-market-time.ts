@@ -200,3 +200,24 @@ export const nseChartLocalization = {
   timeFormatter: nseChartTimeFormatter,
   dateFormat: "dd MMM 'yy",
 } as const;
+
+/**
+ * Is the NSE cash session open right now?
+ *
+ * Weekday + 09:15–15:30 IST. Trading holidays are not modelled, so this can
+ * return true on a holiday — acceptable for gating background work (a quote
+ * fetch simply returns stale data), but don't rely on it for anything that
+ * must be exact.
+ */
+export function isMarketOpenNow(nowMs = Date.now()): boolean {
+  const { year, month, day, hour, minute } = getIstParts(nowMs);
+
+  // Day-of-week from the IST calendar date, avoiding local-timezone drift.
+  const dow = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  if (dow === 0 || dow === 6) return false;
+
+  const mins = hour * 60 + minute;
+  const open = NSE_SESSION_OPEN.hour * 60 + NSE_SESSION_OPEN.minute;
+  const close = NSE_SESSION_CLOSE.hour * 60 + NSE_SESSION_CLOSE.minute;
+  return mins >= open && mins <= close;
+}

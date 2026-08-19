@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PROFESSIONAL_TYPES, type ProfessionalType } from "@/lib/professional-types";
+import { IMAGE_ACCEPT_ATTR } from "@/lib/upload-types";
 
 type Initial = {
   fullName: string;
@@ -161,7 +162,7 @@ export default function ProfileEditor({ initial }: { initial: Initial }) {
               {uploadingImage ? "Uploading…" : profileImageUrl ? "Change image" : "Upload image"}
               <input
                 type="file"
-                accept="image/jpeg,image/jpg,image/png,image/webp"
+                accept={IMAGE_ACCEPT_ATTR}
                 hidden
                 disabled={uploadingImage}
                 onChange={uploadImage}

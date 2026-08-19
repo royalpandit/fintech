@@ -24,7 +24,8 @@ type DbPost = {
     fullName: string;
     uuid: string;
     role?: string | null;
-    advisorProfile?: { verificationStatus: string } | null;
+    avatarUrl?: string | null;
+    advisorProfile?: { verificationStatus: string; profileImageUrl?: string | null } | null;
   };
   images: { id: number; url: string; sortOrder: number }[];
   videos: { id: number; url: string; sortOrder: number }[];
@@ -74,6 +75,7 @@ export function serializeSocialPost(
       is_advisor:
         post.user.role === "advisor" &&
         post.user.advisorProfile?.verificationStatus === "approved",
+      avatar_url: post.user.advisorProfile?.profileImageUrl ?? post.user.avatarUrl ?? null,
     },
     images: post.images.map((i) => ({ id: i.id, url: i.url, sort_order: i.sortOrder })),
     videos: post.videos.map((v) => ({ id: v.id, url: v.url, sort_order: v.sortOrder })),
@@ -106,7 +108,8 @@ export const socialPostInclude = {
       fullName: true,
       uuid: true,
       role: true,
-      advisorProfile: { select: { verificationStatus: true } },
+      avatarUrl: true,
+      advisorProfile: { select: { verificationStatus: true, profileImageUrl: true } },
     },
   },
   images: { orderBy: { sortOrder: "asc" as const } },

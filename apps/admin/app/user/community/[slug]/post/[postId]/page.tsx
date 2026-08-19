@@ -104,6 +104,7 @@ export default async function CommunityPostPage({
         canInteract={interact}
         canModerate={canModerate}
         linkUrl={post.linkUrl}
+        initialPinned={post.pinnedAt != null}
       />
     </section>
   );

@@ -175,6 +175,12 @@ export default function CompetitionFormPage({ competitionId, viewOnly = false }:
               ))}
               <option value="hidden">Hidden</option>
             </select>
+            {visibility === "hidden" && (
+              <p className="comp-visibility-warn">
+                Hidden competitions do not appear on the Live tab for users or
+                advisors — only you will see this one.
+              </p>
+            )}
           </Field>
         </div>
 

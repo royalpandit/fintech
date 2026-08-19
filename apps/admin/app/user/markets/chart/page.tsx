@@ -24,11 +24,13 @@ export default function MarketsChartPage({
       : undefined;
 
   return (
-    <div>
-      <Link href="/user/markets" className="user-page-back-link" style={{ marginBottom: 10 }}>
-        <span className="user-page-back-icon"><FiArrowLeft size={14} /></span>
-        Back to Markets
-      </Link>
+    <div className="chart-page">
+      <div className="chart-page-head">
+        <Link href="/user/markets" className="user-page-back-link" style={{ marginBottom: 0 }}>
+          <span className="user-page-back-icon"><FiArrowLeft size={14} /></span>
+          Back to Markets
+        </Link>
+      </div>
       <ChartWorkspace initialSymbol={initialSymbol} />
     </div>
   );

@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { FiHeart, FiMessageSquare, FiArrowLeft } from "react-icons/fi";
 import MarketCommentForm from "@/components/posts/market-comment-form";
+import MarketLikeButton from "@/components/posts/market-like-button";
+import ProfileAvatar from "@/components/user/profile-avatar";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import { canViewMarketPost } from "@/lib/post-visibility";
@@ -55,7 +57,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
           id: true,
           fullName: true,
           advisorProfile: {
-            select: { sebiRegistrationNo: true, expertiseTags: true, bio: true },
+            select: { sebiRegistrationNo: true, expertiseTags: true, bio: true, profileImageUrl: true },
           },
         },
       },
@@ -73,6 +75,16 @@ export default async function PostDetailPage({ params }: { params: { id: string 
   });
 
   if (!post) notFound();
+
+  // Has the viewer already liked this post? Drives the filled heart.
+  const hasLiked = auth
+    ? Boolean(
+        await prisma.marketReaction.findFirst({
+          where: { postId: post.id, userId: auth.userId, type: "like" },
+          select: { id: true },
+        }),
+      )
+    : false;
 
   // Similar trades — same symbol or asset type from other advisors.
   const similarTrades = await prisma.marketPost.findMany({
@@ -162,13 +174,6 @@ export default async function PostDetailPage({ params }: { params: { id: string 
     side: tradeSide(post.sentiment),
   });
 
-  const initials = (post.advisor?.fullName ?? "??")
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
   const sColor = SENTIMENT_COLORS[post.sentiment];
 
   // Structured trades (entry/target/SL) live under /user/trades, so send the
@@ -198,22 +203,15 @@ export default async function PostDetailPage({ params }: { params: { id: string 
             <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
               <Link
                 href={`/user/advisors/${post.advisor?.id}`}
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 12,
-                  background:
-                    "linear-gradient(135deg, rgba(14,165,233,0.13), rgba(16,185,129,0.13))",
-                  color: "#0ea5e9",
-                  display: "grid",
-                  placeItems: "center",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  flexShrink: 0,
-                  textDecoration: "none",
-                }}
+                style={{ display: "flex", flexShrink: 0, textDecoration: "none" }}
               >
-                {initials}
+                <ProfileAvatar
+                  src={post.advisor?.advisorProfile?.profileImageUrl}
+                  name={post.advisor?.fullName ?? "??"}
+                  size={48}
+                  radius={12}
+                  fontSize={14}
+                />
               </Link>
               <div style={{ flex: 1 }}>
                 <Link
@@ -461,28 +459,14 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                 promptTitle="Sign in to react"
                 promptDescription="Like this post and join the discussion. Sign up free."
               >
-                <button
-                  type="button"
-                  style={{
-                    height: 34,
-                    padding: "0 14px",
-                    borderRadius: 8,
-                    background: "var(--surface-2)",
-                    color: "var(--text)",
-                    border: "1px solid var(--border)",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    lineHeight: 1,
-                  }}
-                >
-                  <FiHeart size={14} /> {post._count.reactions} Like
-                </button>
+                <MarketLikeButton
+                  postId={post.id}
+                  initialLiked={hasLiked}
+                  initialCount={post._count.reactions}
+                />
               </AuthGate>
-              <span
+              <a
+                href="#comments"
                 style={{
                   height: 34,
                   padding: "0 14px",
@@ -496,10 +480,11 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                   alignItems: "center",
                   gap: 6,
                   lineHeight: 1,
+                  textDecoration: "none",
                 }}
               >
                 <FiMessageSquare size={14} /> {post._count.comments} comments
-              </span>
+              </a>
               <span style={{ flex: 1 }} />
               <AuthGate
                 isAuthenticated={isAuthed}
@@ -572,7 +557,10 @@ export default async function PostDetailPage({ params }: { params: { id: string 
               marginTop: 16,
             }}
           >
-            <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
+            <h3
+              id="comments"
+              style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 700, color: "var(--text)", scrollMarginTop: 80 }}
+            >
               Comments ({post._count.comments})
             </h3>
 
@@ -649,22 +637,14 @@ export default async function PostDetailPage({ params }: { params: { id: string 
               padding: 18,
             }}
           >
-            <div
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 14,
-                background: "linear-gradient(135deg, #0ea5e9, #10b981)",
-                color: "#fff",
-                display: "grid",
-                placeItems: "center",
-                fontSize: 18,
-                fontWeight: 600,
-                marginBottom: 12,
-              }}
-            >
-              {initials}
-            </div>
+            <ProfileAvatar
+              src={post.advisor?.advisorProfile?.profileImageUrl}
+              name={post.advisor?.fullName ?? "??"}
+              size={56}
+              radius={14}
+              fontSize={18}
+              style={{ marginBottom: 12 }}
+            />
             <h3
               style={{
                 margin: 0,
