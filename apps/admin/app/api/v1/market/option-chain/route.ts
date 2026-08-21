@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getOptionChain, optionUnderlyingKey } from "@/lib/angelone";
+import { withSWRCache } from "@/lib/market-rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -22,11 +23,14 @@ export async function GET(req: NextRequest) {
     }
 
     const profile = searchParams.get("profile") === "1";
-    const chain = await getOptionChain(
-      underlying,
-      spot ? Number(spot) : undefined,
-      expiry,
-      { profile },
+    // Cache key omits exact LTP — spot only determines strike centering, which
+    // is acceptable to serve slightly stale while a background refresh runs.
+    const cacheKey = `oc-init:${underlying}:${expiry ?? "near"}:${profile ? "p" : "s"}`;
+    const chain = await withSWRCache(
+      cacheKey,
+      45_000,          // serve fresh for 45 s
+      3 * 60_000,      // serve stale + background-refresh for up to 3 min
+      () => getOptionChain(underlying, spot ? Number(spot) : undefined, expiry, { profile }),
     );
     return NextResponse.json({ ok: true, data: chain });
   } catch (err) {
