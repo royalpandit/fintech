@@ -102,10 +102,13 @@ const DRAW_TOOLS = [
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
- * Back out the previous close from a quote. The feed doesn't send `close`, but
- * `netChange` is `ltp - prevClose`, so the close is recoverable.
+ * Previous close for a quote, used to recompute change on each live tick. When
+ * the feed omits `close` we back it out of `netChange` (= ltp - prevClose),
+ * verified live: RELIANCE ltp 1309, netChange -13, close 1322.
  */
-function closeFromQuote(q: { ltp?: number; netChange?: number }): number | undefined {
+function closeFromQuote(q: { ltp?: number; netChange?: number; close?: number }): number | undefined {
+  // Angel One reports `close` directly; prefer it over deriving.
+  if (q.close != null && q.close > 0) return q.close;
   if (q.ltp == null || q.netChange == null) return undefined;
   const close = q.ltp - q.netChange;
   return close > 0 ? close : undefined;
@@ -561,12 +564,12 @@ function TradingTerminalInner({
       if (!json.ok) return;
 
       const quoteMap = new Map<string, {
-        ltp: number; open: number; high: number; low: number;
+        ltp: number; open: number; high: number; low: number; close?: number;
         percentChange: number; netChange: number;
         tradeVolume?: number; volume?: number;
       }>(
         json.data.map((q: {
-          symbolToken: string; ltp: number; open: number; high: number; low: number;
+          symbolToken: string; ltp: number; open: number; high: number; low: number; close?: number;
           percentChange: number; netChange: number;
           tradeVolume?: number; volume?: number;
         }) => [q.symbolToken, q])

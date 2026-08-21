@@ -9,6 +9,8 @@ type Quote = {
   percentChange: number;
 };
 
+type FxRate = { code: string; inrValue: number; changePct: number | null };
+
 const DISPLAY = ["NIFTY 50", "SENSEX", "NIFTY BANK"];
 
 function sparkPath(up: boolean) {
@@ -25,6 +27,7 @@ function sparkPath(up: boolean) {
 
 export default function LandingTicker() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [usdInr, setUsdInr] = useState<FxRate | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -40,11 +43,26 @@ export default function LandingTicker() {
     } catch { /* silent */ }
   }, []);
 
+  const loadFx = useCallback(async () => {
+    try {
+      const res = await fetch("/api/v1/market/fx", { cache: "no-store" });
+      const json = await res.json();
+      const usd = (json.rates as FxRate[] | undefined)?.find(r => r.code === "USD");
+      if (usd && Number.isFinite(usd.inrValue)) setUsdInr(usd);
+    } catch { /* silent — the card falls back to a dash */ }
+  }, []);
+
   useEffect(() => {
     load();
+    loadFx();
     const id = setInterval(load, 30_000);
-    return () => clearInterval(id);
-  }, [load]);
+    // FX is cached upstream for 10 minutes, so polling faster buys nothing.
+    const fxId = setInterval(loadFx, 5 * 60_000);
+    return () => {
+      clearInterval(id);
+      clearInterval(fxId);
+    };
+  }, [load, loadFx]);
 
   const fallback: Quote[] = [
     { displaySymbol: "NIFTY 50", ltp: 24832.5, percentChange: 0.42 },
@@ -73,11 +91,20 @@ export default function LandingTicker() {
               </div>
             );
           })}
+          {/* Was pinned at a hardcoded 83.42 — roughly 13% off the live rate. */}
           <div className="lp-ticker-card" style={{ flex: "1 0 200px" }}>
             <div className="lp-ticker-name">USD/INR</div>
-            <div className="lp-ticker-price">83.42</div>
-            <div className="lp-ticker-chg down">▼ 0.12%</div>
-            {sparkPath(false)}
+            <div className="lp-ticker-price">
+              {usdInr ? usdInr.inrValue.toLocaleString("en-IN", { maximumFractionDigits: 2 }) : "—"}
+            </div>
+            {usdInr?.changePct != null ? (
+              <div className={`lp-ticker-chg ${usdInr.changePct >= 0 ? "up" : "down"}`}>
+                {usdInr.changePct >= 0 ? "▲" : "▼"} {Math.abs(usdInr.changePct).toFixed(2)}%
+              </div>
+            ) : (
+              <div className="lp-ticker-chg" />
+            )}
+            {sparkPath((usdInr?.changePct ?? 0) >= 0)}
           </div>
           <Link href="/register" className="lp-ticker-link">View all markets →</Link>
         </div>

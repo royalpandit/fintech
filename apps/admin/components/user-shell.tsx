@@ -163,6 +163,7 @@ export default function UserShell({
       window.removeEventListener("focus", onFocus);
     };
   }, [currentUser]);
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

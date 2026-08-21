@@ -1,5 +1,5 @@
 // Honest placeholder for instrument classes with no free data feed
-// (IPO, ETFs*, Commodities*, Global). No fabricated numbers.
+// (Commodities — MCX segment must be enabled on the Demat account).
 export default function MarketsPlaceholder({
   title,
   blurb,

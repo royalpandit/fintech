@@ -8,6 +8,8 @@ type MutualFund = {
   name: string;
   amc: string;
   category: string;
+  plan: string;
+  option: string;
   nav: number | null;
   date: string;
 };
@@ -19,6 +21,13 @@ type Returns = {
   r3y: number | null;
   r5y: number | null;
 };
+
+// AMFI now reports Plan and Option as their own columns, so a scheme name on
+// its own maps to up to four rows (Direct/Regular x Growth/IDCW) that would
+// otherwise look like duplicates.
+function planLabel(f: { plan: string; option: string }): string {
+  return [f.plan, f.option].filter(Boolean).join(" · ");
+}
 
 function cleanCategory(c: string): string {
   const m = c.match(/\(([^)]+)\)/);
@@ -193,6 +202,9 @@ export default function MutualFundsView() {
                     <tr key={f.code} className="mkt-trow" style={{ borderTop: "1px solid var(--border)" }}>
                       <td style={{ padding: "12px 16px", maxWidth: 380 }}>
                         <div style={{ fontWeight: 600, color: "var(--text)" }}>{f.name}</div>
+                        {planLabel(f) && (
+                          <div style={{ fontSize: 11, color: "var(--text)", opacity: 0.75, marginTop: 2 }}>{planLabel(f)}</div>
+                        )}
                         {f.amc && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{f.amc}</div>}
                       </td>
                       <td style={{ padding: "12px 16px", color: "var(--text-muted)", maxWidth: 200 }}>{cleanCategory(f.category)}</td>
@@ -224,6 +236,7 @@ export default function MutualFundsView() {
                   <div className="mf-card-head">
                     <div style={{ minWidth: 0 }}>
                       <div className="mf-card-name">{f.name}</div>
+                      {planLabel(f) && <div className="mf-card-amc">{planLabel(f)}</div>}
                       {f.amc && <div className="mf-card-amc">{f.amc}</div>}
                       <div className="mf-card-cat">{cleanCategory(f.category)}</div>
                     </div>

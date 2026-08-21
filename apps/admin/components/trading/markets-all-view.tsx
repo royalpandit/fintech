@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FiArrowUpRight, FiArrowDownRight } from "react-icons/fi";
 
@@ -54,15 +55,84 @@ function StockRow({ r }: { r: MarketRow }) {
   );
 }
 
-function ComingSoon({ title, blurb }: { title: string; blurb: string }) {
+type FiiRow = { date: string; category: string; buyValue: number; sellValue: number; netValue: number };
+type DealRow = { date: string; symbol: string; name: string; client: string; buySell: string; quantity: number; avgPrice: number; dealType: string };
+
+function FiiDiiPanel() {
+  const [rows, setRows] = useState<FiiRow[]>([]);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/v1/market/fii-dii", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => {
+        if (!alive) return;
+        if (j.ok) setRows(j.rows ?? []);
+        else setError(j.error || "Unavailable");
+      })
+      .catch(() => alive && setError("Network error"));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const fmt = (n: number) => n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
   return (
-    <Panel title={title} note="coming soon">
-      <div style={{ padding: "28px 20px", textAlign: "center" }}>
-        <p style={{ margin: "0 0 10px", fontSize: 12.5, color: "var(--text-muted)", lineHeight: 1.6 }}>{blurb}</p>
-        <span style={{ display: "inline-block", fontSize: 11, fontWeight: 600, padding: "4px 12px", borderRadius: 999, background: "var(--surface-2)", color: "var(--text-muted)" }}>
-          Needs an exchange / market-data provider
-        </span>
-      </div>
+    <Panel title="🏦 FII / DII Activity" note="NSE after close">
+      {error && !rows.length ? (
+        <p style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 12, margin: 0 }}>{error}</p>
+      ) : !rows.length ? (
+        <p style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 12, margin: 0 }}>Loading…</p>
+      ) : (
+        rows.slice(0, 8).map((r, i) => {
+          const pos = r.netValue >= 0;
+          return (
+            <div key={`${r.category}-${i}`} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "11px 16px", borderTop: i ? "1px solid var(--border)" : undefined, fontSize: 13 }}>
+              <span style={{ fontWeight: 600, color: "var(--text)" }}>{r.category || "—"}</span>
+              <span style={{ color: pos ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
+                {pos ? "+" : ""}₹{fmt(r.netValue)} Cr
+              </span>
+            </div>
+          );
+        })
+      )}
+    </Panel>
+  );
+}
+
+function BulkDealsPanel() {
+  const [rows, setRows] = useState<DealRow[]>([]);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/v1/market/bulk-deals", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => {
+        if (!alive) return;
+        if (j.ok) setRows(j.rows ?? []);
+        else setError(j.error || "Unavailable");
+      })
+      .catch(() => alive && setError("Network error"));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return (
+    <Panel title="🧾 Bulk & Block Deals" note="NSE">
+      {error && !rows.length ? (
+        <p style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 12, margin: 0 }}>{error}</p>
+      ) : !rows.length ? (
+        <p style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 12, margin: 0 }}>Loading…</p>
+      ) : (
+        rows.slice(0, 8).map((r, i) => (
+          <div key={`${r.symbol}-${i}`} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "11px 16px", borderTop: i ? "1px solid var(--border)" : undefined, fontSize: 13 }}>
+            <span>
+              <span style={{ fontWeight: 600, color: "var(--text)" }}>{r.symbol}</span>
+              <span style={{ color: "var(--text-muted)", marginLeft: 8, fontSize: 11 }}>{r.buySell}</span>
+            </span>
+            <span style={{ color: "var(--text-muted)" }}>{r.quantity.toLocaleString("en-IN")}</span>
+          </div>
+        ))
+      )}
     </Panel>
   );
 }
@@ -91,14 +161,8 @@ export default function MarketsAllView({ stocks }: { stocks: MarketRow[] }) {
       <Panel title="📉 Near 52-Week Low" note="top 5">
         {nearLow.length ? nearLow.map((r) => <StockRow key={r.token} r={r} />) : empty}
       </Panel>
-      <ComingSoon
-        title="🧾 Bulk & Block Deals"
-        blurb="Large institutional trades reported by the exchanges each day."
-      />
-      <ComingSoon
-        title="🏦 FII / DII Activity"
-        blurb="Daily net buy/sell by foreign and domestic institutional investors."
-      />
+      <BulkDealsPanel />
+      <FiiDiiPanel />
     </div>
   );
 }

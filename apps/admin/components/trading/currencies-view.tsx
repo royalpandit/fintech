@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { FiArrowDownRight, FiArrowUpRight } from "react-icons/fi";
 
-type Rate = { code: string; name: string; perInr: number; inrValue: number };
+type Rate = {
+  code: string;
+  name: string;
+  perInr: number;
+  inrValue: number;
+  changePct: number | null;
+};
 
 export default function CurrenciesView() {
   const [rates, setRates] = useState<Rate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [q, setQ] = useState("");
+  const [meta, setMeta] = useState<{ source?: string; fetchedAt?: string; stale?: boolean }>({});
 
   useEffect(() => {
     let alive = true;
@@ -19,6 +27,7 @@ export default function CurrenciesView() {
         if (!alive) return;
         if ((j.ok || j.status) && j.rates) {
           setRates(j.rates);
+          setMeta({ source: j.source, fetchedAt: j.fetchedAt, stale: j.stale });
           setError("");
         } else setError(j.error || "Failed to load currencies");
       } catch {
@@ -44,8 +53,13 @@ export default function CurrenciesView() {
     <section>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
         <p style={{ margin: 0, flex: 1, fontSize: 11.5, color: "var(--text-muted)" }}>
-          Live FX vs Indian Rupee · pairs from open.er-api.com · 1 unit in ₹
+          Live FX vs Indian Rupee · 1 unit in ₹
+          {meta.source ? ` · ${meta.source}` : ""}
           {!loading ? ` · ${rates.length} currencies` : ""}
+          {meta.fetchedAt
+            ? ` · updated ${new Date(meta.fetchedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`
+            : ""}
+          {meta.stale ? " · showing last known rates" : ""}
         </p>
         <input
           value={q}
@@ -87,6 +101,25 @@ export default function CurrenciesView() {
                 <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text)", letterSpacing: -0.5, marginTop: 8 }}>
                   ₹{r.inrValue.toLocaleString("en-IN", { maximumFractionDigits: r.inrValue < 1 ? 4 : 2 })}
                 </div>
+                {/* Only the majors get a day change — er-api has no previous
+                    close, so it comes from Yahoo and isn't always available. */}
+                {r.changePct != null ? (
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 3,
+                      color: r.changePct >= 0 ? "#16a34a" : "#dc2626",
+                    }}
+                  >
+                    {r.changePct >= 0 ? <FiArrowUpRight size={13} /> : <FiArrowDownRight size={13} />}
+                    {r.changePct >= 0 ? "+" : ""}
+                    {r.changePct.toFixed(2)}%
+                  </div>
+                ) : null}
               </article>
             ))}
       </div>

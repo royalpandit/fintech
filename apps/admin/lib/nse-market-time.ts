@@ -45,6 +45,12 @@ export function getIstParts(ms: number): IstParts {
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
+/** NSE historical endpoints want from/to as DD-MM-YYYY in IST. */
+export function istDateDDMMYYYY(ms = Date.now()): string {
+  const p = getIstParts(ms);
+  return `${pad2(p.day)}-${pad2(p.month)}-${p.year}`;
+}
+
 /** IST wall clock → UTC unix seconds (single conversion). */
 export function istWallToUnixSec(
   year: number,
