@@ -3,8 +3,11 @@ import { authorizeCron } from "@/lib/cron-auth";
 import { CRON_JOB_NAMES, isCronJobName, runCronJobs } from "@/lib/cron-jobs";
 
 export const dynamic = "force-dynamic";
-// Give the sweeps room — the price-alert pass fetches live quotes.
-export const maxDuration = 60;
+// Give the sweeps room — the price-alert pass fetches live quotes, and
+// scrip-master downloads a 34.7 MB file that has taken over 70s. maxDuration is
+// a ceiling rather than a reservation, so the quick jobs are unaffected.
+// Requires a Vercel plan that permits 300s functions.
+export const maxDuration = 300;
 
 /**
  * Background job runner.

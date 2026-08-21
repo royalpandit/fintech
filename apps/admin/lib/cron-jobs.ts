@@ -4,6 +4,8 @@ import { sweepAllSubscriptionLifecycles } from "@/lib/subscription-sweep";
 import { sweepCompetitionStatuses } from "@/lib/competition-lifecycle";
 import { evaluatePriceAlerts } from "@/lib/price-alert-engine";
 import { sendNotificationDigests } from "@/lib/email-digest";
+import { refreshBulkDeals, refreshFiiDii } from "@/lib/nse-market-snapshots";
+import { refreshScripMaster } from "@/lib/scrip-master";
 
 /**
  * Background jobs, driven by /api/v1/cron.
@@ -20,7 +22,10 @@ export type CronJobName =
   | "subscriptions"
   | "competitions"
   | "price-alerts"
-  | "email-digest";
+  | "email-digest"
+  | "fii-dii"
+  | "bulk-deals"
+  | "scrip-master";
 
 export type CronJobResult = {
   job: CronJobName;
@@ -39,6 +44,9 @@ const JOBS: Job[] = [
   { name: "competitions", run: sweepCompetitionStatuses },
   { name: "price-alerts", run: evaluatePriceAlerts },
   { name: "email-digest", run: sendNotificationDigests },
+  { name: "fii-dii", run: refreshFiiDii },
+  { name: "bulk-deals", run: refreshBulkDeals },
+  { name: "scrip-master", run: refreshScripMaster },
 ];
 
 export const CRON_JOB_NAMES = JOBS.map((j) => j.name);

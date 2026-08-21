@@ -9,6 +9,9 @@ import CryptoView from "@/components/trading/crypto-view";
 import CurrenciesView from "@/components/trading/currencies-view";
 import MarketsAllView from "@/components/trading/markets-all-view";
 import MarketsPlaceholder from "@/components/trading/markets-placeholder";
+import GlobalMarketsView from "@/components/trading/global-markets-view";
+import IpoView from "@/components/trading/ipo-view";
+import EtfView from "@/components/trading/etf-view";
 import AddToWatchlistButton from "@/components/watchlist/add-to-watchlist-button";
 import type { WatchlistItem } from "@/components/trading/trading-terminal-types";
 import { MARKET_SECTORS, stockInSector } from "@/lib/market-sectors";
@@ -207,34 +210,16 @@ export default function MarketsOverview() {
       {tab === "mf" && <MutualFundsView />}
       {tab === "crypto" && <CryptoView />}
       {tab === "currencies" && <CurrenciesView />}
-      {tab === "etf" && (
-        <MarketsPlaceholder
-          title="ETFs"
-          blurb="Exchange-traded funds trade like stocks. Use the Stocks tab search for listed ETFs (e.g. NIFTYBEES, GOLDBEES) — a dedicated curated ETF board is coming next."
-          needs="curated ETF list"
-        />
-      )}
+      {tab === "etf" && <EtfView />}
       {tab === "commodities" && (
         <MarketsPlaceholder
           title="Commodities"
-          blurb="MCX commodities (gold, silver, crude, natural gas). Requires the broker's commodity (MCX) segment to be enabled on the data feed."
-          needs="MCX data segment"
+          blurb="MCX commodities (gold, silver, crude, natural gas). Requires the broker's commodity (MCX) segment to be enabled on the data feed — that's an account setting, not a missing API."
+          needs="MCX data segment on Demat"
         />
       )}
-      {tab === "ipo" && (
-        <MarketsPlaceholder
-          title="IPO"
-          blurb="Upcoming, open and recently-listed IPOs. There's no free feed for this — it needs a paid IPO data provider or an admin-curated list."
-          needs="IPO data provider / admin-curated list"
-        />
-      )}
-      {tab === "global" && (
-        <MarketsPlaceholder
-          title="Global Markets"
-          blurb="US & global indices (S&P 500, Nasdaq, Dow, FTSE, Nikkei) and ADRs. Needs a global market-data provider."
-          needs="global market-data provider"
-        />
-      )}
+      {tab === "ipo" && <IpoView />}
+      {tab === "global" && <GlobalMarketsView />}
 
       {tab === "stocks" && (
       <>
@@ -364,7 +349,7 @@ export default function MarketsOverview() {
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
-              <tr style={{ color: "var(--text-muted)", fontSize: 11, textAlign: "right" }}>
+              <tr style={{ color: "var(--text-muted)", fontSize: 11 }}>
                 <Th style={{ textAlign: "left" }}>Symbol</Th>
                 <Th>LTP</Th>
                 <Th>Change</Th>
@@ -504,8 +489,12 @@ function MoverList({ title, rows, positive }: { title: string; rows: OverviewRow
   );
 }
 
+// globals.css has `th, td { text-align: left }` — a real declaration, so it
+// beats text-align inherited from <tr> and every numeric header sat left of its
+// right-aligned values. Default to right here, matching Td; callers that want a
+// left-aligned header (Symbol) override via `style`.
 function Th({ children, style }: { children?: React.ReactNode; style?: React.CSSProperties }) {
-  return <th style={{ padding: "10px 16px", fontWeight: 600, ...style }}>{children}</th>;
+  return <th style={{ padding: "10px 16px", fontWeight: 600, textAlign: "right", ...style }}>{children}</th>;
 }
 function Td({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return <td style={{ padding: "11px 16px", textAlign: "right", ...style }}>{children}</td>;

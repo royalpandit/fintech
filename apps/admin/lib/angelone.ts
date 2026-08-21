@@ -35,7 +35,7 @@ export type {
   OptionLeg,
 } from "@/lib/angelone-types";
 
-const BASE_URL = "https://apiconnect.angelone.in";
+const BASE_URL = (process.env.ANGELONE_BASE_URL || "https://apiconnect.angelone.in").replace(/\/$/, "");
 
 /**
  * Angel One credentials, all required to reach the market-data API.

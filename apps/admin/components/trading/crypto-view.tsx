@@ -55,10 +55,47 @@ export default function CryptoView() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!coins.length) return;
+    const ids = coins.map((c) => c.id).join(",");
+    const geckoBtcInr = coins.find((c) => c.id === "bitcoin")?.price ?? 0;
+    const usdInr = { current: 0 };
+    const es = new EventSource(`/api/v1/market/crypto/stream?ids=${encodeURIComponent(ids)}`);
+    es.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data) as {
+          type?: string;
+          id?: string;
+          priceUsd?: number;
+          change24h?: number;
+        };
+        if (msg.type !== "tick" || !msg.id || !msg.priceUsd) return;
+        if (msg.id === "bitcoin" && geckoBtcInr > 0 && !usdInr.current) {
+          usdInr.current = geckoBtcInr / msg.priceUsd;
+        }
+        const rate = usdInr.current;
+        setCoins((prev) =>
+          prev.map((c) => {
+            if (c.id !== msg.id) return c;
+            const price = rate > 0 ? msg.priceUsd! * rate : c.price;
+            return {
+              ...c,
+              price: Number.isFinite(price) && price > 0 ? price : c.price,
+              change24h: typeof msg.change24h === "number" ? msg.change24h : c.change24h,
+            };
+          }),
+        );
+      } catch {
+        /* ignore */
+      }
+    };
+    return () => es.close();
+  }, [coins.length]);
+
   return (
     <section>
       <p style={{ margin: "0 0 12px", fontSize: 11.5, color: "var(--text-muted)" }}>
-        Top crypto by market cap · prices in INR · data from CoinGecko
+          Top crypto by market cap · prices in INR (CoinGecko) · live ticks Binance → Coinbase
       </p>
       {error && (
         <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)", color: "#92400e", fontSize: 12, marginBottom: 16 }}>
@@ -69,11 +106,15 @@ export default function CryptoView() {
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
-              <tr style={{ color: "var(--text-muted)", fontSize: 11, textAlign: "right" }}>
+              {/* globals.css has `th, td { text-align: left }` — a real
+                  declaration, so it beats text-align inherited from <tr>.
+                  Each numeric header has to set its own alignment or it sits
+                  left of the right-aligned values below it. */}
+              <tr style={{ color: "var(--text-muted)", fontSize: 11 }}>
                 <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "left" }}>Coin</th>
-                <th style={{ padding: "12px 16px", fontWeight: 600 }}>Price</th>
-                <th style={{ padding: "12px 16px", fontWeight: 600 }}>24h</th>
-                <th style={{ padding: "12px 16px", fontWeight: 600 }}>Market Cap</th>
+                <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>Price</th>
+                <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>24h</th>
+                <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>Market Cap</th>
               </tr>
             </thead>
             <tbody>
