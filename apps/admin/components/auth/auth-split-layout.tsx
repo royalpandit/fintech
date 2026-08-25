@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import FinuerLogo from "@/components/brand/finuer-logo";
-import ThemeHeaderButton from "@/components/theme/theme-header-button";
+import PanelThemeToggle from "@/components/theme/panel-theme-toggle";
 import { BRAND_NAME } from "@/lib/brand";
 import { FiTrendingUp, FiArrowUpRight } from "react-icons/fi";
 
@@ -157,7 +157,7 @@ export default function AuthSplitLayout({
         {/* ── Right: form panel ── */}
         <section className="auth-form-panel">
           <div className="auth-form-topbar">
-            <ThemeHeaderButton />
+            <PanelThemeToggle className="lp-theme-toggle" size={16} />
           </div>
 
           <div className="auth-form-scroll">

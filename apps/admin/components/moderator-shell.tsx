@@ -5,9 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { FiMenu, FiX } from "react-icons/fi";
 import ThemeToggleMenu from "@/components/theme/theme-toggle-menu";
-import ThemeHeaderButton from "@/components/theme/theme-header-button";
+import PanelThemeToggle from "@/components/theme/panel-theme-toggle";
+import { useTheme } from "@/components/theme/theme-provider";
 import { ADMIN_MODULES, ADMIN_MODULE_ROUTE_MAP } from "../lib/admin-nav";
 import { Bell } from "./advisor-ui/icons";
+import ShellMenuAvatar from "./shell-menu-avatar";
+import { useDismissableMenu } from "@/hooks/use-dismissable-menu";
 
 type ModeratorShellProps = {
   children: React.ReactNode;
@@ -46,10 +49,27 @@ export default function ModeratorShell({
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { enterThemedScope, exitThemedScope } = useTheme();
+
+  // Light is opt-in per panel: outside the signed-in shells every route renders
+  // the product's dark appearance. Adopt the stored preference while this panel
+  // is mounted and hand the page back to dark on the way out, so the choice
+  // survives without leaking onto the landing or auth pages.
+  useEffect(() => {
+    enterThemedScope();
+    return () => exitThemedScope();
+  }, [enterThemedScope, exitThemedScope]);
   const [loggingOut, setLoggingOut] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
 
   const initials = getInitials(currentUser.fullName);
+
+  // Outside click + Escape dismiss the account menu; Escape refocuses the
+  // avatar button so keyboard users don't lose their place.
+  const { containerRef: accountMenuRef, triggerRef: avatarBtnRef } = useDismissableMenu<
+    HTMLDivElement,
+    HTMLButtonElement
+  >(menuOpen, () => setMenuOpen(false));
 
   useEffect(() => {
     setNavOpen(false);
@@ -174,33 +194,27 @@ export default function ModeratorShell({
           </div>
         </div>
 
-        <div
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            color: "var(--text-muted)",
-            letterSpacing: 1,
-            marginBottom: 8,
-            paddingLeft: 6,
-          }}
-        >
-          MODERATION
-        </div>
-
         <nav className="admin-nav">
-          {ADMIN_MODULES.map((moduleName) => {
-            const href = ADMIN_MODULE_ROUTE_MAP[moduleName];
-            const active = pathname === href || pathname.startsWith(href + "/");
-            return (
-              <Link
-                key={moduleName}
-                href={href}
-                className={`admin-nav-link ${active ? "active" : ""}`}
-              >
-                {moduleName}
-              </Link>
-            );
-          })}
+          <div className="admin-nav-group">
+            <div className="admin-nav-heading">Moderation</div>
+            {ADMIN_MODULES.map((moduleName) => {
+              const href = ADMIN_MODULE_ROUTE_MAP[moduleName];
+              const active = pathname === href || pathname.startsWith(href + "/");
+              return (
+                <Link
+                  key={moduleName}
+                  href={href}
+                  className={`admin-nav-link ${active ? "active" : ""}`}
+                  onClick={() => setNavOpen(false)}
+                >
+                  <span className="admin-nav-icon" aria-hidden>
+                    <span className="admin-nav-dot" />
+                  </span>
+                  <span className="admin-nav-label">{moduleName}</span>
+                </Link>
+              );
+            })}
+          </div>
         </nav>
       </aside>
 
@@ -282,7 +296,10 @@ export default function ModeratorShell({
             })}
           </nav>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative", marginLeft: 24, flexShrink: 0 }}>
+          <div
+            ref={accountMenuRef}
+            style={{ display: "flex", alignItems: "center", gap: 12, position: "relative", marginLeft: 24, flexShrink: 0 }}
+          >
             <Link
               href="/admin/audit-logs"
               aria-label="Activity"
@@ -314,12 +331,15 @@ export default function ModeratorShell({
               )}
             </Link>
 
-            <ThemeHeaderButton />
+            <PanelThemeToggle />
 
             <button
+              ref={avatarBtnRef}
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
               aria-label="Account menu"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
               title={currentUser.fullName}
               style={{
                 width: 38,
@@ -358,9 +378,23 @@ export default function ModeratorShell({
                   zIndex: 50,
                 }}
               >
-                <div style={{ padding: "8px 10px 10px", borderBottom: "1px solid var(--border)" }}>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: 13 }}>{currentUser.fullName}</p>
-                  <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>{currentUser.email}</p>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 10,
+                    padding: "8px 10px 10px",
+                    borderBottom: "1px solid var(--border)",
+                  }}
+                >
+                  <ShellMenuAvatar
+                    src={currentUser.avatarUrl}
+                    initials={initials}
+                    gradient="linear-gradient(135deg, #2563eb, #6366f1)"
+                  />
+                  <div style={{ minWidth: 0 }}>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{currentUser.fullName}</p>
+                  <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{currentUser.email}</p>
                   <p
                     style={{
                       margin: "6px 0 0",
@@ -376,6 +410,7 @@ export default function ModeratorShell({
                   >
                     {currentUser.role}
                   </p>
+                  </div>
                 </div>
                 <Link
                   href="/admin/profile"

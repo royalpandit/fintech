@@ -3,12 +3,15 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { sweepSubscriptionLifecycle } from "@/lib/subscription-sweep";
+import { sweepFinuerProLifecycle } from "@/lib/finuer-pro-sweep";
 import { requireAuthToken } from "@/lib/auth";
 import { categoryLabel, isSubscriptionActive } from "@/lib/subscription-services";
 import SubscriptionsBrowser, {
   type PurchaseRow,
   type SubRow,
 } from "@/components/subscriptions/subscriptions-browser";
+import FinuerProSection from "@/components/subscriptions/finuer-pro-section";
+import { getFinuerProStatus, listPurchasableFinuerPlans } from "@/lib/finuer-pro";
 
 export const dynamic = "force-dynamic";
 
@@ -38,8 +41,20 @@ export default async function UserSubscriptionsPage() {
   const auth = await requireAuthToken(token);
   if (!auth) redirect("/login");
 
-  // Warn about anything lapsing, and flip what already has.
-  await sweepSubscriptionLifecycle(auth.userId);
+  // Warn about anything lapsing, and flip what already has. The nightly cron
+  // covers members who never open this page; this catches the ones who do.
+  await Promise.all([
+    sweepSubscriptionLifecycle(auth.userId),
+    sweepFinuerProLifecycle(auth.userId),
+  ]);
+
+  // Finuer Pro — the platform plan. Rendered inline at the top of this page
+  // rather than behind its own tab; #finuer-pro is what the premium-basket
+  // lock CTAs link to.
+  const [proPlans, proStatus] = await Promise.all([
+    listPurchasableFinuerPlans(),
+    getFinuerProStatus(auth.userId, auth.role),
+  ]);
 
   // Per-service subscriptions (new model)
   const serviceSubscriptions = await prisma.serviceSubscription.findMany({
@@ -177,6 +192,25 @@ export default async function UserSubscriptionsPage() {
           one-time trades you&apos;ve unlocked
         </p>
       </div>
+
+      <FinuerProSection
+        plans={proPlans.map((p) => ({
+          id: p.id,
+          label: p.label,
+          tagline: p.tagline,
+          priceInr: p.priceInr,
+          durationDays: p.durationDays,
+          features: p.features,
+          badge: p.badge,
+        }))}
+        status={{
+          active: proStatus.active,
+          planId: proStatus.planId,
+          planLabel: proStatus.plan.label,
+          expiresAt: proStatus.expiresAt,
+          viaRole: proStatus.viaRole,
+        }}
+      />
 
       <div className="subs-grid">
         <SubscriptionsBrowser subs={subRows} purchases={purchaseRows} />

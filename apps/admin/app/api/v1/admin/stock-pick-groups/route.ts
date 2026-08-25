@@ -1,65 +1,92 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { requireRole } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { serializeGroup, uniqueSlug } from "@/lib/stock-picks";
+// ─── Stock Basket / AI Stock Picks — RETIRED ──────────────────────────────
+// Superseded by Finuer Basket (/user/finuer-basket, /super-admin/finuer-basket).
+// The original implementation is preserved verbatim, line-commented, below the
+// stub. To bring the feature back: delete the stub, uncomment the body, and
+// restore the nav entries in components/user-shell.tsx + lib/super-admin.ts.
+
+import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
-  const auth = await requireRole(req, ["super_admin"]);
-  if (!auth) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
-
-  const groups = await prisma.stockPickGroup.findMany({
-    where: { deletedAt: null },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-    include: {
-      _count: { select: { stocks: { where: { deletedAt: null } } } },
-    },
-  });
-
-  return NextResponse.json({
-    ok: true,
-    data: groups.map((g) => serializeGroup(g)),
-  });
-}
-
-export async function POST(req: NextRequest) {
-  const auth = await requireRole(req, ["super_admin"]);
-  if (!auth) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
-
-  const body = await req.json();
-  const { name, description, category, iconEmoji, performancePct, benchmarkPct, chartData, sortOrder, isPublished } =
-    body;
-
-  if (!name?.trim()) {
-    return NextResponse.json({ ok: false, error: "name is required" }, { status: 400 });
-  }
-
-  const existing = await prisma.stockPickGroup.findMany({
-    where: { deletedAt: null },
-    select: { slug: true },
-  });
-  const slug = uniqueSlug(
-    name,
-    existing.map((g) => g.slug),
+/** Stock Basket is retired — use the Finuer Basket API (/api/v1/baskets). */
+function gone() {
+  return NextResponse.json(
+    { ok: false, error: "Stock Basket has been retired. Use Finuer Basket instead." },
+    { status: 410 },
   );
-
-  const group = await prisma.stockPickGroup.create({
-    data: {
-      name: name.trim(),
-      slug,
-      description: description?.trim() || null,
-      category: category?.trim() || null,
-      iconEmoji: iconEmoji?.trim() || "📈",
-      performancePct: performancePct != null ? performancePct : null,
-      benchmarkPct: benchmarkPct != null ? benchmarkPct : null,
-      chartData: chartData ?? null,
-      sortOrder: typeof sortOrder === "number" ? sortOrder : 0,
-      isPublished: Boolean(isPublished),
-      createdById: auth.userId,
-    },
-    include: { _count: { select: { stocks: true } } },
-  });
-
-  return NextResponse.json({ ok: true, data: serializeGroup(group) });
 }
+
+export async function GET() {
+  return gone();
+}
+export async function POST() {
+  return gone();
+}
+
+// ─── Original implementation (commented out) ───────────────────────────
+
+// import { NextResponse, type NextRequest } from "next/server";
+// import { requireRole } from "@/lib/auth";
+// import { prisma } from "@/lib/prisma";
+// import { serializeGroup, uniqueSlug } from "@/lib/stock-picks";
+//
+// export const dynamic = "force-dynamic";
+//
+// export async function GET(req: NextRequest) {
+//   const auth = await requireRole(req, ["super_admin"]);
+//   if (!auth) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+//
+//   const groups = await prisma.stockPickGroup.findMany({
+//     where: { deletedAt: null },
+//     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+//     include: {
+//       _count: { select: { stocks: { where: { deletedAt: null } } } },
+//     },
+//   });
+//
+//   return NextResponse.json({
+//     ok: true,
+//     data: groups.map((g) => serializeGroup(g)),
+//   });
+// }
+//
+// export async function POST(req: NextRequest) {
+//   const auth = await requireRole(req, ["super_admin"]);
+//   if (!auth) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+//
+//   const body = await req.json();
+//   const { name, description, category, iconEmoji, performancePct, benchmarkPct, chartData, sortOrder, isPublished } =
+//     body;
+//
+//   if (!name?.trim()) {
+//     return NextResponse.json({ ok: false, error: "name is required" }, { status: 400 });
+//   }
+//
+//   const existing = await prisma.stockPickGroup.findMany({
+//     where: { deletedAt: null },
+//     select: { slug: true },
+//   });
+//   const slug = uniqueSlug(
+//     name,
+//     existing.map((g) => g.slug),
+//   );
+//
+//   const group = await prisma.stockPickGroup.create({
+//     data: {
+//       name: name.trim(),
+//       slug,
+//       description: description?.trim() || null,
+//       category: category?.trim() || null,
+//       iconEmoji: iconEmoji?.trim() || "📈",
+//       performancePct: performancePct != null ? performancePct : null,
+//       benchmarkPct: benchmarkPct != null ? benchmarkPct : null,
+//       chartData: chartData ?? null,
+//       sortOrder: typeof sortOrder === "number" ? sortOrder : 0,
+//       isPublished: Boolean(isPublished),
+//       createdById: auth.userId,
+//     },
+//     include: { _count: { select: { stocks: true } } },
+//   });
+//
+//   return NextResponse.json({ ok: true, data: serializeGroup(group) });
+// }

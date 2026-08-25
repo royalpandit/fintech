@@ -21,7 +21,7 @@ import {
   FiBriefcase,
   FiClock,
   FiBookOpen,
-  FiTarget,
+  // FiTarget — only used by the retired Stock Basket nav entry.
   FiAward,
   FiMessageSquare,
   FiMenu,
@@ -31,6 +31,7 @@ import {
   FiChevronRight,
 } from "react-icons/fi";
 import { TbRobot } from "react-icons/tb";
+import { useDismissableMenu } from "@/hooks/use-dismissable-menu";
 import WatchlistStoreProvider from "@/components/watchlist/watchlist-store-provider";
 import GlobalSearchPanel from "@/components/search/global-search-panel";
 import PanelBackground from "@/components/motion/panel-background";
@@ -78,7 +79,8 @@ const MAIN_NAV: NavItem[] = [
 
 const INVESTING_NAV: NavItem[] = [
   { label: "Dashboard", href: "/user/home", Icon: FiPieChart },
-  { label: "Stock Basket", href: "/user/stock-picks", Icon: FiTarget },
+  // Stock Basket (AI stock picks) retired — superseded by Finuer Basket.
+  // { label: "Stock Basket", href: "/user/stock-picks", Icon: FiTarget },
   { label: "Finuer Basket", href: "/user/finuer-basket", Icon: FiBriefcase },
   { label: "Competition", href: "/user/competition", Icon: FiAward },
   { label: "Wallet", href: "/user/wallet", Icon: FiCreditCard },
@@ -172,7 +174,6 @@ export default function UserShell({
   const [searchFocused, setSearchFocused] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
   const desktopSearchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
 
@@ -222,16 +223,12 @@ export default function UserShell({
     return () => exitThemedScope();
   }, [enterThemedScope, exitThemedScope]);
 
-  // Close menu on outside click
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  // Outside click + Escape close the account menu (Escape also refocuses the
+  // avatar button so keyboard users stay where they were).
+  const { containerRef: menuRef, triggerRef: avatarBtnRef } = useDismissableMenu<
+    HTMLDivElement,
+    HTMLButtonElement
+  >(menuOpen, () => setMenuOpen(false));
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -273,7 +270,8 @@ export default function UserShell({
     };
   }, [mobileDrawerOpen]);
 
-  // Escape closes mobile drawer
+  // Escape closes mobile drawer. The account menu handles Escape first (capture
+  // phase) and stops propagation, so one keypress never closes both.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setMobileDrawerOpen(false);
@@ -386,10 +384,13 @@ export default function UserShell({
 
                 <div className="us-avatar-wrap" ref={menuRef}>
                   <button
+                    ref={avatarBtnRef}
                     type="button"
                     className="us-avatar-btn"
                     onClick={() => setMenuOpen((v) => !v)}
                     aria-label="Account menu"
+                    aria-haspopup="menu"
+                    aria-expanded={menuOpen}
                     title={currentUser.fullName}
                     style={
                       currentUser.profileImageUrl
@@ -412,7 +413,18 @@ export default function UserShell({
                   {menuOpen && (
                     <div className="us-dropdown">
                       <div className="us-dropdown-head">
-                        <div className="us-dropdown-avatar">{initials}</div>
+                        <div className="us-dropdown-avatar">
+                          {currentUser.profileImageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={currentUser.profileImageUrl}
+                              alt=""
+                              className="us-dropdown-avatar-img"
+                            />
+                          ) : (
+                            initials
+                          )}
+                        </div>
                         <div>
                           <div className="us-dropdown-name">
                             {currentUser.fullName}

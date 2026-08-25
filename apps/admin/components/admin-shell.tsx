@@ -6,10 +6,13 @@ import { useState, useEffect } from "react";
 import { FiMenu, FiX } from "react-icons/fi";
 import FinuerLogo from "@/components/brand/finuer-logo";
 import ThemeToggleMenu from "@/components/theme/theme-toggle-menu";
-import ThemeHeaderButton from "@/components/theme/theme-header-button";
+import PanelThemeToggle from "@/components/theme/panel-theme-toggle";
+import { useTheme } from "@/components/theme/theme-provider";
 import { MODULE_ROUTE_MAP, NAV_GROUPS } from "../lib/super-admin";
 import { Bell } from "./advisor-ui/icons";
 import CommandPalette from "./command-palette";
+import ShellMenuAvatar from "./shell-menu-avatar";
+import { useDismissableMenu } from "@/hooks/use-dismissable-menu";
 import { ToastProvider } from "./toast";
 
 type AdminShellProps = {
@@ -33,10 +36,27 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { enterThemedScope, exitThemedScope } = useTheme();
+
+  // Light is opt-in per panel: outside the signed-in shells every route renders
+  // the product's dark appearance. Adopt the stored preference while this panel
+  // is mounted and hand the page back to dark on the way out, so the choice
+  // survives without leaking onto the landing or auth pages.
+  useEffect(() => {
+    enterThemedScope();
+    return () => exitThemedScope();
+  }, [enterThemedScope, exitThemedScope]);
   const [loggingOut, setLoggingOut] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
 
   const initials = getInitials(currentUser.fullName);
+
+  // Outside click + Escape dismiss the account menu; Escape refocuses the
+  // avatar button so keyboard users don't lose their place.
+  const { containerRef: accountMenuRef, triggerRef: avatarBtnRef } = useDismissableMenu<
+    HTMLDivElement,
+    HTMLButtonElement
+  >(menuOpen, () => setMenuOpen(false));
 
   // Close the mobile nav drawer whenever the route changes.
   useEffect(() => {
@@ -179,37 +199,31 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
           </div>
         </div>
 
-        <nav className="admin-nav" style={{ display: "grid", gap: 4 }}>
-          {NAV_GROUPS.map((group) => (
-            <div key={group.heading} style={{ marginTop: 10 }}>
-              <div
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: "var(--text-muted)",
-                  letterSpacing: 1,
-                  margin: "0 0 6px",
-                  paddingLeft: 6,
-                  textTransform: "uppercase",
-                }}
-              >
-                {group.heading}
-              </div>
-              {group.modules.map((moduleName) => {
-                const href = MODULE_ROUTE_MAP[moduleName];
-                if (!href) return null;
-                return (
+        {/* Same grouped markup the advisor sidebar now uses — headings and link
+            styling live in globals.css so the two shells can't drift. */}
+        <nav className="admin-nav">
+          {NAV_GROUPS.map((group) => {
+            const items = group.modules.filter((m) => MODULE_ROUTE_MAP[m]);
+            if (items.length === 0) return null;
+            return (
+              <div key={group.heading} className="admin-nav-group">
+                <div className="admin-nav-heading">{group.heading}</div>
+                {items.map((moduleName) => (
                   <Link
                     key={moduleName}
-                    href={href}
-                    className={`admin-nav-link ${isActive(href) ? "active" : ""}`}
+                    href={MODULE_ROUTE_MAP[moduleName]}
+                    className={`admin-nav-link ${isActive(MODULE_ROUTE_MAP[moduleName]) ? "active" : ""}`}
+                    onClick={() => setNavOpen(false)}
                   >
-                    {moduleName}
+                    <span className="admin-nav-icon" aria-hidden>
+                      <span className="admin-nav-dot" />
+                    </span>
+                    <span className="admin-nav-label">{moduleName}</span>
                   </Link>
-                );
-              })}
-            </div>
-          ))}
+                ))}
+              </div>
+            );
+          })}
         </nav>
       </aside>
 
@@ -232,6 +246,7 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
           </div>
 
           <div
+            ref={accountMenuRef}
             style={{
               display: "flex",
               alignItems: "center",
@@ -258,12 +273,15 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
               <Bell size={18} />
             </Link>
 
-            <ThemeHeaderButton />
+            <PanelThemeToggle />
 
             <button
+              ref={avatarBtnRef}
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
               aria-label="Account menu"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
               title={currentUser.fullName}
               style={{
                 width: 38,
@@ -306,12 +324,24 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
               >
                 <div
                   className="admin-theme-dropdown-head"
-                  style={{ padding: "8px 10px 10px", borderBottom: "1px solid var(--border)" }}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 10,
+                    padding: "8px 10px 10px",
+                    borderBottom: "1px solid var(--border)",
+                  }}
                 >
-                  <p className="admin-theme-dropdown-name" style={{ margin: 0, fontWeight: 700, fontSize: 13 }}>
+                  <ShellMenuAvatar
+                    src={currentUser.avatarUrl}
+                    initials={initials}
+                    gradient="linear-gradient(135deg, #10b981, #14b8a6)"
+                  />
+                  <div style={{ minWidth: 0 }}>
+                  <p className="admin-theme-dropdown-name" style={{ margin: 0, fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {currentUser.fullName}
                   </p>
-                  <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>{currentUser.email}</p>
+                  <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{currentUser.email}</p>
                   <p
                     style={{
                       margin: "6px 0 0",
@@ -327,6 +357,7 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
                   >
                     {currentUser.role.replace("_", " ")}
                   </p>
+                  </div>
                 </div>
                 <Link
                   href="/super-admin/profile"

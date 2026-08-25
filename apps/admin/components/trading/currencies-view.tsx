@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FiArrowDownRight, FiArrowUpRight } from "react-icons/fi";
+import { FiArrowDownRight, FiArrowUpRight, FiSearch, FiX } from "react-icons/fi";
 
 type Rate = {
   code: string;
@@ -41,55 +41,66 @@ export default function CurrenciesView() {
     };
   }, []);
 
+  // Matches the ISO code ("USD", "usd/inr") and the display name ("Dollar").
   const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
+    const needle = q.trim().toLowerCase().replace(/\s*\/\s*inr$/, "");
     if (!needle) return rates;
     return rates.filter(
       (r) => r.code.toLowerCase().includes(needle) || r.name.toLowerCase().includes(needle),
     );
   }, [rates, q]);
 
+  const query = q.trim();
+
   return (
     <section>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
-        <p style={{ margin: 0, flex: 1, fontSize: 11.5, color: "var(--text-muted)" }}>
+      <div className="mkt-toolbar">
+        <p className="mkt-toolbar-blurb">
           Live FX vs Indian Rupee · 1 unit in ₹
           {meta.source ? ` · ${meta.source}` : ""}
-          {!loading ? ` · ${rates.length} currencies` : ""}
           {meta.fetchedAt
             ? ` · updated ${new Date(meta.fetchedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`
             : ""}
           {meta.stale ? " · showing last known rates" : ""}
         </p>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search currency…"
-          style={{
-            height: 36,
-            minWidth: 180,
-            padding: "0 12px",
-            borderRadius: 8,
-            border: "1px solid var(--border)",
-            background: "var(--surface)",
-            color: "var(--text)",
-            fontSize: 13,
-          }}
-        />
+        <div className="mkt-search">
+          <FiSearch size={15} className="mkt-search-icon" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search currency (USD, Yen…)"
+            aria-label="Search currencies"
+          />
+          {query && (
+            <button
+              type="button"
+              className="mkt-search-clear"
+              onClick={() => setQ("")}
+              aria-label="Clear search"
+            >
+              <FiX size={13} />
+            </button>
+          )}
+        </div>
+        {!loading && (
+          <span className="mkt-count">
+            {query ? `${filtered.length} of ${rates.length}` : `${rates.length} currencies`}
+          </span>
+        )}
       </div>
       {error && (
         <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)", color: "#92400e", fontSize: 12, marginBottom: 16 }}>
           {error}
         </div>
       )}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(220px, 100%), 1fr))", gap: 12 }}>
         {loading
           ? Array.from({ length: 8 }).map((_, i) => (
               <div key={i} style={{ height: 92, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14 }} />
             ))
           : filtered.length === 0 ? (
               <div style={{ gridColumn: "1 / -1", padding: 24, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>
-                No currencies matched “{q.trim()}”.
+                No currencies matched “{query}”.
               </div>
             )
           : filtered.map((r) => (

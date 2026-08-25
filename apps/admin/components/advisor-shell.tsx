@@ -4,13 +4,62 @@ import Link from "next/link";
 import { ToastProvider } from "@/components/toast";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { FiMenu, FiX } from "react-icons/fi";
+import {
+  FiMenu,
+  FiX,
+  FiPieChart,
+  FiBarChart2,
+  FiHome,
+  FiActivity,
+  FiMessageSquare,
+  FiPackage,
+  FiFileText,
+  FiBookOpen,
+  FiDollarSign,
+  FiTrendingUp,
+  FiStar,
+  FiLayers,
+  FiBriefcase,
+  FiAward,
+  FiMessageCircle,
+  FiBell,
+  FiUser,
+} from "react-icons/fi";
+import type { IconType } from "react-icons";
 import FinuerLogo from "@/components/brand/finuer-logo";
 import ThemeToggleMenu from "@/components/theme/theme-toggle-menu";
-import ThemeHeaderButton from "@/components/theme/theme-header-button";
+import PanelThemeToggle from "@/components/theme/panel-theme-toggle";
+import { useTheme } from "@/components/theme/theme-provider";
 import { ADVISOR_NAV_GROUPS, ADVISOR_MODULE_ROUTE_MAP } from "../lib/advisor-nav";
 import { Bell } from "./advisor-ui/icons";
 import AdvisorSearch from "./advisor-search";
+import ShellMenuAvatar from "./shell-menu-avatar";
+import { useDismissableMenu } from "@/hooks/use-dismissable-menu";
+
+/**
+ * One icon per sidebar module, so the advisor console reads like the investor
+ * shell instead of a wall of text. Keys match ADVISOR_MODULES exactly — a module
+ * with no entry falls back to a neutral dot rather than breaking the row.
+ */
+const MODULE_ICONS: Record<string, IconType> = {
+  Dashboard: FiPieChart,
+  Analytics: FiBarChart2,
+  Feed: FiHome,
+  "Buy Sell Trade Posts": FiActivity,
+  Comments: FiMessageSquare,
+  "Subscription Services": FiPackage,
+  Reports: FiFileText,
+  Courses: FiBookOpen,
+  Earnings: FiDollarSign,
+  Markets: FiTrendingUp,
+  Watchlist: FiStar,
+  "Finuer Basket": FiLayers,
+  "Virtual Trading": FiBriefcase,
+  Competitions: FiAward,
+  Messages: FiMessageCircle,
+  Notifications: FiBell,
+  Profile: FiUser,
+};
 
 type AdvisorShellProps = {
   children: React.ReactNode;
@@ -59,6 +108,16 @@ export default function AdvisorShell({
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { enterThemedScope, exitThemedScope } = useTheme();
+
+  // Light is opt-in per panel: outside the signed-in shells every route renders
+  // the product's dark appearance. Adopt the stored preference while this panel
+  // is mounted and hand the page back to dark on the way out, so the choice
+  // survives without leaking onto the landing or auth pages.
+  useEffect(() => {
+    enterThemedScope();
+    return () => exitThemedScope();
+  }, [enterThemedScope, exitThemedScope]);
   const [loggingOut, setLoggingOut] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const hiddenSet = new Set(hiddenModules);
@@ -95,6 +154,13 @@ export default function AdvisorShell({
     needsVerification && target !== "/advisor/dashboard" ? "/advisor/verify" : target;
 
   const initials = getInitials(currentUser.fullName);
+
+  // Outside click + Escape dismiss the account menu; Escape refocuses the
+  // avatar button so keyboard users don't lose their place.
+  const { containerRef: accountMenuRef, triggerRef: avatarBtnRef } = useDismissableMenu<
+    HTMLDivElement,
+    HTMLButtonElement
+  >(menuOpen, () => setMenuOpen(false));
   const avatarUrl = currentUser.profileImageUrl;
   const todayDeltaPct = deltaPct(todayDelta.current, todayDelta.previous);
   const todayDeltaSign = todayDeltaPct >= 0 ? "+" : "";
@@ -259,43 +325,56 @@ export default function AdvisorShell({
           </div>
         </div>
 
+        {/* Grouped like the super-admin sidebar, with the investor shell's icons.
+            It used to flatten the groups and drop their headings, leaving 17
+            undifferentiated links. */}
         <nav className="admin-nav">
-          {ADVISOR_NAV_GROUPS.flatMap((g) => g.modules).map((moduleName) => {
-            if (hiddenSet.has(moduleName)) return null;
-            const href = ADVISOR_MODULE_ROUTE_MAP[moduleName];
-            if (!href) return null;
-            const active = pathname === href || pathname.startsWith(href + "/");
-            const badgeCount = badges[moduleName] ?? 0;
+          {ADVISOR_NAV_GROUPS.map((group) => {
+            const items = group.modules.filter(
+              (m) => !hiddenSet.has(m) && ADVISOR_MODULE_ROUTE_MAP[m],
+            );
+            // A group whose every module is hidden (unverified advisor, a
+            // capability they lack) must not leave a dangling heading.
+            if (items.length === 0) return null;
+
             return (
-              <Link
-                key={moduleName}
-                href={lockedHref(href)}
-                className={`admin-nav-link ${active ? "active" : ""}`}
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-              >
-                <span>{moduleName}</span>
-                {badgeCount > 0 && (
-                  <span
-                    style={{
-                      padding: "1px 8px",
-                      borderRadius: 999,
-                      background:
-                        moduleName === "Comments"
-                          ? "#dc2626"
-                          : active
-                            ? "rgba(255,255,255,0.3)"
-                            : "#2563eb",
-                      color: "#fff",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      minWidth: 20,
-                      textAlign: "center",
-                    }}
-                  >
-                    {badgeCount > 99 ? "99+" : badgeCount}
-                  </span>
-                )}
-              </Link>
+              <div key={group.heading} className="admin-nav-group">
+                <div className="admin-nav-heading">{group.heading}</div>
+                {items.map((moduleName) => {
+                  const href = ADVISOR_MODULE_ROUTE_MAP[moduleName];
+                  const active = pathname === href || pathname.startsWith(href + "/");
+                  const badgeCount = badges[moduleName] ?? 0;
+                  const Icon = MODULE_ICONS[moduleName];
+                  return (
+                    <Link
+                      key={moduleName}
+                      href={lockedHref(href)}
+                      className={`admin-nav-link ${active ? "active" : ""}`}
+                      onClick={() => setNavOpen(false)}
+                    >
+                      <span className="admin-nav-icon" aria-hidden>
+                        {Icon ? <Icon size={17} /> : <span className="admin-nav-dot" />}
+                      </span>
+                      <span className="admin-nav-label">{moduleName}</span>
+                      {badgeCount > 0 && (
+                        <span
+                          className="admin-nav-count"
+                          style={{
+                            background:
+                              moduleName === "Comments"
+                                ? "#dc2626"
+                                : active
+                                  ? "rgba(255,255,255,0.3)"
+                                  : "#2563eb",
+                          }}
+                        >
+                          {badgeCount > 99 ? "99+" : badgeCount}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
             );
           })}
         </nav>
@@ -321,7 +400,10 @@ export default function AdvisorShell({
           </div>
 
           {/* Right side: notifications + avatar */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative", marginLeft: 24, flexShrink: 0 }}>
+          <div
+            ref={accountMenuRef}
+            style={{ display: "flex", alignItems: "center", gap: 12, position: "relative", marginLeft: 24, flexShrink: 0 }}
+          >
             <Link
               href={lockedHref("/advisor/notifications")}
               aria-label="Notifications"
@@ -353,12 +435,15 @@ export default function AdvisorShell({
               )}
             </Link>
 
-            <ThemeHeaderButton />
+            <PanelThemeToggle />
 
             <button
+              ref={avatarBtnRef}
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
               aria-label="Account menu"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
               title={currentUser.fullName}
               style={{
                 width: 38,
@@ -397,12 +482,30 @@ export default function AdvisorShell({
               >
                 <div
                   className="admin-theme-dropdown-head"
-                  style={{ padding: "8px 10px 10px", borderBottom: "1px solid var(--border)" }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "8px 10px 10px",
+                    borderBottom: "1px solid var(--border)",
+                  }}
                 >
-                  <p className="admin-theme-dropdown-name" style={{ margin: 0, fontWeight: 700, fontSize: 13 }}>
-                    {currentUser.fullName}
-                  </p>
-                  <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>{currentUser.email}</p>
+                  <ShellMenuAvatar
+                    src={avatarUrl}
+                    initials={initials}
+                    gradient="linear-gradient(135deg, #2563eb, #10b981)"
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <p
+                      className="admin-theme-dropdown-name"
+                      style={{ margin: 0, fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                    >
+                      {currentUser.fullName}
+                    </p>
+                    <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {currentUser.email}
+                    </p>
+                  </div>
                 </div>
                 <Link
                   href={lockedHref("/advisor/profile")}

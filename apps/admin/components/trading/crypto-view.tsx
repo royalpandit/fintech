@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { FiArrowUpRight, FiArrowDownRight } from "react-icons/fi";
+import { useEffect, useMemo, useState } from "react";
+import { FiArrowUpRight, FiArrowDownRight, FiSearch, FiX } from "react-icons/fi";
 
 type Coin = {
   id: string;
@@ -29,6 +29,7 @@ export default function CryptoView() {
   const [coins, setCoins] = useState<Coin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [q, setQ] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -92,11 +93,53 @@ export default function CryptoView() {
     return () => es.close();
   }, [coins.length]);
 
+  // Search runs over symbol + name + coingecko id, so "btc", "Bitcoin" and
+  // "bitcoin" all hit. Filtering is client-side over the already-loaded list —
+  // live SSE ticks keep updating the rows while a query is active.
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return coins;
+    return coins.filter(
+      (c) =>
+        c.symbol.toLowerCase().includes(needle) ||
+        c.name.toLowerCase().includes(needle) ||
+        c.id.toLowerCase().includes(needle),
+    );
+  }, [coins, q]);
+
+  const query = q.trim();
+
   return (
     <section>
-      <p style={{ margin: "0 0 12px", fontSize: 11.5, color: "var(--text-muted)" }}>
+      <div className="mkt-toolbar">
+        <p className="mkt-toolbar-blurb">
           Top crypto by market cap · prices in INR (CoinGecko) · live ticks Binance → Coinbase
-      </p>
+        </p>
+        <div className="mkt-search">
+          <FiSearch size={15} className="mkt-search-icon" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search coin (BTC, Ethereum…)"
+            aria-label="Search cryptocurrencies"
+          />
+          {query && (
+            <button
+              type="button"
+              className="mkt-search-clear"
+              onClick={() => setQ("")}
+              aria-label="Clear search"
+            >
+              <FiX size={13} />
+            </button>
+          )}
+        </div>
+        {!loading && (
+          <span className="mkt-count">
+            {query ? `${filtered.length} of ${coins.length}` : `${coins.length} coins`}
+          </span>
+        )}
+      </div>
       {error && (
         <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)", color: "#92400e", fontSize: 12, marginBottom: 16 }}>
           {error}
@@ -111,10 +154,10 @@ export default function CryptoView() {
                   Each numeric header has to set its own alignment or it sits
                   left of the right-aligned values below it. */}
               <tr style={{ color: "var(--text-muted)", fontSize: 11 }}>
-                <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "left" }}>Coin</th>
-                <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>Price</th>
-                <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>24h</th>
-                <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>Market Cap</th>
+                <th className="mkt-cell-tight" style={{ padding: "12px 16px", fontWeight: 600, textAlign: "left" }}>Coin</th>
+                <th className="mkt-cell-tight" style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>Price</th>
+                <th className="mkt-cell-tight" style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>24h</th>
+                <th className="mkt-col-sm-hide" style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>Market Cap</th>
               </tr>
             </thead>
             <tbody>
@@ -122,12 +165,18 @@ export default function CryptoView() {
                 <tr><td colSpan={4} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>Loading…</td></tr>
               ) : coins.length === 0 ? (
                 <tr><td colSpan={4} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>No data.</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={4} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>
+                    No coins matched “{query}”.
+                  </td>
+                </tr>
               ) : (
-                coins.map((c) => {
+                filtered.map((c) => {
                   const pos = c.change24h >= 0;
                   return (
                     <tr key={c.id} className="mkt-trow" style={{ borderTop: "1px solid var(--border)" }}>
-                      <td style={{ padding: "12px 16px" }}>
+                      <td className="mkt-cell-tight" style={{ padding: "12px 16px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           {c.image && (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -139,14 +188,14 @@ export default function CryptoView() {
                           </div>
                         </div>
                       </td>
-                      <td style={{ padding: "12px 16px", textAlign: "right", fontWeight: 600, color: "var(--text)" }}>₹{inr(c.price)}</td>
-                      <td style={{ padding: "12px 16px", textAlign: "right", color: pos ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
+                      <td className="mkt-cell-tight" style={{ padding: "12px 16px", textAlign: "right", fontWeight: 600, color: "var(--text)" }}>₹{inr(c.price)}</td>
+                      <td className="mkt-cell-tight" style={{ padding: "12px 16px", textAlign: "right", color: pos ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 3, justifyContent: "flex-end" }}>
                           {pos ? <FiArrowUpRight size={13} /> : <FiArrowDownRight size={13} />}
                           {c.change24h >= 0 ? "+" : ""}{c.change24h.toFixed(2)}%
                         </span>
                       </td>
-                      <td style={{ padding: "12px 16px", textAlign: "right", color: "var(--text-muted)" }}>{compactINR(c.marketCap)}</td>
+                      <td className="mkt-col-sm-hide" style={{ padding: "12px 16px", textAlign: "right", color: "var(--text-muted)" }}>{compactINR(c.marketCap)}</td>
                     </tr>
                   );
                 })

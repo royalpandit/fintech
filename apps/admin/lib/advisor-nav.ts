@@ -1,7 +1,7 @@
 export const ADVISOR_MODULES = [
   "Dashboard",
   "Feed",
-  "Market Posts",
+  "Buy Sell Trade Posts",
   "Comments",
   "Messages",
   "Subscription Services",
@@ -25,7 +25,7 @@ export const ADVISOR_MODULES = [
  */
 export const ADVISOR_NAV_GROUPS: { heading: string; modules: string[] }[] = [
   { heading: "Overview", modules: ["Dashboard", "Analytics"] },
-  { heading: "Content", modules: ["Feed", "Market Posts", "Comments"] },
+  { heading: "Content", modules: ["Feed", "Buy Sell Trade Posts", "Comments"] },
   { heading: "Monetize", modules: ["Subscription Services", "Reports", "Courses", "Earnings"] },
   {
     heading: "Markets",
@@ -38,7 +38,7 @@ export const ADVISOR_NAV_GROUPS: { heading: string; modules: string[] }[] = [
 export const ADVISOR_MODULE_ROUTE_MAP: Record<string, string> = {
   Dashboard: "/advisor/dashboard",
   Feed: "/advisor/feed",
-  "Market Posts": "/advisor/posts",
+  "Buy Sell Trade Posts": "/advisor/posts",
   Comments: "/advisor/comments",
   Messages: "/advisor/messages",
   "Subscription Services": "/advisor/services",

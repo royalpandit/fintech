@@ -39,3 +39,26 @@ export function professionalTypeLabel(value: string | null | undefined): string 
 export function isProfessionalType(value: unknown): value is ProfessionalType {
   return typeof value === "string" && value in LABELS;
 }
+
+// ─── Short badge labels ───────────────────────────────────────────────────────
+// The full labels above carry the regulator suffix ("Registered Investment
+// Adviser (RIA)") which is far too long for an inline pill next to a name in the
+// feed. These are the compact forms used by <ProfessionTag />.
+const SHORT_LABELS: Record<ProfessionalType, string> = {
+  research_analyst: "Research Analyst",
+  investment_advisor: "Investment Adviser",
+  portfolio_manager: "Portfolio Manager",
+  wealth_manager: "Wealth Advisor",
+  advisory_firm: "Advisory Firm",
+  mutual_fund_distributor: "MF Distributor",
+  stock_broker: "Stock Broker",
+  finance_creator: "Finance Creator",
+  listed_company: "Listed Company",
+  financial_platform: "Financial Platform",
+};
+
+/** Label for the profession pill shown beside an author's name in the feed. */
+export function professionalTypeShortLabel(value: string | null | undefined): string {
+  if (!value) return "Investor";
+  return SHORT_LABELS[value as ProfessionalType] ?? "Investor";
+}

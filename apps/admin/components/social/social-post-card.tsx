@@ -22,6 +22,7 @@ import { formatPostText } from "./format-post-text";
 import type { SocialPost } from "@/lib/social-feed-types";
 import type { SocialComment } from "@/lib/social-feed-client";
 import PostAccessBadge from "@/components/posts/post-access-badge";
+import ProfessionTag from "@/components/user/profession-tag";
 import PremiumPostOverlay from "@/components/posts/premium-post-overlay";
 import PremiumUnlockModal from "@/components/posts/premium-unlock-modal";
 import { usePremiumPostUnlock } from "@/components/posts/use-premium-post-unlock";
@@ -165,17 +166,21 @@ export default function SocialPostCard({
             </div>
           )}
           <div className="sf-post-meta">
-            {post.user.is_advisor ? (
-              <Link
-                href={`/user/advisors/${post.user.id}`}
-                className="sf-post-author"
-                style={{ textDecoration: "none" }}
-              >
-                {post.user.fullName}
-              </Link>
-            ) : (
-              <span className="sf-post-author">{post.user.fullName}</span>
-            )}
+            <div className="sf-post-name-row">
+              {post.user.is_advisor ? (
+                <Link
+                  href={`/user/advisors/${post.user.id}`}
+                  className="sf-post-author"
+                  style={{ textDecoration: "none" }}
+                >
+                  {post.user.fullName}
+                </Link>
+              ) : (
+                <span className="sf-post-author">{post.user.fullName}</span>
+              )}
+              {/* What they are — the professional's type, or "Investor". */}
+              <ProfessionTag professionalType={post.user.professional_type ?? null} />
+            </div>
             <span className="sf-post-time">{formatRelativeTime(post.created_at)}</span>
           </div>
         </div>

@@ -24,6 +24,7 @@ import PremiumUnlockModal from "@/components/posts/premium-unlock-modal";
 import { usePremiumPostUnlock } from "@/components/posts/use-premium-post-unlock";
 import FeedFilter, { DEFAULT_FEED_FILTERS, type FeedFilters } from "@/components/feed/feed-filter";
 import ProfileAvatar from "@/components/user/profile-avatar";
+import ProfessionTag from "@/components/user/profession-tag";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -73,7 +74,11 @@ type FeedPost = {
   advisor: {
     id: number;
     fullName: string;
-    advisorProfile: { sebiRegistrationNo: string | null; profileImageUrl?: string | null } | null;
+    advisorProfile: {
+      sebiRegistrationNo: string | null;
+      profileImageUrl?: string | null;
+      professionalType?: string | null;
+    } | null;
   } | null;
   _count: { reactions: number; comments: number };
 };
@@ -301,14 +306,27 @@ function PostCard({
         </Link>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
             <Link
               href={`/user/advisors/${post.advisor?.id}`}
-              style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", textDecoration: "none" }}
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "var(--text)",
+                textDecoration: "none",
+                maxWidth: "100%",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
             >
               {post.advisor?.fullName}
             </Link>
             <CheckCircle size={12} style={{ color: "#10b981" }} />
+            {/* What they are — Research Analyst / Portfolio Manager / … */}
+            <ProfessionTag
+              professionalType={post.advisor?.advisorProfile?.professionalType ?? null}
+            />
           </div>
           <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
             {post.advisor?.advisorProfile?.sebiRegistrationNo} · {formatRelativeTime(when)}

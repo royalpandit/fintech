@@ -137,7 +137,7 @@ export default function UserFinuerBasketDetailClient() {
             Holdings, methodology, and full performance for this premium basket are available on Finuer Pro.
           </p>
           <a
-            href="/user/subscriptions?tab=finuer-pro"
+            href="/user/subscriptions#finuer-pro"
             style={{
               display: "inline-block",
               padding: "10px 16px",

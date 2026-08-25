@@ -8,7 +8,7 @@ import LandingBackground from "./landing-background";
 import LandingPopup from "./landing-popup";
 import AdvisorCarousel from "./advisor-carousel";
 import ProductSlider from "./product-slider";
-import { DashboardMock, FeedMock, VirtualLabMock } from "./landing-mockups";
+import { DashboardMock, FeedMock, PhoneMock, VirtualLabMock } from "./landing-mockups";
 import type { LandingAdvisor } from "./types";
 
 export type { LandingAdvisor };
@@ -66,11 +66,16 @@ const FEATURES = [
   },
 ];
 
+/**
+ * Shown only when the advisor query returns nothing (empty database, or it
+ * threw). These are illustrative names, so they carry no performance figure —
+ * `returnsPct: null` makes the card fall back to a follower count.
+ */
 const FALLBACK_ADVISORS: LandingAdvisor[] = [
-  { id: 1, name: "Ankit Shah", sebi: "INH000012345", expertise: "Equity + Derivatives", years: 12, returnsPct: 18.4, initials: "AS" },
-  { id: 2, name: "Priya Mehta", sebi: "INH000023456", expertise: "Options Specialist", years: 9, returnsPct: 22.1, initials: "PM" },
-  { id: 3, name: "Rahul Verma", sebi: "INH000034567", expertise: "Mid & Small Cap", years: 15, returnsPct: 16.8, initials: "RV" },
-  { id: 4, name: "Sneha Rao", sebi: "INH000045678", expertise: "Banking & FMCG", years: 7, returnsPct: 19.5, initials: "SR" },
+  { id: 1, name: "Ankit Shah", sebi: "INH000012345", expertise: "Equity + Derivatives", years: 12, returnsPct: null, followers: 0, initials: "AS", avatarUrl: null },
+  { id: 2, name: "Priya Mehta", sebi: "INH000023456", expertise: "Options Specialist", years: 9, returnsPct: null, followers: 0, initials: "PM", avatarUrl: null },
+  { id: 3, name: "Rahul Verma", sebi: "INH000034567", expertise: "Mid & Small Cap", years: 15, returnsPct: null, followers: 0, initials: "RV", avatarUrl: null },
+  { id: 4, name: "Sneha Rao", sebi: "INH000045678", expertise: "Banking & FMCG", years: 7, returnsPct: null, followers: 0, initials: "SR", avatarUrl: null },
 ];
 
 const TRUST = [
@@ -147,25 +152,17 @@ export default function LandingPage({ advisors = FALLBACK_ADVISORS }: Props) {
           </Reveal>
 
           <Reveal variant="right" delay={140} className="lp-hero-visual">
-            {/* Stat cards sit in a centered row above the dashboard mock —
-                in normal flow, so they never overlap it. */}
-            <div className="lp-float-row" aria-hidden>
-              <div className="lp-float-card lp-float-card--returns">
-                <span className="lp-float-label">Portfolio</span>
-                <strong className="lp-float-value">+18.4%</strong>
-                <span className="lp-float-spark" />
-              </div>
-              <div className="lp-float-card lp-float-card--verified">
-                <span className="lp-float-check">✓</span>
-                <div>
-                  <strong>SEBI Verified</strong>
-                  <span className="lp-float-label">Every advisor</span>
+            {/* Desktop + phone side by side. The desktop mock scrolls its own
+                holdings list; the phone scrolls its watchlist. */}
+            <div className="lp-device-combo">
+              <div className="lp-device-desktop">
+                <div className="lp-mock-scroll">
+                  <DashboardMock />
                 </div>
               </div>
-            </div>
-
-            <div className="lp-mock-scroll">
-              <DashboardMock />
+              <div className="lp-device-phone">
+                <PhoneMock />
+              </div>
             </div>
           </Reveal>
         </div>

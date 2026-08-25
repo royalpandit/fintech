@@ -2271,6 +2271,38 @@ enum FinuerPerformanceStatus {
   @@map("finuer_performance_status")
 }
 
+/// Platform-level subscription catalog ("Finuer Pro"), editable by super-admin.
+/// `slug` is the stable identity written to `user_preferences.finuer_pro_plan_id`,
+/// so the existing "free" / "pro_monthly" / "pro_yearly" grants keep resolving
+/// after the catalog moved out of lib/finuer-pro.ts and into this table. Rows are
+/// lazily seeded from the code defaults on first read (see lib/finuer-pro.ts).
+model FinuerPlan {
+  id                    Int      @id @default(autoincrement())
+  slug                  String   @unique @db.VarChar(40)
+  label                 String   @db.VarChar(120)
+  /// Short line under the title on the pricing cards.
+  tagline               String?  @db.VarChar(200)
+  priceInr              Decimal  @default(0) @map("price_inr") @db.Decimal(12, 2)
+  /// null = never expires (the Free baseline).
+  durationDays          Int?     @map("duration_days")
+  features              String[] @default([])
+  /// The one field that actually gates anything — premium Finuer Baskets and
+  /// pro_members competitions both key off it.
+  unlocksPremiumBaskets Boolean  @default(false) @map("unlocks_premium_baskets")
+  /// Free is the implicit baseline, not something a user can buy.
+  isPurchasable         Boolean  @default(true) @map("is_purchasable")
+  isActive              Boolean  @default(true) @map("is_active")
+  /// Optional ribbon on the card, e.g. "Best value".
+  badge                 String?  @db.VarChar(40)
+  sortOrder             Int      @default(0) @map("sort_order")
+  updatedByAdminId      Int?     @map("updated_by_admin_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive, sortOrder])
+  @@map("finuer_plans")
+}
+
 model FinuerMarket {
   id        Int                 @id @default(autoincrement())
   name      String              @unique @db.VarChar(120)

@@ -31,7 +31,7 @@ export const FEATURES: Array<{ key: FeatureKey; label: string }> = [
   { key: "dashboard", label: "Dashboard" },
   { key: "users", label: "Users" },
   { key: "advisors", label: "Advisors" },
-  { key: "market_posts", label: "Market Posts" },
+  { key: "market_posts", label: "Buy Sell Trade Posts" },
   { key: "community", label: "Community" },
   { key: "reports", label: "Reports" },
   { key: "ai_compliance", label: "AI & Compliance" },

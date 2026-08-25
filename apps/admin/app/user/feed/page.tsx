@@ -64,7 +64,14 @@ export default async function UserFeedPage() {
         select: {
           id: true,
           fullName: true,
-          advisorProfile: { select: { sebiRegistrationNo: true, profileImageUrl: true } },
+          advisorProfile: {
+            select: {
+              sebiRegistrationNo: true,
+              profileImageUrl: true,
+              // Drives the profession pill beside the author's name in the feed.
+              professionalType: true,
+            },
+          },
         },
       },
       _count: { select: { reactions: true, comments: true } },

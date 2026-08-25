@@ -12,6 +12,9 @@ const TOP_HOLDINGS = [
   { symbol: "RELIANCE", change: "+1.2%" },
   { symbol: "TCS", change: "+0.8%" },
   { symbol: "HDFCBANK", change: "+1.6%" },
+  { symbol: "INFY", change: "+0.9%" },
+  { symbol: "ICICIBANK", change: "+1.1%" },
+  { symbol: "ITC", change: "+0.4%" },
 ];
 
 export function DashboardMock() {
@@ -55,13 +58,91 @@ export function DashboardMock() {
             </div>
             <div className="lp-mock-tile">
               <div className="lp-mock-tile-caption">Top Holdings</div>
-              {TOP_HOLDINGS.map(h => (
-                <div key={h.symbol} className="lp-mock-row">
-                  <span>{h.symbol}</span>
-                  <span className="up">{h.change}</span>
+              <div className="lp-mock-scrollbox">
+                <div className="lp-mock-autoscroll">
+                  {TOP_HOLDINGS.map(h => (
+                    <div key={h.symbol} className="lp-mock-row">
+                      <span>{h.symbol}</span>
+                      <span className="up">{h.change}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const PHONE_HOLDINGS = [
+  { symbol: "RELIANCE", sub: "12 shares", change: "+1.2%" },
+  { symbol: "TCS", sub: "8 shares", change: "+0.8%" },
+  { symbol: "HDFCBANK", sub: "20 shares", change: "+1.6%" },
+  { symbol: "INFY", sub: "15 shares", change: "+0.9%" },
+  { symbol: "ICICIBANK", sub: "10 shares", change: "+1.1%" },
+  { symbol: "ITC", sub: "40 shares", change: "+0.4%" },
+];
+
+/** Compact mobile-app view, shown beside the desktop dashboard in the hero. */
+export function PhoneMock() {
+  return (
+    <div className="lp-phone" aria-hidden>
+      <div className="lp-phone-frame">
+        <div className="lp-phone-notch" />
+        <div className="lp-phone-screen">
+          <div className="lp-phone-head">
+            <span className="lp-phone-greet">Portfolio</span>
+            <span className="lp-phone-chip up">+18.4%</span>
+          </div>
+          <div className="lp-phone-value">₹12,45,890</div>
+          <div className="lp-phone-sub up">+₹18,420 today</div>
+
+          <div className="lp-phone-spark">
+            <svg viewBox="0 0 200 60" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="lpPhoneFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--lp-primary)" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="var(--lp-primary)" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M0 46 L28 40 L56 44 L84 28 L112 32 L140 18 L168 22 L200 8"
+                fill="none"
+                stroke="var(--lp-primary)"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M0 46 L28 40 L56 44 L84 28 L112 32 L140 18 L168 22 L200 8 L200 60 L0 60 Z"
+                fill="url(#lpPhoneFill)"
+                stroke="none"
+              />
+            </svg>
+          </div>
+
+          <div className="lp-phone-list">
+            <div className="lp-phone-scroll">
+              {PHONE_HOLDINGS.map(h => (
+                <div key={h.symbol} className="lp-phone-item">
+                  <span className="lp-phone-dot" />
+                  <div className="lp-phone-item-main">
+                    <strong>{h.symbol}</strong>
+                    <span>{h.sub}</span>
+                  </div>
+                  <span className="lp-phone-item-chg up">{h.change}</span>
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="lp-phone-tabbar">
+            <span className="is-active" />
+            <span />
+            <span />
+            <span />
           </div>
         </div>
       </div>

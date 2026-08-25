@@ -1,35 +1,49 @@
 /**
- * Theme system — dark by default, light available inside the user panel.
+ * Theme system — dark by default, light available inside the signed-in panels.
  *
- * The product ships dark: every shell (landing, advisor, admin, moderator, auth)
- * is locked to it, and dark is what `:root` carries in theme.css. The one
- * exception is the signed-in user panel, where the header toggle lets a user
- * switch to light for themselves.
+ * The product opens dark: that is DEFAULT_THEME and what `:root` carries in
+ * theme.css. Every surface then offers a toggle — the landing header, the
+ * login / register topbar, and the user, advisor, super-admin and moderator
+ * panels — and the choice is remembered across the whole app.
  *
  * Scoping is by route rather than by CSS ancestor on purpose. Roughly a hundred
  * rules in theme.css are written as `html[data-theme="dark"] .thing { … }` to
  * rescue pages that carry hardcoded light inline styles; a descendant scope
  * cannot un-apply those, so the attribute has to live on <html>. Light is
- * therefore only ever set while the user is on a /user route — the init script
- * gates on the path before paint, and the user shell reverts to dark when it
+ * therefore only ever set while on one of the panel routes below — the init
+ * script gates on the path before paint, and each shell reverts to dark when it
  * unmounts.
  */
 export type Theme = "light" | "dark";
 
 export const THEME_STORAGE_KEY = "finuer-theme";
 
-/** What every shell outside the user panel gets, and the fallback everywhere. */
+/** What every surface outside the signed-in panels gets, and the fallback. */
 export const DEFAULT_THEME: Theme = "dark";
 
-/** Only routes under this prefix honour a stored light preference. */
-export const THEMED_PATH_PREFIX = "/user";
+/**
+ * Every route now honours a stored light preference: the landing header and the
+ * login / register topbar carry a toggle alongside the four signed-in panels, so
+ * gating by path would have let a visitor flip the switch and then snap back to
+ * dark on the next navigation.
+ *
+ * DEFAULT_THEME still governs a first visit with nothing stored, so the product
+ * continues to open dark.
+ */
+export const THEMED_PATH_PREFIXES = ["/"] as const;
+
+/** @deprecated single-prefix alias, kept so any older import keeps resolving. */
+export const THEMED_PATH_PREFIX = THEMED_PATH_PREFIXES[0];
 
 export function isTheme(value: unknown): value is Theme {
   return value === "light" || value === "dark";
 }
 
 export function isThemedPath(pathname: string | null | undefined): boolean {
-  return typeof pathname === "string" && pathname.startsWith(THEMED_PATH_PREFIX);
+  return (
+    typeof pathname === "string" &&
+    THEMED_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  );
 }
 
 /**

@@ -167,7 +167,7 @@ export default function FinuerBasketCard({
             Premium basket — open for details, or upgrade to unlock full holdings &amp; returns.
           </p>
           <Link
-            href="/user/subscriptions?tab=finuer-pro"
+            href="/user/subscriptions#finuer-pro"
             className="finuer-basket-lock-cta"
             onClick={(e) => e.stopPropagation()}
           >

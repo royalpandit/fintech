@@ -554,6 +554,32 @@ export async function notifySubscriptionLifecycle(params: {
   });
 }
 
+/**
+ * Finuer Pro expiry — advance warning and lapse notice.
+ *
+ * Deliberately left out of KIND_CATEGORY: this is a billing/account message, so
+ * a category toggle shouldn't be able to silence it.
+ */
+export async function notifyFinuerProLifecycle(params: {
+  userId: number;
+  planLabel: string;
+  /** null once it has actually lapsed. */
+  daysLeft: number | null;
+  /** Precomputed so the sweep's dedupe key and the sent title can't drift. */
+  title: string;
+}): Promise<void> {
+  const lapsed = params.daysLeft == null || params.daysLeft <= 0;
+  const plural = params.daysLeft === 1 ? "" : "s";
+  await notify({
+    userId: params.userId,
+    title: params.title,
+    message: lapsed
+      ? `${params.planLabel} has ended. Premium Finuer Baskets and Pro-only competitions are locked until you renew.`
+      : `${params.planLabel} ends in ${params.daysLeft} day${plural}. Renew to keep premium baskets unlocked — renewing extends from your current end date.`,
+    data: { kind: "finuer_pro", href: "/user/subscriptions#finuer-pro" },
+  });
+}
+
 /** Competition lifecycle — joined, results, winner. */
 export async function notifyCompetition(params: {
   userId: number;

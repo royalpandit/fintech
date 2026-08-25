@@ -8,6 +8,7 @@ import FollowToggle from "@/components/FollowToggle";
 import { CheckCircle } from "@/components/advisor-ui/icons";
 import { professionalTypeLabel, isProfessionalType } from "@/lib/professional-types";
 import ProfileAvatar from "@/components/user/profile-avatar";
+import ProfessionTag from "@/components/user/profession-tag";
 import FinanceProSearchBar from "./search-bar";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +55,7 @@ export default async function UserAdvisorsPage({
             expertiseTags: true,
             profileImageUrl: true,
             verifiedAt: true,
+            featuredUntil: true,
           },
         },
       },
@@ -136,15 +138,8 @@ export default async function UserAdvisorsPage({
       <FinanceProSearchBar />
 
       {/* Stats strip */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: typeFilter === "listed_company" ? "repeat(3, 1fr)" : "repeat(4, 1fr)",
-          gap: 12,
-          marginBottom: 20,
-        }}
-      >
-        {[
+      {(() => {
+        const stats = [
           { label: "Verified Professionals", value: totalAdvisors.toLocaleString(), color: "#10b981" },
           { label: "Avg Accuracy", value: "78%", color: "#0ea5e9" },
           { label: "Posts (30d)", value: postsLast30.toLocaleString(), color: "#f59e0b" },
@@ -152,68 +147,80 @@ export default async function UserAdvisorsPage({
           ...(typeFilter === "listed_company"
             ? []
             : [{ label: "Total Subscribers", value: totalSubscribers.toLocaleString(), color: "#7c3aed" }]),
-        ].map((s) => (
-          <article
-            key={s.label}
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 14,
-              padding: 16,
-            }}
-          >
-            <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", fontWeight: 500, marginBottom: 6 }}>
-              {s.label}
-            </p>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 600, color: s.color, letterSpacing: -0.5 }}>
-              {s.value}
-            </p>
-          </article>
-        ))}
+        ];
+        return (
+          <div className="fp-stats" style={{ ["--fp-stat-cols" as string]: String(stats.length) }}>
+            {stats.map((s) => (
+              <article key={s.label} className="fp-stat" style={{ ["--fp-stat-accent" as string]: s.color }}>
+                <p className="fp-stat-label">{s.label}</p>
+                <p className="fp-stat-value">{s.value}</p>
+              </article>
+            ))}
+          </div>
+        );
+      })()}
+
+      {/* Result count — tells you whether a filter actually narrowed anything */}
+      <div className="fp-resultbar">
+        <h2>
+          {typeFilter
+            ? professionalTypeLabel(typeFilter)
+            : query
+              ? "Search results"
+              : "All professionals"}
+        </h2>
+        <span>
+          {advisors.length === 0
+            ? "No matches"
+            : `Showing ${advisors.length}${advisors.length === 24 ? "+" : ""} of ${totalAdvisors.toLocaleString()} verified`}
+        </span>
       </div>
 
       {/* Advisor grid */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-          gap: 14,
-        }}
-      >
+      <div className="fp-grid">
         {advisors.length === 0 ? (
-          <article
-            style={{
-              gridColumn: "1 / -1",
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 14,
-              padding: 32,
-              textAlign: "center",
-              color: "var(--text-muted)",
-              fontSize: 13,
-            }}
-          >
-            {query || typeFilter
-              ? "No finance professionals match your search."
-              : "No verified finance professionals yet."}
+          <article className="fp-card-empty">
+            <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 600, color: "var(--text)" }}>
+              {query || typeFilter
+                ? "No finance professionals match your search."
+                : "No verified finance professionals yet."}
+            </p>
+            <p style={{ margin: 0, fontSize: 12.5, color: "var(--text-muted)" }}>
+              {query || typeFilter
+                ? "Try a different name, or widen the category filter."
+                : "Verified analysts and advisory firms will appear here once approved."}
+            </p>
+            {(query || typeFilter) && (
+              <Link
+                href="/user/advisors"
+                style={{
+                  display: "inline-block",
+                  marginTop: 14,
+                  padding: "8px 16px",
+                  borderRadius: 999,
+                  border: "1px solid var(--border)",
+                  background: "var(--surface-2)",
+                  color: "var(--text)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  textDecoration: "none",
+                }}
+              >
+                Clear filters
+              </Link>
+            )}
           </article>
         ) : (
           advisors.map((adv) => {
             const postCount = postsByAdvisor.get(adv.id) ?? 0;
             const subCount = subsByAdvisor.get(adv.id) ?? 0;
+            const featured =
+              adv.advisorProfile?.featuredUntil != null &&
+              adv.advisorProfile.featuredUntil.getTime() > Date.now();
+            const tags = adv.advisorProfile?.expertiseTags ?? [];
             return (
               <article key={adv.id} className="fp-card">
-                <Link
-                  href={`/user/advisors/${adv.id}`}
-                  style={{
-                    display: "flex",
-                    gap: 10,
-                    alignItems: "center",
-                    textDecoration: "none",
-                    color: "inherit",
-                    marginBottom: 12,
-                  }}
-                >
+                <Link href={`/user/advisors/${adv.id}`} className="fp-card-head">
                   <ProfileAvatar
                     src={adv.advisorProfile?.profileImageUrl}
                     name={adv.fullName}
@@ -222,37 +229,32 @@ export default async function UserAdvisorsPage({
                     fontSize={14}
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: "var(--text)",
-                        display: "flex",
-                        gap: 4,
-                        alignItems: "center",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {adv.fullName}
+                    <div className="fp-card-name">
+                      <span>{adv.fullName}</span>
                       <CheckCircle size={12} style={{ color: "#10b981", flexShrink: 0 }} />
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "monospace" }}>
-                      {adv.advisorProfile?.sebiRegistrationNo}
-                    </div>
+                    <div className="fp-card-sebi">{adv.advisorProfile?.sebiRegistrationNo}</div>
                   </div>
+                  {featured && <span className="fp-card-featured">Featured</span>}
                 </Link>
 
                 <div className="fp-card-tags">
-                  <span className="fp-card-type">
-                    {professionalTypeLabel(adv.advisorProfile?.professionalType)}
-                  </span>
-                  {adv.advisorProfile?.expertiseTags?.slice(0, 2).map((tag) => (
+                  {/* Same colour-coded pill the feed uses, so a Research Analyst
+                      reads the same everywhere in the product. */}
+                  <ProfessionTag
+                    professionalType={adv.advisorProfile?.professionalType ?? null}
+                    title={professionalTypeLabel(adv.advisorProfile?.professionalType)}
+                  />
+                  {tags.slice(0, 2).map((tag) => (
                     <span key={tag} className="fp-card-tag">
                       {tag}
                     </span>
                   ))}
+                  {tags.length > 2 && (
+                    <span className="fp-card-tag" title={tags.slice(2).join(", ")}>
+                      +{tags.length - 2}
+                    </span>
+                  )}
                 </div>
 
                 {adv.advisorProfile?.bio && (

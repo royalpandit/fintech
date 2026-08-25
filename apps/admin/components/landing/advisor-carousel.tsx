@@ -148,7 +148,12 @@ export default function AdvisorCarousel({ advisors }: Props) {
               aria-hidden={d !== 0}
             >
               <div className="lp-advisor-photo">
-                <span>{a.initials}</span>
+                {a.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={a.avatarUrl} alt="" className="lp-advisor-photo-img" />
+                ) : (
+                  <span>{a.initials}</span>
+                )}
                 <span className="lp-advisor-verified" title="SEBI registered">✓</span>
               </div>
               <div className="lp-advisor-body">
@@ -156,13 +161,28 @@ export default function AdvisorCarousel({ advisors }: Props) {
                 <div className="lp-advisor-meta">SEBI Reg. {a.sebi}</div>
                 <div className="lp-advisor-tags">{a.expertise} · {a.years} yrs exp.</div>
                 <div className="lp-advisor-return">
-                  {d === 0 ? (
-                    // Re-mounts per active card so the count-up replays.
-                    <Counter key={a.id} to={a.returnsPct} decimals={1} prefix="+" suffix="%" />
+                  {a.returnsPct != null ? (
+                    <>
+                      {d === 0 ? (
+                        // Re-mounts per active card so the count-up replays.
+                        <Counter key={a.id} to={a.returnsPct} decimals={1} prefix="+" suffix="%" />
+                      ) : (
+                        <span>+{a.returnsPct.toFixed(1)}%</span>
+                      )}
+                      <small>Avg. Returns</small>
+                    </>
                   ) : (
-                    <span>+{a.returnsPct.toFixed(1)}%</span>
+                    // No measured ROI for this advisor. Show a fact we hold
+                    // rather than inventing a performance figure.
+                    <>
+                      {d === 0 ? (
+                        <Counter key={a.id} to={a.followers} locale="en-IN" />
+                      ) : (
+                        <span>{a.followers.toLocaleString("en-IN")}</span>
+                      )}
+                      <small>{a.followers === 1 ? "Follower" : "Followers"}</small>
+                    </>
                   )}
-                  <small>Avg. Returns</small>
                 </div>
                 <Link href="/register" className="lp-btn-follow" tabIndex={d === 0 ? 0 : -1}>
                   Follow

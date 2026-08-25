@@ -4,7 +4,8 @@ import { FiArrowUpRight, FiArrowDownRight } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
-import AiStockPicksSection from "@/components/stock-picks/ai-stock-picks-section";
+// Stock Basket retired — superseded by Finuer Basket.
+// import AiStockPicksSection from "@/components/stock-picks/ai-stock-picks-section";
 import AreaChart from "@/components/advisor-ui/area-chart";
 import DonutChart from "@/components/advisor-ui/donut-chart";
 import TabSwitcher from "@/components/advisor-ui/tab-switcher";
@@ -306,7 +307,8 @@ export default async function UserDashboardPage({
             <TabSwitcher tabs={tabs} activeKey={tab} />
           </div>
 
-          <AiStockPicksSection />
+          {/* Stock Basket retired — superseded by Finuer Basket. */}
+          {/* <AiStockPicksSection /> */}
 
           {/* KPI cards row */}
           <div className="user-stat-grid" style={{ marginBottom: 18 }}>

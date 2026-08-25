@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireAuthToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { userAvatarSelect, resolveAvatarUrl } from "@/lib/user-avatar";
 import LandingPage, { type LandingAdvisor } from "@/components/landing/landing-page";
 import "./landing.css";
 
@@ -20,11 +21,14 @@ async function loadLandingAdvisors(): Promise<LandingAdvisor[]> {
       select: {
         id: true,
         fullName: true,
+        avatarUrl: true,
+        _count: { select: { followers: true } },
         advisorProfile: {
           select: {
             sebiRegistrationNo: true,
             experienceYears: true,
             expertiseTags: true,
+            profileImageUrl: true,
           },
         },
       },
@@ -32,13 +36,17 @@ async function loadLandingAdvisors(): Promise<LandingAdvisor[]> {
 
     const thirty = new Date();
     thirty.setDate(thirty.getDate() - 30);
+    // roiPct, not accuracyPct — the card labels this "Avg. Returns", and
+    // prediction accuracy is a different measurement entirely.
     const metrics = await prisma.advisorMetricDaily.groupBy({
       by: ["advisorUserId"],
       where: { day: { gte: thirty } },
-      _avg: { accuracyPct: true },
+      _avg: { roiPct: true },
     });
-    const avgById = new Map(
-      metrics.map(m => [m.advisorUserId, Number(m._avg.accuracyPct ?? 0)]),
+    const roiById = new Map(
+      metrics
+        .filter(m => m._avg.roiPct != null)
+        .map(m => [m.advisorUserId, Number(m._avg.roiPct)]),
     );
 
     return advisors.map(a => {
@@ -54,8 +62,13 @@ async function loadLandingAdvisors(): Promise<LandingAdvisor[]> {
         sebi: a.advisorProfile?.sebiRegistrationNo ?? "—",
         expertise,
         years: a.advisorProfile?.experienceYears ?? 0,
-        returnsPct: Math.max(8, avgById.get(a.id) ?? 12 + (a.id % 10)),
+        // No metrics → null, so the card shows followers instead. This used to
+        // fall back to `12 + (a.id % 10)`, i.e. a performance number derived
+        // from the row's primary key.
+        returnsPct: roiById.get(a.id) ?? null,
+        followers: a._count.followers,
         initials: initials.toUpperCase() || "?",
+        avatarUrl: resolveAvatarUrl(a),
       };
     });
   } catch {

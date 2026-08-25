@@ -24,6 +24,10 @@
       "schedule": "0 3 * * *"
     },
     {
+      "path": "/api/v1/cron?job=finuer-pro",
+      "schedule": "15 3 * * *"
+    },
+    {
       "path": "/api/v1/cron?job=email-digest",
       "schedule": "0 13 * * *"
     },

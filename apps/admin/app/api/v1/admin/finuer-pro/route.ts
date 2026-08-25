@@ -3,12 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
 import {
-  FINUER_PLANS,
   getFinuerPlan,
   grantFinuerPro,
   listFinuerPlans,
   revokeFinuerPro,
-  type FinuerPlanId,
 } from "@/lib/finuer-pro";
 
 export const dynamic = "force-dynamic";
@@ -19,33 +17,38 @@ export async function GET(req: NextRequest) {
   if (!auth) return err("Forbidden", 403);
 
   const now = new Date();
-  const active = await prisma.userPreference.findMany({
-    where: { finuerProExpiresAt: { gt: now } },
-    select: {
-      userId: true,
-      finuerProPlanId: true,
-      finuerProExpiresAt: true,
-      user: { select: { id: true, fullName: true, email: true, role: true } },
-    },
-    orderBy: { finuerProExpiresAt: "asc" },
-    take: 200,
-  });
+  const [plans, active] = await Promise.all([
+    listFinuerPlans({ includeInactive: true }),
+    prisma.userPreference.findMany({
+      where: { finuerProExpiresAt: { gt: now } },
+      select: {
+        userId: true,
+        finuerProPlanId: true,
+        finuerProExpiresAt: true,
+        user: { select: { id: true, fullName: true, email: true, role: true } },
+      },
+      orderBy: { finuerProExpiresAt: "asc" },
+      take: 200,
+    }),
+  ]);
+
+  const labelBySlug = new Map(plans.map((p) => [p.id, p.label]));
 
   return ok({
-    plans: listFinuerPlans(),
+    plans,
     members: active.map((r) => ({
       userId: r.userId,
       fullName: r.user.fullName,
       email: r.user.email,
       role: r.user.role,
       planId: r.finuerProPlanId,
-      planLabel: getFinuerPlan(r.finuerProPlanId)?.label ?? r.finuerProPlanId,
+      planLabel: labelBySlug.get(r.finuerProPlanId ?? "") ?? r.finuerProPlanId,
       expiresAt: r.finuerProExpiresAt?.toISOString() ?? null,
     })),
   });
 }
 
-/** POST — grant or revoke Finuer Pro for a user (manual until Razorpay). */
+/** POST — grant or revoke Finuer Pro for a user (manual, alongside self-serve). */
 export async function POST(req: NextRequest) {
   const auth = await requireRole(req, ["super_admin", "admin"]);
   if (!auth) return err("Forbidden", 403);
@@ -75,16 +78,22 @@ export async function POST(req: NextRequest) {
     return ok({ revoked: true, userId });
   }
 
-  const planId = (body.planId ?? "pro_monthly") as FinuerPlanId;
-  if (!FINUER_PLANS[planId]?.unlocksPremiumBaskets) {
-    return err("planId must be pro_monthly or pro_yearly");
+  const planId = body.planId ?? "pro_monthly";
+  const plan = await getFinuerPlan(planId);
+  if (!plan?.unlocksPremiumBaskets) {
+    return err("planId must be a Pro plan (one that unlocks premium baskets)");
   }
 
   const days =
     typeof body.days === "number" && body.days > 0
       ? Math.round(body.days)
-      : FINUER_PLANS[planId].durationDays ?? 30;
+      : plan.durationDays ?? 30;
   const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
   const result = await grantFinuerPro({ userId, planId, expiresAt });
-  return ok({ granted: true, userId, ...result, expiresAt: result.expiresAt.toISOString() });
+  return ok({
+    granted: true,
+    userId,
+    planId: result.planId,
+    expiresAt: result.expiresAt.toISOString(),
+  });
 }

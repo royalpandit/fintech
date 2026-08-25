@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FiSearch } from "react-icons/fi";
+import { FiSearch, FiX } from "react-icons/fi";
 import { PROFESSIONAL_TYPES } from "@/lib/professional-types";
 
 export default function FinanceProSearchBar() {
@@ -10,6 +10,7 @@ export default function FinanceProSearchBar() {
   const params = useSearchParams();
   const [q, setQ] = useState(params.get("q") ?? "");
   const activeType = params.get("type") ?? "";
+  const urlQ = params.get("q") ?? "";
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Push the current query/type into the URL so the server component re-filters.
@@ -27,7 +28,7 @@ export default function FinanceProSearchBar() {
 
   // Debounce text input so we don't navigate on every keystroke.
   useEffect(() => {
-    if (q === (params.get("q") ?? "")) return;
+    if (q === urlQ) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => pushParams({ q }), 350);
     return () => {
@@ -36,79 +37,67 @@ export default function FinanceProSearchBar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
+  // Keep the box in sync when the URL changes from elsewhere (back button, a
+  // "clear filters" link in the empty state).
+  useEffect(() => {
+    setQ(urlQ);
+  }, [urlQ]);
+
+  const hasFilters = Boolean(q.trim() || activeType);
+
   return (
     <div style={{ marginBottom: 20 }}>
-      <div style={{ position: "relative", marginBottom: 12 }}>
-        <FiSearch
-          size={16}
-          style={{
-            position: "absolute",
-            left: 14,
-            top: "50%",
-            transform: "translateY(-50%)",
-            color: "var(--text-muted)",
-          }}
-        />
+      <div className="fp-search">
+        <FiSearch size={17} className="fp-search-icon" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search analysts, portfolio managers, advisory firms…"
-          style={{
-            width: "100%",
-            height: 46,
-            padding: "0 14px 0 40px",
-            borderRadius: 12,
-            border: "1px solid var(--border)",
-            background: "var(--surface)",
-            color: "var(--text)",
-            fontSize: 14,
-            outline: "none",
-            boxSizing: "border-box",
-          }}
+          aria-label="Search finance professionals"
         />
+        {q && (
+          <button
+            type="button"
+            className="fp-search-clear"
+            onClick={() => setQ("")}
+            aria-label="Clear search"
+          >
+            <FiX size={14} />
+          </button>
+        )}
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        <TypePill label="All" active={!activeType} onClick={() => pushParams({ type: "" })} />
+      <div className="fp-pills">
+        <button
+          type="button"
+          className={`fp-pill${activeType ? "" : " active"}`}
+          onClick={() => pushParams({ type: "" })}
+        >
+          All
+        </button>
         {PROFESSIONAL_TYPES.map((t) => (
-          <TypePill
+          <button
             key={t.value}
-            label={t.label}
-            active={activeType === t.value}
+            type="button"
+            className={`fp-pill${activeType === t.value ? " active" : ""}`}
             onClick={() => pushParams({ type: activeType === t.value ? "" : t.value })}
-          />
+          >
+            {t.label}
+          </button>
         ))}
+        {hasFilters && (
+          <button
+            type="button"
+            className="fp-pill fp-pill-reset"
+            onClick={() => {
+              setQ("");
+              router.push("/user/advisors");
+            }}
+          >
+            Reset
+          </button>
+        )}
       </div>
     </div>
-  );
-}
-
-function TypePill({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        padding: "7px 14px",
-        borderRadius: 999,
-        border: `1px solid ${active ? "transparent" : "var(--border)"}`,
-        background: active ? "#0ea5e9" : "var(--surface)",
-        color: active ? "#fff" : "var(--text)",
-        fontSize: 12,
-        fontWeight: 600,
-        cursor: "pointer",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {label}
-    </button>
   );
 }

@@ -1,10 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import FinuerLogo from "@/components/brand/finuer-logo";
-import ThemeHeaderButton from "@/components/theme/theme-header-button";
+import { FiArrowUpRight } from "react-icons/fi";
+import PanelThemeToggle from "@/components/theme/panel-theme-toggle";
+
+/**
+ * Single theme toggle — shows the icon for the mode you'll switch to.
+ * Delegates to the shared PanelThemeToggle, which keeps both icons in the DOM
+ * and lets CSS pick one off the data-theme attribute. Choosing the icon from
+ * React state (as this did) renders the dark one on the server and swaps it
+ * after hydration, which a light-mode visitor sees as a flicker on every load.
+ */
+function ThemeToggle() {
+  return <PanelThemeToggle className="lp-theme-toggle" size={16} />;
+}
 
 const NAV = [
   { label: "Products", href: "#products" },
@@ -18,15 +38,19 @@ const NAV = [
 
 const MOBILE_MQ = "(max-width: 768px)";
 
+type CtaHandler = (e: ReactMouseEvent<HTMLAnchorElement>, href: string) => void;
+
 type NavLinksProps = {
   onNavigate?: () => void;
   /** Section id currently in view, used to highlight the matching link. */
   activeId?: string | null;
   /** Staggers drawer items in; desktop passes false. */
   stagger?: boolean;
+  /** Fires the branded route-transition curtain for Log in / Start Now. */
+  onCta?: CtaHandler;
 };
 
-function NavLinks({ onNavigate, activeId, stagger = false }: NavLinksProps) {
+function NavLinks({ onNavigate, activeId, stagger = false, onCta }: NavLinksProps) {
   return (
     <>
       <nav className="lp-nav" aria-label="Main">
@@ -52,12 +76,23 @@ function NavLinks({ onNavigate, activeId, stagger = false }: NavLinksProps) {
         className="lp-header-actions"
         style={stagger ? ({ "--i": NAV.length } as CSSProperties) : undefined}
       >
-        <ThemeHeaderButton />
-        <Link href="/login" className="lp-btn-login" onClick={onNavigate}>
+        <Link
+          href="/login"
+          className="lp-btn-login"
+          onClick={onCta ? e => onCta(e, "/login") : onNavigate}
+        >
           Log in
         </Link>
-        <Link href="/register" className="lp-btn-primary" onClick={onNavigate}>
-          Get Started Free <span aria-hidden>→</span>
+        <ThemeToggle />
+        <Link
+          href="/register"
+          className="lp-btn-start"
+          onClick={onCta ? e => onCta(e, "/register") : onNavigate}
+        >
+          Start Now
+          <span className="lp-start-arrow" aria-hidden>
+            <FiArrowUpRight size={15} />
+          </span>
         </Link>
       </div>
     </>
@@ -68,13 +103,47 @@ function isMobileViewport() {
   return typeof window !== "undefined" && window.matchMedia(MOBILE_MQ).matches;
 }
 
+/** Milliseconds the curtain plays before the route actually changes. */
+const CTA_TRANSITION_MS = 780;
+
 export default function LandingHeader() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [cta, setCta] = useState<{ href: string; x: number; y: number } | null>(null);
+  const ctaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const close = useCallback(() => setOpen(false), []);
+
+  /**
+   * Intercepts Log in / Start Now clicks to play a branded circular-reveal
+   * curtain that grows from the click point, then routes. Falls back to a
+   * plain navigation for modified clicks or reduced-motion users.
+   */
+  const startCta = useCallback<CtaHandler>(
+    (e, href) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+
+      close();
+
+      const reduce =
+        typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduce) return; // let <Link> navigate immediately
+
+      e.preventDefault();
+      router.prefetch?.(href);
+      setCta({ href, x: e.clientX, y: e.clientY });
+      ctaTimer.current = setTimeout(() => router.push(href), CTA_TRANSITION_MS);
+    },
+    [close, router],
+  );
+
+  useEffect(() => () => {
+    if (ctaTimer.current) clearTimeout(ctaTimer.current);
+  }, []);
 
   const toggleMenu = () => {
     if (!isMobileViewport()) return;
@@ -146,6 +215,26 @@ export default function LandingHeader() {
     };
   }, [open, close]);
 
+  const ctaCurtain =
+    mounted && cta
+      ? createPortal(
+          <div
+            className="lp-route-curtain"
+            style={{ "--rt-x": `${cta.x}px`, "--rt-y": `${cta.y}px` } as CSSProperties}
+            role="status"
+            aria-live="polite"
+          >
+            <div className="lp-route-curtain-inner">
+              <span className="lp-route-mark">Finuer</span>
+              <span className="lp-route-label">
+                {cta.href === "/login" ? "Signing you in…" : "Let's get you started…"}
+              </span>
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
+
   const showMobileDrawer = mounted && open && isMobileViewport();
 
   const mobileDrawer = showMobileDrawer
@@ -175,7 +264,7 @@ export default function LandingHeader() {
               </button>
             </div>
             <div className="lp-nav-drawer-body">
-              <NavLinks onNavigate={close} activeId={activeId} stagger />
+              <NavLinks onNavigate={close} activeId={activeId} stagger onCta={startCta} />
             </div>
           </aside>
         </>,
@@ -189,10 +278,10 @@ export default function LandingHeader() {
         className={`lp-header${open ? " nav-open" : ""}${scrolled ? " lp-header--scrolled" : ""}`}
       >
         <div className="landing-container lp-header-inner">
-          <FinuerLogo href="/" height={40} className="lp-brand-logo" onClick={close} />
+          <FinuerLogo href="/" height={52} className="lp-brand-logo" onClick={close} />
 
           <div className="lp-nav-drawer lp-nav-drawer--desktop">
-            <NavLinks activeId={activeId} />
+            <NavLinks activeId={activeId} onCta={startCta} />
           </div>
 
           <button
@@ -211,6 +300,7 @@ export default function LandingHeader() {
         </div>
       </header>
       {mobileDrawer}
+      {ctaCurtain}
     </>
   );
 }

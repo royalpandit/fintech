@@ -62,7 +62,9 @@ export async function GET(req: NextRequest) {
         select: {
           id: true,
           fullName: true,
-          advisorProfile: { select: { sebiRegistrationNo: true } },
+          advisorProfile: {
+            select: { sebiRegistrationNo: true, professionalType: true },
+          },
         },
       },
       _count: { select: { reactions: true, comments: true } },

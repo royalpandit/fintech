@@ -8,6 +8,13 @@ import { ThemeProvider } from "@/components/theme/theme-provider";
 import AmbientBackground from "@/components/motion/ambient-background";
 import ChatWidget from "@/components/chat-widget";
 
+/**
+ * Geist is self-hosted here and exposed as --font-geist-sans / --font-geist-mono,
+ * which theme.css maps to --font-sans / --font-mono. `html, body` in globals.css
+ * points at --font-sans, so every route actually renders in it — previously the
+ * font was downloaded but body text still declared Inter, which nothing loaded,
+ * so pages silently fell back to Segoe UI.
+ */
 export const metadata = {
   title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
   description:

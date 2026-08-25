@@ -102,7 +102,7 @@ export default async function SuperAdminMarketPostsPage({
               letterSpacing: -0.6,
             }}
           >
-            Market Posts
+            Buy Sell Trade Posts
           </h1>
           <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
             Platform-wide moderation of advisor sentiment posts

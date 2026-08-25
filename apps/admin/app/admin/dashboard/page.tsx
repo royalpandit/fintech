@@ -297,7 +297,7 @@ export default async function AdminDashboardPage({
               style={{ textDecoration: "none", color: "inherit" }}
             >
               <article className="stat-card" style={{ cursor: "pointer" }}>
-                <p className="stat-card-label">Flagged Market Posts</p>
+                <p className="stat-card-label">Flagged Buy Sell Trade Posts</p>
                 <p
                   className="stat-card-value"
                   style={{ color: totalFlagged > 0 ? "#dc2626" : "var(--text-muted)" }}

@@ -92,7 +92,7 @@ export default async function MarketPostDetailView({
   return (
     <section>
       <Link href={backHref} className="page-subtitle" style={{ marginTop: 0, display: "inline-block" }}>
-        ← Market Posts / Post #{post.id}
+        ← Buy Sell Trade Posts / Post #{post.id}
       </Link>
 
       <div

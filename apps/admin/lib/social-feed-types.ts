@@ -35,6 +35,9 @@ export type SocialPost = {
     // Uploaded profile picture: an advisor's is on their advisor profile, a
     // regular user's on the user row. Null falls back to initials.
     avatar_url: string | null;
+    // ProfessionalType of a verified advisor ("research_analyst", …) — drives the
+    // profession pill next to the name. Null for a plain retail investor.
+    professional_type: string | null;
   };
   images: { id: number; url: string; sort_order: number }[];
   videos: { id: number; url: string; sort_order: number }[];
