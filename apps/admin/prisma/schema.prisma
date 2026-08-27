@@ -2303,6 +2303,32 @@ model FinuerPlan {
   @@map("finuer_plans")
 }
 
+/// Paid "Featured Analyst" placement. `slug` is the identity stored in
+/// advisor_profiles.featured_tier, so the three original slugs (weekly /
+/// monthly / quarterly) must keep their names for existing rows to resolve.
+model SponsorshipTier {
+  id               Int      @id @default(autoincrement())
+  slug             String   @unique @db.VarChar(40)
+  label            String   @db.VarChar(120)
+  /// Short line under the title on the purchase cards.
+  tagline          String?  @db.VarChar(200)
+  priceInr         Decimal  @default(0) @map("price_inr") @db.Decimal(12, 2)
+  /// How long one purchase of this tier lasts.
+  durationDays     Int      @map("duration_days")
+  /// Off = super-admin can still grant it, advisors can't buy it.
+  isPurchasable    Boolean  @default(true) @map("is_purchasable")
+  isActive         Boolean  @default(true) @map("is_active")
+  /// Optional ribbon, e.g. "Best value".
+  badge            String?  @db.VarChar(40)
+  sortOrder        Int      @default(0) @map("sort_order")
+  updatedByAdminId Int?     @map("updated_by_admin_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive, sortOrder])
+  @@map("sponsorship_tiers")
+}
+
 model FinuerMarket {
   id        Int                 @id @default(autoincrement())
   name      String              @unique @db.VarChar(120)

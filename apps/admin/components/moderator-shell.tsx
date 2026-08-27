@@ -9,8 +9,10 @@ import PanelThemeToggle from "@/components/theme/panel-theme-toggle";
 import { useTheme } from "@/components/theme/theme-provider";
 import { ADMIN_MODULES, ADMIN_MODULE_ROUTE_MAP } from "../lib/admin-nav";
 import { Bell } from "./advisor-ui/icons";
+import FinuerLogo from "@/components/brand/finuer-logo";
 import ShellMenuAvatar from "./shell-menu-avatar";
 import { useDismissableMenu } from "@/hooks/use-dismissable-menu";
+import PanelBackground from "@/components/motion/panel-background";
 
 type ModeratorShellProps = {
   children: React.ReactNode;
@@ -109,6 +111,7 @@ export default function ModeratorShell({
 
   return (
     <div className="admin-shell advisor-scope" style={{ ["--advisor-primary" as any]: "#2563eb" }}>
+      <PanelBackground />
       {navOpen && (
         <div className="admin-nav-overlay" onClick={() => setNavOpen(false)} aria-hidden="true" />
       )}
@@ -116,15 +119,25 @@ export default function ModeratorShell({
         className={`admin-sidebar${navOpen ? " admin-sidebar-open" : ""}`}
         style={{ background: "var(--surface-2)", padding: "20px 14px" }}
       >
-        <button
-          type="button"
-          className="admin-nav-close"
-          aria-label="Close menu"
-          onClick={() => setNavOpen(false)}
-          style={{ marginLeft: "auto", marginBottom: 8 }}
+        <div
+          style={{
+            marginBottom: 16,
+            paddingLeft: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
         >
-          <FiX size={20} />
-        </button>
+          <FinuerLogo href="/" height={36} className="shell-brand-logo" />
+          <button
+            type="button"
+            className="admin-nav-close"
+            aria-label="Close menu"
+            onClick={() => setNavOpen(false)}
+          >
+            <FiX size={20} />
+          </button>
+        </div>
         {/* Profile card */}
         <div className="profile-card">
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>

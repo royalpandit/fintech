@@ -580,6 +580,27 @@ export async function notifyFinuerProLifecycle(params: {
   });
 }
 
+/** Featured Analyst placement — expiry warnings and the lapse notice. */
+export async function notifySponsorshipLifecycle(params: {
+  userId: number;
+  tierLabel: string;
+  /** null once it has actually lapsed. */
+  daysLeft: number | null;
+  /** Precomputed so the sweep's dedupe key and the sent title can't drift. */
+  title: string;
+}): Promise<void> {
+  const lapsed = params.daysLeft == null || params.daysLeft <= 0;
+  const plural = params.daysLeft === 1 ? "" : "s";
+  await notify({
+    userId: params.userId,
+    title: params.title,
+    message: lapsed
+      ? "Your Featured Analyst placement has ended. Your profile no longer appears at the top of Trades."
+      : `Your Featured Analyst placement (${params.tierLabel}) ends in ${params.daysLeft} day${plural}. Renewing extends from your current end date.`,
+    data: { kind: "sponsorship", href: "/advisor/services" },
+  });
+}
+
 /** Competition lifecycle — joined, results, winner. */
 export async function notifyCompetition(params: {
   userId: number;

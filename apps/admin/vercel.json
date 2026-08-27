@@ -28,6 +28,10 @@
       "schedule": "15 3 * * *"
     },
     {
+      "path": "/api/v1/cron?job=sponsorship",
+      "schedule": "30 3 * * *"
+    },
+    {
       "path": "/api/v1/cron?job=email-digest",
       "schedule": "0 13 * * *"
     },

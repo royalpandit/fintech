@@ -19,7 +19,8 @@
     "seed:admin": "tsx scripts/seed-admin.ts",
     "seed:all": "tsx scripts/seed-all.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
-    "mark-advisors-verified": "tsx scripts/mark-advisors-verified.ts"
+    "mark-advisors-verified": "tsx scripts/mark-advisors-verified.ts",
+    "db:sponsorship-tiers": "prisma db execute --file scripts/sql/sponsorship-tiers-migration.sql"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1106.0",

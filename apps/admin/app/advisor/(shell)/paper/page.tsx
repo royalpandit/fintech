@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { TbRobot } from "react-icons/tb";
+import { FiArrowRight } from "react-icons/fi";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireAuthToken } from "@/lib/auth";
@@ -20,11 +22,25 @@ export default async function AdvisorPaperPage() {
 
   return (
     <section>
-      <div style={{ marginBottom: 18 }}>
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 600, color: "var(--text)" }}>Paper Trading</h1>
-        <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
-          Practice with virtual funds — separate from your advisor earnings wallet
-        </p>
+      <div className="page-head" style={{ marginBottom: 18 }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 600, color: "var(--text)" }}>Paper Trading</h1>
+          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
+            Practice with virtual funds — separate from your advisor earnings wallet
+          </p>
+        </div>
+
+        {/* Same route into the AI agents the investor panel has, so both sides
+            can reach them from where trading decisions actually happen. */}
+        <Link
+          href="/advisor/agents"
+          className="vt-ai-cta"
+          aria-label="Get trade ideas from Financial AI Agents"
+        >
+          <TbRobot size={17} />
+          <span>Ask an AI agent</span>
+          <FiArrowRight size={14} />
+        </Link>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>

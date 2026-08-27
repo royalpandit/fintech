@@ -42,10 +42,18 @@ function milestoneFor(daysLeft: number): number | null {
     if (daysLeft === m) return m;
   }
   // Anything that slipped past a milestone without a tick (server down, a plan
-  // granted for 2 days) still gets the nearest smaller milestone once.
+  // granted for 2 days) still gets a single nudge, at the NEAREST milestone
+  // above it — Math.min, not Math.max. Math.max picked the furthest one, so a
+  // member two days from expiry was told their plan "expires in 7 days".
   const missed = WARN_AT_DAYS.filter((m) => daysLeft < m);
-  return daysLeft > 0 && missed.length > 0 ? Math.max(...missed) : null;
+  return daysLeft > 0 && missed.length > 0 ? Math.min(...missed) : null;
 }
+
+const MILESTONE_TITLES: Record<7 | 3 | 1, string> = {
+  7: "Finuer Pro expires next week",
+  3: "Finuer Pro expires in a few days",
+  1: "Finuer Pro expires tomorrow",
+};
 
 export type FinuerProSweepResult = { checked: number; warned: number; lapsed: number };
 
@@ -115,11 +123,14 @@ export async function sweepFinuerProLifecycle(
     const milestone = lapsed ? null : milestoneFor(daysLeft);
     if (!lapsed && milestone == null) return result;
 
-    // Distinct titles per milestone, so the 24h dedupe gives one nudge each
-    // rather than one nudge total for the whole run-up.
+    // One distinct title per bucket, so the 24h dedupe gives a single nudge per
+    // milestone rather than one for the whole run-up. Deliberately phrased
+    // rather than numbered: with a daily cron `daysLeft` almost never lands
+    // exactly on 7/3/1, so a numbered title would routinely contradict the
+    // exact figure in the body.
     const title = lapsed
       ? "Finuer Pro ended"
-      : `Finuer Pro expires in ${milestone} day${milestone === 1 ? "" : "s"}`;
+      : MILESTONE_TITLES[milestone as 7 | 3 | 1];
 
     const recent = await prisma.notification.findMany({
       where: { userId, createdAt: { gte: new Date(now.getTime() - DEDUPE_WINDOW_MS) } },
@@ -127,10 +138,13 @@ export async function sweepFinuerProLifecycle(
     });
     if (recent.some((r) => r.title === title)) return result;
 
+    // The title carries the milestone so the dedupe above gives one nudge per
+    // bucket; the body carries the REAL number of days, so a bucket that rounds
+    // (2 days left bucketed to the 3-day nudge) never states a wrong figure.
     await notifyFinuerProLifecycle({
       userId,
       planLabel,
-      daysLeft: lapsed ? null : milestone,
+      daysLeft: lapsed ? null : daysLeft,
       title,
     });
 

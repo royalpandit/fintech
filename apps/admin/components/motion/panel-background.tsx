@@ -11,6 +11,9 @@ import { useEffect, useRef, type CSSProperties } from "react";
  * hero palette pinned, since the panel has no marketing sections to stage
  * against.
  *
+ * Mounted by every signed-in shell (user, advisor, admin, moderator) so all
+ * four panels share one background.
+ *
  * The one structural difference: the user shell locks the viewport
  * (.us-body is height:100vh/overflow:hidden) and scrolls inside .us-main, so
  * window.scrollY is always 0 here. Progress is therefore read off that scroll
@@ -32,17 +35,21 @@ export default function PanelBackground() {
     if (!root) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    // .us-main owns the scroll in the user shell; fall back to the window for
-    // any shell that scrolls normally.
-    const scroller = document.querySelector<HTMLElement>(".us-main");
+    // Each shell scrolls somewhere different: .us-main in the user shell,
+    // .admin-main in the advisor/admin/moderator shells (only above 1024px —
+    // below that the window scrolls instead). Rather than guess, listen on the
+    // candidate AND the window, and read progress from whichever actually has
+    // overflow at the moment the frame runs. That way one component follows the
+    // scroll correctly in every shell and across the breakpoint.
+    const scroller = document.querySelector<HTMLElement>(".us-main, .admin-main");
     let frame = 0;
 
     const update = () => {
       frame = 0;
       let sp = 0;
-      if (scroller) {
-        const max = scroller.scrollHeight - scroller.clientHeight;
-        if (max > 0) sp = Math.min(1, Math.max(0, scroller.scrollTop / max));
+      const inner = scroller ? scroller.scrollHeight - scroller.clientHeight : 0;
+      if (inner > 0) {
+        sp = Math.min(1, Math.max(0, scroller!.scrollTop / inner));
       } else {
         const max = document.documentElement.scrollHeight - window.innerHeight;
         if (max > 0) sp = Math.min(1, Math.max(0, window.scrollY / max));
@@ -56,11 +63,12 @@ export default function PanelBackground() {
     };
 
     update();
-    const target: HTMLElement | Window = scroller ?? window;
-    target.addEventListener("scroll", onScroll, { passive: true });
+    scroller?.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll, { passive: true });
     return () => {
-      target.removeEventListener("scroll", onScroll);
+      scroller?.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       if (frame) cancelAnimationFrame(frame);
     };

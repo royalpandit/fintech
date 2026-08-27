@@ -390,7 +390,7 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
                         padding: "10px 14px",
                         borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
                         background: isMine
-                          ? "linear-gradient(135deg, #0ea5e9, #0284c7)"
+                          ? "var(--nav-active-gradient)"
                           : "var(--surface)",
                         color: isMine ? "#fff" : "var(--text)",
                         fontSize: 14,
@@ -562,7 +562,7 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
+        <div className="dm-composer" style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
           <input
             ref={fileInputRef}
             type="file"
@@ -631,10 +631,14 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
                 sendMessage();
               }
             }}
-            placeholder="Type a message… (Enter to send, Shift+Enter for new line, paste to attach an image)"
+            placeholder="Type a message…"
+            title="Enter to send · Shift+Enter for a new line · paste to attach an image"
+            aria-label="Message. Enter to send, Shift+Enter for a new line, paste to attach an image."
             rows={1}
+            className="dm-composer-input"
             style={{
               flex: 1,
+              minWidth: 0,
               resize: "none",
               border: "1px solid var(--border)",
               borderRadius: 10,
@@ -642,9 +646,12 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
               fontSize: 14,
               outline: "none",
               lineHeight: 1.5,
+              minHeight: 44,
               maxHeight: 120,
               overflowY: "auto",
               fontFamily: "inherit",
+              background: "var(--surface)",
+              color: "var(--text)",
             }}
           />
 
@@ -664,7 +671,7 @@ export default function ChatClient({ threadId, userId, partner, initialMessages,
                   borderRadius: 10,
                   border: "none",
                   background: canSend
-                    ? "linear-gradient(135deg, #0ea5e9, #0284c7)"
+                    ? "var(--nav-active-gradient)"
                     : "var(--border)",
                   color: canSend ? "#fff" : "var(--text-muted)",
                   cursor: canSend ? "pointer" : "default",

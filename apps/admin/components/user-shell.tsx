@@ -11,6 +11,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import type { ComponentType } from "react";
 import {
   FiHome,
+  FiActivity,
   FiUsers,
   FiTrendingUp,
   FiMessageCircle,
@@ -68,6 +69,7 @@ type NavItem = {
 
 const MAIN_NAV: NavItem[] = [
   { label: "Feed", href: "/user/feed", Icon: FiHome },
+  { label: "Trade Calls", href: "/user/trades", Icon: FiActivity },
   { label: "Finance Professionals", href: "/user/advisors", Icon: FiUsers },
   { label: "Subscriptions", href: "/user/subscriptions", Icon: FiCreditCard },
   { label: "Markets", href: "/user/markets", Icon: FiTrendingUp },
@@ -83,6 +85,7 @@ const INVESTING_NAV: NavItem[] = [
   // { label: "Stock Basket", href: "/user/stock-picks", Icon: FiTarget },
   { label: "Finuer Basket", href: "/user/finuer-basket", Icon: FiBriefcase },
   { label: "Competition", href: "/user/competition", Icon: FiAward },
+  { label: "Virtual Trading", href: "/user/virtual-trading", Icon: FiBriefcase },
   { label: "Wallet", href: "/user/wallet", Icon: FiCreditCard },
   { label: "Watchlist", href: "/user/watchlist", Icon: FiStar },
   { label: "Portfolio", href: "/user/portfolio", Icon: FiBriefcase },
@@ -344,7 +347,7 @@ export default function UserShell({
             <FinuerLogo
               href="/user/home"
               height={36}
-              className="us-brand-logo"
+              className="us-brand-logo shell-brand-logo"
             />
           </div>
 

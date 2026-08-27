@@ -304,16 +304,7 @@ export default async function SuperAdminDashboardPage({
   return (
     <section className="advisor-scope" style={{ ["--advisor-primary" as any]: GREEN }}>
       {/* Greeting header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-end",
-          gap: 16,
-          marginBottom: 20,
-          flexWrap: "wrap",
-        }}
-      >
+      <div className="page-head" style={{ marginBottom: 20 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: "var(--text)", letterSpacing: -0.4 }}>
             Welcome back, {firstName} 👋
@@ -326,7 +317,7 @@ export default async function SuperAdminDashboardPage({
       </div>
 
       {/* KPI row — icon-chip cards, each links to its module */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 16 }}>
+      <div className="stat-grid-4" style={{ marginBottom: 16 }}>
         <Link href="/super-admin/users" className="stat-card dash-kpi" style={kpiLink}>
           <div style={kpiInner}>
             <div>
@@ -403,7 +394,7 @@ export default async function SuperAdminDashboardPage({
       </div>
 
       {/* Needs attention */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 18 }}>
+      <div className="stat-grid-4" style={{ marginBottom: 18 }}>
         {attention.map((a) => (
           <Link
             key={a.label}
@@ -437,7 +428,7 @@ export default async function SuperAdminDashboardPage({
 
       {/* ─── Tab content ─── */}
       {tab === "growth" ? (
-        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14, marginBottom: 18 }}>
+        <div className="split-chart" style={{ marginBottom: 18 }}>
           <article className="widget">
             <div className="widget-title">
               <h3>New Signups</h3>
@@ -498,7 +489,7 @@ export default async function SuperAdminDashboardPage({
           </article>
         </div>
       ) : tab === "compliance" ? (
-        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14, marginBottom: 18 }}>
+        <div className="split-chart" style={{ marginBottom: 18 }}>
           <article className="widget">
             <div className="widget-title">
               <h3>Posts Needing Review</h3>
@@ -577,7 +568,7 @@ export default async function SuperAdminDashboardPage({
           </article>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14, marginBottom: 18 }}>
+        <div className="split-chart" style={{ marginBottom: 18 }}>
           <article className="widget">
             <div className="widget-title">
               <h3>Platform Revenue</h3>
@@ -608,7 +599,7 @@ export default async function SuperAdminDashboardPage({
       )}
 
       {/* Bottom: top advisors + recent activity */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14, alignItems: "start" }}>
+      <div className="split-chart" style={{ alignItems: "start" }}>
         <article className="widget">
           <div className="widget-title">
             <h3>Top Earning Advisors</h3>

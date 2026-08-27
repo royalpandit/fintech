@@ -82,10 +82,14 @@ export default function AgentChat({
   agent,
   userName = null,
   userAvatar = null,
+  /* The advisor console mounts this at /advisor/agents/[id]; its back link has
+     to return there rather than into the investor shell. */
+  backHref = "/user/lab/agents",
 }: {
   agent: Agent;
   userName?: string | null;
   userAvatar?: string | null;
+  backHref?: string;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -357,7 +361,7 @@ export default function AgentChat({
           }}
         >
           <Link
-            href="/user/lab/agents"
+            href={backHref}
             style={{ display: "flex", alignItems: "center", color: "var(--text-muted)", textDecoration: "none" }}
           >
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

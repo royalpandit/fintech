@@ -13,6 +13,7 @@ import { Bell } from "./advisor-ui/icons";
 import CommandPalette from "./command-palette";
 import ShellMenuAvatar from "./shell-menu-avatar";
 import { useDismissableMenu } from "@/hooks/use-dismissable-menu";
+import PanelBackground from "@/components/motion/panel-background";
 import { ToastProvider } from "./toast";
 
 type AdminShellProps = {
@@ -121,6 +122,7 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
         } as React.CSSProperties
       }
     >
+      <PanelBackground />
       {navOpen && (
         <div
           className="admin-nav-overlay"
@@ -142,7 +144,7 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
             justifyContent: "space-between",
           }}
         >
-          <FinuerLogo href="/" height={44} />
+          <FinuerLogo href="/" height={36} className="shell-brand-logo" />
           <button
             type="button"
             className="admin-nav-close"

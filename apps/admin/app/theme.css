@@ -1587,8 +1587,13 @@ html[data-theme="dark"] select[style*="background:#fff"] {
   -webkit-text-fill-color: var(--text);
 }
 
+/* The advisor/admin content column must stay transparent so the shared ambient
+   background reads through it, exactly as .us-main does in the user shell.
+   This rule used to force `background: var(--bg) !important`, which — being a
+   later !important at equal specificity — beat the transparent rule above and
+   painted a flat panel over the aurora. That is why the staff panels looked
+   plain white next to the investor panel. Only the colour is kept. */
 .admin-main {
-  background: var(--bg) !important;
   color: var(--text);
 }
 
@@ -1599,10 +1604,19 @@ html[data-theme="dark"] select[style*="background:#fff"] {
 .theme-page,
 .us-main,
 .us-content,
-.admin-main,
 .landing-root {
   background: var(--bg);
   color: var(--text);
+}
+
+/* .admin-main is deliberately absent above and .us-main/.us-content are pulled
+   back to transparent below — every signed-in shell now mounts the ambient
+   layer, and an opaque content column would hide it. */
+.us-main,
+.us-content,
+.admin-main,
+.admin-content {
+  background: transparent !important;
 }
 
 .theme-page-centered {

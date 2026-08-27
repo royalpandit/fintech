@@ -2,6 +2,7 @@ import { publishDueScheduledPosts } from "@/lib/scheduled-posts";
 import { sendDueBroadcasts } from "@/lib/broadcast";
 import { sweepAllSubscriptionLifecycles } from "@/lib/subscription-sweep";
 import { sweepAllFinuerProLifecycles } from "@/lib/finuer-pro-sweep";
+import { sweepAllSponsorshipLifecycles } from "@/lib/sponsorship-sweep";
 import { sweepCompetitionStatuses } from "@/lib/competition-lifecycle";
 import { evaluatePriceAlerts } from "@/lib/price-alert-engine";
 import { sendNotificationDigests } from "@/lib/email-digest";
@@ -22,6 +23,7 @@ export type CronJobName =
   | "broadcasts"
   | "subscriptions"
   | "finuer-pro"
+  | "sponsorship"
   | "competitions"
   | "price-alerts"
   | "email-digest"
@@ -44,6 +46,7 @@ const JOBS: Job[] = [
   { name: "broadcasts", run: sendDueBroadcasts },
   { name: "subscriptions", run: sweepAllSubscriptionLifecycles },
   { name: "finuer-pro", run: sweepAllFinuerProLifecycles },
+  { name: "sponsorship", run: sweepAllSponsorshipLifecycles },
   { name: "competitions", run: sweepCompetitionStatuses },
   { name: "price-alerts", run: evaluatePriceAlerts },
   { name: "email-digest", run: sendNotificationDigests },

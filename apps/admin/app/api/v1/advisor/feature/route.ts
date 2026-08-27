@@ -1,23 +1,40 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/auth";
+import {
+  getSponsorshipStatus,
+  grantSponsorship,
+  listPurchasableSponsorshipTiers,
+  revokeSponsorship,
+} from "@/lib/sponsorship";
 
 export const dynamic = "force-dynamic";
 
-// Paid "Featured Analyst" promotion. Payment is BYPASSED for now (no gateway) —
-// POST just extends featuredUntil; DELETE removes it. Flag when billing goes live.
-const TIER_DAYS: Record<string, number> = { weekly: 7, monthly: 30, quarterly: 90 };
+/**
+ * Paid "Featured Analyst" promotion, advisor self-serve.
+ *
+ * Tiers now come from `sponsorship_tiers` (editable in super-admin) rather than
+ * a hardcoded map, and every purchase writes a `payments` row so the revenue is
+ * actually recorded. The card is still not charged — see the PAYMENT SEAM note
+ * in lib/sponsorship.ts.
+ */
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req);
   if (!auth || auth.role !== "advisor") return err("Unauthorized", 401);
-  const profile = await prisma.advisorProfile.findUnique({
-    where: { userId: auth.userId },
-    select: { featuredUntil: true, featuredTier: true },
+
+  const [status, tiers] = await Promise.all([
+    getSponsorshipStatus(auth.userId),
+    listPurchasableSponsorshipTiers(),
+  ]);
+
+  return ok({
+    featured: status.featured,
+    featuredUntil: status.featuredUntil,
+    tier: status.tierId,
+    daysLeft: status.daysLeft,
+    tiers,
   });
-  const active = Boolean(profile?.featuredUntil && profile.featuredUntil.getTime() > Date.now());
-  return ok({ featured: active, featuredUntil: profile?.featuredUntil ?? null, tier: profile?.featuredTier ?? null });
 }
 
 export async function POST(req: NextRequest) {
@@ -25,35 +42,37 @@ export async function POST(req: NextRequest) {
   if (!auth || auth.role !== "advisor") return err("Unauthorized", 401);
 
   const body = await parseBody<{ tier?: string }>(req).catch(() => ({}) as { tier?: string });
-  const tier = body?.tier && body.tier in TIER_DAYS ? body.tier : "monthly";
-  const days = TIER_DAYS[tier];
 
-  const profile = await prisma.advisorProfile.findUnique({
-    where: { userId: auth.userId },
-    select: { featuredUntil: true },
+  // Fall back to the cheapest purchasable tier rather than a hardcoded
+  // "monthly", which may have been renamed or switched off in super-admin.
+  const tiers = await listPurchasableSponsorshipTiers();
+  if (tiers.length === 0) return err("No sponsorship tiers are available", 409);
+  const chosen = tiers.find((t) => t.id === body?.tier) ?? tiers[0];
+
+  try {
+    await grantSponsorship({
+      userId: auth.userId,
+      tierId: chosen.id,
+      source: "purchase",
+    });
+  } catch (e) {
+    return err(e instanceof Error ? e.message : "Could not apply placement", 400);
+  }
+
+  const status = await getSponsorshipStatus(auth.userId);
+  return ok({
+    featured: status.featured,
+    featuredUntil: status.featuredUntil,
+    tier: status.tierId,
+    daysLeft: status.daysLeft,
+    tiers,
   });
-  if (!profile) return err("Advisor profile not found", 404);
-
-  const base =
-    profile.featuredUntil && profile.featuredUntil.getTime() > Date.now()
-      ? new Date(profile.featuredUntil)
-      : new Date();
-  base.setDate(base.getDate() + days);
-
-  const updated = await prisma.advisorProfile.update({
-    where: { userId: auth.userId },
-    data: { featuredUntil: base, featuredTier: tier },
-    select: { featuredUntil: true, featuredTier: true },
-  });
-  return ok({ featured: true, featuredUntil: updated.featuredUntil, tier: updated.featuredTier });
 }
 
 export async function DELETE(req: NextRequest) {
   const auth = await requireAuth(req);
   if (!auth || auth.role !== "advisor") return err("Unauthorized", 401);
-  await prisma.advisorProfile.update({
-    where: { userId: auth.userId },
-    data: { featuredUntil: null, featuredTier: null },
-  });
-  return ok({ featured: false });
+  await revokeSponsorship(auth.userId);
+  const tiers = await listPurchasableSponsorshipTiers();
+  return ok({ featured: false, featuredUntil: null, tier: null, daysLeft: 0, tiers });
 }

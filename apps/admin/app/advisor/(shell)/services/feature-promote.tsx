@@ -3,33 +3,60 @@
 import { useEffect, useState } from "react";
 import { FiStar } from "react-icons/fi";
 
-type Status = { featured: boolean; featuredUntil: string | null; tier: string | null };
+type Tier = {
+  id: string;
+  label: string;
+  tagline: string | null;
+  priceInr: number;
+  durationDays: number;
+  badge: string | null;
+};
 
-const TIERS: { id: string; label: string; price: string }[] = [
-  { id: "weekly", label: "1 week", price: "₹999" },
-  { id: "monthly", label: "1 month", price: "₹2,999" },
-  { id: "quarterly", label: "3 months", price: "₹7,499" },
-];
+type Status = {
+  featured: boolean;
+  featuredUntil: string | null;
+  tier: string | null;
+  daysLeft?: number;
+  tiers?: Tier[];
+};
+
+function inr(n: number) {
+  return `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+}
 
 function fmt(d: string | null) {
   return d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
 }
 
-// Advisors pay to appear as a "Featured Analyst" at the top of Trades. Payment is
-// bypassed for now (dev) — the API just extends featuredUntil.
+// Advisors pay to appear as a "Featured Analyst" at the top of Trades.
+//
+// Tiers and pricing arrive from the API (backed by `sponsorship_tiers`), so
+// super-admin can change them without a redeploy — they used to be a hardcoded
+// array here, which meant the price on this button was the only place the
+// number existed. The card itself is still not charged; the purchase records a
+// `payments` row with provider "dev_bypass" until a gateway lands.
 export default function FeaturePromote() {
   const [status, setStatus] = useState<Status | null>(null);
+  const [tiers, setTiers] = useState<Tier[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function apply(d: Status | null) {
+    if (!d) return;
+    setStatus(d);
+    if (Array.isArray(d.tiers)) setTiers(d.tiers);
+  }
 
   useEffect(() => {
     fetch("/api/v1/advisor/feature")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setStatus(d.data ?? d))
+      .then((d) => d && apply(d.data ?? d))
       .catch(() => {});
   }, []);
 
   async function buy(tier: string) {
     setBusy(tier);
+    setError(null);
     try {
       const r = await fetch("/api/v1/advisor/feature", {
         method: "POST",
@@ -37,7 +64,13 @@ export default function FeaturePromote() {
         body: JSON.stringify({ tier }),
       });
       const d = await r.json();
-      setStatus(d.data ?? d);
+      if (!r.ok) {
+        setError(d?.error ?? "Could not activate the placement.");
+        return;
+      }
+      apply(d.data ?? d);
+    } catch {
+      setError("Could not reach the server. Try again.");
     } finally {
       setBusy(null);
     }
@@ -49,7 +82,7 @@ export default function FeaturePromote() {
     try {
       const r = await fetch("/api/v1/advisor/feature", { method: "DELETE" });
       const d = await r.json();
-      setStatus(d.data ?? d);
+      apply(d.data ?? d);
     } finally {
       setBusy(null);
     }
@@ -95,24 +128,34 @@ export default function FeaturePromote() {
           : "Payment is bypassed while we finish billing integration."}
       </p>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-        {TIERS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => buy(t.id)}
-            disabled={busy != null}
-            className="btn-primary"
-            style={{
-              padding: "9px 16px",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: busy ? "wait" : "pointer",
-              background: "#f59e0b",
-            }}
-          >
-            {busy === t.id ? "Activating…" : `${active ? "Extend" : "Feature"} · ${t.label} · ${t.price}`}
-          </button>
-        ))}
+        {tiers.length === 0 ? (
+          <p style={{ margin: 0, fontSize: 12.5, color: "var(--text-muted)" }}>
+            No promotion tiers are available right now.
+          </p>
+        ) : (
+          tiers.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => buy(t.id)}
+              disabled={busy != null}
+              className="btn-primary"
+              title={t.tagline ?? undefined}
+              style={{
+                padding: "9px 16px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: busy ? "wait" : "pointer",
+                background: "#f59e0b",
+              }}
+            >
+              {busy === t.id
+                ? "Activating…"
+                : `${active ? "Extend" : "Feature"} · ${t.label} · ${inr(t.priceInr)}`}
+              {t.badge ? ` · ${t.badge}` : ""}
+            </button>
+          ))
+        )}
         {active && (
           <button
             type="button"
@@ -131,6 +174,12 @@ export default function FeaturePromote() {
           </button>
         )}
       </div>
+
+      {error && (
+        <p style={{ margin: "10px 0 0", fontSize: 12.5, color: "var(--danger, #dc2626)" }} role="alert">
+          {error}
+        </p>
+      )}
     </article>
   );
 }

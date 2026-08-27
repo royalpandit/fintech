@@ -93,12 +93,17 @@ html[data-theme="dark"] .finuer-logo-dark {
   flex-shrink: 0;
 }
 
-.us-brand-logo {
+/* One brand mark size across every signed-in shell. The advisor sidebar used
+   34px and the super-admin sidebar 44px against the user shell's 36px, so the
+   logo visibly changed size as you moved between panels. */
+.us-brand-logo,
+.shell-brand-logo {
   flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
-  .us-brand-logo {
+  .us-brand-logo,
+  .shell-brand-logo {
     height: 30px !important;
   }
 }
@@ -1778,12 +1783,23 @@ th {
   overflow: hidden;
   padding-bottom: 16px;
 }
+/* flex-direction MUST be column here. As a row container (the default) the
+   chat became a flex item on the main axis, so it sized to its own content —
+   a ~500px column stranded against the left edge of a full-width area, which
+   read as "stuck in mobile view". In a column container the chat is stretched
+   on the cross axis instead, so it fills the width and `height: 100%` still
+   resolves against a definite height. */
 .us-main:has(.dm-chat-root) .us-content {
   flex: 1;
   min-height: 0;
   display: flex;
+  flex-direction: column;
 }
 .us-main:has(.dm-chat-root) .dm-chat-root {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
   height: 100%;
 }
 
@@ -9383,6 +9399,8 @@ body.terminal-active .us-content {
 }
 .admin-content:has(.dm-chat-root) .dm-chat-root {
   height: 100%;
+  width: 100%;
+  min-width: 0;
 }
 
 .comm-post-content {
@@ -11496,5 +11514,351 @@ body.agent-chat-active .us-content {
   }
   .fpro-head-actions button {
     flex: 1;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE LAYOUT — shared across every panel
+   ══════════════════════════════════════════════════════════════════════════
+   The investor dashboard was the only panel that reflowed properly, because it
+   is the only one whose grids live in CSS classes (.user-stat-grid and friends
+   above). The advisor / admin / super-admin / moderator dashboards declare the
+   same shapes with inline `style={{ gridTemplateColumns: ... }}`, and an inline
+   style cannot carry a media query — so a `repeat(4, 1fr)` KPI row stayed four
+   columns wide at 360px and the `1fr 320px` rail pushed the page sideways.
+
+   Two mechanisms below:
+     1. Shell-neutral aliases for the existing user-panel grid classes, so staff
+        pages can opt into exactly the same breakpoints instead of a parallel set.
+     2. A safety net that collapses the remaining inline grids app-wide.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* ── 1. Aliases — same rules, names that don't imply the user shell ───────── */
+.stat-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.stat-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.split-chart {
+  display: grid;
+  grid-template-columns: 1.55fr minmax(0, 1fr);
+  gap: 14px;
+}
+
+.split-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.layout-rail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) min(320px, 30vw);
+  gap: 18px;
+  align-items: start;
+  width: 100%;
+}
+
+.rail-sticky {
+  position: sticky;
+  top: 80px;
+}
+
+@media (max-width: 1200px) {
+  .split-chart {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .stat-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .layout-rail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rail-sticky {
+    position: static;
+  }
+}
+
+@media (max-width: 767px) {
+  .stat-grid-3,
+  .split-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 479px) {
+  .stat-grid-4 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── 2. Safety net for grids still declared inline ────────────────────────
+   Matches the serialized style attribute. Two things make the selectors look
+   the way they do:
+
+   • They match the VALUE only, never "grid-template-columns:value". React's
+     server renderer writes inline styles with no space after the colon
+     (style="display:grid;grid-template-columns:repeat(4, 1fr)") while the
+     browser re-serializes to "grid-template-columns: repeat(4, 1fr)" once the
+     client touches the node. Matching the value alone is the one form that
+     hits both. Spaces INSIDE the value survive verbatim in both, so
+     "repeat(4, 1fr)" is stable.
+   • Two-equal-column grids ("1fr 1fr") are deliberately absent: as a substring
+     they also match "1fr 1fr 1fr", and two columns on a phone are cramped but
+     not broken. The grids that genuinely overflow are the 4-5 column rows and
+     the fixed-px rails.
+
+   This is a stopgap for the call sites that still set the grid inline; the fix
+   for any given page is to move it onto one of the classes above. It only ever
+   collapses columns at widths where they could not fit, and only inside a panel
+   shell, so the landing page is untouched. */
+@media (max-width: 1024px) {
+  .admin-main [style*="1fr 320px"],
+  .admin-main [style*="1fr 340px"],
+  .admin-main [style*="1fr 300px"],
+  .admin-main [style*="1.6fr 1fr"],
+  .admin-main [style*="1.55fr 1fr"],
+  .admin-main [style*="1.5fr 1fr"],
+  .admin-main [style*="1.4fr 1fr"],
+  .admin-main [style*="1.35fr 1fr"],
+  .admin-main [style*="1.2fr 1fr"],
+  .us-main [style*="1fr 320px"],
+  .us-main [style*="1fr 340px"],
+  .us-main [style*="1.6fr 1fr"],
+  .us-main [style*="1.55fr 1fr"],
+  .us-main [style*="1.5fr 1fr"],
+  .us-main [style*="1.4fr 1fr"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  /* A rail that has stacked underneath must stop sticking. */
+  .admin-main aside[style*="sticky"],
+  .us-main aside[style*="sticky"] {
+    position: static !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .admin-main [style*="repeat(4, 1fr)"],
+  .admin-main [style*="repeat(5, 1fr)"],
+  .us-main [style*="repeat(4, 1fr)"],
+  .us-main [style*="repeat(5, 1fr)"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-main [style*="repeat(3, 1fr)"],
+  .admin-main [style*="2fr 1fr"],
+  .admin-main [style*="1fr 2fr"],
+  .us-main [style*="repeat(3, 1fr)"],
+  .us-main [style*="2fr 1fr"],
+  .us-main [style*="1fr 2fr"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 479px) {
+  .admin-main [style*="repeat(4, 1fr)"],
+  .admin-main [style*="repeat(5, 1fr)"],
+  .us-main [style*="repeat(4, 1fr)"],
+  .us-main [style*="repeat(5, 1fr)"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+/* ── 3. Wide content must scroll inside its own box, never the page ───────── */
+/* Deliberately NOT a blanket `overflow-x: hidden` on the scroll containers:
+   per spec a non-visible overflow-x forces overflow-y to compute to `auto`,
+   which is what turned the demo screens into scrollboxes on the landing page,
+   and it would clip any popover that extends past the content edge. Instead,
+   let flex/grid children shrink — which is what actually causes the overflow —
+   and cap anything intrinsically wide. */
+.admin-main :where(div, section, article, aside, ul, ol, table, form),
+.us-main :where(div, section, article, aside, ul, ol, table, form) {
+  min-width: 0;
+}
+
+.admin-main :where(svg, img, video, canvas, pre),
+.us-main :where(svg, img, video, canvas, pre) {
+  max-width: 100%;
+}
+
+/* Tables are the usual culprit: give them a scroll container of their own so a
+   12-column report doesn't drag the whole layout sideways on a phone.
+
+   Tables already inside a dedicated wrapper (.table-wrap, .oc-table-wrap,
+   .competition-table-wrap, .user-page-table-wrap, .paper-th-table-wrap — all
+   of which set overflow themselves, and some of which pair it with a deliberate
+   min-width and a sticky thead) are excluded. Turning those into a second,
+   nested scroll container would fight the wrapper and break the sticky header. */
+@media (max-width: 1024px) {
+  .admin-main :not([class*="table-wrap"]) > table,
+  .us-main :not([class*="table-wrap"]) > table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── 4. Staff dashboard padding tightens on small screens ─────────────────── */
+@media (max-width: 767px) {
+  .admin-main {
+    padding: 14px !important;
+  }
+}
+
+@media (max-width: 479px) {
+  .admin-main {
+    padding: 10px !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MESSAGES — composer
+   The three action buttons are 44px each; below ~420px that left the textarea
+   almost no room, so it collapsed to a sliver. Shrink the buttons rather than
+   the input, since the input is the part being typed into.
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 420px) {
+  .dm-composer {
+    gap: 6px !important;
+  }
+  .dm-composer > button,
+  .dm-composer > div > button {
+    width: 38px !important;
+    height: 38px !important;
+  }
+  .dm-composer-input {
+    min-height: 38px !important;
+    padding: 8px 10px !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE — page header rows and tab strips
+   ══════════════════════════════════════════════════════════════════════════
+   Every staff dashboard opens with the same shape: a title block on the left
+   and a TabSwitcher on the right, laid out with an inline
+   `display:flex; justify-content:space-between` and no flex-wrap. Collapsing
+   the KPI grids underneath did nothing for this row — the two children simply
+   squashed into each other and pushed past the screen edge on a phone. Grids
+   were only half the responsiveness problem; this is the other half.
+   ══════════════════════════════════════════════════════════════════════════ */
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.page-head > * {
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .page-head {
+    align-items: stretch;
+    gap: 12px;
+  }
+  /* Once wrapped, the tab strip is on its own line — let it use the width. */
+  .page-head > .tab-switcher {
+    width: 100%;
+  }
+}
+
+/* A three-item pill group is ~300px; below that it must scroll rather than
+   stretch the page. `inline-flex` can't scroll, so it becomes flex here. */
+@media (max-width: 767px) {
+  .tab-switcher {
+    display: flex;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab-switcher::-webkit-scrollbar {
+    display: none;
+  }
+  .tab-switcher-item {
+    flex: 1 0 auto;
+    white-space: nowrap;
+    text-align: center;
+    padding: 8px 14px;
+  }
+}
+
+/* Long dashboard titles shouldn't force a minimum width either. */
+@media (max-width: 479px) {
+  .page-head h1 {
+    font-size: 21px !important;
+  }
+}
+
+/* Last-resort wrap for the many inline `justify-content:space-between` rows
+   that aren't dashboard headers. Only below 560px, where a row that refuses to
+   wrap is guaranteed to overflow: dropping the second item to its own line is
+   always better than pushing the page sideways. Matched on the value, since
+   React's server output has no space after the property colon. */
+@media (max-width: 560px) {
+  .admin-main [style*="space-between"],
+  .us-main [style*="space-between"] {
+    flex-wrap: wrap;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   VIRTUAL TRADING — "Ask an AI agent" call to action
+   The Financial AI Agents hub was only reachable from the sidebar, so the two
+   features never met. This puts a route to it on the page where someone is
+   actually deciding what to trade.
+   ══════════════════════════════════════════════════════════════════════════ */
+.vt-ai-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    border-color var(--dur-base, 0.18s) var(--ease-out, ease),
+    background var(--dur-base, 0.18s) var(--ease-out, ease),
+    transform var(--dur-base, 0.18s) var(--ease-out, ease);
+}
+
+.vt-ai-cta:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateY(-1px);
+}
+
+.vt-ai-cta svg:first-child {
+  color: var(--primary-text, var(--primary));
+}
+
+@media (max-width: 767px) {
+  /* .page-head has already wrapped it onto its own line by here. */
+  .vt-ai-cta {
+    justify-content: center;
+    width: 100%;
   }
 }

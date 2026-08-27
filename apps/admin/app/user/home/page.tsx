@@ -900,7 +900,7 @@ export default async function UserDashboardPage({
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>
                 Virtual Trade
               </h3>
-              <Link href="/user/lab" style={{ fontSize: 11, color: "#0ea5e9", fontWeight: 600 }}>
+              <Link href="/user/virtual-trading" style={{ fontSize: 11, color: "var(--primary-text, var(--primary))", fontWeight: 600 }}>
                 View all
               </Link>
             </div>

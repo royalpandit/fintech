@@ -264,26 +264,11 @@ export default async function AdvisorDashboardPage({
 
   return (
     <section className="advisor-scope">
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 320px",
-          gap: 20,
-          alignItems: "start",
-        }}
-      >
+      <div className="layout-rail" style={{ gap: 20 }}>
         {/* ═══ MAIN COLUMN ═══ */}
         <div>
           {/* Header: title + tabs */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-end",
-              gap: 16,
-              marginBottom: 18,
-            }}
-          >
+          <div className="page-head" style={{ marginBottom: 18 }}>
             <div>
               <h1
                 style={{
@@ -304,14 +289,7 @@ export default async function AdvisorDashboardPage({
           </div>
 
           {/* KPI Row — 4 cards with sparklines and deltas */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 14,
-              marginBottom: 18,
-            }}
-          >
+          <div className="stat-grid-4" style={{ marginBottom: 18 }}>
             <article className="stat-card">
               <p className="stat-card-label">Total Portfolio Value</p>
               <p className="stat-card-value">{formatINR(portfolioCurrent, true)}</p>
@@ -371,14 +349,7 @@ export default async function AdvisorDashboardPage({
           </div>
 
           {/* Performance chart + Donut */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1.55fr 1fr",
-              gap: 14,
-              marginBottom: 18,
-            }}
-          >
+          <div className="split-chart" style={{ marginBottom: 18 }}>
             <article className="widget">
               <div className="widget-title">
                 <h3>Portfolio Performance</h3>
@@ -664,7 +635,7 @@ export default async function AdvisorDashboardPage({
         </div>
 
         {/* ═══ RIGHT SIDEBAR ═══ */}
-        <aside style={{ display: "grid", gap: 14, position: "sticky", top: 16 }}>
+        <aside className="rail-sticky" style={{ display: "grid", gap: 14, top: 16 }}>
           {/* Watchlist */}
           <article className="widget">
             <div className="widget-title">

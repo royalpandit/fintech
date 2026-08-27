@@ -19,7 +19,19 @@ const SORTS = [
 ] as const;
 type SortKey = (typeof SORTS)[number]["key"];
 
-export default function AgentsBrowser({ agents }: { agents: Agent[] }) {
+/**
+ * `basePath` exists because the advisor console renders this same browser at
+ * /advisor/agents. Hardcoding /user/lab/agents sent advisors into the investor
+ * shell, which redirects them straight back out by role — a link that looked
+ * fine and went nowhere.
+ */
+export default function AgentsBrowser({
+  agents,
+  basePath = "/user/lab/agents",
+}: {
+  agents: Agent[];
+  basePath?: string;
+}) {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<SortKey>("default");
 
@@ -85,7 +97,7 @@ export default function AgentsBrowser({ agents }: { agents: Agent[] }) {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 18 }}>
           {shown.map((a) => (
-            <Link key={a.id} href={`/user/lab/agents/${a.id}`} style={{ textDecoration: "none" }}>
+            <Link key={a.id} href={`${basePath}/${a.id}`} style={{ textDecoration: "none" }}>
               <div className="lab-agent-card" style={{ background: "var(--surface)", borderRadius: 16, padding: "22px 22px 18px", border: "1.5px solid var(--border)", cursor: "pointer", transition: "all 0.15s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
                 <div style={{ display: "flex", gap: 14, alignItems: "flex-start", marginBottom: 14 }}>
                   <div style={{ width: 52, height: 52, borderRadius: 14, background: "linear-gradient(135deg,#ede9fe,#c7d2fe)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>

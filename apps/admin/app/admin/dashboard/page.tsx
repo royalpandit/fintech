@@ -185,25 +185,10 @@ export default async function AdminDashboardPage({
 
   return (
     <section className="advisor-scope" style={{ ["--advisor-primary" as any]: "#2563eb" }}>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 320px",
-          gap: 20,
-          alignItems: "start",
-        }}
-      >
+      <div className="layout-rail" style={{ gap: 20 }}>
         {/* ═══ MAIN ═══ */}
         <div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-end",
-              gap: 16,
-              marginBottom: 18,
-            }}
-          >
+          <div className="page-head" style={{ marginBottom: 18 }}>
             <div>
               <h1
                 style={{
@@ -224,14 +209,7 @@ export default async function AdminDashboardPage({
           </div>
 
           {/* KPI Row */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 14,
-              marginBottom: 18,
-            }}
-          >
+          <div className="stat-grid-4" style={{ marginBottom: 18 }}>
             <Link
               href="/admin/advisors"
               style={{ textDecoration: "none", color: "inherit" }}
@@ -342,14 +320,7 @@ export default async function AdminDashboardPage({
           </div>
 
           {/* Performance Chart + Donut */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1.55fr 1fr",
-              gap: 14,
-              marginBottom: 18,
-            }}
-          >
+          <div className="split-chart" style={{ marginBottom: 18 }}>
             <article className="widget">
               <div className="widget-title">
                 <h3>Moderation Activity</h3>
@@ -571,7 +542,7 @@ export default async function AdminDashboardPage({
         </div>
 
         {/* ═══ RIGHT SIDEBAR ═══ */}
-        <aside style={{ display: "grid", gap: 14, position: "sticky", top: 16 }}>
+        <aside className="rail-sticky" style={{ display: "grid", gap: 14, top: 16 }}>
           {/* Flagged posts watchlist */}
           <article className="widget">
             <div className="widget-title">

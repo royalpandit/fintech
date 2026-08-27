@@ -34,7 +34,9 @@ import { ADVISOR_NAV_GROUPS, ADVISOR_MODULE_ROUTE_MAP } from "../lib/advisor-nav
 import { Bell } from "./advisor-ui/icons";
 import AdvisorSearch from "./advisor-search";
 import ShellMenuAvatar from "./shell-menu-avatar";
+import { TbRobot } from "react-icons/tb";
 import { useDismissableMenu } from "@/hooks/use-dismissable-menu";
+import PanelBackground from "@/components/motion/panel-background";
 
 /**
  * One icon per sidebar module, so the advisor console reads like the investor
@@ -55,6 +57,7 @@ const MODULE_ICONS: Record<string, IconType> = {
   Watchlist: FiStar,
   "Finuer Basket": FiLayers,
   "Virtual Trading": FiBriefcase,
+  "Financial AI Agents": TbRobot,
   Competitions: FiAward,
   Messages: FiMessageCircle,
   Notifications: FiBell,
@@ -216,6 +219,7 @@ export default function AdvisorShell({
 
   return (
     <div className="admin-shell advisor-scope">
+      <PanelBackground />
       {navOpen && (
         <div className="admin-nav-overlay" onClick={() => setNavOpen(false)} aria-hidden="true" />
       )}
@@ -232,7 +236,7 @@ export default function AdvisorShell({
             justifyContent: "space-between",
           }}
         >
-          <FinuerLogo href="/" height={34} />
+          <FinuerLogo href="/" height={36} className="shell-brand-logo" />
           <button
             type="button"
             className="admin-nav-close"
