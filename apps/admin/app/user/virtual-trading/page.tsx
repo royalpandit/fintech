@@ -21,10 +21,18 @@ export const dynamic = "force-dynamic";
  * entry point carrying the name. Same shared components, same order, so the two
  * panels behave identically.
  */
-export default async function UserVirtualTradingPage() {
+export default async function UserVirtualTradingPage({
+  searchParams,
+}: {
+  searchParams?: { symbol?: string; side?: string };
+}) {
   const token = cookies().get("access_token")?.value ?? null;
   const auth = await requireAuthToken(token);
   if (!auth) redirect("/login");
+
+  // Deep-linked from the Buy/Sell shortcuts in Markets and the Watchlist.
+  const presetSymbol = (searchParams?.symbol ?? "").trim().toUpperCase();
+  const presetSide = searchParams?.side === "sell" ? "sell" : "buy";
 
   const [wallet, finuer] = await Promise.all([
     prisma.virtualWallet.findUnique({ where: { userId: auth.userId } }),
@@ -74,16 +82,18 @@ export default async function UserVirtualTradingPage() {
           }}
         >
           <h2 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600, color: "var(--text)" }}>
-            Quick trade
+            {presetSymbol ? `Quick trade · ${presetSymbol}` : "Quick trade"}
           </h2>
-          <PaperTradeForm compact />
+          <PaperTradeForm compact defaultSymbol={presetSymbol} defaultSide={presetSide} />
           <p style={{ margin: "12px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
             Enter any NSE symbol and price to simulate buys and sells.
           </p>
         </article>
       </div>
 
-      <PaperPortfolioSection userId={auth.userId} />
+      {/* The Quick trade card above is this page's order entry — the section
+          would otherwise render a second, identical form underneath. */}
+      <PaperPortfolioSection userId={auth.userId} showTradeForm={false} />
     </section>
   );
 }

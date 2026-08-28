@@ -461,7 +461,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
             return (
               <Link
                 key={post.id}
-                href={`/user/markets/${post.id}`}
+                href={`/user/markets/${post.id}?from=advisor`}
                 style={{ textDecoration: "none", color: "inherit" }}
               >
                 <article

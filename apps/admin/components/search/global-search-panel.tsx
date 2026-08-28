@@ -182,7 +182,7 @@ export default function GlobalSearchPanel({ onClose }: { onClose: () => void }) 
                       key={p.id}
                       type="button"
                       className="gs-row"
-                      onClick={() => go(`/user/markets/${p.id}`)}
+                      onClick={() => go(`/user/markets/${p.id}?from=search`)}
                     >
                       <span className="gs-row-main">
                         <span className="gs-row-title">{p.title}</span>

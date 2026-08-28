@@ -3,7 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { FiSliders, FiX } from "react-icons/fi";
 
+export type FeedSource = "all" | "following" | "discover";
+export type FeedKind = "advisor" | "community";
+
 export type FeedFilters = {
+  /* `source` and `kinds` are what the For You / Community / Advisors tabs
+     turned into. They are server-side (they change the query), unlike every
+     other filter here, which narrows the rows already fetched. */
+  source: FeedSource;
+  kinds: FeedKind[];
   sort: "latest" | "oldest";
   sentiment: "all" | "bullish" | "bearish" | "neutral";
   asset: "all" | "equity" | "crypto" | "mf" | "commodity" | "other";
@@ -15,6 +23,8 @@ export type FeedFilters = {
 };
 
 export const DEFAULT_FEED_FILTERS: FeedFilters = {
+  source: "all",
+  kinds: ["advisor", "community"],
   sort: "latest",
   sentiment: "all",
   asset: "all",
@@ -25,10 +35,21 @@ export const DEFAULT_FEED_FILTERS: FeedFilters = {
 };
 
 export const FEED_FILTER_GROUPS: {
-  key: keyof FeedFilters;
+  /* `kinds` is multi-select and rendered on its own below, so it is not a
+     member of this single-select group list. */
+  key: Exclude<keyof FeedFilters, "kinds">;
   label: string;
   options: { id: string; label: string }[];
 }[] = [
+  {
+    key: "source",
+    label: "Show posts from",
+    options: [
+      { id: "all", label: "Everyone" },
+      { id: "following", label: "People I follow" },
+      { id: "discover", label: "Discover (not following)" },
+    ],
+  },
   {
     key: "sort",
     label: "Sort by",
@@ -103,8 +124,16 @@ export const FEED_FILTER_GROUPS: {
   },
 ];
 
+const KIND_OPTIONS: { id: FeedKind; label: string }[] = [
+  { id: "advisor", label: "Advisor analysis" },
+  { id: "community", label: "Community posts" },
+];
+
 function countActive(f: FeedFilters): number {
   let n = 0;
+  if (f.source !== "all") n++;
+  // Only counts as a filter when one of the two types is switched off.
+  if (f.kinds.length === 1) n++;
   if (f.sort !== "latest") n++;
   if (f.sentiment !== "all") n++;
   if (f.asset !== "all") n++;
@@ -201,6 +230,51 @@ export default function FeedFilter({
           </div>
 
           <div style={{ display: "grid", gap: 14, maxHeight: "60vh", overflowY: "auto" }}>
+            {/* Post type — multi-select, so it can't join FEED_FILTER_GROUPS.
+                Turning both off would render an empty feed, so the last one
+                on can't be switched off. */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+                Post type
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {KIND_OPTIONS.map((opt) => {
+                  const sel = value.kinds.includes(opt.id);
+                  const isLastOn = sel && value.kinds.length === 1;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      aria-pressed={sel}
+                      disabled={isLastOn}
+                      title={isLastOn ? "At least one post type must stay on" : undefined}
+                      onClick={() =>
+                        onChange({
+                          ...value,
+                          kinds: sel
+                            ? value.kinds.filter((k) => k !== opt.id)
+                            : [...value.kinds, opt.id],
+                        })
+                      }
+                      style={{
+                        padding: "6px 11px",
+                        borderRadius: 999,
+                        border: `1px solid ${sel ? "#0ea5e9" : "var(--border)"}`,
+                        background: sel ? "rgba(14,165,233,0.12)" : "var(--surface-2)",
+                        color: sel ? "#0ea5e9" : "var(--text-muted)",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: isLastOn ? "default" : "pointer",
+                        opacity: isLastOn ? 0.75 : 1,
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {FEED_FILTER_GROUPS.map((g) => (
               <div key={g.key}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>

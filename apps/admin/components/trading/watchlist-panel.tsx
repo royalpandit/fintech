@@ -19,6 +19,7 @@ import {
   useWatchlistStore,
   type StoredWatchlistItem,
 } from "@/lib/watchlist-store";
+import { isPaperTradable } from "@/components/trading/trade-buttons";
 
 function fmtPct(n?: number) {
   if (n === undefined || n === null || Number.isNaN(n)) return "—";
@@ -328,6 +329,35 @@ export default function WatchlistPanel({
                   </div>
                 </div>
               </button>
+              {/* Buy/Sell were only in the ⋮ menu, so the watchlist looked like
+                  it had no trade action at all. Surface them on the row in the
+                  full-page variant, where there is width; the drawer keeps them
+                  in the menu. Hidden for anything the paper engine can't fill —
+                  see isPaperTradable. */}
+              {variant === "page" && isPaperTradable(row.type, row.exchange) && (
+                <span className="wl-row-trade">
+                  <span className="trade-btns trade-btns--sm">
+                    <button
+                      type="button"
+                      className="trade-btn trade-btn--buy"
+                      aria-label={`Buy ${row.display} with virtual funds`}
+                      title={`Buy ${row.display} with virtual funds`}
+                      onClick={() => onBuy(row)}
+                    >
+                      B<span className="trade-btn-full">uy</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="trade-btn trade-btn--sell"
+                      aria-label={`Sell ${row.display} with virtual funds`}
+                      title={`Sell ${row.display} with virtual funds`}
+                      onClick={() => onSell(row)}
+                    >
+                      S<span className="trade-btn-full">ell</span>
+                    </button>
+                  </span>
+                </span>
+              )}
               <button
                 type="button"
                 className="wl-row-menu-btn"

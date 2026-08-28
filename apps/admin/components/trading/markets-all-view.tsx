@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FiArrowUpRight, FiArrowDownRight } from "react-icons/fi";
+import TradeButtons from "@/components/trading/trade-buttons";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 export type MarketRow = {
   symbol: string;
@@ -38,20 +40,25 @@ function Panel({ title, children, note }: { title: string; children: React.React
 function StockRow({ r }: { r: MarketRow }) {
   const pos = r.percentChange >= 0;
   return (
-    <Link
-      href={chartHref(r)}
-      className="mkt-row"
-      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", borderTop: "1px solid var(--border)", textDecoration: "none", color: "inherit" }}
-    >
-      <span style={{ fontWeight: 600, color: "var(--text)", fontSize: 13 }}>{r.symbol}</span>
-      <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ color: "var(--text)", fontSize: 13 }}>₹{inr(r.ltp)}</span>
-        <span style={{ color: pos ? "#16a34a" : "#dc2626", fontWeight: 600, fontSize: 13, minWidth: 70, textAlign: "right", display: "inline-flex", alignItems: "center", gap: 2, justifyContent: "flex-end" }}>
-          {pos ? <FiArrowUpRight size={13} /> : <FiArrowDownRight size={13} />}
-          {pos ? "+" : ""}{r.percentChange.toFixed(2)}%
+    <div className="mkt-row" style={{ display: "flex", alignItems: "center", gap: 8, borderTop: "1px solid var(--border)" }}>
+      <Link
+        href={chartHref(r)}
+        style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 4px 11px 16px", textDecoration: "none", color: "inherit" }}
+      >
+        <span style={{ fontWeight: 600, color: "var(--text)", fontSize: 13 }}>{r.symbol}</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ color: "var(--text)", fontSize: 13 }}>₹{inr(r.ltp)}</span>
+          <span style={{ color: pos ? "#16a34a" : "#dc2626", fontWeight: 600, fontSize: 13, minWidth: 70, textAlign: "right", display: "inline-flex", alignItems: "center", gap: 2, justifyContent: "flex-end" }}>
+            {pos ? <FiArrowUpRight size={13} /> : <FiArrowDownRight size={13} />}
+            {pos ? "+" : ""}{r.percentChange.toFixed(2)}%
+          </span>
         </span>
+      </Link>
+      {/* Hidden automatically for anything the paper engine can't fill. */}
+      <span style={{ paddingRight: 12, flexShrink: 0 }}>
+        <TradeButtons symbol={r.symbol} instrumentType={r.type} exchange={r.exchange} />
       </span>
-    </Link>
+    </div>
   );
 }
 
@@ -81,7 +88,7 @@ function FiiDiiPanel() {
       {error && !rows.length ? (
         <p style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 12, margin: 0 }}>{error}</p>
       ) : !rows.length ? (
-        <p style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 12, margin: 0 }}>Loading…</p>
+        <div style={{ padding: 16 }}><LoadingRows rows={4} /></div>
       ) : (
         rows.slice(0, 8).map((r, i) => {
           const pos = r.netValue >= 0;
@@ -121,7 +128,7 @@ function BulkDealsPanel() {
       {error && !rows.length ? (
         <p style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 12, margin: 0 }}>{error}</p>
       ) : !rows.length ? (
-        <p style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 12, margin: 0 }}>Loading…</p>
+        <div style={{ padding: 16 }}><LoadingRows rows={4} /></div>
       ) : (
         rows.slice(0, 8).map((r, i) => (
           <div key={`${r.symbol}-${i}`} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "11px 16px", borderTop: i ? "1px solid var(--border)" : undefined, fontSize: 13 }}>
@@ -148,7 +155,7 @@ export default function MarketsAllView({ stocks }: { stocks: MarketRow[] }) {
     .sort((a, b) => a.ltp / (a.week52Low || 1) - b.ltp / (b.week52Low || 1))
     .slice(0, 5);
 
-  const empty = <p style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 12, margin: 0 }}>Loading…</p>;
+  const empty = <div style={{ padding: 16 }}><LoadingRows rows={4} /></div>;
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 14 }}>

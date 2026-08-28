@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Btn, Field, Panel, competitionApi, inputStyle } from "@/components/competition/admin-ui";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 type CompetitionData = {
   id: number;
@@ -58,7 +59,7 @@ export default function DeclareWinnerPage() {
     router.push("/super-admin/competition/list");
   }
 
-  if (loading) return <p>Loading…</p>;
+  if (loading) return <LoadingRows />;
   if (!data) return <p>Competition not found.</p>;
 
   if (data.resultDeclaredAt) {

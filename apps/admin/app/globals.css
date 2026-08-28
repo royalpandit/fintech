@@ -3320,6 +3320,19 @@ body.terminal-active .us-content {
   flex-wrap: wrap;
   gap: 12px;
   align-items: flex-end;
+  /* The filter row sat flush against .user-page-stats, which has bottom margin
+     but no top margin — so filters and stat cards touched. */
+  margin-bottom: 20px;
+}
+
+@media (max-width: 560px) {
+  .finuer-basket-filters-bar {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .finuer-basket-filter-field {
+    flex: 1 1 140px;
+  }
 }
 .finuer-basket-filter-field {
   display: flex;
@@ -3352,8 +3365,15 @@ body.terminal-active .us-content {
 .finuer-basket-page-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
-  margin-top: 4px;
+  gap: 20px;
+  margin-top: 12px;
+}
+
+@media (max-width: 700px) {
+  .finuer-basket-page-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
 }
 
 .finuer-basket-card {
@@ -3480,7 +3500,9 @@ body.terminal-active .us-content {
   gap: 8px;
   padding: 20px;
   text-align: center;
-  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
   border-radius: inherit;
   pointer-events: none;
 }
@@ -4350,9 +4372,21 @@ body.terminal-active .us-content {
 
 .user-page-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 20px;
+}
+
+@media (max-width: 900px) {
+  .user-page-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 460px) {
+  .user-page-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .user-page-stat-card {
@@ -10306,15 +10340,19 @@ body.agent-chat-active .us-content {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #6366f1;
-  opacity: 0.35;
+  /* Was a fixed #6366f1 at 0.35 opacity — dark indigo on the dark bubble, so
+     "thinking" looked like an empty bubble rather than an animation. Follows
+     the text colour now, so it reads in both themes. */
+  background: currentColor;
+  color: var(--text-muted);
+  opacity: 0.55;
   animation: agent-typing-bounce 1.2s ease-in-out infinite;
 }
 .agent-typing span:nth-child(2) { animation-delay: 0.15s; }
 .agent-typing span:nth-child(3) { animation-delay: 0.3s; }
 
 @keyframes agent-typing-bounce {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.45; }
   30% { transform: translateY(-4px); opacity: 1; }
 }
 
@@ -11568,7 +11606,10 @@ body.agent-chat-active .us-content {
 
 .rail-sticky {
   position: sticky;
-  top: 80px;
+  /* 16, not 80: .us-main / .admin-main are their own scroll containers, so this
+     offset is measured from below the fixed header already. At 80 the rail
+     floated a long way beneath the card it belongs next to. */
+  top: 16px;
 }
 
 @media (max-width: 1200px) {
@@ -11860,5 +11901,232 @@ body.agent-chat-active .us-content {
   .vt-ai-cta {
     justify-content: center;
     width: 100%;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SIMILAR TRADES — post detail right rail
+   The row used to be a single flex line: title (ellipsised) + status badge.
+   In a 320px rail the badge took ~90px and the title was cut after a few
+   words, so most rows read as "Zenith Industries — Q1 FY2…". The title now
+   owns a full-width line and wraps to two; the badge shares the meta row.
+   ══════════════════════════════════════════════════════════════════════════ */
+.similar-trade-row {
+  display: block;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+  transition:
+    border-color var(--dur-base, 0.18s) var(--ease-out, ease),
+    background var(--dur-base, 0.18s) var(--ease-out, ease);
+}
+
+.similar-trade-row:hover {
+  border-color: var(--primary);
+  background: var(--hover, var(--surface-2));
+}
+
+.similar-trade-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.similar-trade-meta {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.similar-trade-who {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.similar-trade-symbol {
+  font-weight: 700;
+  color: var(--primary-text, var(--primary));
+  margin-right: 5px;
+}
+
+.similar-trade-status {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   POST DISCLAIMER
+   The panel tint is the same in both themes, but the text was a fixed
+   #713f12 — a near-black amber. On the dark background that is effectively
+   invisible (about 1.3:1). Each theme gets the tone that actually reads.
+   ══════════════════════════════════════════════════════════════════════════ */
+.post-disclaimer {
+  padding: 14px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  font-style: italic;
+  margin-bottom: 16px;
+  /* :root is the dark palette in this codebase — see theme.css. */
+  color: #fcd34d;
+}
+
+html[data-theme="light"] .post-disclaimer {
+  color: #713f12;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BUY / SELL SHORTCUTS — Markets rows, ETF rows, Watchlist rows
+   ══════════════════════════════════════════════════════════════════════════
+   One segmented pill rather than two loose squares: joined, sharing a hairline
+   divider, so the pair reads as a single control the way an order-side toggle
+   does in a real terminal. Tinted at rest with coloured text — beside live
+   quotes, two solid blocks shout for attention the price deserves — and it
+   fills solid on hover so the committed state is unmistakable.
+
+   Colours are the app's existing buy/sell pair (#16a34a / #dc2626), used by
+   the paper-trading panels, so green means the same thing everywhere.
+   ────────────────────────────────────────────────────────────────────────── */
+.trade-btns {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  line-height: 1;
+}
+
+.trade-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  text-decoration: none;
+  cursor: pointer;
+  line-height: 1;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.trade-btn + .trade-btn {
+  border-left: 1px solid var(--border);
+}
+
+.trade-btn--buy {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
+}
+
+.trade-btn--sell {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.trade-btn--buy:hover,
+.trade-btn--buy:focus-visible {
+  background: #16a34a;
+  color: #fff;
+}
+
+.trade-btn--sell:hover,
+.trade-btn--sell:focus-visible {
+  background: #dc2626;
+  color: #fff;
+}
+
+.trade-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.trade-btns--sm .trade-btn {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 7px;
+  font-size: 11px;
+}
+
+.trade-btns--md .trade-btn {
+  min-width: 44px;
+  height: 32px;
+  padding: 0 13px;
+  font-size: 12.5px;
+}
+
+/* The full word is hidden at the small size; title and aria-label still read
+   "Buy <SYMBOL> with virtual funds". */
+.trade-btns--sm .trade-btn-full {
+  display: none;
+}
+
+@media (min-width: 1500px) {
+  .trade-btns--sm .trade-btn-full {
+    display: inline;
+  }
+}
+
+@media (max-width: 520px) {
+  .trade-btns--sm .trade-btn {
+    min-width: 23px;
+    height: 23px;
+    padding: 0 5px;
+    font-size: 10px;
+  }
+}
+
+/* ── Watchlist row Buy/Sell ────────────────────────────────────────────────
+   These actions existed only inside the row's ⋮ menu, so the watchlist read as
+   having no trade action at all. Shown on the row in the full-page variant
+   (the drawer is too narrow and keeps them in the menu), and only for
+   instruments the paper engine can fill — see isPaperTradable.
+
+   Always visible, not hover-revealed: hiding them meant only the selected row
+   showed buttons, so the feature looked broken on every other row. The buttons
+   themselves reuse the shared .trade-btns control above, so Markets, ETFs and
+   the Watchlist are identical rather than three near-copies.
+   ────────────────────────────────────────────────────────────────────────── */
+.wl-row-trade {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  flex-shrink: 0;
+  padding-left: 8px;
+}
+
+@media (max-width: 520px) {
+  .wl-row-trade {
+    padding-left: 4px;
   }
 }

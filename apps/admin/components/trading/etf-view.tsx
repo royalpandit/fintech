@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { FiArrowDownRight, FiArrowUpRight } from "react-icons/fi";
 import AddToWatchlistButton from "@/components/watchlist/add-to-watchlist-button";
+import TradeButtons from "@/components/trading/trade-buttons";
 
 type Etf = {
   symbol: string;
@@ -138,11 +139,16 @@ export default function EtfView() {
                         )}
                       </td>
                       <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                        <AddToWatchlistButton
-                          item={{ display: r.symbol, tradingSymbol: r.symbol, token: r.token, exchange: r.exchange, type: "EQ" }}
-                          compact
-                          label=""
-                        />
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
+                          {/* ETFs are EQ on NSE — same instrument the paper
+                              engine already fills for equities. */}
+                          <TradeButtons symbol={r.symbol} instrumentType="EQ" exchange={r.exchange} />
+                          <AddToWatchlistButton
+                            item={{ display: r.symbol, tradingSymbol: r.symbol, token: r.token, exchange: r.exchange, type: "EQ" }}
+                            compact
+                            label=""
+                          />
+                        </span>
                       </td>
                     </tr>
                   );

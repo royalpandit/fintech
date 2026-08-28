@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { Btn, Field, Panel, finuerBasketApi, inputStyle, tableStyle, tdStyle, thStyle } from "@/components/finuer-basket/admin-ui";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 type Market = { id: number; name: string; status: string };
 
@@ -63,7 +64,7 @@ export default function MarketsAdminPage() {
     <div style={{ display: "grid", gap: 16, gridTemplateColumns: "1fr 320px" }}>
       <Panel title="Markets">
         {loading ? (
-          <p>Loading…</p>
+          <LoadingRows />
         ) : (
           <table style={tableStyle}>
             <thead>

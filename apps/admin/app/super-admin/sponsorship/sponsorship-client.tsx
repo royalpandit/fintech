@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { FiEdit2, FiPlus, FiTrash2, FiX, FiCheck, FiStar } from "react-icons/fi";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 type Tier = {
   id: string;
@@ -417,7 +418,7 @@ export default function SponsorshipClient() {
         </h3>
 
         {loading ? (
-          <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Loading…</p>
+          <LoadingRows />
         ) : advisors.length === 0 ? (
           <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
             No advisor has ever held a placement.

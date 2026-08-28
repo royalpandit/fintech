@@ -427,12 +427,12 @@ export default function TradesClient({
                           </button>
                         );
                       })()}
-                      <Link href={`/user/markets/${t.id}#comments`} className="trade-act">
+                      <Link href={`/user/markets/${t.id}?from=trades#comments`} className="trade-act">
                         <FiMessageSquare size={14} /> {t._count.comments}
                       </Link>
                       <span style={{ flex: 1 }} />
                       <Link
-                        href={`/user/markets/${t.id}`}
+                        href={`/user/markets/${t.id}?from=trades`}
                         style={{
                           padding: "8px 18px",
                           borderRadius: 10,

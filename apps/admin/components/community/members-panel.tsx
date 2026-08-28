@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { fetchMembers } from "@/lib/community-client";
 import { UserPageBackLink } from "@/components/user/user-page-layout";
 import { formatRelativeTime } from "@/lib/format-date";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 const ROLE_COLORS: Record<string, string> = {
   owner: "#7c3aed",
@@ -38,7 +39,7 @@ export default function MembersPanel({
       <UserPageBackLink href={`/user/community/${slug}`}>Back to {communityName}</UserPageBackLink>
       <h1 className="comm-form-title">Members</h1>
       {loading ? (
-        <p className="comm-loading">Loading...</p>
+        <LoadingRows />
       ) : (
         <div className="comm-member-list">
           {members.map((m) => (

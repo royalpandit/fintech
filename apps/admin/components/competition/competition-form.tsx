@@ -13,6 +13,7 @@ import {
   type CompetitionVisibility,
 } from "@/lib/competition";
 import { Btn, Field, Panel, competitionApi, inputStyle } from "@/components/competition/admin-ui";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 type Props = {
   competitionId?: string;
@@ -140,7 +141,7 @@ export default function CompetitionFormPage({ competitionId, viewOnly = false }:
     router.push("/super-admin/competition/list");
   }
 
-  if (loading) return <p>Loading…</p>;
+  if (loading) return <LoadingRows />;
 
   const disabled = viewOnly;
 

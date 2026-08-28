@@ -5,6 +5,7 @@
 // restore the nav entries in components/user-shell.tsx + lib/super-admin.ts.
 
 import { notFound } from "next/navigation";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 export const dynamic = "force-dynamic";
 
@@ -186,7 +187,7 @@ export default function StockBasketRetiredPage() {
 //       </div>
 //
 //       {loading ? (
-//         <div style={{ color: "var(--text-muted)", padding: 40 }}>Loading…</div>
+//         <LoadingRows />
 //       ) : groups.length === 0 ? (
 //         <div style={{ textAlign: "center", padding: "80px 0" }}>
 //           <div

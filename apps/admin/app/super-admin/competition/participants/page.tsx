@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Btn, Field, Panel, competitionApi, tableStyle, tdStyle, thStyle, inputStyle } from "@/components/competition/admin-ui";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 type Competition = { id: number; title: string };
 type Participant = {
@@ -72,7 +73,7 @@ export default function ParticipantsAdminPage() {
       </div>
 
       {loading ? (
-        <p>Loading…</p>
+        <LoadingRows />
       ) : (
         <>
           <table style={tableStyle}>

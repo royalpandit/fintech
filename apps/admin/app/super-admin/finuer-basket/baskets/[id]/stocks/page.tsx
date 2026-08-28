@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { FiSearch, FiX } from "react-icons/fi";
 import { Btn, Field, Panel, finuerBasketApi, inputStyle, tableStyle, tdStyle, thStyle } from "@/components/finuer-basket/admin-ui";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 type Stock = {
   id: number;
@@ -244,7 +245,7 @@ export default function BasketStocksAdminPage() {
 
       <Panel title="Holdings (weights must sum to 100%)">
         {loading ? (
-          <p>Loading…</p>
+          <LoadingRows />
         ) : stocks.length === 0 ? (
           <div style={{ textAlign: "center", padding: "24px 12px", color: "var(--text-muted)" }}>
             <p style={{ margin: "0 0 12px" }}>No stocks added yet. Add constituent stocks to complete this basket.</p>

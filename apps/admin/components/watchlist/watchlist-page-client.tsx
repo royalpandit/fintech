@@ -119,6 +119,15 @@ export default function WatchlistPageClient() {
     router.push(q ? `/user/markets?q=${encodeURIComponent(q)}` : "/user/markets");
   };
 
+  const goTrade = (item: WatchlistItem | null, side: "buy" | "sell") => {
+    const sym = (item?.tradingSymbol ?? item?.display ?? "").trim().toUpperCase();
+    router.push(
+      sym
+        ? `/user/virtual-trading?symbol=${encodeURIComponent(sym)}&side=${side}`
+        : "/user/virtual-trading",
+    );
+  };
+
   return (
     <section className="wl-page">
       <div className="wl-page-header">
@@ -137,13 +146,16 @@ export default function WatchlistPageClient() {
           selected={selected}
           onSelect={setSelected}
           onOpenChart={item => goMarkets(item)}
+          /* These used to bounce to Markets, which left you to find the symbol
+             again and then find the trade form. Go straight to the paper-trade
+             form with the symbol and side already filled in. */
           onBuy={item => {
             setSelected(item);
-            goMarkets(item);
+            goTrade(item, "buy");
           }}
           onSell={item => {
             setSelected(item);
-            goMarkets(item);
+            goTrade(item, "sell");
           }}
           liveQuotes={liveQuotes}
         />

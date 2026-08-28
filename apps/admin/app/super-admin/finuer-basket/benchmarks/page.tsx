@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { Btn, Field, Panel, finuerBasketApi, inputStyle, tableStyle, tdStyle, thStyle } from "@/components/finuer-basket/admin-ui";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 type Market = { id: number; name: string };
 type Benchmark = { id: number; marketId: number; marketName: string | null; name: string };
@@ -94,7 +95,7 @@ export default function BenchmarksAdminPage() {
           </select>
         </div>
         {loading ? (
-          <p>Loading…</p>
+          <LoadingRows />
         ) : (
           <table style={tableStyle}>
             <thead>

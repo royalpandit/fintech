@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { UserPageBackLink, UserPageSection } from "@/components/user/user-page-layout";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 type Option = { id: number; label: string };
 type Prediction = {
@@ -105,7 +106,7 @@ export default function UserCompetitionDetailClient() {
   if (loading) {
     return (
       <UserPageSection>
-        <p>Loading…</p>
+        <LoadingRows />
       </UserPageSection>
     );
   }

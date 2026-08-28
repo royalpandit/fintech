@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { UserPageBackLink, UserPageHeader, UserPageSection } from "@/components/user/user-page-layout";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 type Row = {
   id: number;
@@ -46,7 +47,7 @@ export default function MyPredictionsPage() {
       </div>
 
       {loading ? (
-        <p>Loading…</p>
+        <LoadingRows />
       ) : rows.length === 0 ? (
         <p className="competition-empty">You haven&apos;t made any predictions yet.</p>
       ) : (

@@ -21,6 +21,7 @@ export default function UserFinuerBasketClient() {
   const [typeId, setTypeId] = useState("");
   const [timePeriod, setTimePeriod] = useState<FinuerBasketTimePeriod>("1_year");
   const [sortOrder, setSortOrder] = useState("");
+  const [access, setAccess] = useState<"" | "free" | "premium">("");
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [loading, setLoading] = useState(true);
@@ -51,15 +52,22 @@ export default function UserFinuerBasketClient() {
     load();
   }, [marketId, typeId, timePeriod, sortOrder, search]);
 
+  const visibleBaskets = useMemo(() => {
+    if (!access) return baskets;
+    return baskets.filter((b) =>
+      access === "premium" ? b.requiredPlan === "premium" : b.requiredPlan !== "premium",
+    );
+  }, [baskets, access]);
+
   const stats = useMemo(() => {
-    const outperforming = baskets.filter((b) => b.performance.performanceStatus === "outperforming").length;
+    const outperforming = visibleBaskets.filter((b) => b.performance.performanceStatus === "outperforming").length;
     const returns = baskets
       .map((b) => b.performance.basketReturn)
       .filter((v): v is number => v != null);
     const avg =
       returns.length > 0 ? returns.reduce((s, v) => s + v, 0) / returns.length : null;
     return { outperforming, avg };
-  }, [baskets]);
+  }, [visibleBaskets]);
 
   return (
     <UserPageSection>
@@ -113,6 +121,18 @@ export default function UserFinuerBasketClient() {
           </select>
         </div>
         <div className="finuer-basket-filter-field">
+          <span className="finuer-basket-filter-label">Access</span>
+          <select
+            className="finuer-basket-filter-select"
+            value={access}
+            onChange={(e) => setAccess(e.target.value as "" | "free" | "premium")}
+          >
+            <option value="">All Baskets</option>
+            <option value="free">Free</option>
+            <option value="premium">Premium</option>
+          </select>
+        </div>
+        <div className="finuer-basket-filter-field">
           <span className="finuer-basket-filter-label">Performance</span>
           <select
             className="finuer-basket-filter-select"
@@ -144,7 +164,7 @@ export default function UserFinuerBasketClient() {
 
       {/* Stat cards go after the search bar and filters. */}
       <UserPageStatsGrid>
-        <UserPageStatCard label="Active Baskets" value={loading ? "—" : String(baskets.length)} color="#0ea5e9" />
+        <UserPageStatCard label="Active Baskets" value={loading ? "—" : String(visibleBaskets.length)} color="#0ea5e9" />
         <UserPageStatCard
           label="Outperforming"
           value={loading ? "—" : String(stats.outperforming)}
@@ -163,14 +183,18 @@ export default function UserFinuerBasketClient() {
       </UserPageStatsGrid>
 
       {loading ? (
-        <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Loading baskets…</p>
-      ) : baskets.length === 0 ? (
+        <div className="finuer-basket-page-grid">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i} className="skel" style={{ height: 300, borderRadius: 16 }} />
+          ))}
+        </div>
+      ) : visibleBaskets.length === 0 ? (
         <div className="user-page-empty">
           <p style={{ margin: 0 }}>No baskets match your filters. Try adjusting search or filters.</p>
         </div>
       ) : (
         <div className="finuer-basket-page-grid">
-          {baskets.map((basket) => (
+          {visibleBaskets.map((basket) => (
             <FinuerBasketCard key={basket.id} basket={basket} timePeriod={timePeriod} />
           ))}
         </div>

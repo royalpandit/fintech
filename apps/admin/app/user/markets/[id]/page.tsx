@@ -41,7 +41,27 @@ function formatINR(n: number, compact = false) {
   return `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 }
 
-export default async function PostDetailPage({ params }: { params: { id: string } }) {
+/**
+ * Where "back" goes. The post detail page is reachable from several places, and
+ * inferring the origin from the post itself sent you to Markets even when you
+ * had opened it from the Feed. Callers pass ?from=<origin> instead; anything
+ * unrecognised falls back to the old post-shape inference.
+ */
+const BACK_TARGETS: Record<string, { href: string; label: string }> = {
+  feed: { href: "/user/feed", label: "Feed" },
+  trades: { href: "/user/trades", label: "Trade Calls" },
+  markets: { href: "/user/markets", label: "Markets" },
+  advisor: { href: "/user/advisors", label: "Finance Professionals" },
+  search: { href: "/user/feed", label: "Feed" },
+};
+
+export default async function PostDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams?: { from?: string };
+}) {
   const token = cookies().get("access_token")?.value ?? null;
   const auth = await requireAuthToken(token);
   const isAuthed = Boolean(auth);
@@ -180,18 +200,28 @@ export default async function PostDetailPage({ params }: { params: { id: string 
   // back link there; plain sentiment posts go back to /user/markets.
   const isTrade =
     post.entryPriceMin != null || post.targetPrice != null || post.stopLossPrice != null;
-  const backHref = isTrade ? "/user/trades" : "/user/markets";
-  const backLabel = isTrade ? "Trades" : "Markets";
+  const origin = searchParams?.from ? BACK_TARGETS[searchParams.from] : undefined;
+  const backHref = origin?.href ?? (isTrade ? "/user/trades" : "/user/markets");
+  const backLabel = origin?.label ?? (isTrade ? "Trade Calls" : "Markets");
+
+  /** Keep the origin as you hop between related posts, so back still returns to
+   *  wherever you actually came from rather than resetting to Markets. */
+  const carryFrom = searchParams?.from ? `?from=${encodeURIComponent(searchParams.from)}` : "";
 
   return (
-    <section>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 18, alignItems: "start" }}>
-        <div>
-          <Link href={backHref} className="user-page-back-link" style={{ marginBottom: 12 }}>
-            <span className="user-page-back-icon"><FiArrowLeft size={14} /></span>
-            {backLabel}
-          </Link>
+    <section className="user-page-section">
+      {/* Above the grid, not inside the content column: while it sat in the
+          left column, that column started with a ~32px link and the right one
+          started with a card, so the two could never line up. */}
+      <Link href={backHref} className="user-page-back-link" style={{ marginBottom: 12 }}>
+        <span className="user-page-back-icon"><FiArrowLeft size={14} /></span>
+        {backLabel}
+      </Link>
 
+      <div className="layout-rail">
+        {/* min-width:0 so a long title or the trade grid can't widen this
+            column past its track and shove the rail off-screen. */}
+        <div style={{ minWidth: 0 }}>
           <article
             style={{
               background: "var(--surface)",
@@ -426,19 +456,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
               </div>
             )}
 
-            <div
-              style={{
-                padding: 14,
-                background: "rgba(245,158,11,0.12)",
-                border: "1px solid rgba(245,158,11,0.30)",
-                borderRadius: 10,
-                fontSize: 12,
-                color: "#713f12",
-                lineHeight: 1.5,
-                fontStyle: "italic",
-                marginBottom: 16,
-              }}
-            >
+            <div className="post-disclaimer">
               <strong>Disclaimer:</strong> {post.disclaimer}
             </div>
             </MarketPostDetailBody>
@@ -628,7 +646,7 @@ export default async function PostDetailPage({ params }: { params: { id: string 
         </div>
 
         {/* Author profile sidebar */}
-        <aside style={{ position: "sticky", top: 80 }}>
+        <aside className="rail-sticky" style={{ minWidth: 0 }}>
           <article
             style={{
               background: "var(--surface)",
@@ -757,41 +775,29 @@ export default async function PostDetailPage({ params }: { params: { id: string 
                   return (
                     <Link
                       key={t.id}
-                      href={`/user/markets/${t.id}`}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "10px 12px",
-                        borderRadius: 10,
-                        border: "1px solid var(--border)",
-                        textDecoration: "none",
-                        color: "inherit",
-                      }}
+                      href={`/user/markets/${t.id}${carryFrom}`}
+                      className="similar-trade-row"
                     >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {t.title}
-                        </div>
-                        <div style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {t.marketSymbol ? `${t.marketSymbol} · ` : ""}
+                      {/* Title gets the full width and wraps to two lines. It
+                          used to share one line with the badge and be cut to an
+                          ellipsis after a few words, which in a 320px rail meant
+                          most rows read as "Zenith Industries — Q1 FY2…". */}
+                      <div className="similar-trade-title">{t.title}</div>
+
+                      <div className="similar-trade-meta">
+                        <span className="similar-trade-who">
+                          {t.marketSymbol && (
+                            <span className="similar-trade-symbol">{t.marketSymbol}</span>
+                          )}
                           {t.advisor?.fullName}
-                        </div>
+                        </span>
+                        <span
+                          className="similar-trade-status"
+                          style={{ color: st.tone, background: `${st.tone}1f` }}
+                        >
+                          {st.label}
+                        </span>
                       </div>
-                      <span
-                        style={{
-                          padding: "3px 8px",
-                          borderRadius: 999,
-                          fontSize: 9.5,
-                          fontWeight: 700,
-                          textTransform: "uppercase",
-                          color: st.tone,
-                          background: `${st.tone}1f`,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {st.label}
-                      </span>
                     </Link>
                   );
                 })}

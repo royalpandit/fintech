@@ -2,7 +2,11 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/auth";
-import { serializeSocialPost, socialPostInclude } from "@/lib/social-feed-serialize";
+import {
+  enrichSocialPosts,
+  serializeSocialPost,
+  socialPostInclude,
+} from "@/lib/social-feed-serialize";
 import { parsePostAccessType } from "@/lib/post-access";
 import type { FeedPostType, FeedSentiment } from "@/lib/social-feed-types";
 
@@ -30,29 +34,6 @@ async function upsertTags(postId: number, tagNames: string[]) {
   }
 }
 
-async function enrichPosts(userId: number | null, posts: Parameters<typeof serializeSocialPost>[0][]) {
-  const ids = posts.map((p) => p.id);
-  const [likes, saves, unlocks] = userId
-    ? await Promise.all([
-        prisma.communityReaction.findMany({
-          where: { userId, postId: { in: ids }, type: "like" },
-          select: { postId: true },
-        }),
-        prisma.communityPostSave.findMany({
-          where: { userId, postId: { in: ids } },
-          select: { postId: true },
-        }),
-        prisma.communityPostUnlock.findMany({
-          where: { userId, postId: { in: ids } },
-          select: { postId: true },
-        }),
-      ])
-    : [[], [], []];
-  const likedIds = new Set(likes.map((l) => l.postId));
-  const savedIds = new Set(saves.map((s) => s.postId));
-  const unlockedIds = new Set(unlocks.map((u) => u.postId));
-  return posts.map((p) => serializeSocialPost(p, { userId, likedIds, savedIds, unlockedIds }));
-}
 
 export async function GET(req: NextRequest) {
   try {
@@ -88,7 +69,7 @@ export async function GET(req: NextRequest) {
     const hasMore = rows.length > limit;
     const page = hasMore ? rows.slice(0, limit) : rows;
     const nextCursor = hasMore ? page[page.length - 1].id : null;
-    const posts = await enrichPosts(userId, page);
+    const posts = await enrichSocialPosts(userId, page);
 
     return ok({ posts, next_cursor: nextCursor });
   } catch (e) {

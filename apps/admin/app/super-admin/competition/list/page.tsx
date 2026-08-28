@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Btn, Panel, competitionApi, tableStyle, tdStyle, thStyle } from "@/components/competition/admin-ui";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 type Row = {
   id: number;
@@ -83,7 +84,7 @@ export default function CompetitionListPage() {
       <Panel title="Competition List">
         {error ? <p style={{ color: "#ef4444", fontSize: 13, marginBottom: 12 }}>{error}</p> : null}
         {loading ? (
-          <p>Loading…</p>
+          <LoadingRows />
         ) : (
           <table style={tableStyle}>
             <thead>

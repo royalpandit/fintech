@@ -107,7 +107,8 @@ export default async function PortfolioPage() {
 
   return (
     <section>
-      <div style={{ marginBottom: 20 }}>
+      <div className="page-head" style={{ marginBottom: 20 }}>
+        <div>
         <h1
           style={{
             margin: 0,
@@ -124,9 +125,18 @@ export default async function PortfolioPage() {
             ? "Paper holdings + connected broker portfolio"
             : "Connect your broker for AI-powered portfolio insights"}
         </p>
+        </div>
+
+        {/* Portfolio reviews positions; placing an order happens on Virtual
+            Trading, so the two pages stop being near-duplicates. */}
+        {isAuthed && (
+          <Link href="/user/virtual-trading" className="vt-ai-cta">
+            Trade
+          </Link>
+        )}
       </div>
 
-      {isAuthed && userId ? <PaperPortfolioSection userId={userId} /> : null}
+      {isAuthed && userId ? <PaperPortfolioSection userId={userId} showTradeForm={false} /> : null}
 
       {!isAuthed || !activePortfolio ? (
         <article

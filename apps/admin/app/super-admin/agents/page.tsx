@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 // Use the "-latest" aliases: they always track Google's current model, so they
 // don't 404 when a specific dated version (2.0-flash, 2.5-flash, …) is retired.
@@ -168,7 +169,7 @@ export default function AgentsPage() {
 
       {/* Agent cards */}
       {loading ? (
-        <div style={{ color: "var(--text-muted)", padding: 40 }}>Loading…</div>
+        <LoadingRows />
       ) : agents.length === 0 ? (
         <div style={{ textAlign: "center", padding: "80px 0" }}>
           <div style={{ width: 80, height: 80, borderRadius: "50%", background: "linear-gradient(135deg,#e8f0fe,#d2e3fc)", margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36 }}>🤖</div>

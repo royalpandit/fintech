@@ -13,6 +13,7 @@ import GlobalMarketsView from "@/components/trading/global-markets-view";
 import IpoView from "@/components/trading/ipo-view";
 import EtfView from "@/components/trading/etf-view";
 import AddToWatchlistButton from "@/components/watchlist/add-to-watchlist-button";
+import TradeButtons from "@/components/trading/trade-buttons";
 import type { WatchlistItem } from "@/components/trading/trading-terminal-types";
 import { MARKET_SECTORS, stockInSector } from "@/lib/market-sectors";
 
@@ -478,7 +479,16 @@ function MoverList({ title, rows, positive }: { title: string; rows: OverviewRow
                   </span>
                 </span>
               </Link>
-              <span style={{ paddingRight: 12, flexShrink: 0 }}>
+              <span
+                style={{
+                  paddingRight: 12,
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <TradeButtons symbol={r.symbol} instrumentType={r.type} exchange={r.exchange} />
                 <AddToWatchlistButton item={toWatchItem(r)} compact label="" />
               </span>
             </div>

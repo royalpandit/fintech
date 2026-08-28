@@ -6,13 +6,20 @@ import { placePaperOrder } from "@/lib/paper-trade-client";
 
 type Props = {
   defaultSymbol?: string;
+  /** Pre-selects Buy or Sell — set by the Buy/Sell shortcuts in Markets and
+   *  the Watchlist, which deep-link here with ?symbol= and ?side=. */
+  defaultSide?: "buy" | "sell";
   compact?: boolean;
 };
 
-export default function PaperTradeForm({ defaultSymbol = "", compact = false }: Props) {
+export default function PaperTradeForm({
+  defaultSymbol = "",
+  defaultSide = "buy",
+  compact = false,
+}: Props) {
   const router = useRouter();
   const [symbol, setSymbol] = useState(defaultSymbol);
-  const [side, setSide] = useState<"buy" | "sell">("buy");
+  const [side, setSide] = useState<"buy" | "sell">(defaultSide);
   const [quantity, setQuantity] = useState("1");
   const [orderType, setOrderType] = useState<"MARKET" | "LIMIT">("MARKET");
   const [limitPrice, setLimitPrice] = useState("");

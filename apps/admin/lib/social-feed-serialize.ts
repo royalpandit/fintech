@@ -1,3 +1,4 @@
+import { prisma } from "./prisma";
 import type { SocialPost } from "./social-feed-types";
 import { applyContentLock, isPostLocked, type PostAccessType } from "./post-access";
 
@@ -128,3 +129,41 @@ export const socialPostInclude = {
   symbols: { orderBy: { sortOrder: "asc" as const } },
   _count: { select: { comments: true, reactions: true, saves: true } },
 } as const;
+
+/**
+ * Attach the viewer-specific flags (liked / saved / unlocked) to a page of
+ * community rows.
+ *
+ * Lifted out of app/api/v1/community/posts/route.ts so the unified feed can
+ * serialize community posts the same way the community endpoint does — two
+ * copies of this would drift, and `liked_by_me` silently going stale in one of
+ * them is exactly the kind of bug nobody reports.
+ */
+export async function enrichSocialPosts(
+  userId: number | null,
+  posts: Parameters<typeof serializeSocialPost>[0][],
+) {
+  const ids = posts.map((p) => p.id);
+  const [likes, saves, unlocks] =
+    userId && ids.length > 0
+      ? await Promise.all([
+          prisma.communityReaction.findMany({
+            where: { userId, postId: { in: ids }, type: "like" },
+            select: { postId: true },
+          }),
+          prisma.communityPostSave.findMany({
+            where: { userId, postId: { in: ids } },
+            select: { postId: true },
+          }),
+          prisma.communityPostUnlock.findMany({
+            where: { userId, postId: { in: ids } },
+            select: { postId: true },
+          }),
+        ])
+      : [[], [], []];
+
+  const likedIds = new Set(likes.map((l) => l.postId));
+  const savedIds = new Set(saves.map((s) => s.postId));
+  const unlockedIds = new Set(unlocks.map((u) => u.postId));
+  return posts.map((p) => serializeSocialPost(p, { userId, likedIds, savedIds, unlockedIds }));
+}

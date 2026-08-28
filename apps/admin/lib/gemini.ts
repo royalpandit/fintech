@@ -1,5 +1,30 @@
 const BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
+/**
+ * Google Search grounding, enabled for every agent.
+ *
+ * Several agent prompts instruct the model to look things up — the Earnings
+ * Predictor says "MANDATORY LIVE EVENT SCRUB: You must perform an immediate
+ * live web search". With no tools declared, the model still tried to call one
+ * and the request died with finishReason MALFORMED_FUNCTION_CALL and zero text
+ * parts, so the chat returned an empty reply.
+ *
+ * Grounding also fixes the quieter problem: ungrounded, the same agent answered
+ * with a fabricated earnings date and spot price (Feb 2025 / $138.25) more than
+ * a year out of date. For a finance product, confidently stale numbers are the
+ * worse of the two failures.
+ *
+ * The model only searches when it decides to, so this costs nothing for agents
+ * that don't need it.
+ */
+const GROUNDING_TOOLS = [{ google_search: {} }];
+
+/**
+ * Thinking tokens count against maxOutputTokens on these models, and grounding
+ * adds a retrieval round trip, so 2048 left very little for the answer itself.
+ */
+const MAX_OUTPUT_TOKENS = 4096;
+
 export type GeminiRole = "user" | "model";
 
 export interface GeminiMessage {
@@ -36,7 +61,8 @@ export function streamGeminiChat(opts: {
   const body = JSON.stringify({
     system_instruction: { parts: [{ text: systemPrompt }] },
     contents: buildContents(history, userMessage),
-    generationConfig: { temperature, maxOutputTokens: 2048 },
+    generationConfig: { temperature, maxOutputTokens: MAX_OUTPUT_TOKENS },
+    tools: GROUNDING_TOOLS,
   });
 
   const encoder = new TextEncoder();
@@ -44,6 +70,7 @@ export function streamGeminiChat(opts: {
   return new ReadableStream({
     async start(controller) {
       let fullText = "";
+      let finishReason = "";
       try {
         const res = await fetch(url, {
           method: "POST",
@@ -85,7 +112,13 @@ export function streamGeminiChat(opts: {
             if (!raw || raw === "[DONE]") continue;
             try {
               const parsed = JSON.parse(raw);
-              const text: string = parsed.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+              const cand = parsed.candidates?.[0];
+              if (cand?.finishReason) finishReason = cand.finishReason;
+              // Join every part: a grounded turn can interleave parts, so
+              // reading only parts[0] silently drops the rest.
+              const text: string = (cand?.content?.parts ?? [])
+                .map((part: { text?: string }) => part.text ?? "")
+                .join("");
               if (text) {
                 fullText += text;
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
@@ -119,7 +152,8 @@ export async function geminiChat(opts: {
     body: JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents: buildContents(history, userMessage),
-      generationConfig: { temperature, maxOutputTokens: 2048 },
+      generationConfig: { temperature, maxOutputTokens: MAX_OUTPUT_TOKENS },
+      tools: GROUNDING_TOOLS,
     }),
   });
   const data = await res.json();

@@ -101,7 +101,15 @@ export default function UserFinuerBasketDetailClient() {
   if (loading) {
     return (
       <UserPageSection>
-        <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Loading basket…</p>
+        <div style={{ display: "grid", gap: 16 }}>
+          <div className="skel" style={{ height: 92, borderRadius: 16 }} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="skel" style={{ height: 78, borderRadius: 12 }} />
+            ))}
+          </div>
+          <div className="skel" style={{ height: 260, borderRadius: 16 }} />
+        </div>
       </UserPageSection>
     );
   }

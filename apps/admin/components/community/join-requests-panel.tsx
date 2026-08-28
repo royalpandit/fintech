@@ -5,6 +5,7 @@ import Link from "next/link";
 import { fetchJoinRequests, reviewJoinRequest } from "@/lib/community-client";
 import { UserPageBackLink } from "@/components/user/user-page-layout";
 import { formatRelativeTime } from "@/lib/format-date";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 export default function JoinRequestsPanel({ slug, communityName }: { slug: string; communityName: string }) {
   const [requests, setRequests] = useState<
@@ -36,7 +37,7 @@ export default function JoinRequestsPanel({ slug, communityName }: { slug: strin
       <UserPageBackLink href={`/user/community/${slug}`}>Back to {communityName}</UserPageBackLink>
       <h1 className="comm-form-title">Join Requests</h1>
       {loading ? (
-        <p className="comm-loading">Loading...</p>
+        <LoadingRows />
       ) : requests.length === 0 ? (
         <div className="comm-empty"><p>No pending requests.</p></div>
       ) : (

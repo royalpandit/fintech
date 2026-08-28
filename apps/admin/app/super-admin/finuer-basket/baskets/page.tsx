@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Btn, Panel, finuerBasketApi, tableStyle, tdStyle, thStyle } from "@/components/finuer-basket/admin-ui";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 type Basket = {
   id: number;
@@ -124,7 +125,7 @@ export default function BasketListAdminPage() {
       </div>
 
       {loading ? (
-        <p>Loading…</p>
+        <LoadingRows />
       ) : (
         <div style={{ overflowX: "auto" }}>
           <table style={tableStyle}>

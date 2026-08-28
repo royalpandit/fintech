@@ -14,7 +14,22 @@ function formatINR(n: number) {
   return `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 }
 
-export default async function PaperPortfolioSection({ userId }: { userId: number }) {
+/**
+ * Paper holdings + P&L.
+ *
+ * `showTradeForm` exists because this section embedded its own "Place paper
+ * trade" form, and both /user/portfolio and /user/virtual-trading render the
+ * section — so Virtual Trading showed the form twice (once in its own Quick
+ * trade card, once in here) and the two pages looked like the same screen.
+ * Trading now lives on Virtual Trading; Portfolio is for reviewing positions.
+ */
+export default async function PaperPortfolioSection({
+  userId,
+  showTradeForm = true,
+}: {
+  userId: number;
+  showTradeForm?: boolean;
+}) {
   const wallet = await prisma.virtualWallet.findUnique({
     where: { userId },
     include: { trades: { orderBy: { tradedAt: "asc" } } },
@@ -209,17 +224,19 @@ export default async function PaperPortfolioSection({ userId }: { userId: number
         )}
       </article>
 
-      <article
-        style={{
-          background: "var(--surface)",
-          border: "1px solid var(--border)",
-          borderRadius: 14,
-          padding: 16,
-        }}
-      >
-        <h3 style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 600 }}>Place paper trade</h3>
-        <PaperTradeForm compact />
-      </article>
+      {showTradeForm && (
+        <article
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: 14,
+            padding: 16,
+          }}
+        >
+          <h3 style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 600 }}>Place paper trade</h3>
+          <PaperTradeForm compact />
+        </article>
+      )}
     </div>
   );
 }

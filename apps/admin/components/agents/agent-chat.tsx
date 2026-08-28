@@ -171,6 +171,21 @@ export default function AgentChat({
         body: JSON.stringify({ message: messageForModel, sessionId: sessionId || undefined }),
       });
 
+      // A non-SSE reply (401 session expired, 404 agent, 500) has a body, but no
+      // line in it starts with "data: " — so the parser below found nothing, the
+      // placeholder kept `streaming: true`, and the chat sat on a typing
+      // indicator forever with no clue why. Surface it instead.
+      if (!res.ok) {
+        let detail = `Request failed (${res.status})`;
+        try {
+          const j = await res.json();
+          if (j?.error) detail = String(j.error);
+        } catch {
+          /* not JSON — keep the status line */
+        }
+        if (res.status === 401) detail = "Your session expired — sign in again to keep chatting.";
+        throw new Error(detail);
+      }
       if (!res.body) throw new Error("No response body");
 
       const reader = res.body.getReader();
@@ -178,6 +193,7 @@ export default function AgentChat({
       let buf = "";
       let fullText = "";
       let gotSession = false;
+      let sawError = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -216,6 +232,7 @@ export default function AgentChat({
               });
             }
             if (d.error) {
+              sawError = true;
               setMessages((prev) => {
                 const next = [...prev];
                 next[next.length - 1] = {
@@ -231,10 +248,29 @@ export default function AgentChat({
           }
         }
       }
+
+      // The stream can close having produced nothing — a model that returns no
+      // candidates, or a response cut off before any text. Never leave the
+      // placeholder stuck mid-stream.
+      if (!fullText && !sawError) {
+        setMessages((prev) => {
+          const next = [...prev];
+          next[next.length - 1] = {
+            role: "model",
+            content: "⚠️ No response came back. Try again, or rephrase your message.",
+            streaming: false,
+          };
+          return next;
+        });
+      }
     } catch (e) {
       setMessages((prev) => {
         const next = [...prev];
-        next[next.length - 1] = { role: "model", content: `⚠️ ${String(e)}`, streaming: false };
+        next[next.length - 1] = {
+          role: "model",
+          content: `⚠️ ${e instanceof Error ? e.message : String(e)}`,
+          streaming: false,
+        };
         return next;
       });
     } finally {

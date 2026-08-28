@@ -30,6 +30,7 @@ import type { SocialPost } from "@/lib/social-feed-types";
 import { formatRelativeTime } from "@/lib/format-date";
 import CommunityPostImages from "@/components/community/community-post-images";
 import { useToast } from "@/components/toast";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 const SORTS: { id: CommunitySort; label: string }[] = [
   { id: "latest", label: "Latest" },
@@ -323,7 +324,7 @@ export default function CommunityDetailClient({
           </div>
           <div className="comm-post-list">
             {loading ? (
-              <p className="comm-loading">Loading posts...</p>
+              <LoadingRows />
             ) : posts.length === 0 ? (
               <div className="comm-empty">
                 <p>No posts yet.</p>

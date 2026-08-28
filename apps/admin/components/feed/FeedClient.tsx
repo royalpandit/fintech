@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { formatRelativeTime } from "@/lib/format-date";
 import TradePanel from "@/components/trades/trade-panel";
@@ -11,14 +11,21 @@ import {
   FiUserCheck,
   FiMoreHorizontal,
   FiFlag,
+  FiFileText,
+  FiPlus,
   FiSlash,
   FiSend,
   FiX,
+  FiSearch,
   FiTrendingUp,
   FiChevronDown,
 } from "react-icons/fi";
 import { CheckCircle } from "@/components/advisor-ui/icons";
-import SocialFeedSection from "@/components/social/social-feed-section";
+import CommunityFeedItem from "@/components/feed/community-feed-item";
+import { LoadingCards } from "@/components/loading-shimmer";
+import PostComposerModal from "@/components/social/post-composer-modal";
+import type { SocialPost } from "@/lib/social-feed-types";
+import type { UnifiedFeedItem } from "@/lib/unified-feed";
 import PremiumPostOverlay from "@/components/posts/premium-post-overlay";
 import PremiumUnlockModal from "@/components/posts/premium-unlock-modal";
 import { usePremiumPostUnlock } from "@/components/posts/use-premium-post-unlock";
@@ -84,9 +91,10 @@ type FeedPost = {
 };
 
 export type FeedClientProps = {
-  initialFollowedPosts: FeedPost[];
-  initialDiscoverPosts: FeedPost[];
-  initialNextCursor: number | null;
+  /** First page of the merged stream, already ranked follow-first. */
+  initialItems: UnifiedFeedItem[];
+  /** Opaque `<phase>:<iso>` cursor; null when the stream is exhausted. */
+  initialNextCursor: string | null;
   isAuthed: boolean;
   userId: number | null;
   initialFollowedIds: number[];
@@ -97,11 +105,28 @@ export type FeedClientProps = {
     userId: number;
     profileImageUrl?: string | null;
     user: { id: number; fullName: string; _count: { followers: number } } | null;
+    /** Paid placement — labelled as such in the rail. See lib/sponsorship.ts. */
+    sponsored: boolean;
   }[];
-  trendingSymbols: { marketSymbol: string | null; _count: { _all: number } }[];
+  trendingPosts: {
+    id: number;
+    title: string;
+    marketSymbol: string | null;
+    advisor: { fullName: string } | null;
+    _count: { reactions: number; comments: number };
+  }[];
 };
 
 // ─── Constants ────────────────────────────────────────────
+
+/** Stand-in rows for the Market news card until a news API is wired up. They
+ *  are clearly labelled as samples in the UI so nobody mistakes them for live
+ *  market data. */
+const MARKET_NEWS_PLACEHOLDER = [
+  { headline: "Nifty ends higher as IT and banking stocks lead gains", source: "Market wrap", when: "Sample" },
+  { headline: "RBI holds repo rate; commentary stays data-dependent", source: "Policy", when: "Sample" },
+  { headline: "FII flows turn positive for the third straight session", source: "Flows", when: "Sample" },
+];
 
 const SENTIMENT_COLORS: Record<string, string> = {
   bullish: "#16a34a",
@@ -496,7 +521,7 @@ function PostCard({
           </div>
         ) : (
           <Link
-            href={`/user/markets/${postState.id}`}
+            href={`/user/markets/${postState.id}?from=feed`}
             style={{ textDecoration: "none", color: "inherit" }}
           >
             <h3
@@ -988,8 +1013,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 // ─── Main FeedClient ──────────────────────────────────────
 
 export default function FeedClient({
-  initialFollowedPosts,
-  initialDiscoverPosts,
+  initialItems,
   initialNextCursor,
   isAuthed,
   userId,
@@ -998,24 +1022,36 @@ export default function FeedClient({
   currentUserAvatar,
   currentUserName,
   suggestedAdvisors,
-  trendingSymbols,
+  trendingPosts,
 }: FeedClientProps) {
   // Feed state
-  const [discoverPosts, setDiscoverPosts] = useState<FeedPost[]>(initialDiscoverPosts);
-  const [nextCursor, setNextCursor] = useState<number | null>(initialNextCursor);
+  const [items, setItems] = useState<UnifiedFeedItem[]>(initialItems);
+  const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [reloading, setReloading] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  /** Raw input vs the debounced value the query actually uses — typing shouldn't
+   *  fire a request per keystroke. */
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+
+  /** Advisor posts only — the counters and comment state below are keyed by
+   *  marketPost id, and community posts carry their own state in their card. */
+  const advisorPosts = useMemo(
+    () => items.filter((i) => i.kind === "advisor").map((i) => i.post as FeedPost),
+    [items],
+  );
 
   // Per-post interaction state
   const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set(initialLikedPostIds));
+  const seedAdvisor = initialItems
+    .filter((i) => i.kind === "advisor")
+    .map((i) => i.post as FeedPost);
   const [likeCounts, setLikeCounts] = useState<Map<number, number>>(
-    new Map(
-      [...initialFollowedPosts, ...initialDiscoverPosts].map((p) => [p.id, p._count.reactions]),
-    ),
+    new Map(seedAdvisor.map((p) => [p.id, p._count.reactions])),
   );
   const [commentCounts, setCommentCounts] = useState<Map<number, number>>(
-    new Map(
-      [...initialFollowedPosts, ...initialDiscoverPosts].map((p) => [p.id, p._count.comments]),
-    ),
+    new Map(seedAdvisor.map((p) => [p.id, p._count.comments])),
   );
 
   // Follow state
@@ -1040,8 +1076,6 @@ export default function FeedClient({
   // Feed filters (client-side: sort + direction/asset/risk/access).
   const [filters, setFilters] = useState<FeedFilters>(DEFAULT_FEED_FILTERS);
 
-  // Which feed the tabs are showing.
-  const [tab, setTab] = useState<"foryou" | "community" | "advisors">("foryou");
 
   function applyFilters(posts: FeedPost[]): FeedPost[] {
     const out = posts.filter((p) => {
@@ -1063,37 +1097,59 @@ export default function FeedClient({
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // ── Infinite scroll ──────────────────────────────────────
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  const feedQuery = useCallback(
+    (cursor: string | null) => {
+      const params = new URLSearchParams({ limit: "12", source: filters.source });
+      if (cursor) params.set("cursor", cursor);
+      if (filters.kinds.length === 1) params.set("kinds", filters.kinds[0]);
+      if (search) params.set("q", search);
+      return `/api/v1/feed?${params}`;
+    },
+    [filters.source, filters.kinds, search],
+  );
+
+  /** Merge a page in, dropping anything already on screen. The unified cursor
+   *  is inclusive, so the boundary row is expected to repeat. */
+  const appendItems = useCallback((incoming: UnifiedFeedItem[]) => {
+    setItems((prev) => {
+      const seen = new Set(prev.map((i) => i.key));
+      const fresh = incoming.filter((i) => !seen.has(i.key));
+      return fresh.length ? [...prev, ...fresh] : prev;
+    });
+    setLikeCounts((prev) => {
+      const next = new Map(prev);
+      incoming.forEach((i) => {
+        if (i.kind === "advisor") next.set(i.post.id, i.post._count.reactions);
+      });
+      return next;
+    });
+    setCommentCounts((prev) => {
+      const next = new Map(prev);
+      incoming.forEach((i) => {
+        if (i.kind === "advisor") next.set(i.post.id, i.post._count.comments);
+      });
+      return next;
+    });
+  }, []);
+
   const fetchMore = useCallback(async () => {
     if (loadingMore || !nextCursor) return;
     setLoadingMore(true);
     try {
-      const res = await fetch(`/api/v1/user/feed?cursor=${nextCursor}&limit=10`);
+      const res = await fetch(feedQuery(nextCursor));
       if (!res.ok) return;
       const json = await res.json();
-      const newPosts: FeedPost[] = json.data ?? [];
-      const newLiked: number[] = json.likedPostIds ?? [];
-
-      setDiscoverPosts((prev) => [...prev, ...newPosts]);
+      appendItems((json.items ?? []) as UnifiedFeedItem[]);
       setNextCursor(json.nextCursor ?? null);
-      setLikedPosts((prev) => {
-        const next = new Set(prev);
-        newLiked.forEach((id) => next.add(id));
-        return next;
-      });
-      setLikeCounts((prev) => {
-        const next = new Map(prev);
-        newPosts.forEach((p) => next.set(p.id, p._count.reactions));
-        return next;
-      });
-      setCommentCounts((prev) => {
-        const next = new Map(prev);
-        newPosts.forEach((p) => next.set(p.id, p._count.comments));
-        return next;
-      });
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, nextCursor]);
+  }, [loadingMore, nextCursor, feedQuery, appendItems]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -1103,9 +1159,38 @@ export default function FeedClient({
     const sentinel = sentinelRef.current;
     if (sentinel) observer.observe(sentinel);
     return () => observer.disconnect();
-    // `tab` is included so the observer re-attaches to the sentinel when it
-    // mounts on the Advisors / For-You-fallback tabs.
-  }, [fetchMore, nextCursor, tab]);
+  }, [fetchMore, nextCursor]);
+
+  /**
+   * `source` and `kinds` change the query, not just what we hide, so they need
+   * a round trip — unlike the other filters, which narrow rows already loaded.
+   * Skips the very first run so we don't immediately refetch the page the
+   * server already rendered.
+   */
+  const didMountFilters = useRef(false);
+  useEffect(() => {
+    if (!didMountFilters.current) {
+      didMountFilters.current = true;
+      return;
+    }
+    let cancelled = false;
+    setReloading(true);
+    (async () => {
+      try {
+        const res = await fetch(feedQuery(null));
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        if (cancelled) return;
+        setItems((json.items ?? []) as UnifiedFeedItem[]);
+        setNextCursor(json.nextCursor ?? null);
+      } finally {
+        if (!cancelled) setReloading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [feedQuery]);
 
   // ── Like ─────────────────────────────────────────────────
   async function toggleLike(postId: number) {
@@ -1289,17 +1374,203 @@ export default function FeedClient({
     );
   }
 
-  const filteredFollowed = applyFilters(initialFollowedPosts);
-  const filteredDiscover = applyFilters(discoverPosts);
-  const hasFollowed = filteredFollowed.length > 0;
+  /**
+   * Client-side filters (sentiment / asset / risk / access / horizon / status /
+   * sort) apply to advisor posts only — a community post has none of those
+   * fields. Rather than silently dropping community posts whenever any of them
+   * is set, they pass through untouched: the "Post type" toggle is how you
+   * exclude them.
+   */
+  const visibleItems = useMemo(() => {
+    const keep = items.filter((item) => {
+      if (item.kind !== "advisor") return true;
+      const p = item.post;
+      if (filters.sentiment !== "all" && p.sentiment !== filters.sentiment) return false;
+      if (filters.asset !== "all" && p.assetType !== filters.asset) return false;
+      if (filters.risk !== "all" && p.riskLevel !== filters.risk) return false;
+      if (filters.access !== "all" && (p.post_access_type ?? "free") !== filters.access) return false;
+      if (filters.horizon !== "all" && p.timeframeType !== filters.horizon) return false;
+      if (filters.status !== "all" && p.tradeStatus !== filters.status) return false;
+      return true;
+    });
 
-  // Discover feed (all approved advisors) + infinite scroll — reused by the
-  // "Advisors" tab and as the "For You" fallback when you follow nobody.
-  function renderDiscoverFeed() {
+    // Preserve the server's follow-first ranking on the default sort; an
+    // explicit oldest-first is a deliberate override, so it sorts across the
+    // whole stream.
+    if (filters.sort === "oldest") {
+      return [...keep].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+    }
+    return keep;
+  }, [items, filters]);
+
+  const followedCount = visibleItems.filter((i) => i.followed).length;
+
+  function renderItem(item: UnifiedFeedItem, index: number) {
+    // A single divider where the followed run ends and discovery begins, so the
+    // ranking is legible instead of looking like an arbitrary jumble.
+    const showDivider =
+      filters.source === "all" &&
+      filters.sort === "latest" &&
+      followedCount > 0 &&
+      index === followedCount;
+
     return (
-      <>
-        <div style={{ display: "grid", gap: 12 }}>
-          {filteredDiscover.length === 0 && !loadingMore ? (
+      <div key={item.key}>
+        {showDivider && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              margin: "6px 0 14px",
+              color: "var(--text-muted)",
+              fontSize: 11,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: 1,
+            }}
+          >
+            <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
+            Suggested for you
+            <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
+          </div>
+        )}
+        {item.kind === "advisor" ? (
+          renderPost(item.post as FeedPost)
+        ) : (
+          <CommunityFeedItem
+            post={item.post as SocialPost}
+            isAuthed={isAuthed}
+            onRemoved={(id) =>
+              setItems((prev) => prev.filter((i) => !(i.kind === "community" && i.post.id === id)))
+            }
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="layout-rail">
+        {/* Feed column */}
+        <div style={{ minWidth: 0 }}>
+          {/* One merged stream. The old For You / Community / Advisors tabs are
+              now the "Show posts from" and "Post type" controls in Filter. */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 11,
+                fontWeight: 700,
+                color: "var(--text-muted)",
+                textTransform: "uppercase",
+                letterSpacing: 1,
+              }}
+            >
+              {search
+                ? `Results for “${search}”`
+                : filters.source === "following"
+                  ? "From people you follow"
+                  : filters.source === "discover"
+                    ? "Discover"
+                    : "Your feed"}
+            </h2>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ position: "relative", flex: "1 1 190px", minWidth: 150 }}>
+                <FiSearch
+                  size={14}
+                  style={{
+                    position: "absolute",
+                    left: 11,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "var(--text-muted)",
+                    pointerEvents: "none",
+                  }}
+                />
+                <input
+                  type="search"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search posts or people…"
+                  aria-label="Search posts, symbols, or people"
+                  style={{
+                    width: "100%",
+                    height: 38,
+                    padding: "0 32px 0 32px",
+                    borderRadius: 10,
+                    border: "1px solid var(--border)",
+                    background: "var(--surface)",
+                    color: "var(--text)",
+                    fontSize: 13,
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchInput("")}
+                    aria-label="Clear search"
+                    style={{
+                      position: "absolute",
+                      right: 8,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      border: "none",
+                      background: "var(--surface-2)",
+                      color: "var(--text-muted)",
+                      width: 20,
+                      height: 20,
+                      borderRadius: "50%",
+                      display: "grid",
+                      placeItems: "center",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <FiX size={12} />
+                  </button>
+                )}
+              </div>
+
+              {isAuthed && (
+                <button
+                  type="button"
+                  onClick={() => setComposerOpen(true)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "9px 14px",
+                    borderRadius: 10,
+                    border: "1px solid var(--border)",
+                    background: "var(--surface)",
+                    color: "var(--text)",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  <FiPlus size={14} /> Post
+                </button>
+              )}
+              <FeedFilter value={filters} onChange={setFilters} />
+            </div>
+          </div>
+
+          {reloading ? (
+            <LoadingCards count={3} />
+          ) : visibleItems.length === 0 ? (
             <article
               style={{
                 background: "var(--surface)",
@@ -1311,164 +1582,42 @@ export default function FeedClient({
                 fontSize: 13,
               }}
             >
-              {discoverPosts.length === 0
-                ? "No posts yet — check back soon."
+              {search
+                ? `Nothing matches “${search}”.`
+                : items.length === 0
+                ? filters.source === "following"
+                  ? "Nothing here yet — follow a few people and their posts will show up."
+                  : "No posts yet — check back soon."
                 : "No posts match your filters."}
             </article>
           ) : (
-            filteredDiscover.map(renderPost)
+            <div style={{ display: "grid", gap: 12 }}>{visibleItems.map(renderItem)}</div>
           )}
-        </div>
 
-        <div ref={sentinelRef} style={{ height: 1 }} />
+          <div ref={sentinelRef} style={{ height: 1 }} />
 
-        {loadingMore && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "20px 0",
-              color: "var(--text-muted)",
-              fontSize: 13,
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <span
+          {loadingMore && (
+            <div style={{ marginTop: 12 }}>
+              <LoadingCards count={2} />
+            </div>
+          )}
+
+          {!nextCursor && !loadingMore && items.length > 0 && (
+            <p
               style={{
-                width: 16,
-                height: 16,
-                borderRadius: "50%",
-                border: "2px solid var(--border)",
-                borderTopColor: "#0ea5e9",
-                animation: "spin 0.7s linear infinite",
-                display: "inline-block",
+                textAlign: "center",
+                padding: "20px 0",
+                color: "var(--text-muted)",
+                fontSize: 12,
               }}
-            />
-            Loading more…
-          </div>
-        )}
-
-        {!nextCursor && discoverPosts.length > 0 && (
-          <p style={{ textAlign: "center", padding: "20px 0", color: "var(--text-muted)", fontSize: 12 }}>
-            You&apos;re all caught up.
-          </p>
-        )}
-      </>
-    );
-  }
-
-  const TABS = [
-    { key: "foryou" as const, label: "For You" },
-    { key: "community" as const, label: "Community" },
-    { key: "advisors" as const, label: "Advisors" },
-  ];
-
-  return (
-    <>
-      <div className="user-layout-rail">
-        {/* Feed column */}
-        <div>
-          {/* Tabs: For You (advisors you follow) · Community · Advisors (discover) */}
-          <div
-            style={{
-              display: "flex",
-              gap: 4,
-              marginBottom: 16,
-              borderBottom: "1px solid var(--border)",
-            }}
-          >
-            {TABS.map((t) => {
-              const active = tab === t.key;
-              return (
-                <button
-                  key={t.key}
-                  type="button"
-                  onClick={() => setTab(t.key)}
-                  style={{
-                    appearance: "none",
-                    border: "none",
-                    background: "transparent",
-                    padding: "10px 16px",
-                    marginBottom: -1,
-                    fontSize: 13.5,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    color: active ? "var(--brand-primary, #0ea5e9)" : "var(--text-muted)",
-                    borderBottom: `2px solid ${active ? "var(--brand-primary, #0ea5e9)" : "transparent"}`,
-                  }}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {tab === "community" ? (
-            <SocialFeedSection
-              isAuthed={isAuthed}
-              userName={currentUserName ?? "You"}
-              userAvatar={currentUserAvatar ?? null}
-            />
-          ) : (
-            <>
-              {/* Filter row (advisor feeds) */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 10,
-                }}
-              >
-                <h2
-                  style={{
-                    margin: 0,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: "var(--text-muted)",
-                    textTransform: "uppercase",
-                    letterSpacing: 1,
-                  }}
-                >
-                  {tab === "foryou" ? "For You" : "All advisors"}
-                </h2>
-                <FeedFilter value={filters} onChange={setFilters} />
-              </div>
-
-              {tab === "foryou" ? (
-                hasFollowed ? (
-                  <div style={{ display: "grid", gap: 12 }}>{filteredFollowed.map(renderPost)}</div>
-                ) : (
-                  <>
-                    <article
-                      style={{
-                        background: "var(--surface)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 14,
-                        padding: 20,
-                        marginBottom: 16,
-                        textAlign: "center",
-                        color: "var(--text-muted)",
-                        fontSize: 13,
-                      }}
-                    >
-                      Follow advisors to personalise this feed. Meanwhile, here&apos;s what&apos;s
-                      trending across all advisors:
-                    </article>
-                    {renderDiscoverFeed()}
-                  </>
-                )
-              ) : (
-                renderDiscoverFeed()
-              )}
-            </>
+            >
+              You&apos;re all caught up.
+            </p>
           )}
         </div>
 
         {/* Right rail */}
-        <aside style={{ display: "grid", gap: 14 }}>
+        <aside style={{ display: "grid", gap: 14, minWidth: 0 }}>
           {/* Suggested advisors */}
           <article
             style={{
@@ -1512,8 +1661,34 @@ export default function FeedClient({
                           {sa.user?.fullName}
                           <CheckCircle size={11} style={{ color: "#10b981" }} />
                         </div>
-                        <div style={{ fontSize: 10, color: "var(--text-muted)" }}>
-                          {sa.user?._count.followers ?? 0} followers
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: "var(--text-muted)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 5,
+                          }}
+                        >
+                          {/* Paid placement has to be labelled — this rail is a
+                              promotion slot advisors buy, not an organic pick. */}
+                          {sa.sponsored && (
+                            <span
+                              style={{
+                                padding: "1px 5px",
+                                borderRadius: 4,
+                                background: "rgba(245,158,11,0.16)",
+                                color: "#b45309",
+                                fontWeight: 800,
+                                fontSize: 9,
+                                letterSpacing: 0.3,
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              Sponsored
+                            </span>
+                          )}
+                          <span>{sa.user?._count.followers ?? 0} followers</span>
                         </div>
                       </div>
                       {isAuthed && advisorId && (
@@ -1579,36 +1754,138 @@ export default function FeedClient({
                 gap: 6,
               }}
             >
-              <FiTrendingUp size={14} /> Trending this week
+              <FiTrendingUp size={14} /> Trending posts
             </h3>
-            {trendingSymbols.length === 0 ? (
+            {trendingPosts.length === 0 ? (
               <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>Nothing trending yet.</p>
             ) : (
               <div style={{ display: "grid", gap: 8 }}>
-                {trendingSymbols.map((s) => (
+                {trendingPosts.map((t) => (
                   <Link
-                    key={s.marketSymbol ?? "—"}
-                    href={`/user/markets?symbol=${encodeURIComponent(s.marketSymbol ?? "")}`}
+                    key={t.id}
+                    href={`/user/markets/${t.id}?from=feed`}
                     style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "8px 12px",
+                      display: "block",
+                      padding: "9px 12px",
                       borderRadius: 8,
                       background: "var(--surface-2)",
                       textDecoration: "none",
                     }}
                   >
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>
-                      {s.marketSymbol}
-                    </span>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)" }}>
-                      {s._count._all} posts
-                    </span>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "var(--text)",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      {t.title}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 4,
+                        fontSize: 10.5,
+                        fontWeight: 600,
+                        color: "var(--text-muted)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {t.marketSymbol && (
+                        <span style={{ color: "var(--primary-text, var(--primary))" }}>
+                          {t.marketSymbol}
+                        </span>
+                      )}
+                      <span>{t.advisor?.fullName}</span>
+                      <span>·</span>
+                      <span>
+                        {t._count.reactions + t._count.comments} interaction
+                        {t._count.reactions + t._count.comments === 1 ? "" : "s"}
+                      </span>
+                    </div>
                   </Link>
                 ))}
               </div>
             )}
+          </article>
+
+          {/* ── Market news ────────────────────────────────────────────────
+              Placeholder shell. Swap the static rows for a fetch when the news
+              API is picked — the card, its slots and its empty state are done,
+              so wiring it is a data change rather than a UI change. */}
+          <article
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              borderRadius: 14,
+              padding: 16,
+            }}
+          >
+            <h3
+              style={{
+                margin: "0 0 12px",
+                fontSize: 13,
+                fontWeight: 700,
+                color: "var(--text)",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <FiFileText size={14} /> Market news
+            </h3>
+
+            <div style={{ display: "grid", gap: 8 }}>
+              {MARKET_NEWS_PLACEHOLDER.map((n) => (
+                <div
+                  key={n.headline}
+                  style={{
+                    padding: "9px 12px",
+                    borderRadius: 8,
+                    background: "var(--surface-2)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "var(--text)",
+                      lineHeight: 1.35,
+                    }}
+                  >
+                    {n.headline}
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontSize: 10.5,
+                      fontWeight: 600,
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    {n.source} · {n.when}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p
+              style={{
+                margin: "10px 0 0",
+                fontSize: 10.5,
+                color: "var(--text-muted)",
+                fontStyle: "italic",
+              }}
+            >
+              Sample headlines — live feed coming soon.
+            </p>
           </article>
 
           {/* Guest CTA */}
@@ -1671,6 +1948,33 @@ export default function FeedClient({
           }}
         />
       )}
+
+      <PostComposerModal
+        open={composerOpen}
+        onClose={() => setComposerOpen(false)}
+        isAuthed={isAuthed}
+        userName={currentUserName ?? "You"}
+        userAvatar={currentUserAvatar ?? null}
+        onPosted={(post) => {
+          setComposerOpen(false);
+          // Prepend so the author sees their post land, as the old Community
+          // tab did, instead of waiting for a refetch.
+          setItems((prev) =>
+            prev.some((i) => i.kind === "community" && i.post.id === post.id)
+              ? prev
+              : [
+                  {
+                    kind: "community" as const,
+                    key: `community:${post.id}`,
+                    at: post.created_at,
+                    followed: true,
+                    post,
+                  },
+                  ...prev,
+                ],
+          );
+        }}
+      />
 
       {/* Spin animation */}
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

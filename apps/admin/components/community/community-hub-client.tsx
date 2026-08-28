@@ -11,6 +11,7 @@ import {
   type CommunitySort,
 } from "@/lib/community-client";
 import type { SerializedCommunity } from "@/lib/community";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 const TABS: { id: CommunityTab; label: string }[] = [
   { id: "home", label: "Home" },
@@ -139,7 +140,7 @@ export default function CommunityHubClient({ isAuthed }: { isAuthed: boolean }) 
         ))}
       </div>
 
-      {loading && <p className="comm-loading">Loading...</p>}
+      {loading && <LoadingRows />}
       {!loading && communities.length === 0 && (
         <div className="comm-empty">
           <p>No communities found.</p>
