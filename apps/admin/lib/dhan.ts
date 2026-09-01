@@ -381,7 +381,7 @@ export async function getCandles(params: {
     const json = await dhanPost<CandleResp>(endpoint, body);
     if (!json.timestamp?.length) return [];
     return json.timestamp.map((ts, i) => ({
-      timestamp: normalizeCandleTimestamp(ts * 1000),
+      timestamp: normalizeCandleTimestamp(String(ts * 1000)),
       open:   json.open?.[i]   ?? 0,
       high:   json.high?.[i]   ?? 0,
       low:    json.low?.[i]    ?? 0,
