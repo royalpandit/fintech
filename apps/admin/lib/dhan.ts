@@ -85,13 +85,31 @@ function toDhanInstrument(segment: string, sym = ""): string {
 }
 
 // "14AUG24" → "2024-08-14" (Dhan needs ISO dates for option chain)
-function toISOExpiry(code: string): string {
+function toISOExpiry(code: string | undefined): string {
+  if (!code) return nearestThursdayISO();
   const M: Record<string, string> = {
     JAN: "01", FEB: "02", MAR: "03", APR: "04", MAY: "05", JUN: "06",
     JUL: "07", AUG: "08", SEP: "09", OCT: "10", NOV: "11", DEC: "12",
   };
   const m = code.match(/^(\d{2})([A-Z]{3})(\d{2})$/);
   return m ? `20${m[3]}-${M[m[2]] ?? "01"}-${m[1]}` : code;
+}
+
+// Returns nearest upcoming Thursday in IST as "YYYY-MM-DD"
+function nearestThursdayISO(): string {
+  const istMs = Date.now() + 5.5 * 60 * 60 * 1000;
+  const ist = new Date(istMs);
+  const day = ist.getUTCDay(); // 0=Sun 4=Thu
+  const daysToThur = ((4 - day) + 7) % 7 || 7;
+  const thu = new Date(istMs + daysToThur * 86_400_000);
+  return `${thu.getUTCFullYear()}-${String(thu.getUTCMonth() + 1).padStart(2, "0")}-${String(thu.getUTCDate()).padStart(2, "0")}`;
+}
+
+// ISO "YYYY-MM-DD" → "14AUG24" app format
+function isoToExpiryCode(iso: string): string {
+  const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  const d = new Date(iso + "T00:00:00Z");
+  return `${String(d.getUTCDate()).padStart(2,"0")}${MONTHS[d.getUTCMonth()]}${String(d.getUTCFullYear()).slice(2)}`;
 }
 
 // Angel One-style interval name → Dhan interval number (null = use daily endpoint)
@@ -504,15 +522,19 @@ const UNDERLYING_META: Record<string, { secId: string; seg: string }> = {
 };
 
 export type OptionChainResult = {
-  expiries: string[];
+  underlying: string;
+  exchange: string;
+  expiry: string;
+  expiries: { code: string; label: string }[];
+  spot: number;
   rows: OptionChainRow[];
-  underlyingLtp: number;
+  tokens: { token: string; exchange: string }[];
 };
 
 export async function getOptionChain(
   underlying: string,
-  spot: number,
-  expiryCode: string,
+  spot: number | undefined,
+  expiryCode?: string,
   opts: { profile?: boolean } = {},
 ): Promise<OptionChainResult> {
   const key = underlying.toUpperCase().replace(/[\s-]/g, "");
@@ -520,57 +542,76 @@ export async function getOptionChain(
   if (!meta) throw new Error(`Unknown underlying for option chain: ${underlying}`);
 
   const expiryISO = toISOExpiry(expiryCode);
+  const resolvedCode = expiryCode || isoToExpiryCode(expiryISO);
   const url = `${BASE}/optionchain?UnderlyingScrip=${meta.secId}&UnderlyingSeg=${meta.seg}&Expiry=${expiryISO}`;
+
+  console.log(`[Dhan] getOptionChain key=${key} expiry=${expiryISO} url=${url}`);
 
   return scheduleAngelRest("dhan-optchain", async () => {
     const res = await fetch(url, { headers: dhanHeaders(), cache: "no-store" });
     const json = await res.json() as {
       status?: string;
+      remarks?: string;
       data?: {
         oc?: Array<{
           strike_price?: number;
-          call_options?: { ltp?: number; volume?: number; oi?: number; oi_change?: number; net_change?: number };
-          put_options?:  { ltp?: number; volume?: number; oi?: number; oi_change?: number; net_change?: number };
+          call_options?: { security_id?: string; ltp?: number; volume?: number; oi?: number; oi_change?: number; net_change?: number };
+          put_options?:  { security_id?: string; ltp?: number; volume?: number; oi?: number; oi_change?: number; net_change?: number };
         }>;
         underlying_ltp?: number;
         expiry_list?: string[];
       };
     };
+    console.log(`[Dhan] optionchain HTTP ${res.status}`, JSON.stringify(json).slice(0, 400));
 
+    if (!res.ok) throw new Error(`Dhan option chain HTTP ${res.status}: ${json.remarks ?? res.statusText}`);
     const data = json.data;
-    if (!data?.oc) throw new Error("Dhan option chain returned no data");
+    if (!data?.oc) throw new Error(`Dhan option chain returned no data. Response: ${JSON.stringify(json).slice(0, 200)}`);
 
-    const atmStrike = Math.round(spot / 50) * 50;
+    const liveSpot = data.underlying_ltp ?? spot ?? 0;
+    const stepSize = key === "SENSEX" ? 100 : 50;
+    const atmStrike = Math.round(liveSpot / stepSize) * stepSize;
     const radius    = opts.profile ? 35 : 15;
     const rows: OptionChainRow[] = [];
+    const tokenSet = new Set<string>();
 
     for (const item of data.oc) {
       const strike = item.strike_price ?? 0;
-      if (Math.abs(strike - atmStrike) > radius * 50) continue;
+      if (liveSpot > 0 && Math.abs(strike - atmStrike) > radius * stepSize) continue;
 
       const mapLeg = (side: typeof item.call_options, type: "CE" | "PE"): OptionLeg | undefined => {
         if (!side) return undefined;
+        const token = side.security_id ?? `${meta.secId}_${strike}_${type}`;
+        if (side.security_id) tokenSet.add(side.security_id);
         return {
-          tradingsymbol: `${key}${expiryCode}${strike}${type}`,
-          token:         `${meta.secId}_${strike}_${type}`,
-          ltp:           side.ltp,
-          change:        side.net_change,
-          oi:            side.oi,
-          oiChange:      side.oi_change,
-          volume:        side.volume,
+          tradingsymbol: `${key}${resolvedCode}${strike}${type}`,
+          token,
+          ltp:      side.ltp,
+          change:   side.net_change,
+          oi:       side.oi,
+          oiChange: side.oi_change,
+          volume:   side.volume,
         };
       };
       rows.push({ strike, ce: mapLeg(item.call_options, "CE"), pe: mapLeg(item.put_options, "PE") });
     }
 
-    // Convert ISO expiry dates back to "14AUG24" app format
-    const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-    const expiries = (data.expiry_list ?? [expiryISO]).map(e => {
-      const d = new Date(e);
-      return `${String(d.getUTCDate()).padStart(2,"0")}${MONTHS[d.getUTCMonth()]}${String(d.getUTCFullYear()).slice(2)}`;
-    });
+    const expiries = (data.expiry_list ?? [expiryISO]).map(iso => ({
+      code: isoToExpiryCode(iso),
+      label: formatExpiryLabel(isoToExpiryCode(iso)),
+    }));
 
-    return { expiries, rows, underlyingLtp: data.underlying_ltp ?? spot };
+    const tokens = [...tokenSet].map(t => ({ token: t, exchange: meta.seg }));
+
+    return {
+      underlying: key,
+      exchange: meta.seg,
+      expiry: resolvedCode,
+      expiries,
+      spot: liveSpot,
+      rows,
+      tokens,
+    };
   });
 }
 

@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     if (isRateLimited()) {
       return NextResponse.json({
         ok: false,
-        error: "Angel One rate limit — live quotes paused.",
+        error: "Dhan API rate limit — live quotes paused.",
         rateLimited: true,
         data: [],
       });
