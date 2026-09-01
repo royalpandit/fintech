@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
 
     const cacheKey = `live:${all.map(i => `${i.exchange}:${i.symboltoken}`).sort().join(",")}`;
 
-    const quoteMap = await withMarketCache(cacheKey, 8_000, async () => {
+    const quoteMap = await withMarketCache(cacheKey, 20_000, async () => {
       const quotes = await getExtendedQuotes(all);
       const merged = new Map<string, Record<string, unknown>>();
       for (const q of quotes) merged.set(q.symbolToken, q as unknown as Record<string, unknown>);

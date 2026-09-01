@@ -20,9 +20,9 @@ export function isRateLimitMessage(msg: string): boolean {
 
 export function handleRateLimitMessage(msg: string): boolean {
   if (isRateLimitMessage(msg)) {
-    markRateLimited(30);
+    markRateLimited(60);
     (globalThis as typeof globalThis & { __angelRateLimitHook?: (s: number) => void })
-      .__angelRateLimitHook?.(30);
+      .__angelRateLimitHook?.(60);
     return true;
   }
   return false;

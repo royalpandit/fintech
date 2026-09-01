@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
     }
 
     const cacheKey = `candles:v2:${token}:${exchange}:${interval}:${days}`;
-    const candles = await withMarketCache(cacheKey, 8_000, async () => {
+    const candles = await withMarketCache(cacheKey, 20_000, async () => {
       const raw = await getCandles({
         exchange,
         symboltoken: token,

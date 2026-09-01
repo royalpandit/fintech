@@ -37,7 +37,7 @@ class DhanStreamHub {
 
   private start() {
     if (this.timer) return;
-    this.timer = setInterval(() => void this.poll(), 2_000);
+    this.timer = setInterval(() => void this.poll(), 15_000);
   }
 
   private stop() {

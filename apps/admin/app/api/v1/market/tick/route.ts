@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const cacheKey = `tick:${exchange}:${token}`;
-    const results = await withMarketCache(cacheKey, 3_000, () =>
+    const results = await withMarketCache(cacheKey, 15_000, () =>
       getOHLC([{ exchange, symboltoken: token }]),
     );
     const q = results[0];

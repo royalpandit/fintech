@@ -675,7 +675,7 @@ function TradingTerminalInner({
   // REST fallback for OHLC / % change on watchlist (WebSocket = LTP only)
   useEffect(() => {
     fetchQuotes();
-    const ms = centerTab === "chart" ? 12_000 : 20_000;
+    const ms = centerTab === "chart" ? 30_000 : 60_000;
     const id = setInterval(fetchQuotes, ms);
     return () => clearInterval(id);
   }, [fetchQuotes, centerTab]);
@@ -878,7 +878,7 @@ function TradingTerminalInner({
 
   useEffect(() => {
     if (!oiProfileActive || centerTab !== "chart") return;
-    const id = setInterval(refreshOiProfile, 12_000);
+    const id = setInterval(refreshOiProfile, 45_000);
     return () => clearInterval(id);
   }, [oiProfileActive, centerTab, refreshOiProfile]);
 

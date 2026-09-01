@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     }
 
     const cacheKey = `depth:${exchange}:${token}`;
-    const data = await withMarketCache(cacheKey, 3_000, () =>
+    const data = await withMarketCache(cacheKey, 15_000, () =>
       getMarketDepth(exchange, token, tradingSymbol)
     );
 
