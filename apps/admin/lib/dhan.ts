@@ -335,6 +335,7 @@ export async function getMarketDepth(
       (arr ?? []).slice(0, 5).map(d => ({ price: d.price ?? 0, quantity: d.quantity ?? 0, orders: d.orders ?? 0 }));
     return {
       ...base,
+      token,
       tradingSymbol,
       avgPrice:     e.average_price,
       tradeVolume:  e.trade_volume ?? e.volume,
