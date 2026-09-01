@@ -23,7 +23,7 @@ const GROUNDING_TOOLS = [{ google_search: {} }];
  * Thinking tokens count against maxOutputTokens on these models, and grounding
  * adds a retrieval round trip, so 2048 left very little for the answer itself.
  */
-const MAX_OUTPUT_TOKENS = 4096;
+const MAX_OUTPUT_TOKENS = 8192;
 
 export type GeminiRole = "user" | "model";
 
