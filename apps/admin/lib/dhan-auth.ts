@@ -42,16 +42,21 @@ export function getDhanAccessToken(): string {
   // 1. Try the persisted session (set by the OAuth callback)
   const session = readSession();
   if (session && session.expiresAt > Date.now() + 60_000) {
+    console.log("[DhanAuth] using session token, expires", new Date(session.expiresAt).toISOString());
     return session.accessToken;
   }
 
-  // 2. Fall back to env (useful for local dev: paste a fresh 24-h token in .env)
+  // 2. Fall back to env (useful for local dev / Vercel: set DHAN_ACCESS_TOKEN in env vars)
   const envToken = process.env.DHAN_ACCESS_TOKEN?.trim();
-  if (envToken) return envToken;
+  if (envToken) {
+    console.log("[DhanAuth] using DHAN_ACCESS_TOKEN env var (length=%d)", envToken.length);
+    return envToken;
+  }
 
+  console.error("[DhanAuth] no valid token found — session file missing/expired and DHAN_ACCESS_TOKEN env not set");
   throw new Error(
     "Dhan access token expired or not configured. " +
-      "Re-authorise at /api/v1/admin/dhan/authorize (super-admin only).",
+      "Set DHAN_ACCESS_TOKEN in Vercel env vars or re-authorise at /api/v1/admin/dhan/authorize.",
   );
 }
 

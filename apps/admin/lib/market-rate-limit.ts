@@ -13,7 +13,9 @@ export function markRateLimited(seconds = 25): void {
 }
 
 export function isRateLimitMessage(msg: string): boolean {
-  return /exceeding access rate|rate limit|too many request|access denied/i.test(msg);
+  // Match actual rate limit signals only — NOT auth errors (401/403)
+  return /exceeding access rate|too many request|DH-906|rate.?limit/i.test(msg) &&
+    !/HTTP 401|HTTP 403|forbidden|unauthorized/i.test(msg);
 }
 
 export function handleRateLimitMessage(msg: string): boolean {
@@ -35,7 +37,7 @@ export async function withMarketCache<T>(
   fn: () => Promise<T>
 ): Promise<T> {
   if (isRateLimited()) {
-    throw new Error("Angel One rate limit — updates paused. Please wait a few seconds.");
+    throw new Error("Dhan API rate limit — updates paused. Please wait a few seconds.");
   }
   const hit = cache.get(key) as CacheEntry<T> | undefined;
   if (hit && hit.expires > Date.now()) return hit.value;
@@ -71,7 +73,7 @@ export async function withSWRCache<T>(
   fn: () => Promise<T>,
 ): Promise<T> {
   if (isRateLimited()) {
-    throw new Error("Angel One rate limit — updates paused. Please wait a few seconds.");
+    throw new Error("Dhan API rate limit — updates paused. Please wait a few seconds.");
   }
   const now = Date.now();
   const hit = cache.get(key) as CacheEntry<T> | undefined;

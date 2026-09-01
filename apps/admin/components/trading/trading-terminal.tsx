@@ -557,7 +557,7 @@ function TradingTerminalInner({
       const json = await res.json();
       if (json.rateLimited) {
         setCandleError(prev =>
-          prev?.includes("rate limit") ? prev : "Angel One rate limit — live updates paused briefly."
+          prev?.includes("rate limit") ? prev : "Dhan API rate limit — live updates paused briefly."
         );
         return;
       }

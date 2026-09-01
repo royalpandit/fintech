@@ -246,13 +246,15 @@ function buildPayload(instruments: { exchange: string; symboltoken: string }[]):
 }
 
 async function dhanPost<T>(path: string, body: unknown): Promise<T> {
+  console.log(`[Dhan] POST ${path}`, JSON.stringify(body).slice(0, 300));
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: dhanHeaders(),
     body: JSON.stringify(body),
     cache: "no-store",
   });
-  const json = await res.json() as T & { remarks?: string; errorCode?: string };
+  const json = await res.json() as T & { remarks?: string; errorCode?: string; status?: string };
+  console.log(`[Dhan] ${path} → HTTP ${res.status}`, JSON.stringify(json).slice(0, 500));
   if (!res.ok) {
     const msg = (json as Record<string, unknown>).remarks ?? (json as Record<string, unknown>).errorCode ?? res.statusText;
     throw new Error(`Dhan ${path} → HTTP ${res.status}: ${msg}`);
