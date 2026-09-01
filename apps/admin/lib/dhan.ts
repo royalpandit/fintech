@@ -353,22 +353,25 @@ export async function getCandles(params: {
   symboltoken: string;
   interval: CandleInterval;
   tradingSymbol?: string;
+  instrumentType?: string;
   fromDate: string;
   toDate: string;
+  fromdate?: string;
+  todate?: string;
 }): Promise<Candle[]> {
   const seg      = toDhanSegment(params.exchange);
   const intv     = DHAN_INTERVAL[params.interval];
   const intraday = intv !== null;
   const endpoint = intraday ? "/charts/intraday" : "/charts/historical";
-  const instrument = toDhanInstrument(seg, params.tradingSymbol);
+  const instrument = toDhanInstrument(seg, params.tradingSymbol ?? params.instrumentType);
 
   const body: Record<string, unknown> = {
     securityId:      params.symboltoken,
     exchangeSegment: seg,
     instrument,
     expiryCode: 0,
-    fromDate:   params.fromDate,
-    toDate:     params.toDate,
+    fromDate:   params.fromDate ?? params.fromdate ?? "",
+    toDate:     params.toDate   ?? params.todate   ?? "",
   };
   if (intraday) body.interval = intv;
 
