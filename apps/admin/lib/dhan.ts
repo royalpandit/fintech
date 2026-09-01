@@ -252,7 +252,12 @@ async function dhanPost<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
     cache: "no-store",
   });
-  return res.json() as Promise<T>;
+  const json = await res.json() as T & { remarks?: string; errorCode?: string };
+  if (!res.ok) {
+    const msg = (json as Record<string, unknown>).remarks ?? (json as Record<string, unknown>).errorCode ?? res.statusText;
+    throw new Error(`Dhan ${path} → HTTP ${res.status}: ${msg}`);
+  }
+  return json;
 }
 
 type DhanFeedResponse = {
@@ -366,21 +371,28 @@ export async function getCandles(params: {
   const endpoint = intraday ? "/charts/intraday" : "/charts/historical";
   const instrument = toDhanInstrument(seg, params.tradingSymbol ?? params.instrumentType);
 
+  // Dhan expects "YYYY-MM-DD" only — strip any time component
+  const stripTime = (dt: string) => dt.split(" ")[0];
+  const fromDate = stripTime(params.fromDate ?? params.fromdate ?? "");
+  const toDate   = stripTime(params.toDate   ?? params.todate   ?? "");
+
   const body: Record<string, unknown> = {
     securityId:      params.symboltoken,
     exchangeSegment: seg,
     instrument,
-    expiryCode: 0,
-    fromDate:   params.fromDate ?? params.fromdate ?? "",
-    toDate:     params.toDate   ?? params.todate   ?? "",
+    fromDate,
+    toDate,
   };
   if (intraday) body.interval = intv;
+  else body.expiryCode = 0;
 
   return scheduleAngelRest("dhan-candles", async () => {
-    type CandleResp = { open?: number[]; high?: number[]; low?: number[]; close?: number[]; volume?: number[]; timestamp?: number[] };
+    // Dhan response uses start_Time (Unix seconds) not timestamp
+    type CandleResp = { open?: number[]; high?: number[]; low?: number[]; close?: number[]; volume?: number[]; start_Time?: number[]; timestamp?: number[] };
     const json = await dhanPost<CandleResp>(endpoint, body);
-    if (!json.timestamp?.length) return [];
-    return json.timestamp.map((ts, i) => ({
+    const times = json.start_Time ?? json.timestamp;
+    if (!times?.length) return [];
+    return times.map((ts, i) => ({
       timestamp: normalizeCandleTimestamp(String(ts * 1000)),
       open:   json.open?.[i]   ?? 0,
       high:   json.high?.[i]   ?? 0,
