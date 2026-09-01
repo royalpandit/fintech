@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +9,8 @@ export const dynamic = "force-dynamic";
  * re-authorize the platform account and get a fresh access token.
  */
 export async function GET(req: NextRequest) {
-  const auth = await verifyToken(req);
-  if (!auth || auth.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireRole(req, ["super_admin"]);
+  if (!auth) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
 
   const apiKey     = process.env.DHAN_API_KEY?.trim();
   const redirectUri = process.env.DHAN_REDIRECT_URI?.trim() ?? `${process.env.NEXTAUTH_URL}/api/v1/auth/dhan/callback`;
