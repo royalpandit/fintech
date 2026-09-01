@@ -1,5 +1,5 @@
 ﻿import { NextResponse } from "next/server";
-import { getExtendedQuotes, type ExtendedQuote } from "@/lib/dhan";
+import { getExtendedQuotes, type ExtendedQuoteData, type QuoteInstrument } from "@/lib/dhan";
 import { MARKET_INSTRUMENTS } from "@/lib/angelone-shared";
 import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
 
@@ -32,23 +32,22 @@ export async function GET() {
   }
 
   try {
-    const byExchange = MARKET_INSTRUMENTS.reduce<Record<string, string[]>>((acc, m) => {
-      (acc[m.exchange] ||= []).push(m.token);
-      return acc;
-    }, {});
+    const instruments: QuoteInstrument[] = MARKET_INSTRUMENTS.map(m => ({
+      exchange: m.exchange,
+      symboltoken: m.token,
+      tradingSymbol: m.symbol,
+    }));
 
     const quoteMap = await withMarketCache("overview:full", 10_000, async () => {
-      const merged = new Map<string, ExtendedQuote>();
-      for (const [exch, tokens] of Object.entries(byExchange)) {
-        const m = await getExtendedQuotes(exch, tokens, "FULL");
-        m.forEach((q, tok) => merged.set(tok, q));
-      }
+      const results = await getExtendedQuotes(instruments);
+      const merged = new Map<string, ExtendedQuoteData>();
+      for (const q of results) merged.set(q.symbolToken, q);
       return merged;
     });
 
     const rows: OverviewRow[] = MARKET_INSTRUMENTS.map((m) => {
       const q = quoteMap.get(m.token);
-      const isIndex = m.token.startsWith("999");
+      const isIndex = m.exchange === "IDX_I";
       return {
         symbol: m.symbol,
         token: m.token,
