@@ -354,8 +354,8 @@ export async function getCandles(params: {
   interval: CandleInterval;
   tradingSymbol?: string;
   instrumentType?: string;
-  fromDate: string;
-  toDate: string;
+  fromDate?: string;
+  toDate?: string;
   fromdate?: string;
   todate?: string;
 }): Promise<Candle[]> {
