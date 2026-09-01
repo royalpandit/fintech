@@ -50,17 +50,11 @@ export async function GET(req: NextRequest) {
     ];
 
     const cacheKey = `live:${all.map(i => `${i.exchange}:${i.symboltoken}`).sort().join(",")}`;
-    const byExchange = all.reduce<Record<string, string[]>>((acc, i) => {
-      (acc[i.exchange] ||= []).push(i.symboltoken);
-      return acc;
-    }, {});
 
     const quoteMap = await withMarketCache(cacheKey, 8_000, async () => {
+      const quotes = await getExtendedQuotes(all);
       const merged = new Map<string, Record<string, unknown>>();
-      for (const [exch, tokens] of Object.entries(byExchange)) {
-        const m = await getExtendedQuotes(exch, tokens);
-        m.forEach((q, tok) => merged.set(tok, q as unknown as Record<string, unknown>));
-      }
+      for (const q of quotes) merged.set(q.symbolToken, q as unknown as Record<string, unknown>);
       return merged;
     });
 
