@@ -16,6 +16,7 @@ import type {
   OptionLeg,
 } from "@/lib/angelone-types";
 import { scheduleAngelRest } from "@/lib/angelone-quote-coordinator";
+import { getDhanAccessToken } from "@/lib/dhan-auth";
 
 // Re-export everything routes currently import from @/lib/angelone
 export {
@@ -40,15 +41,12 @@ const BASE = "https://api.dhan.co/v2";
 
 function dhanHeaders() {
   const clientId = process.env.DHAN_CLIENT_ID?.trim();
-  const accessToken = process.env.DHAN_ACCESS_TOKEN?.trim();
-  if (!clientId || !accessToken) {
-    throw new Error(
-      "Dhan credentials not configured — add DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN to apps/admin/.env",
-    );
+  if (!clientId) {
+    throw new Error("DHAN_CLIENT_ID not set in apps/admin/.env");
   }
   return {
     "Content-Type": "application/json",
-    "access-token": accessToken,
+    "access-token": getDhanAccessToken(),
     "client-id": clientId,
   };
 }
