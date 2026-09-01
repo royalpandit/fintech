@@ -1,6 +1,6 @@
 import "server-only";
 
-import { normalizeCandleTimestamp } from "@/lib/nse-market-time";
+import { unixSecToIsoIst } from "@/lib/nse-market-time";
 import {
   formatExpiryLabel,
   optionChainExchange,
@@ -395,7 +395,7 @@ export async function getCandles(params: {
     const times = json.start_Time ?? json.timestamp;
     if (!times?.length) return [];
     return times.map((ts, i) => ({
-      timestamp: normalizeCandleTimestamp(String(ts * 1000)),
+      timestamp: unixSecToIsoIst(ts),
       open:   json.open?.[i]   ?? 0,
       high:   json.high?.[i]   ?? 0,
       low:    json.low?.[i]    ?? 0,
