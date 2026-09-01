@@ -1,5 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { getExtendedQuotes, MARKET_INSTRUMENTS, type QuoteInstrument } from "@/lib/angelone";
+﻿import { NextResponse, type NextRequest } from "next/server";
+import { getExtendedQuotes, MARKET_INSTRUMENTS, type QuoteInstrument } from "@/lib/dhan";
 import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -112,3 +112,4 @@ export async function GET(req: NextRequest) {
     }, { status: 200 });
   }
 }
+

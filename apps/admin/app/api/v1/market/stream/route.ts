@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { subscriptionKey } from "@/lib/angelone-exchange";
-import { getAngelStreamHub } from "@/lib/angelone-stream";
+import { getDhanStreamHub } from "@/lib/dhan-stream";
 import { isRateLimited } from "@/lib/market-rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Missing symbols=NSE:token,..." }, { status: 400 });
   }
 
-  const hub = getAngelStreamHub();
+  const hub = getDhanStreamHub();
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -88,6 +88,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     keys: items.map(i => subscriptionKey(i.exchange, i.token)),
-    hub: getAngelStreamHub().getStatus(),
+    hub: getDhanStreamHub().getStatus(),
   });
 }

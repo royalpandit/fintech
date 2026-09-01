@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import type { ComponentType } from "react";
 import { cookies } from "next/headers";
 import {
@@ -16,7 +16,7 @@ import PaperPortfolioSection from "@/components/paper/paper-portfolio-section";
 import AreaChart from "@/components/advisor-ui/area-chart";
 import DonutChart from "@/components/advisor-ui/donut-chart";
 import LiveCandleChart from "@/components/live-candle-chart";
-import { getHoldings } from "@/lib/angelone";
+import { getHoldings } from "@/lib/dhan";
 
 export const dynamic = "force-dynamic";
 
@@ -566,3 +566,4 @@ export default async function PortfolioPage() {
     </section>
   );
 }
+

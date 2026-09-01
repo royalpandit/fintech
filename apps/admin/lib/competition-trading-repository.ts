@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+﻿import { prisma } from "@/lib/prisma";
 import { deriveEffectiveStatus } from "@/lib/competition";
 import {
   COMPETITION_DEFAULT_INITIAL_CAPITAL,
@@ -6,7 +6,7 @@ import {
   calcTotalReturn,
   type BuySellInput,
 } from "@/lib/competition-trading";
-import { getLTP, searchSymbol, type QuoteInstrument } from "@/lib/angelone";
+import { getLTP, searchSymbol, type QuoteInstrument } from "@/lib/dhan";
 
 export class CompetitionTradingRepository {
   async getCompetitionOrThrow(competitionId: number) {
@@ -518,3 +518,4 @@ export class CompetitionTradingRepository {
 }
 
 export const competitionTradingRepository = new CompetitionTradingRepository();
+

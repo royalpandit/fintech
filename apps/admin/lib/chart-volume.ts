@@ -1,5 +1,5 @@
-import type { Candle, CandleInterval } from "@/lib/angelone";
-import { getCandles, searchSymbol } from "@/lib/angelone";
+﻿import type { Candle, CandleInterval } from "@/lib/dhan";
+import { getCandles, searchSymbol } from "@/lib/dhan";
 import { parseCandleTimestampToUnix } from "@/lib/nse-market-time";
 
 const INDEX_FUT_SEARCH: Record<string, { exchange: string; query: string }> = {
@@ -95,3 +95,4 @@ export async function enrichCandlesWithVolume(
 
   return normalized;
 }
+

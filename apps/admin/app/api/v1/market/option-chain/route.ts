@@ -1,5 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { getOptionChain, optionUnderlyingKey } from "@/lib/angelone";
+﻿import { NextResponse, type NextRequest } from "next/server";
+import { getOptionChain, optionUnderlyingKey } from "@/lib/dhan";
 import { withSWRCache } from "@/lib/market-rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -39,3 +39,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: msg, data: null }, { status: 200 });
   }
 }
+

@@ -1,11 +1,11 @@
-/**
+﻿/**
  * Single Angel One WebSocket V2 connection per Node process.
  * Server-only — do not import from client components.
  */
 
 import "server-only";
 
-import { getToken } from "@/lib/angelone";
+import { getToken } from "@/lib/dhan";
 import { subscriptionKey, toAngelExchangeType } from "@/lib/angelone-exchange";
 import {
   recordWsTick,
@@ -246,3 +246,4 @@ export function getAngelStreamHub(): AngelStreamHub {
   }
   return globalForAngel.__angelStreamHub;
 }
+

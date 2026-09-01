@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { getHoldings, getPositions } from "@/lib/angelone";
+﻿import { NextResponse } from "next/server";
+import { getHoldings, getPositions } from "@/lib/dhan";
 
 export const dynamic = "force-dynamic";
 
@@ -32,3 +32,4 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: msg }, { status: 502 });
   }
 }
+

@@ -1,4 +1,4 @@
-import { getOHLC, searchSymbol } from "@/lib/angelone";
+﻿import { getOHLC, searchSymbol } from "@/lib/dhan";
 
 export type QuoteInput = {
   symbol: string;
@@ -71,3 +71,4 @@ export async function fetchLiveLtp(input: QuoteInput): Promise<number> {
 export function normalizePaperSymbol(symbol: string): string {
   return symbol.trim().toUpperCase().split("-")[0].replace(/\.(NS|BO)$/i, "").replace(/\s+/g, "");
 }
+

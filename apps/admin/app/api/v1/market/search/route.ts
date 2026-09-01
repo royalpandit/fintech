@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { searchSymbol } from "@/lib/angelone";
+﻿import { NextResponse } from "next/server";
+import { searchSymbol } from "@/lib/dhan";
 
 export const dynamic = "force-dynamic";
 
@@ -26,3 +26,4 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: msg, data: [] }, { status: 200 });
   }
 }
+

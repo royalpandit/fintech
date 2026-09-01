@@ -1,5 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { getMarketDepth } from "@/lib/angelone";
+﻿import { NextResponse, type NextRequest } from "next/server";
+import { getMarketDepth } from "@/lib/dhan";
 import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -40,3 +40,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: msg }, { status: 200 });
   }
 }
+

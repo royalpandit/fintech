@@ -1,5 +1,5 @@
-import type { FinuerBasketStock, FinuerBenchmark } from "@prisma/client";
-import { getCandles, getLTP, searchSymbol } from "@/lib/angelone";
+﻿import type { FinuerBasketStock, FinuerBenchmark } from "@prisma/client";
+import { getCandles, getLTP, searchSymbol } from "@/lib/dhan";
 import { computePerformanceStatus, toNumber } from "@/lib/finuer-basket";
 import { prisma } from "@/lib/prisma";
 
@@ -273,3 +273,4 @@ export async function recalculateBasketPerformance(basketId: number) {
 export async function fetchEntryPrice(symbol: string, exchange: string): Promise<number | null> {
   return resolveLtp(symbol, exchange, null);
 }
+

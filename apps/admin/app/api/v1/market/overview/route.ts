@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { getExtendedQuotes, type ExtendedQuote } from "@/lib/angelone";
+﻿import { NextResponse } from "next/server";
+import { getExtendedQuotes, type ExtendedQuote } from "@/lib/dhan";
 import { MARKET_INSTRUMENTS } from "@/lib/angelone-shared";
 import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
 
@@ -79,3 +79,4 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: msg, indices: [], stocks: [] }, { status: 200 });
   }
 }
+
