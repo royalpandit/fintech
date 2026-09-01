@@ -60,18 +60,18 @@ const PERIODS: PeriodPreset[] = [
 ];
 
 const DEFAULT_WATCHLIST: WatchlistItem[] = [
-  { display: "NIFTY 50",   tradingSymbol: "NIFTY 50",   token: "99926000", exchange: "NSE", type: "INDEX" },
-  { display: "BANK NIFTY", tradingSymbol: "NIFTY BANK", token: "99926009", exchange: "NSE", type: "INDEX" },
-  { display: "SENSEX",     tradingSymbol: "SENSEX",      token: "99919000", exchange: "BSE", type: "INDEX" },
-  { display: "RELIANCE",   tradingSymbol: "RELIANCE",    token: "2885",     exchange: "NSE", type: "EQ"    },
-  { display: "TCS",        tradingSymbol: "TCS",         token: "11536",    exchange: "NSE", type: "EQ"    },
-  { display: "HDFCBANK",   tradingSymbol: "HDFCBANK",    token: "1333",     exchange: "NSE", type: "EQ"    },
-  { display: "INFY",       tradingSymbol: "INFY",        token: "1594",     exchange: "NSE", type: "EQ"    },
-  { display: "ICICIBANK",  tradingSymbol: "ICICIBANK",   token: "4963",     exchange: "NSE", type: "EQ"    },
-  { display: "WIPRO",      tradingSymbol: "WIPRO",       token: "3787",     exchange: "NSE", type: "EQ"    },
-  { display: "SBIN",       tradingSymbol: "SBIN",        token: "3045",     exchange: "NSE", type: "EQ"    },
-  { display: "BHARTIARTL", tradingSymbol: "BHARTIARTL",  token: "10604",    exchange: "NSE", type: "EQ"    },
-  { display: "LT",         tradingSymbol: "LT",          token: "11483",    exchange: "NSE", type: "EQ"    },
+  { display: "NIFTY 50",   tradingSymbol: "NIFTY 50",   token: "13",   exchange: "IDX_I", type: "INDEX" },
+  { display: "BANK NIFTY", tradingSymbol: "NIFTY BANK", token: "25",   exchange: "IDX_I", type: "INDEX" },
+  { display: "SENSEX",     tradingSymbol: "SENSEX",      token: "51",   exchange: "IDX_I", type: "INDEX" },
+  { display: "RELIANCE",   tradingSymbol: "RELIANCE",    token: "2885", exchange: "NSE",   type: "EQ"    },
+  { display: "TCS",        tradingSymbol: "TCS",         token: "11536",exchange: "NSE",   type: "EQ"    },
+  { display: "HDFCBANK",   tradingSymbol: "HDFCBANK",    token: "1333", exchange: "NSE",   type: "EQ"    },
+  { display: "INFY",       tradingSymbol: "INFY",        token: "1594", exchange: "NSE",   type: "EQ"    },
+  { display: "ICICIBANK",  tradingSymbol: "ICICIBANK",   token: "4963", exchange: "NSE",   type: "EQ"    },
+  { display: "WIPRO",      tradingSymbol: "WIPRO",       token: "3787", exchange: "NSE",   type: "EQ"    },
+  { display: "SBIN",       tradingSymbol: "SBIN",        token: "3045", exchange: "NSE",   type: "EQ"    },
+  { display: "BHARTIARTL", tradingSymbol: "BHARTIARTL",  token: "10604",exchange: "NSE",   type: "EQ"    },
+  { display: "LT",         tradingSymbol: "LT",          token: "11483",exchange: "NSE",   type: "EQ"    },
 ];
 
 // ── Drawing tools ─────────────────────────────────────────────────────────────

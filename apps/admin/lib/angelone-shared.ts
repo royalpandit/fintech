@@ -11,13 +11,15 @@ export function resolveMarketExchange(input: {
 }): string {
   const sym = (input.tradingSymbol ?? "").toUpperCase();
   const exch = (input.exchange ?? "NSE").toUpperCase();
+  // Dhan indices use IDX_I exchange — pass through directly
+  if (exch === "IDX_I" || input.instrumentType === "INDEX") return exch || "IDX_I";
   if (sym.endsWith("-EQ") || sym.endsWith("-BE") || input.instrumentType === "EQ") {
-    if (exch === "BSE" || input.symboltoken === "99919000" || sym.includes("SENSEX")) return "BSE";
+    if (exch === "BSE" || input.symboltoken === "51" || sym.includes("SENSEX")) return "BSE";
     return "NSE";
   }
   if (sym.endsWith("CE") || sym.endsWith("PE") || input.instrumentType === "OPT") return "NFO";
   if (sym.includes("FUT") || input.instrumentType === "FUT") return "NFO";
-  if (input.symboltoken === "99919000" || sym.includes("SENSEX")) return "BSE";
+  if (input.symboltoken === "51" || sym.includes("SENSEX")) return "BSE";
   if (exch === "BSE") return "BSE";
   if (exch === "MCX" || exch === "NCDEX") return exch;
   return "NSE";

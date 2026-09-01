@@ -17,12 +17,12 @@ const PERIOD_DAYS = {
   fiveYear: 365 * 5,
 } as const;
 
-const BENCHMARK_INDEX: Record<string, { symbol: string; token: string }> = {
-  "nifty 50": { symbol: "NIFTY", token: "99926000" },
-  "nifty50": { symbol: "NIFTY", token: "99926000" },
-  "nifty bank": { symbol: "BANKNIFTY", token: "99926009" },
-  "bank nifty": { symbol: "BANKNIFTY", token: "99926009" },
-  "sensex": { symbol: "SENSEX", token: "99919000" },
+const BENCHMARK_INDEX: Record<string, { symbol: string; token: string; exchange: string }> = {
+  "nifty 50":   { symbol: "NIFTY",     token: "13", exchange: "IDX_I" },
+  "nifty50":    { symbol: "NIFTY",     token: "13", exchange: "IDX_I" },
+  "nifty bank": { symbol: "BANKNIFTY", token: "25", exchange: "IDX_I" },
+  "bank nifty": { symbol: "BANKNIFTY", token: "25", exchange: "IDX_I" },
+  "sensex":     { symbol: "SENSEX",    token: "51", exchange: "IDX_I" },
 };
 
 function round4(n: number | null): number | null {
