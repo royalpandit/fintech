@@ -541,78 +541,93 @@ export async function getOptionChain(
   const meta = UNDERLYING_META[key];
   if (!meta) throw new Error(`Unknown underlying for option chain: ${underlying}`);
 
-  const expiryISO = toISOExpiry(expiryCode);
-  const resolvedCode = expiryCode || isoToExpiryCode(expiryISO);
-  const url = `${BASE}/optionchain?UnderlyingScrip=${meta.secId}&UnderlyingSeg=${meta.seg}&Expiry=${expiryISO}`;
+  const scripId = Number(meta.secId);
 
-  console.log(`[Dhan] getOptionChain key=${key} expiry=${expiryISO} url=${url}`);
+  // Step 1: fetch available expiries (POST /optionchain/expirylist)
+  type ExpiryListResp = { status?: string; data?: string[]; remarks?: string };
+  const expiryListJson = await dhanPost<ExpiryListResp>("/optionchain/expirylist", {
+    UnderlyingScrip: scripId,
+    UnderlyingSeg: meta.seg,
+  }).catch(() => ({ data: [] as string[] }));
+  const expiryList: string[] = expiryListJson.data ?? [];
 
-  return scheduleAngelRest("dhan-optchain", async () => {
-    const res = await fetch(url, { headers: dhanHeaders(), cache: "no-store" });
-    const json = await res.json() as {
-      status?: string;
-      remarks?: string;
-      data?: {
-        oc?: Array<{
-          strike_price?: number;
-          call_options?: { security_id?: string; ltp?: number; volume?: number; oi?: number; oi_change?: number; net_change?: number };
-          put_options?:  { security_id?: string; ltp?: number; volume?: number; oi?: number; oi_change?: number; net_change?: number };
-        }>;
-        underlying_ltp?: number;
-        expiry_list?: string[];
-      };
-    };
-    console.log(`[Dhan] optionchain HTTP ${res.status}`, JSON.stringify(json).slice(0, 400));
+  // Resolve expiry ISO: use provided code, else nearest from list, else nearest Thursday
+  const expiryISO = expiryCode ? toISOExpiry(expiryCode) : (expiryList[0] ?? nearestThursdayISO());
+  const resolvedCode = isoToExpiryCode(expiryISO);
 
-    if (!res.ok) throw new Error(`Dhan option chain HTTP ${res.status}: ${json.remarks ?? res.statusText}`);
-    const data = json.data;
-    if (!data?.oc) throw new Error(`Dhan option chain returned no data. Response: ${JSON.stringify(json).slice(0, 200)}`);
+  console.log(`[Dhan] getOptionChain key=${key} expiry=${expiryISO} expiries=${expiryList.length}`);
 
-    const liveSpot = data.underlying_ltp ?? spot ?? 0;
-    const stepSize = key === "SENSEX" ? 100 : 50;
-    const atmStrike = Math.round(liveSpot / stepSize) * stepSize;
-    const radius    = opts.profile ? 35 : 15;
-    const rows: OptionChainRow[] = [];
-    const tokenSet = new Set<string>();
+  // Step 2: fetch option chain (POST /optionchain)
+  type LegData = {
+    security_id?: number;
+    last_price?: number;
+    volume?: number;
+    oi?: number;
+    previous_oi?: number;
+    previous_close_price?: number;
+    implied_volatility?: number;
+  };
+  type OcResp = {
+    status?: string; remarks?: string;
+    data?: { last_price?: number; oc?: Record<string, { ce?: LegData; pe?: LegData }> };
+  };
 
-    for (const item of data.oc) {
-      const strike = item.strike_price ?? 0;
-      if (liveSpot > 0 && Math.abs(strike - atmStrike) > radius * stepSize) continue;
-
-      const mapLeg = (side: typeof item.call_options, type: "CE" | "PE"): OptionLeg | undefined => {
-        if (!side) return undefined;
-        const token = side.security_id ?? `${meta.secId}_${strike}_${type}`;
-        if (side.security_id) tokenSet.add(side.security_id);
-        return {
-          tradingsymbol: `${key}${resolvedCode}${strike}${type}`,
-          token,
-          ltp:      side.ltp,
-          change:   side.net_change,
-          oi:       side.oi,
-          oiChange: side.oi_change,
-          volume:   side.volume,
-        };
-      };
-      rows.push({ strike, ce: mapLeg(item.call_options, "CE"), pe: mapLeg(item.put_options, "PE") });
-    }
-
-    const expiries = (data.expiry_list ?? [expiryISO]).map(iso => ({
-      code: isoToExpiryCode(iso),
-      label: formatExpiryLabel(isoToExpiryCode(iso)),
-    }));
-
-    const tokens = [...tokenSet].map(t => ({ token: t, exchange: meta.seg }));
-
-    return {
-      underlying: key,
-      exchange: meta.seg,
-      expiry: resolvedCode,
-      expiries,
-      spot: liveSpot,
-      rows,
-      tokens,
-    };
+  const json = await dhanPost<OcResp>("/optionchain", {
+    UnderlyingScrip: scripId,
+    UnderlyingSeg: meta.seg,
+    Expiry: expiryISO,
   });
+
+  const data = json.data;
+  if (!data?.oc) throw new Error(`Dhan option chain returned no data. status=${json.status} remarks=${json.remarks}`);
+
+  const liveSpot = data.last_price ?? spot ?? 0;
+  const stepSize = key === "SENSEX" ? 100 : 50;
+  const atmStrike = Math.round(liveSpot / stepSize) * stepSize;
+  const radius    = opts.profile ? 35 : 15;
+  const rows: OptionChainRow[] = [];
+  const tokenSet = new Set<string>();
+
+  for (const [strikeStr, item] of Object.entries(data.oc)) {
+    const strike = parseFloat(strikeStr);
+    if (liveSpot > 0 && Math.abs(strike - atmStrike) > radius * stepSize) continue;
+
+    const mapLeg = (side: LegData | undefined, type: "CE" | "PE"): OptionLeg | undefined => {
+      if (!side) return undefined;
+      const token = side.security_id ? String(side.security_id) : `${meta.secId}_${strike}_${type}`;
+      if (side.security_id) tokenSet.add(String(side.security_id));
+      const oiChange = (side.oi ?? 0) - (side.previous_oi ?? 0);
+      const netChange = (side.last_price ?? 0) - (side.previous_close_price ?? 0);
+      return {
+        tradingsymbol: `${key}${resolvedCode}${Math.round(strike)}${type}`,
+        token,
+        ltp:      side.last_price,
+        change:   netChange,
+        oi:       side.oi,
+        oiChange,
+        volume:   side.volume,
+      };
+    };
+    rows.push({ strike, ce: mapLeg(item.ce, "CE"), pe: mapLeg(item.pe, "PE") });
+  }
+
+  rows.sort((a, b) => a.strike - b.strike);
+
+  const allExpiries = expiryList.length ? expiryList : [expiryISO];
+  const expiries = allExpiries.map(iso => ({
+    code: isoToExpiryCode(iso),
+    label: formatExpiryLabel(isoToExpiryCode(iso)),
+  }));
+
+  return {
+    underlying: key,
+    exchange: meta.seg,
+    expiry: resolvedCode,
+    expiries,
+    spot: liveSpot,
+    rows,
+    tokens: [...tokenSet].map(t => ({ token: t, exchange: meta.seg })),
+  };
 }
 
 export async function refreshOptionChainQuotes(
