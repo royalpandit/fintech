@@ -40,30 +40,45 @@ function authHeaders() {
   return { "Content-Type": "application/json", ...(t ? { Authorization: `Bearer ${t}` } : {}) };
 }
 
+function applyInline(raw: string): string {
+  return raw
+    .replace(/\*\*(.*?)\*\*/g, (_, t) => `<strong>${t}</strong>`)
+    .replace(/\*(.*?)\*/g, (_, t) => `<em>${t}</em>`)
+    .replace(
+      /`([^`]+)`/g,
+      (_, t) =>
+        `<code style="background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:0.9em;font-family:monospace">${t}</code>`,
+    );
+}
+
 function MarkdownText({ text }: { text: string }) {
   const lines = text.split("\n");
   return (
-    <div style={{ lineHeight: 1.65, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+    <div style={{ lineHeight: 1.65, wordBreak: "break-word" }}>
       {lines.map((line, i) => {
-        let content: React.ReactNode = line;
-        content = String(content).replace(/\*\*(.*?)\*\*/g, (_, t) => `<strong>${t}</strong>`);
-        content = String(content).replace(
-          /`([^`]+)`/g,
-          (_, t) =>
-            `<code style="background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:0.9em;font-family:monospace">${t}</code>`,
-        );
-        const isBullet = line.startsWith("- ") || line.startsWith("• ");
+        // Horizontal rule: ***, ---, ___
+        if (/^(\*{3,}|-{3,}|_{3,})\s*$/.test(line.trim())) {
+          return <hr key={i} style={{ border: "none", borderTop: "1px solid var(--border)", margin: "10px 0" }} />;
+        }
+        // Headings
+        const h1 = line.match(/^# (.+)/);
+        if (h1) return <div key={i} style={{ fontWeight: 700, fontSize: 17, margin: "10px 0 4px" }} dangerouslySetInnerHTML={{ __html: applyInline(h1[1]) }} />;
+        const h2 = line.match(/^## (.+)/);
+        if (h2) return <div key={i} style={{ fontWeight: 700, fontSize: 15, margin: "8px 0 3px" }} dangerouslySetInnerHTML={{ __html: applyInline(h2[1]) }} />;
+        const h3 = line.match(/^### (.+)/);
+        if (h3) return <div key={i} style={{ fontWeight: 700, fontSize: 14, margin: "6px 0 2px" }} dangerouslySetInnerHTML={{ __html: applyInline(h3[1]) }} />;
+
+        // Bullets: - , • , or * followed by a space
+        const isBullet = /^[-•*]\s/.test(line);
+        const content = applyInline(isBullet ? line.slice(2) : line);
+
         return (
           <div
             key={i}
             style={{ marginBottom: isBullet ? 2 : 0, paddingLeft: isBullet ? 14 : 0, position: "relative" }}
           >
             {isBullet && <span style={{ position: "absolute", left: 0 }}>•</span>}
-            <span
-              dangerouslySetInnerHTML={{
-                __html: typeof content === "string" ? (isBullet ? content.slice(2) : content) : "",
-              }}
-            />
+            <span dangerouslySetInnerHTML={{ __html: content }} />
           </div>
         );
       })}

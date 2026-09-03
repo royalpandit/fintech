@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAngelMetrics } from "@/lib/angelone-metrics";
-import { getAngelStreamHub } from "@/lib/angelone-stream";
+import { getDhanStreamHub } from "@/lib/dhan-stream";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +9,6 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     ...getAngelMetrics(),
-    stream: getAngelStreamHub().getStatus(),
+    stream: getDhanStreamHub().getStatus(),
   });
 }

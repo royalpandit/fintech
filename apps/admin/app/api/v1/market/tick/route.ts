@@ -1,5 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { getOHLC } from "@/lib/angelone";
+﻿import { NextResponse, type NextRequest } from "next/server";
+import { getOHLC } from "@/lib/dhan";
 import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const cacheKey = `tick:${exchange}:${token}`;
-    const results = await withMarketCache(cacheKey, 3_000, () =>
+    const results = await withMarketCache(cacheKey, 15_000, () =>
       getOHLC([{ exchange, symboltoken: token }]),
     );
     const q = results[0];
@@ -50,3 +50,4 @@ export async function GET(req: NextRequest) {
     });
   }
 }
+

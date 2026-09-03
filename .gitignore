@@ -9,3 +9,5 @@ venv/
 *.tsbuildinfo
 # User-uploaded content — never commit test artifacts
 apps/admin/public/uploads/
+# Dhan OAuth session (access token, rotates daily)
+.dhan-session.json

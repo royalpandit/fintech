@@ -1,8 +1,8 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
-import { searchSymbol } from "@/lib/angelone";
+import { searchSymbol } from "@/lib/dhan";
 import {
   SEARCH_CATEGORY_LABELS,
   SEARCH_CATEGORY_ORDER,
@@ -200,3 +200,4 @@ export default async function UserSearchPage({
     </section>
   );
 }
+

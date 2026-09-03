@@ -1,5 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { refreshOptionChainQuotes } from "@/lib/angelone";
+﻿import { NextResponse, type NextRequest } from "next/server";
+import { refreshOptionChainQuotes } from "@/lib/dhan";
 import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -29,15 +29,15 @@ export async function POST(req: NextRequest) {
     );
 
     const quotes: Record<string, unknown> = {};
-    for (const [token, q] of map) {
+    for (const [token, q] of Object.entries(map)) {
       quotes[token] = {
         ltp: q.ltp,
         netChange: q.netChange,
         percentChange: q.percentChange,
         tradeVolume: q.tradeVolume,
         opnInterest: q.opnInterest,
-        oiChange: q.opnInterestChange,
-        oiChangePct: q.opnInterestChangePct,
+        oiChange: q.oiChange,
+        oiChangePct: q.oiChangePct,
       };
     }
     return NextResponse.json({ ok: true, quotes, ts: Date.now() });
@@ -52,3 +52,4 @@ export async function POST(req: NextRequest) {
     }, { status: 200 });
   }
 }
+

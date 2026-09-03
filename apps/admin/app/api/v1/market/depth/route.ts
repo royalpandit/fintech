@@ -1,5 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { getMarketDepth } from "@/lib/angelone";
+﻿import { NextResponse, type NextRequest } from "next/server";
+import { getMarketDepth } from "@/lib/dhan";
 import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     }
 
     const cacheKey = `depth:${exchange}:${token}`;
-    const data = await withMarketCache(cacheKey, 3_000, () =>
+    const data = await withMarketCache(cacheKey, 15_000, () =>
       getMarketDepth(exchange, token, tradingSymbol)
     );
 
@@ -40,3 +40,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: msg }, { status: 200 });
   }
 }
+

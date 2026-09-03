@@ -1,5 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { getOHLC } from "@/lib/angelone";
+﻿import { NextResponse, type NextRequest } from "next/server";
+import { getOHLC } from "@/lib/dhan";
 import { getEtfList } from "@/lib/scrip-master";
 
 import { requireAuth } from "@/lib/auth";
@@ -85,3 +85,4 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+

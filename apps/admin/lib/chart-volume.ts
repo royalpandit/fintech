@@ -1,11 +1,11 @@
-import type { Candle, CandleInterval } from "@/lib/angelone";
-import { getCandles, searchSymbol } from "@/lib/angelone";
+﻿import type { Candle, CandleInterval } from "@/lib/dhan";
+import { getCandles, searchSymbol } from "@/lib/dhan";
 import { parseCandleTimestampToUnix } from "@/lib/nse-market-time";
 
 const INDEX_FUT_SEARCH: Record<string, { exchange: string; query: string }> = {
-  "99926000": { exchange: "NFO", query: "NIFTY" },
-  "99926009": { exchange: "NFO", query: "BANKNIFTY" },
-  "99919000": { exchange: "BFO", query: "SENSEX" },
+  "13": { exchange: "NFO", query: "NIFTY" },
+  "25": { exchange: "NFO", query: "BANKNIFTY" },
+  "51": { exchange: "BFO", query: "SENSEX" },
 };
 
 function candleEpochSec(timestamp: string): number {
@@ -64,7 +64,7 @@ export async function enrichCandlesWithVolume(
   if (normalized.some(c => c.volume > 0)) return normalized;
 
   const isIndex =
-    params.instrumentType === "INDEX" || /^999\d+/.test(params.symboltoken);
+    params.instrumentType === "INDEX" || params.exchange === "IDX_I" || /^999\d+/.test(params.symboltoken);
   if (!isIndex || normalized.length === 0) return normalized;
 
   const fut = await nearestFutureToken(params.symboltoken);
@@ -95,3 +95,4 @@ export async function enrichCandlesWithVolume(
 
   return normalized;
 }
+

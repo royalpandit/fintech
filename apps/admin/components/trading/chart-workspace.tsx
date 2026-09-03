@@ -8,8 +8,8 @@ import type { WatchlistItem } from "@/components/trading/trading-terminal-types"
 const NIFTY: WatchlistItem = {
   display: "NIFTY 50",
   tradingSymbol: "NIFTY 50",
-  token: "99926000",
-  exchange: "NSE",
+  token: "13",
+  exchange: "IDX_I",
   type: "INDEX",
 };
 

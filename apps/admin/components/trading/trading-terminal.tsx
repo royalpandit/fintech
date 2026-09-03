@@ -60,18 +60,18 @@ const PERIODS: PeriodPreset[] = [
 ];
 
 const DEFAULT_WATCHLIST: WatchlistItem[] = [
-  { display: "NIFTY 50",   tradingSymbol: "NIFTY 50",   token: "99926000", exchange: "NSE", type: "INDEX" },
-  { display: "BANK NIFTY", tradingSymbol: "NIFTY BANK", token: "99926009", exchange: "NSE", type: "INDEX" },
-  { display: "SENSEX",     tradingSymbol: "SENSEX",      token: "99919000", exchange: "BSE", type: "INDEX" },
-  { display: "RELIANCE",   tradingSymbol: "RELIANCE",    token: "2885",     exchange: "NSE", type: "EQ"    },
-  { display: "TCS",        tradingSymbol: "TCS",         token: "11536",    exchange: "NSE", type: "EQ"    },
-  { display: "HDFCBANK",   tradingSymbol: "HDFCBANK",    token: "1333",     exchange: "NSE", type: "EQ"    },
-  { display: "INFY",       tradingSymbol: "INFY",        token: "1594",     exchange: "NSE", type: "EQ"    },
-  { display: "ICICIBANK",  tradingSymbol: "ICICIBANK",   token: "4963",     exchange: "NSE", type: "EQ"    },
-  { display: "WIPRO",      tradingSymbol: "WIPRO",       token: "3787",     exchange: "NSE", type: "EQ"    },
-  { display: "SBIN",       tradingSymbol: "SBIN",        token: "3045",     exchange: "NSE", type: "EQ"    },
-  { display: "BHARTIARTL", tradingSymbol: "BHARTIARTL",  token: "10604",    exchange: "NSE", type: "EQ"    },
-  { display: "LT",         tradingSymbol: "LT",          token: "11483",    exchange: "NSE", type: "EQ"    },
+  { display: "NIFTY 50",   tradingSymbol: "NIFTY 50",   token: "13",   exchange: "IDX_I", type: "INDEX" },
+  { display: "BANK NIFTY", tradingSymbol: "NIFTY BANK", token: "25",   exchange: "IDX_I", type: "INDEX" },
+  { display: "SENSEX",     tradingSymbol: "SENSEX",      token: "51",   exchange: "IDX_I", type: "INDEX" },
+  { display: "RELIANCE",   tradingSymbol: "RELIANCE",    token: "2885", exchange: "NSE",   type: "EQ"    },
+  { display: "TCS",        tradingSymbol: "TCS",         token: "11536",exchange: "NSE",   type: "EQ"    },
+  { display: "HDFCBANK",   tradingSymbol: "HDFCBANK",    token: "1333", exchange: "NSE",   type: "EQ"    },
+  { display: "INFY",       tradingSymbol: "INFY",        token: "1594", exchange: "NSE",   type: "EQ"    },
+  { display: "ICICIBANK",  tradingSymbol: "ICICIBANK",   token: "4963", exchange: "NSE",   type: "EQ"    },
+  { display: "WIPRO",      tradingSymbol: "WIPRO",       token: "3787", exchange: "NSE",   type: "EQ"    },
+  { display: "SBIN",       tradingSymbol: "SBIN",        token: "3045", exchange: "NSE",   type: "EQ"    },
+  { display: "BHARTIARTL", tradingSymbol: "BHARTIARTL",  token: "10604",exchange: "NSE",   type: "EQ"    },
+  { display: "LT",         tradingSymbol: "LT",          token: "11483",exchange: "NSE",   type: "EQ"    },
 ];
 
 // ── Drawing tools ─────────────────────────────────────────────────────────────
@@ -555,13 +555,17 @@ function TradingTerminalInner({
         : "/api/v1/market/live";
       const res  = await fetch(url, { cache: "no-store" });
       const json = await res.json();
+      console.log(`[Chart] live quotes HTTP ${res.status} ok=${json.ok} rateLimited=${json.rateLimited} count=${json.data?.length ?? 0}`, json.ok ? "" : json.error);
       if (json.rateLimited) {
         setCandleError(prev =>
-          prev?.includes("rate limit") ? prev : "Angel One rate limit — live updates paused briefly."
+          prev?.includes("rate limit") ? prev : "Dhan API rate limit — live updates paused briefly."
         );
         return;
       }
-      if (!json.ok) return;
+      if (!json.ok) {
+        console.warn("[Chart] live quotes not ok:", json.error);
+        return;
+      }
 
       const quoteMap = new Map<string, {
         ltp: number; open: number; high: number; low: number; close?: number;
@@ -671,7 +675,7 @@ function TradingTerminalInner({
   // REST fallback for OHLC / % change on watchlist (WebSocket = LTP only)
   useEffect(() => {
     fetchQuotes();
-    const ms = centerTab === "chart" ? 12_000 : 20_000;
+    const ms = centerTab === "chart" ? 30_000 : 60_000;
     const id = setInterval(fetchQuotes, ms);
     return () => clearInterval(id);
   }, [fetchQuotes, centerTab]);
@@ -695,18 +699,23 @@ function TradingTerminalInner({
       `&tradingSymbol=${encodeURIComponent(selected.tradingSymbol)}` +
       `&instrumentType=${encodeURIComponent(selected.type)}` +
       `&interval=${timeframe.fetchInterval}&days=${period.days}`;
+    console.log(`[Chart] fetchCandles silent=${silent} →`, url);
     try {
       const res  = await fetch(url, { cache: "no-store" });
       const json = await res.json();
+      console.log(`[Chart] candles response HTTP ${res.status}`, json);
       if (json.ok && Array.isArray(json.data)) {
+        console.log(`[Chart] loaded ${json.data.length} candles, first=`, json.data[0], "last=", json.data[json.data.length - 1]);
         setCandles(json.data as Candle[]);
         const ltp = selectedRef.current.ltp;
         if (ltp && ltp > 0) pushLiveTick(ltp, liveSessionVol);
         if (!silent) setCandleError(null);
       } else if (!silent) {
+        console.warn("[Chart] candles error:", json.error, "rateLimited=", json.rateLimited);
         setCandleError(json.error ?? "Failed to load chart data");
       }
     } catch (e) {
+      console.error("[Chart] candles fetch threw:", e);
       if (!silent) {
         setCandleError(e instanceof Error ? e.message : "Network error");
       }
@@ -869,7 +878,7 @@ function TradingTerminalInner({
 
   useEffect(() => {
     if (!oiProfileActive || centerTab !== "chart") return;
-    const id = setInterval(refreshOiProfile, 12_000);
+    const id = setInterval(refreshOiProfile, 45_000);
     return () => clearInterval(id);
   }, [oiProfileActive, centerTab, refreshOiProfile]);
 

@@ -1,5 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { getCandles, resolveMarketExchange, type CandleInterval } from "@/lib/angelone";
+﻿import { NextResponse, type NextRequest } from "next/server";
+import { getCandles, resolveMarketExchange, type CandleInterval } from "@/lib/dhan";
 import { enrichCandlesWithVolume } from "@/lib/chart-volume";
 import { angelCandleRange } from "@/lib/nse-market-time";
 import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
     }
 
     const cacheKey = `candles:v2:${token}:${exchange}:${interval}:${days}`;
-    const candles = await withMarketCache(cacheKey, 8_000, async () => {
+    const candles = await withMarketCache(cacheKey, 20_000, async () => {
       const raw = await getCandles({
         exchange,
         symboltoken: token,
@@ -79,3 +79,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: msg, rateLimited: isRateLimited() }, { status: 200 });
   }
 }
+
