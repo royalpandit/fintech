@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FiArrowDownRight, FiArrowUpRight } from "react-icons/fi";
 import AddToWatchlistButton from "@/components/watchlist/add-to-watchlist-button";
 import TradeButtons from "@/components/trading/trade-buttons";
+import { LoadingTableRows } from "@/components/loading-shimmer";
 
 type Etf = {
   symbol: string;
@@ -105,7 +106,7 @@ export default function EtfView() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={4} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>Loading scrip master…</td></tr>
+                <LoadingTableRows cols={4} rows={6} />
               ) : warming ? (
                 <tr><td colSpan={4} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>
                   Building the ETF list from the scrip master — this takes a minute. Refresh shortly.
@@ -142,7 +143,7 @@ export default function EtfView() {
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
                           {/* ETFs are EQ on NSE — same instrument the paper
                               engine already fills for equities. */}
-                          <TradeButtons symbol={r.symbol} instrumentType="EQ" exchange={r.exchange} />
+                          <TradeButtons symbol={r.symbol} instrumentType="EQ" exchange={r.exchange} price={r.ltp} />
                           <AddToWatchlistButton
                             item={{ display: r.symbol, tradingSymbol: r.symbol, token: r.token, exchange: r.exchange, type: "EQ" }}
                             compact

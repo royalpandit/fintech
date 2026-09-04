@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { FiArrowUpRight, FiArrowDownRight, FiSearch, FiX } from "react-icons/fi";
+import { LoadingTableRows } from "@/components/loading-shimmer";
 
 type Coin = {
   id: string;
@@ -162,7 +163,7 @@ export default function CryptoView() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={4} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>Loading…</td></tr>
+                <LoadingTableRows cols={4} rows={6} />
               ) : coins.length === 0 ? (
                 <tr><td colSpan={4} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>No data.</td></tr>
               ) : filtered.length === 0 ? (

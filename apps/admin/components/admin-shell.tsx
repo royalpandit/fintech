@@ -3,7 +3,30 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { FiMenu, FiX } from "react-icons/fi";
+import {
+  FiMenu,
+  FiX,
+  FiPieChart,
+  FiBarChart2,
+  FiUsers,
+  FiUserCheck,
+  FiShield,
+  FiActivity,
+  FiMessageSquare,
+  FiFileText,
+  FiCpu,
+  FiLayers,
+  FiAward,
+  FiBookOpen,
+  FiCreditCard,
+  FiStar,
+  FiDollarSign,
+  FiBell,
+  FiClipboard,
+  FiSettings,
+} from "react-icons/fi";
+import { TbRobot } from "react-icons/tb";
+import type { IconType } from "react-icons";
 import FinuerLogo from "@/components/brand/finuer-logo";
 import ThemeToggleMenu from "@/components/theme/theme-toggle-menu";
 import PanelThemeToggle from "@/components/theme/panel-theme-toggle";
@@ -15,6 +38,39 @@ import ShellMenuAvatar from "./shell-menu-avatar";
 import { useDismissableMenu } from "@/hooks/use-dismissable-menu";
 import PanelBackground from "@/components/motion/panel-background";
 import { ToastProvider } from "./toast";
+
+/**
+ * One icon per sidebar module, mirroring the advisor console's MODULE_ICONS.
+ *
+ * Every row here used to render `.admin-nav-dot` — the neutral fallback marker
+ * meant for a module with no icon — because no icon map existed. That gave the
+ * whole super-admin sidebar a column of identical grey bullets, so the nav read
+ * as a bulleted list rather than as navigation, and it looked nothing like the
+ * advisor shell beside it. Keys match NAV_GROUPS in lib/super-admin.ts exactly;
+ * anything unmapped still falls back to the dot rather than breaking the row.
+ */
+const MODULE_ICONS: Record<string, IconType> = {
+  Dashboard: FiPieChart,
+  Analytics: FiBarChart2,
+  Users: FiUsers,
+  Advisors: FiUserCheck,
+  Permissions: FiShield,
+  "Buy Sell Trade Posts": FiActivity,
+  Community: FiMessageSquare,
+  Reports: FiFileText,
+  "AI & Compliance": FiCpu,
+  "AI Agents": TbRobot,
+  "Finuer Basket": FiLayers,
+  Competition: FiAward,
+  Courses: FiBookOpen,
+  Subscriptions: FiCreditCard,
+  "Finuer Pro Plans": FiStar,
+  Sponsorship: FiAward,
+  Payments: FiDollarSign,
+  Notifications: FiBell,
+  "Audit Logs": FiClipboard,
+  Settings: FiSettings,
+};
 
 type AdminShellProps = {
   children: React.ReactNode;
@@ -210,19 +266,22 @@ export default function AdminShell({ children, currentUser }: AdminShellProps) {
             return (
               <div key={group.heading} className="admin-nav-group">
                 <div className="admin-nav-heading">{group.heading}</div>
-                {items.map((moduleName) => (
-                  <Link
-                    key={moduleName}
-                    href={MODULE_ROUTE_MAP[moduleName]}
-                    className={`admin-nav-link ${isActive(MODULE_ROUTE_MAP[moduleName]) ? "active" : ""}`}
-                    onClick={() => setNavOpen(false)}
-                  >
-                    <span className="admin-nav-icon" aria-hidden>
-                      <span className="admin-nav-dot" />
-                    </span>
-                    <span className="admin-nav-label">{moduleName}</span>
-                  </Link>
-                ))}
+                {items.map((moduleName) => {
+                  const Icon = MODULE_ICONS[moduleName];
+                  return (
+                    <Link
+                      key={moduleName}
+                      href={MODULE_ROUTE_MAP[moduleName]}
+                      className={`admin-nav-link ${isActive(MODULE_ROUTE_MAP[moduleName]) ? "active" : ""}`}
+                      onClick={() => setNavOpen(false)}
+                    >
+                      <span className="admin-nav-icon" aria-hidden>
+                        {Icon ? <Icon size={17} /> : <span className="admin-nav-dot" />}
+                      </span>
+                      <span className="admin-nav-label">{moduleName}</span>
+                    </Link>
+                  );
+                })}
               </div>
             );
           })}

@@ -72,10 +72,10 @@ export default async function UserDashboardPage({
 
   const [
     portfolios,
-    wallet,
+    // wallet,           // see the commented-out queries below
     snapshots,
     holdings,
-    virtualHoldings,
+    // virtualHoldings,  // was already fetched and never rendered
     topAdvisorMetrics,
     topSymbols,
     sentimentMix,
@@ -89,9 +89,12 @@ export default async function UserDashboardPage({
           orderBy: { totalValue: "desc" },
         })
       : Promise.resolve([]),
-    userId
-      ? prisma.virtualWallet.findUnique({ where: { userId } })
-      : Promise.resolve(null),
+    // Wallet is hidden from the nav and the Buying Power card that used this is
+    // commented out, so the dashboard no longer reads the virtual wallet.
+    // Uncomment together with `wallet` in the destructuring above.
+    // userId
+    //   ? prisma.virtualWallet.findUnique({ where: { userId } })
+    //   : Promise.resolve(null),
     userId
       ? prisma.portfolioSnapshotDaily.findMany({
           where: {
@@ -108,13 +111,15 @@ export default async function UserDashboardPage({
           take: 10,
         })
       : Promise.resolve([]),
-    userId
-      ? prisma.tradeVirtual.findMany({
-          where: { wallet: { userId } },
-          orderBy: { tradedAt: "desc" },
-          take: 50,
-        })
-      : Promise.resolve([]),
+    // Paper trades — fetched but never rendered on this page, even before
+    // Virtual Trading was hidden. Uncomment with `virtualHoldings` above.
+    // userId
+    //   ? prisma.tradeVirtual.findMany({
+    //       where: { wallet: { userId } },
+    //       orderBy: { tradedAt: "desc" },
+    //       take: 50,
+    //     })
+    //   : Promise.resolve([]),
     prisma.advisorMetricDaily.groupBy({
       by: ["advisorUserId"],
       where: { day: { gte: new Date(Date.now() - 30 * 86400_000) } },
@@ -191,7 +196,7 @@ export default async function UserDashboardPage({
   const todayPnLPct =
     yesterdayValue > 0 ? ((todayValue - yesterdayValue) / yesterdayValue) * 100 : 0;
 
-  const buyingPower = wallet?.balance ? Number(wallet.balance) : 0;
+  // const buyingPower = wallet?.balance ? Number(wallet.balance) : 0;
 
   // Performance chart from snapshots
   const chartData =
@@ -311,7 +316,11 @@ export default async function UserDashboardPage({
           {/* <AiStockPicksSection /> */}
 
           {/* KPI cards row */}
-          <div className="user-stat-grid" style={{ marginBottom: 18 }}>
+          {/* stat-grid-3, not user-stat-grid: the fourth card (Buying Power)
+              is commented out below because it renders the virtual wallet
+              balance, and Wallet is hidden from the nav. Switch back to
+              user-stat-grid when that card comes back. */}
+          <div className="stat-grid-3" style={{ marginBottom: 18 }}>
             <article
               style={{
                 background: "var(--surface)",
@@ -464,6 +473,8 @@ export default async function UserDashboardPage({
               </p>
             </article>
 
+            {/* Buying Power = virtual wallet balance. Hidden along with the
+                Wallet tab; uncomment with it (and restore user-stat-grid above).
             <article
               style={{
                 background: "var(--surface)",
@@ -496,6 +507,7 @@ export default async function UserDashboardPage({
                 {formatINR(buyingPower || 26680.5)}
               </p>
             </article>
+            */}
           </div>
 
           {/* Performance + Holdings */}
@@ -880,7 +892,10 @@ export default async function UserDashboardPage({
             })}
           </article>
 
-          {/* Virtual Trade */}
+          {/* Virtual Trade — order-entry card, hidden along with the
+              Virtual Trading tab. It was a non-functional mock anyway
+              (the inputs were never wired to the paper-order engine), so
+              nothing behavioural is lost. Uncomment with the nav item.
           <article
             style={{
               background: "var(--surface)",
@@ -1066,6 +1081,8 @@ export default async function UserDashboardPage({
               </button>
             </AuthGate>
           </article>
+
+          */}
 
           {/* Market News */}
           <article

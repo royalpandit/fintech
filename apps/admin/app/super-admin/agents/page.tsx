@@ -20,6 +20,7 @@ interface Agent {
   model: string;
   temperature: number;
   isActive: boolean;
+  starterPrompts: string[];
   isSiteAssistant: boolean;
   createdAt: string;
   createdBy: { fullName: string };
@@ -43,6 +44,7 @@ const empty = () => ({
   model: "gemini-flash-latest",
   temperature: 0.7,
   isActive: true,
+  starterPrompts: "",
 });
 
 function getToken() {
@@ -87,7 +89,18 @@ export default function AgentsPage() {
 
   function openCreate() { setForm(empty()); setEditId(null); setError(""); setOpen(true); }
   function openEdit(a: Agent) {
-    setForm({ name: a.name, description: a.description, systemPrompt: a.systemPrompt, avatar: a.avatar || "🤖", model: a.model, temperature: a.temperature, isActive: a.isActive });
+    setForm({
+      name: a.name,
+      description: a.description,
+      systemPrompt: a.systemPrompt,
+      avatar: a.avatar || "🤖",
+      model: a.model,
+      temperature: a.temperature,
+      isActive: a.isActive,
+      // Stored as an array, edited as one prompt per line — the server splits
+      // and trims it back (normalizeStarterPrompts).
+      starterPrompts: (a.starterPrompts ?? []).join("\n"),
+    });
     setEditId(a.id); setError(""); setOpen(true);
   }
 
@@ -271,6 +284,22 @@ export default function AgentsPage() {
                   style={{ width: "100%", padding: "12px 14px", border: "1.5px solid var(--border)", borderRadius: 8, fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit", lineHeight: 1.6, color: "var(--text)", boxSizing: "border-box" }} />
                 <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--text-muted)", lineHeight: 1.45 }}>
                   PDF / Word attach is built into every chat UI — keep a short Documents section so the model handles uploads well.
+                </p>
+              </div>
+
+              {/* Starter prompts */}
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>
+                  Starter prompts <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>· optional</span>
+                </label>
+                <textarea value={form.starterPrompts} onChange={e => f("starterPrompts", e.target.value)}
+                  rows={4}
+                  placeholder={"One per line, e.g.\nDecode NVDA's latest quarter\nWhat drove the margin miss?\nCompare guidance with last quarter"}
+                  style={{ width: "100%", padding: "12px 14px", border: "1.5px solid var(--border)", borderRadius: 8, fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit", lineHeight: 1.6, color: "var(--text)", boxSizing: "border-box" }} />
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--text-muted)", lineHeight: 1.45 }}>
+                  Shown as clickable chips on an empty chat. Write them for <em>this</em> agent — a
+                  generic starter on a specialist agent wastes the user&apos;s first turn. Up to 4;
+                  leave blank for none.
                 </p>
               </div>
 

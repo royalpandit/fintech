@@ -98,6 +98,51 @@ export function LoadingCards({
   );
 }
 
+/**
+ * Shimmer rows for a table body that is still loading.
+ *
+ * The market views each rendered a single centred "Loading…" cell instead —
+ * "Loading funds…", "Loading scrip master…" — so a table collapsed to one grey
+ * line and then jumped to full height when data landed. These occupy roughly
+ * the space the real rows will, so the layout does not move.
+ *
+ * Widths cycle rather than being uniform: a column of identical bars reads as
+ * a progress graphic, while uneven ones read as text about to appear.
+ */
+export function LoadingTableRows({
+  cols,
+  rows = 5,
+  /** First column is usually a name and wider than the figures after it. */
+  firstColWidth = "58%",
+}: {
+  cols: number;
+  rows?: number;
+  firstColWidth?: string;
+}) {
+  const widths = ["46%", "62%", "38%", "54%"];
+  return (
+    <>
+      {Array.from({ length: rows }, (_, r) => (
+        <tr key={r}>
+          {Array.from({ length: cols }, (_, c) => (
+            <td key={c} style={{ padding: "12px 16px" }}>
+              <span
+                className="skel"
+                style={{
+                  display: "block",
+                  height: 12,
+                  borderRadius: 6,
+                  width: c === 0 ? firstColWidth : widths[(r + c) % widths.length],
+                }}
+              />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
 /** Inline shimmer for a single value being fetched (a count, a price, a name). */
 export function LoadingInline({ width = 90, height = 12 }: { width?: number | string; height?: number }) {
   return (

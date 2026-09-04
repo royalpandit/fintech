@@ -14,7 +14,21 @@ type Msg = { role: "user" | "model"; content: string };
 
 // Hidden on staff consoles. Also requires a logged-in user / advisor / admin
 // (see `loggedIn` below) so landing, login, and register stay bubble-free for guests.
-const HIDDEN_PREFIXES = ["/super-admin", "/admin", "/moderator", "/login", "/register"];
+//
+// The agent sections are hidden for a different reason: this bubble IS an agent
+// chat, so floating it over a full-screen agent chat gave you two chat inputs on
+// one screen, with the bubble sitting on top of the real composer. Both the
+// browser and the [id] chat pages are covered — on the browser your next click
+// is to pick an agent anyway.
+const HIDDEN_PREFIXES = [
+  "/super-admin",
+  "/admin",
+  "/moderator",
+  "/login",
+  "/register",
+  "/user/lab/agents",
+  "/advisor/agents",
+];
 const CHAT_ROLES = new Set(["user", "advisor", "admin", "super_admin"]);
 
 const BUBBLE_SIZE = 56;

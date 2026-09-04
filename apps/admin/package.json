@@ -20,7 +20,10 @@
     "seed:all": "tsx scripts/seed-all.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "mark-advisors-verified": "tsx scripts/mark-advisors-verified.ts",
-    "db:sponsorship-tiers": "prisma db execute --file scripts/sql/sponsorship-tiers-migration.sql"
+    "db:sponsorship-tiers": "prisma db execute --file scripts/sql/sponsorship-tiers-migration.sql",
+    "db:agent-starter-prompts": "prisma db execute --file scripts/sql/agent-starter-prompts-migration.sql",
+    "db:basket-last-calculated": "prisma db execute --file scripts/sql/finuer-basket-last-calculated-migration.sql",
+    "db:basket-beta": "prisma db execute --file scripts/sql/finuer-basket-beta-migration.sql"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1106.0",

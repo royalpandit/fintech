@@ -1,5 +1,5 @@
 import MarketsLoading from "@/components/trading/markets-loading";
 
-export default function UserMarketsLoading() {
+export default function AdvisorMarketsLoading() {
   return <MarketsLoading />;
 }

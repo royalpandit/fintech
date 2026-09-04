@@ -14,7 +14,14 @@ export default async function AgentChatPage({ params }: { params: { id: string }
   const [agent, user] = await Promise.all([
     prisma.geminiAgent.findUnique({
       where: { id: Number(params.id), isActive: true },
-      select: { id: true, name: true, description: true, avatar: true, model: true },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        avatar: true,
+        model: true,
+        starterPrompts: true,
+      },
     }),
     auth
       ? prisma.user.findUnique({

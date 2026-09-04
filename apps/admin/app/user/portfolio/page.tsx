@@ -127,13 +127,14 @@ export default async function PortfolioPage() {
         </p>
         </div>
 
-        {/* Portfolio reviews positions; placing an order happens on Virtual
-            Trading, so the two pages stop being near-duplicates. */}
+        {/* Trade CTA pointed at Virtual Trading, which is hidden from the nav.
+            Uncomment with that tab.
         {isAuthed && (
           <Link href="/user/virtual-trading" className="vt-ai-cta">
             Trade
           </Link>
         )}
+        */}
       </div>
 
       {isAuthed && userId ? <PaperPortfolioSection userId={userId} showTradeForm={false} /> : null}

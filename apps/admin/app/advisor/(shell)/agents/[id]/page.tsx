@@ -15,7 +15,14 @@ export default async function AdvisorAgentChatPage({ params }: { params: { id: s
   const [agent, user] = await Promise.all([
     prisma.geminiAgent.findUnique({
       where: { id: Number(params.id), isActive: true },
-      select: { id: true, name: true, description: true, avatar: true, model: true },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        avatar: true,
+        model: true,
+        starterPrompts: true,
+      },
     }),
     prisma.user.findUnique({
       where: { id: auth.userId },

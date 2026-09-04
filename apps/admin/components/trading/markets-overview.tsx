@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { FiArrowUpRight, FiArrowDownRight, FiBarChart2, FiRefreshCw } from "react-icons/fi";
+import { FiArrowUpRight, FiArrowDownRight, FiBarChart2 } from "react-icons/fi";
 import MarketSearch from "@/components/trading/market-search";
 import MutualFundsView from "@/components/trading/mutual-funds-view";
 import CryptoView from "@/components/trading/crypto-view";
@@ -135,25 +135,17 @@ export default function MarketsOverview() {
 
   return (
     <section>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 12,
-          marginBottom: 18,
-        }}
-      >
+      <div className="mkt-head">
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: "var(--text)", letterSpacing: -0.5 }}>
-            Markets
-          </h1>
-          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
+          <h1 className="mkt-title">Markets</h1>
+          <p className="mkt-sub">
             Live indices, top movers and 52-week levels
+            {/* A pill with a pulsing dot, not a bare timestamp next to a static
+                refresh glyph — it reads as "this is live" at a glance. */}
             {updatedAt && (
-              <span style={{ marginLeft: 8, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                <FiRefreshCw size={10} /> {updatedAt}
+              <span className="mkt-live" title={`Quotes refresh every 10s · last ${updatedAt}`}>
+                <span className="mkt-live-dot" aria-hidden />
+                Live · {updatedAt}
               </span>
             )}
           </p>
@@ -180,34 +172,25 @@ export default function MarketsOverview() {
       </div>
 
       {/* Instrument tabs */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, borderBottom: "1px solid var(--border)", overflowX: "auto" }}>
-        {TABS.map((t) => {
-          const active = tab === t.key;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              style={{
-                padding: "10px 16px",
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-                fontSize: 14,
-                fontWeight: 600,
-                whiteSpace: "nowrap",
-                color: active ? "var(--text)" : "var(--text-muted)",
-                borderBottom: active ? "2px solid var(--primary, #10b981)" : "2px solid transparent",
-                marginBottom: -1,
-              }}
-            >
-              {t.label}
-            </button>
-          );
-        })}
+      {/* A segmented control rather than an underline rail: nine tabs on an
+          underline read as a wall of grey text, and on a narrow screen the row
+          scrolls with no sign that it does. */}
+      <div className="mkt-tabs" role="tablist" aria-label="Instrument type">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.key}
+            className={`mkt-tab${tab === t.key ? " is-active" : ""}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {tab === "all" && <MarketsAllView stocks={stocks} />}
+      {tab === "all" && <MarketsAllView stocks={stocks} indices={indices} loading={loading} />}
       {tab === "mf" && <MutualFundsView />}
       {tab === "crypto" && <CryptoView />}
       {tab === "currencies" && <CurrenciesView />}
@@ -225,29 +208,17 @@ export default function MarketsOverview() {
       {tab === "stocks" && (
       <>
       {/* Sector / industry filter */}
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-        {[{ key: "all", label: "All sectors" }, ...MARKET_SECTORS].map((s) => {
-          const active = sector === s.key;
-          return (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => setSector(s.key)}
-              style={{
-                padding: "6px 14px",
-                borderRadius: 999,
-                fontSize: 12.5,
-                fontWeight: 600,
-                cursor: "pointer",
-                border: "1px solid var(--border)",
-                background: active ? "var(--primary-soft, rgba(37,99,235,0.12))" : "var(--surface)",
-                color: active ? "var(--accent-blue, #2563eb)" : "var(--text-muted)",
-              }}
-            >
-              {s.label}
-            </button>
-          );
-        })}
+      <div className="mkt-chips">
+        {[{ key: "all", label: "All sectors" }, ...MARKET_SECTORS].map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            className={`mkt-chip${sector === s.key ? " is-active" : ""}`}
+            onClick={() => setSector(s.key)}
+          >
+            {s.label}
+          </button>
+        ))}
       </div>
 
       <MarketSearch />
@@ -268,55 +239,38 @@ export default function MarketsOverview() {
         </div>
       )}
 
-      {/* Index cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: 12,
-          marginBottom: 20,
-        }}
-      >
-        {(loading && indices.length === 0 ? skeletonRows(3) : indices).map((idx, i) => {
-          const pos = idx.percentChange >= 0;
-          return (
-            <Link
-              key={idx.token || i}
-              href={idx.token ? chartHref(idx) : "#"}
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                borderRadius: 14,
-                padding: 16,
-                textDecoration: "none",
-                color: "inherit",
-              }}
-            >
-              <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, marginBottom: 6 }}>
-                {idx.symbol || "—"}
-              </div>
-              <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text)", letterSpacing: -0.5 }}>
-                {idx.ltp ? inr(idx.ltp) : "—"}
-              </div>
-              <div
-                style={{
-                  marginTop: 4,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: pos ? up : down,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 3,
-                }}
-              >
-                {pos ? <FiArrowUpRight size={14} /> : <FiArrowDownRight size={14} />}
-                {idx.netChange >= 0 ? "+" : ""}
-                {inr(idx.netChange)} ({idx.percentChange >= 0 ? "+" : ""}
-                {idx.percentChange.toFixed(2)}%)
-              </div>
-            </Link>
-          );
-        })}
+      {/* Index cards.
+
+          While loading these used to render three fake rows of zeroes — "—"
+          and a flat "+0.00%" — which is not a loading state, it is wrong data
+          wearing a real card. With the new coloured direction rail it also
+          painted three green edges for a change nobody had measured yet. */}
+      <div className="mkt-index-grid">
+        {loading && indices.length === 0
+          ? Array.from({ length: 3 }, (_, i) => <IndexCardSkeleton key={i} />)
+          : indices.map((idx) => {
+              const pos = idx.percentChange >= 0;
+              return (
+                <Link
+                  key={idx.token}
+                  href={chartHref(idx)}
+                  /* data-dir drives a coloured hairline down the left edge, so
+                     the direction of a whole row of indices reads before any
+                     number does. */
+                  className="mkt-index-card"
+                  data-dir={pos ? "up" : "down"}
+                >
+                  <div className="mkt-index-sym">{idx.symbol || "—"}</div>
+                  <div className="mkt-index-ltp">{idx.ltp ? inr(idx.ltp) : "—"}</div>
+                  <div className={`mkt-chg ${pos ? "up" : "down"}`}>
+                    {pos ? <FiArrowUpRight size={13} /> : <FiArrowDownRight size={13} />}
+                    {idx.netChange >= 0 ? "+" : ""}
+                    {inr(idx.netChange)} ({idx.percentChange >= 0 ? "+" : ""}
+                    {idx.percentChange.toFixed(2)}%)
+                  </div>
+                </Link>
+              );
+            })}
       </div>
 
       {/* Gainers + Losers */}
@@ -488,7 +442,7 @@ function MoverList({ title, rows, positive }: { title: string; rows: OverviewRow
                   gap: 8,
                 }}
               >
-                <TradeButtons symbol={r.symbol} instrumentType={r.type} exchange={r.exchange} />
+                <TradeButtons symbol={r.symbol} instrumentType={r.type} exchange={r.exchange} price={r.ltp} />
                 <AddToWatchlistButton item={toWatchItem(r)} compact label="" />
               </span>
             </div>
@@ -510,20 +464,20 @@ function Td({ children, style }: { children: React.ReactNode; style?: React.CSSP
   return <td style={{ padding: "11px 16px", textAlign: "right", ...style }}>{children}</td>;
 }
 
-function skeletonRows(n: number): OverviewRow[] {
-  return Array.from({ length: n }, () => ({
-    symbol: "",
-    token: "",
-    exchange: "",
-    type: "INDEX" as const,
-    ltp: 0,
-    open: 0,
-    high: 0,
-    low: 0,
-    close: 0,
-    netChange: 0,
-    percentChange: 0,
-    week52High: null,
-    week52Low: null,
-  }));
+/**
+ * An index card that is visibly loading.
+ *
+ * Replaces skeletonRows(), which built fake OverviewRow objects full of zeroes
+ * and fed them through the real card — so the loading state was three cards
+ * reading "—" and "+0.00%", indistinguishable from a genuinely flat market.
+ * Shimmer bars say "not yet"; a zero says "measured, and it is zero".
+ */
+function IndexCardSkeleton() {
+  return (
+    <div className="mkt-index-card mkt-index-card--skel" aria-hidden>
+      <span className="skel" style={{ width: 74, height: 11, borderRadius: 6 }} />
+      <span className="skel" style={{ width: 122, height: 25, borderRadius: 8, margin: "8px 0 8px" }} />
+      <span className="skel" style={{ width: 96, height: 18, borderRadius: 7 }} />
+    </div>
+  );
 }

@@ -1,6 +1,7 @@
 ﻿import type { Candle, CandleInterval } from "@/lib/dhan";
 import { getCandles, searchSymbol } from "@/lib/dhan";
 import { parseCandleTimestampToUnix } from "@/lib/nse-market-time";
+import { isFutureInstrument } from "@/lib/instrument-type";
 
 const INDEX_FUT_SEARCH: Record<string, { exchange: string; query: string }> = {
   "13": { exchange: "NFO", query: "NIFTY" },
@@ -20,7 +21,7 @@ async function nearestFutureToken(symboltoken: string): Promise<{ exchange: stri
   const futs = rows.filter(r => {
     if (!/^\d+$/.test(r.token)) return false;
     if (/\s/.test(r.tradingSymbol)) return false;
-    return r.instrumentType === "FUT" || /FUT$/i.test(r.tradingSymbol);
+    return isFutureInstrument(r.instrumentType) || /FUT$/i.test(r.tradingSymbol);
   });
   if (!futs.length) return null;
 

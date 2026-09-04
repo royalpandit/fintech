@@ -111,11 +111,11 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         </Link>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 16 }}>
+      <div className="ui-stats">
         {stats.map((s) => (
-          <article key={s.label} className="stat-card">
-            <p className="stat-card-label">{s.label}</p>
-            <p className="stat-card-value" style={{ color: s.tone ?? "var(--text)" }}>
+          <article key={s.label} className="ui-stat">
+            <p className="ui-stat-label">{s.label}</p>
+            <p className="ui-stat-value" style={{ color: s.tone ?? "var(--text)" }}>
               {s.value}
             </p>
           </article>
@@ -129,16 +129,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
             <Link
               key={t.key}
               href={`/super-admin/payments?status=${t.key}&sort=${sort.key}`}
-              style={{
-                padding: "8px 16px",
-                borderRadius: 999,
-                fontSize: 13,
-                fontWeight: 600,
-                textDecoration: "none",
-                border: "1px solid var(--border)",
-                background: active ? "var(--primary-soft)" : "var(--surface)",
-                color: active ? "#047857" : "var(--text-muted)",
-              }}
+              className={`ui-chip${active ? " is-active" : ""}`}
             >
               {t.label}
             </Link>

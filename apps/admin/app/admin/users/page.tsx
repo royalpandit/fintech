@@ -86,28 +86,23 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
         </div>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 14,
-          marginBottom: 18,
-        }}
-      >
-        <article className="stat-card">
-          <p className="stat-card-label">Total Users</p>
-          <p className="stat-card-value">{totalUsers.toLocaleString()}</p>
+      {/* Was a fixed three-column inline grid: fine on a laptop, three
+          unreadable slivers on anything narrower. */}
+      <div className="ui-stats" data-cols="3">
+        <article className="ui-stat">
+          <p className="ui-stat-label">Total Users</p>
+          <p className="ui-stat-value">{totalUsers.toLocaleString()}</p>
         </article>
-        <article className="stat-card">
-          <p className="stat-card-label">Total Advisors</p>
-          <p className="stat-card-value" style={{ color: "#10b981" }}>
+        <article className="ui-stat">
+          <p className="ui-stat-label">Total Advisors</p>
+          <p className="ui-stat-value" style={{ color: "#10b981" }}>
             {totalAdvisors.toLocaleString()}
           </p>
         </article>
-        <article className="stat-card">
-          <p className="stat-card-label">Suspended</p>
+        <article className="ui-stat">
+          <p className="ui-stat-label">Suspended</p>
           <p
-            className="stat-card-value"
+            className="ui-stat-value"
             style={{ color: suspendedCount > 0 ? "#dc2626" : "var(--text-muted)" }}
           >
             {suspendedCount.toLocaleString()}

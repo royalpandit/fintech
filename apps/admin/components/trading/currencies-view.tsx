@@ -95,8 +95,11 @@ export default function CurrenciesView() {
       )}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(220px, 100%), 1fr))", gap: 12 }}>
         {loading
-          ? Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} style={{ height: 92, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14 }} />
+          ? /* These were plain empty cards — the right shape, but static, so the
+               grid just sat there looking like eight failed tiles. `.skel` is
+               the app-wide shimmer. */
+            Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="skel" style={{ height: 92, borderRadius: 14 }} />
             ))
           : filtered.length === 0 ? (
               <div style={{ gridColumn: "1 / -1", padding: 24, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>

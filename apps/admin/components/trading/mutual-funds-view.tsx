@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { LoadingCards, LoadingInline, LoadingTableRows } from "@/components/loading-shimmer";
 
 type MutualFund = {
   code: string;
@@ -164,7 +165,12 @@ export default function MutualFundsView() {
 
       <p style={{ margin: "0 0 12px", fontSize: 11.5, color: "var(--text-muted)" }}>
         NAV from AMFI · returns computed from historical NAV (mfapi.in)
-        {returnsLoading ? " · loading returns…" : ""}
+        {returnsLoading ? (
+          <>
+            {" · "}
+            <LoadingInline width={78} height={9} />
+          </>
+        ) : null}
       </p>
 
       {error && (
@@ -192,7 +198,7 @@ export default function MutualFundsView() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>Loading funds…</td></tr>
+                <LoadingTableRows cols={8} rows={6} />
               ) : sorted.length === 0 ? (
                 <tr><td colSpan={8} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>No funds matched “{q.trim()}”.</td></tr>
               ) : (
@@ -225,7 +231,9 @@ export default function MutualFundsView() {
         {/* Mobile card list */}
         <div className="mf-mobile">
           {loading ? (
-            <div style={{ padding: 24, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>Loading funds…</div>
+            /* Card layout on narrow screens — the table shimmer above would not
+               fit here, so cards get card-shaped placeholders. */
+            <LoadingCards count={4} height={104} />
           ) : sorted.length === 0 ? (
             <div style={{ padding: 24, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>No funds matched “{q.trim()}”.</div>
           ) : (

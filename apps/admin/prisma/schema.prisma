@@ -2095,6 +2095,10 @@ model GeminiAgent {
   temperature  Float    @default(0.7)
   isActive     Boolean  @default(true) @map("is_active")
   isSiteAssistant Boolean @default(false) @map("is_site_assistant")
+  /// Suggested first messages, shown as chips on an empty chat. Per-agent
+  /// because a generic starter on a specialist agent is worse than none —
+  /// "Analyse a stock" under Earnings Decoder just wastes a turn.
+  starterPrompts String[] @default([]) @map("starter_prompts")
   createdById  Int      @map("created_by_id")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -2438,6 +2442,13 @@ model FinuerBasketPerformance {
   benchmarkFiveYear    Decimal?                @map("benchmark_five_year") @db.Decimal(9, 4)
   benchmarkSinceLaunch Decimal?                @map("benchmark_since_launch") @db.Decimal(9, 4)
   performanceStatus    FinuerPerformanceStatus @default(underperforming) @map("performance_status")
+  /// When these numbers were last recomputed. The calculator has always written
+  /// this field; the column was missing, so every upsert threw and no basket
+  /// ever stored a result.
+  /// Sensitivity to the benchmark, from aligned daily returns. Null when the
+  /// two series do not overlap for long enough to regress.
+  beta                 Decimal?                @db.Decimal(9, 4)
+  lastCalculatedAt     DateTime?               @map("last_calculated_at")
   createdAt            DateTime                @default(now()) @map("created_at")
   updatedAt            DateTime                @updatedAt @map("updated_at")
 

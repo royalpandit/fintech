@@ -17,6 +17,7 @@ import type {
 } from "@/lib/angelone-types";
 import { scheduleAngelRest } from "@/lib/angelone-quote-coordinator";
 import { getDhanAccessToken } from "@/lib/dhan-auth";
+import { isEquityInstrument, isIndexInstrument } from "@/lib/instrument-type";
 
 // Re-export everything routes currently import from @/lib/angelone
 export {
@@ -142,8 +143,12 @@ async function fetchSecurityMaster(): Promise<ScripRow[]> {
   if (_master) return _master;
   if (_masterFetch) return _masterFetch;
   _masterFetch = (async () => {
+    // no-store, not Next's data cache: the file is ~33MB and Next refuses to
+    // cache anything over 2MB, so `revalidate` only produced a scary
+    // "Failed to set Next.js data cache" error on every cold start. The
+    // in-memory `_master` above is the real cache and lives for the process.
     const res = await fetch("https://images.dhan.co/api-data/api-scrip-master.csv", {
-      next: { revalidate: 86_400 },
+      cache: "no-store",
     });
     const text = await res.text();
     const lines = text.split("\n");
@@ -182,27 +187,69 @@ export type SearchResult = {
   token: string;
 };
 
+const SEARCH_LIMIT = 20;
+
+/**
+ * Symbol lookup against the scrip master.
+ *
+ * The cap used to be applied while scanning — push, then
+ * `if (results.length >= 20) break`. The master lists derivatives before cash,
+ * so for any heavily-optioned name the 20 slots filled entirely with option
+ * contracts and the equity row was never reached: searching "RELIANCE" on NSE
+ * returned twenty OPTSTK rows and no RELIANCE.
+ *
+ * That was not only a bad search result. Every caller that resolves a plain
+ * symbol to a token went through here — the paper-trade quote resolver, the
+ * basket performance calculator — and each fell back to `hits[0]`, so they
+ * priced against an arbitrary option contract, or found nothing usable and
+ * returned null. Basket returns showing "—" was a downstream symptom.
+ *
+ * Now the scan buckets by relevance and truncates at the end, so a cash-market
+ * row can never be crowded out by F&O noise. Single pass, and the derivative
+ * bucket is bounded so a query matching thousands of contracts stays cheap.
+ */
 export async function searchSymbol(exchange: string, query: string): Promise<SearchResult[]> {
   const q = query.toUpperCase().trim();
   if (!q) return [];
   const master = await fetchSecurityMaster();
   const exch = exchange.toUpperCase();
-  const results: SearchResult[] = [];
+
+  // Exact cash-market match → other cash-market rows → everything else.
+  const exact: SearchResult[] = [];
+  const cash: SearchResult[] = [];
+  const rest: SearchResult[] = [];
+
   for (const row of master) {
     if (exch !== "ALL" && row.exchange.toUpperCase() !== exch) continue;
-    // Only equity/index rows — skip the F&O noise
     if (row.segment !== "E" && row.segment !== "D" && row.segment !== "I") continue;
-    if (!row.tradingSymbol.toUpperCase().includes(q) && !row.symbolName.toUpperCase().includes(q)) continue;
-    results.push({
+
+    const ts = row.tradingSymbol.toUpperCase();
+    if (!ts.includes(q) && !row.symbolName.toUpperCase().includes(q)) continue;
+
+    const hit: SearchResult = {
       exchange: row.exchange,
       tradingSymbol: row.tradingSymbol,
       symbolName: row.symbolName,
       instrumentType: row.instrumentType,
       token: row.securityId,
-    });
-    if (results.length >= 20) break;
+    };
+
+    const isCash =
+      isEquityInstrument(row.instrumentType) || isIndexInstrument(row.instrumentType);
+
+    if (isCash && ts.replace(/-EQ$/, "") === q) {
+      exact.push(hit);
+      // An exact cash match is the best answer available; nothing later can
+      // outrank a full page of them.
+      if (exact.length >= SEARCH_LIMIT) break;
+    } else if (isCash) {
+      if (cash.length < SEARCH_LIMIT) cash.push(hit);
+    } else if (rest.length < SEARCH_LIMIT) {
+      rest.push(hit);
+    }
   }
-  return results;
+
+  return [...exact, ...cash, ...rest].slice(0, SEARCH_LIMIT);
 }
 
 // ── Market Feed (quotes) ──────────────────────────────────────────────────
@@ -224,8 +271,14 @@ type DhanEntry = {
   trade_volume?: number;
   oi?: number;
   average_price?: number;
-  week_52_high?: number;
-  week_52_low?: number;
+  /* Dhan spells these with the number first — "52_week_high", not
+     "week_52_high". The old names silently resolved to undefined, so every
+     52-week value in the app was null and the Near 52-Week High/Low panels on
+     /user/markets sat on a loading shimmer forever. Verified against a live
+     /v2/marketfeed/quote response for RELIANCE (52_week_high: 1611.8).
+     Quoted keys because an identifier cannot start with a digit. */
+  "52_week_high"?: number;
+  "52_week_low"?: number;
   oi_day_high?: number;
   oi_day_low?: number;
   total_buy_quantity?: number;
@@ -299,11 +352,14 @@ function extractQuotes(json: DhanFeedResponse, sym?: (seg: string, id: string) =
 export async function getLTP(instruments: QuoteInstrument[]): Promise<LTPData[]> {
   if (!instruments.length) return [];
   const payload = buildPayload(instruments);
+  // Dedupe key: identical concurrent requests share one trip through the
+  // serialized queue instead of each waiting their own 850ms gap. Orders and
+  // the Markets poll routinely ask for the same instrument at the same moment.
   return scheduleAngelRest("dhan-ltp", async () => {
     const json = await dhanPost<DhanFeedResponse>("/marketfeed/ltp", payload);
     if (json.status !== "success") { console.warn("[Dhan] getLTP:", json); return []; }
     return extractQuotes(json);
-  });
+  }, `ltp:${JSON.stringify(payload)}`);
 }
 
 export async function getOHLC(instruments: { exchange: string; symboltoken: string }[]): Promise<LTPData[]> {
@@ -312,7 +368,7 @@ export async function getOHLC(instruments: { exchange: string; symboltoken: stri
   return scheduleAngelRest("dhan-ohlc", async () => {
     const json = await dhanPost<DhanFeedResponse>("/marketfeed/ohlc", payload);
     return extractQuotes(json);
-  });
+  }, `ohlc:${JSON.stringify(payload)}`);
 }
 
 export type ExtendedQuoteData = LTPData & {
@@ -335,8 +391,8 @@ export async function getExtendedQuotes(instruments: QuoteInstrument[]): Promise
           ...mapEntry(seg, secId, e),
           tradeVolume:  e.trade_volume ?? e.volume,
           opnInterest:  e.oi,
-          week52High:   e.week_52_high,
-          week52Low:    e.week_52_low,
+          week52High:   e["52_week_high"],
+          week52Low:    e["52_week_low"],
         });
       }
     }
@@ -512,7 +568,8 @@ export async function getPositions(): Promise<Position[]> {
 
 // ── Option Chain ──────────────────────────────────────────────────────────
 
-// Underlying → Dhan securityId + exchange segment
+// Index underlyings, which are not in the equity scrip master and so cannot be
+// looked up the way a stock can.
 const UNDERLYING_META: Record<string, { secId: string; seg: string }> = {
   NIFTY:      { secId: "13", seg: "IDX_I" },
   BANKNIFTY:  { secId: "25", seg: "IDX_I" },
@@ -520,6 +577,64 @@ const UNDERLYING_META: Record<string, { secId: string; seg: string }> = {
   FINNIFTY:   { secId: "27", seg: "IDX_I" },
   MIDCPNIFTY: { secId: "11", seg: "IDX_I" },
 };
+
+/**
+ * Resolve an underlying to the securityId + segment Dhan's option-chain API
+ * wants.
+ *
+ * This used to be a straight lookup in the five-index map above, so every
+ * F&O-enabled STOCK failed with "Unknown underlying for option chain:
+ * ICICIBANK" — even though Dhan serves stock chains perfectly well
+ * (UnderlyingScrip 4963 / UnderlyingSeg NSE_EQ returns three live expiries).
+ * Indices still come from the map because they are not in the equity master;
+ * everything else is resolved from it.
+ *
+ * A derivative symbol is reduced to its underlying first: opening the chain
+ * while looking at RELIANCE-Sep2026-FUT should show RELIANCE options, not fail.
+ * The scrip master names contracts "<BASE>-<Expiry>-<Strike>-<CE|PE>" and
+ * "<BASE>-<Expiry>-FUT", so the first token is the underlying.
+ */
+async function resolveOptionUnderlying(
+  underlying: string,
+): Promise<{ secId: string; seg: string; symbol: string } | null> {
+  const raw = underlying.toUpperCase().trim();
+  const exact = UNDERLYING_META[raw.replace(/[\s-]/g, "")];
+  if (exact) return { ...exact, symbol: raw };
+
+  const base = raw.split(/[-\s]/)[0].replace(/\.(NS|BO)$/i, "");
+  const mapped = UNDERLYING_META[base];
+  if (mapped) return { ...mapped, symbol: base };
+
+  const hits = await searchSymbol("NSE", base);
+  const eq = hits.find(
+    (h) =>
+      isEquityInstrument(h.instrumentType) &&
+      h.tradingSymbol.toUpperCase().replace(/-EQ$/, "") === base,
+  );
+  if (eq?.token) return { secId: eq.token, seg: "NSE_EQ", symbol: base };
+
+  return null;
+}
+
+/**
+ * Strike spacing, used to build the ladder around spot.
+ *
+ * Was a flat `key === "SENSEX" ? 100 : 50`, which only ever had to cover five
+ * indices. Now that stocks resolve too, a 50-point ladder is wrong for most of
+ * them — a 300 rupee stock has strikes every 5, and a 50-point grid would skip
+ * every real contract. Derived from spot instead, which is how exchanges set
+ * the interval in practice.
+ */
+function strikeStepFor(symbol: string, spot?: number): number {
+  if (symbol === "SENSEX") return 100;
+  if (UNDERLYING_META[symbol]) return 50;
+  if (!spot || spot <= 0) return 50;
+  if (spot < 250) return 5;
+  if (spot < 1000) return 10;
+  if (spot < 2500) return 20;
+  if (spot < 5000) return 50;
+  return 100;
+}
 
 export type OptionChainResult = {
   underlying: string;
@@ -537,9 +652,12 @@ export async function getOptionChain(
   expiryCode?: string,
   opts: { profile?: boolean } = {},
 ): Promise<OptionChainResult> {
-  const key = underlying.toUpperCase().replace(/[\s-]/g, "");
-  const meta = UNDERLYING_META[key];
-  if (!meta) throw new Error(`Unknown underlying for option chain: ${underlying}`);
+  const meta = await resolveOptionUnderlying(underlying);
+  if (!meta) {
+    throw new Error(
+      `No option chain for ${underlying} — it is not an index and has no listed equity on NSE.`,
+    );
+  }
 
   const scripId = Number(meta.secId);
 
@@ -555,7 +673,7 @@ export async function getOptionChain(
   const expiryISO = expiryCode ? toISOExpiry(expiryCode) : (expiryList[0] ?? nearestThursdayISO());
   const resolvedCode = isoToExpiryCode(expiryISO);
 
-  console.log(`[Dhan] getOptionChain key=${key} expiry=${expiryISO} expiries=${expiryList.length}`);
+  console.log(`[Dhan] getOptionChain key=${meta.symbol} expiry=${expiryISO} expiries=${expiryList.length}`);
 
   // Step 2: fetch option chain (POST /optionchain)
   type LegData = {
@@ -582,7 +700,7 @@ export async function getOptionChain(
   if (!data?.oc) throw new Error(`Dhan option chain returned no data. status=${json.status} remarks=${json.remarks}`);
 
   const liveSpot = data.last_price ?? spot ?? 0;
-  const stepSize = key === "SENSEX" ? 100 : 50;
+  const stepSize = strikeStepFor(meta.symbol, liveSpot);
   const atmStrike = Math.round(liveSpot / stepSize) * stepSize;
   const radius    = opts.profile ? 35 : 15;
   const rows: OptionChainRow[] = [];
@@ -599,7 +717,7 @@ export async function getOptionChain(
       const oiChange = (side.oi ?? 0) - (side.previous_oi ?? 0);
       const netChange = (side.last_price ?? 0) - (side.previous_close_price ?? 0);
       return {
-        tradingsymbol: `${key}${resolvedCode}${Math.round(strike)}${type}`,
+        tradingsymbol: `${meta.symbol}${resolvedCode}${Math.round(strike)}${type}`,
         token,
         ltp:      side.last_price,
         change:   netChange,
@@ -620,7 +738,7 @@ export async function getOptionChain(
   }));
 
   return {
-    underlying: key,
+    underlying: meta.symbol,
     exchange: meta.seg,
     expiry: resolvedCode,
     expiries,

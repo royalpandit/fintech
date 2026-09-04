@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { normalizeStarterPrompts } from "../route";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,20 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (!auth) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { name, description, avatar, systemPrompt, model, temperature, isActive, isSiteAssistant } = body;
+  const {
+    name,
+    description,
+    avatar,
+    systemPrompt,
+    model,
+    temperature,
+    isActive,
+    isSiteAssistant,
+    starterPrompts,
+  } = body;
+  // Not the `...(x && ...)` guard the fields below use: clearing every prompt is
+  // a valid edit, and an empty array would be silently ignored by that pattern.
+  const prompts = normalizeStarterPrompts(starterPrompts);
   const id = Number(params.id);
 
   // Only one agent can be the site assistant — clear the flag on the others first.
@@ -45,6 +59,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       ...(typeof temperature === "number" && { temperature: Math.max(0, Math.min(2, temperature)) }),
       ...(typeof isActive === "boolean" && { isActive }),
       ...(typeof isSiteAssistant === "boolean" && { isSiteAssistant }),
+      ...(prompts !== undefined && { starterPrompts: prompts }),
     },
   });
 

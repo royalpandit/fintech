@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LoadingTableRows } from "@/components/loading-shimmer";
 
 type Ipo = {
   symbol: string;
@@ -65,7 +66,7 @@ export default function IpoView() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>Loading…</td></tr>
+                <LoadingTableRows cols={7} rows={5} />
               ) : rows.length === 0 ? (
                 <tr><td colSpan={7} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>No current IPOs.</td></tr>
               ) : (

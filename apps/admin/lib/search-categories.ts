@@ -1,4 +1,5 @@
 import { MARKET_INSTRUMENTS, resolveMarketExchange } from "@/lib/angelone-shared";
+import { isEquityInstrument } from "@/lib/instrument-type";
 
 export type MarketSearchHit = {
   exchange: string;
@@ -43,7 +44,7 @@ export function displaySymbolName(row: {
   instrumentType?: string;
 }): string {
   const raw = (row.symbolName || row.tradingSymbol).replace(/-EQ$/i, "").trim();
-  if (row.instrumentType === "EQ" || row.tradingSymbol.endsWith("-EQ")) {
+  if (isEquityInstrument(row.instrumentType) || row.tradingSymbol.endsWith("-EQ")) {
     return raw.split("-")[0].toUpperCase();
   }
   return raw;

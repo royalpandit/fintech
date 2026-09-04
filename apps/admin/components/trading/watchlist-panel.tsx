@@ -20,6 +20,7 @@ import {
   type StoredWatchlistItem,
 } from "@/lib/watchlist-store";
 import { isPaperTradable } from "@/components/trading/trade-buttons";
+import { LoadingRows } from "@/components/loading-shimmer";
 
 function fmtPct(n?: number) {
   if (n === undefined || n === null || Number.isNaN(n)) return "—";
@@ -40,8 +41,10 @@ export default function WatchlistPanel({
   selected: WatchlistItem;
   onSelect: (item: WatchlistItem) => void;
   onOpenChart: (item: WatchlistItem) => void;
-  onBuy: (item: WatchlistItem) => void;
-  onSell: (item: WatchlistItem) => void;
+  /** `el` is the clicked control, so the trade popover can anchor to the row
+   *  instead of floating in the middle of the screen. */
+  onBuy: (item: WatchlistItem, el?: HTMLElement) => void;
+  onSell: (item: WatchlistItem, el?: HTMLElement) => void;
   /** Optional: terminal merges live LTP into rows */
   onItemsChange?: (items: WatchlistItem[]) => void;
   liveQuotes?: WatchlistItem[];
@@ -287,7 +290,9 @@ export default function WatchlistPanel({
       />
 
       <div className="wl-list">
-        {loading && <div className="wl-list-msg">Loading…</div>}
+        {/* Rows, not a "Loading…" line: the list collapsed to one small grey
+            sentence and then jumped to full height when symbols arrived. */}
+        {loading && <LoadingRows rows={5} height={16} gap={14} className="wl-list-skel" />}
         {authError && <div className="wl-list-msg wl-list-warn">{authError}</div>}
         {!loading && items.length === 0 && (
           <div className="wl-list-msg">Search and add symbols, or use + on a result.</div>
@@ -342,7 +347,7 @@ export default function WatchlistPanel({
                       className="trade-btn trade-btn--buy"
                       aria-label={`Buy ${row.display} with virtual funds`}
                       title={`Buy ${row.display} with virtual funds`}
-                      onClick={() => onBuy(row)}
+                      onClick={(e) => onBuy(row, e.currentTarget)}
                     >
                       B<span className="trade-btn-full">uy</span>
                     </button>
@@ -351,7 +356,7 @@ export default function WatchlistPanel({
                       className="trade-btn trade-btn--sell"
                       aria-label={`Sell ${row.display} with virtual funds`}
                       title={`Sell ${row.display} with virtual funds`}
-                      onClick={() => onSell(row)}
+                      onClick={(e) => onSell(row, e.currentTarget)}
                     >
                       S<span className="trade-btn-full">ell</span>
                     </button>
@@ -369,8 +374,8 @@ export default function WatchlistPanel({
               {menuItem?.id === row.id && (
                 <div className="wl-row-menu">
                   <button type="button" onClick={() => { onOpenChart(row); setMenuItem(null); }}>Chart</button>
-                  <button type="button" onClick={() => { onBuy(row); setMenuItem(null); }}>Buy</button>
-                  <button type="button" onClick={() => { onSell(row); setMenuItem(null); }}>Sell</button>
+                  <button type="button" onClick={(e) => { onBuy(row, e.currentTarget); setMenuItem(null); }}>Buy</button>
+                  <button type="button" onClick={(e) => { onSell(row, e.currentTarget); setMenuItem(null); }}>Sell</button>
                   <button type="button" onClick={() => { setShowMove(row); setMenuItem(null); }}>Move to…</button>
                   <button type="button" className="danger" onClick={() => handleRemove(row)}>Remove</button>
                 </div>

@@ -360,6 +360,8 @@ export function lockPremiumBasketPayload<T extends Record<string, unknown>>(
     basketReturn: null,
     benchmarkReturn: null,
     alpha: null,
+    excessReturn: null,
+    beta: null,
     performanceStatus: "underperforming",
   };
 

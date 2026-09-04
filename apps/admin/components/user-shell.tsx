@@ -85,8 +85,11 @@ const INVESTING_NAV: NavItem[] = [
   // { label: "Stock Basket", href: "/user/stock-picks", Icon: FiTarget },
   { label: "Finuer Basket", href: "/user/finuer-basket", Icon: FiBriefcase },
   { label: "Competition", href: "/user/competition", Icon: FiAward },
-  { label: "Virtual Trading", href: "/user/virtual-trading", Icon: FiBriefcase },
-  { label: "Wallet", href: "/user/wallet", Icon: FiCreditCard },
+  // Virtual Trading and Wallet are hidden from the investor nav for now. The
+  // routes still exist and still work if you know the URL — this only takes
+  // them out of the sidebar. Uncomment both lines to bring the tabs back.
+  // { label: "Virtual Trading", href: "/user/virtual-trading", Icon: FiBriefcase },
+  // { label: "Wallet", href: "/user/wallet", Icon: FiCreditCard },
   { label: "Watchlist", href: "/user/watchlist", Icon: FiStar },
   { label: "Portfolio", href: "/user/portfolio", Icon: FiBriefcase },
   { label: "Courses", href: "/user/courses", Icon: FiBookOpen },

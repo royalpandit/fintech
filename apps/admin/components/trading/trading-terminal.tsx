@@ -14,6 +14,7 @@ import type { UtilityPanelId } from "./trading-utility-types";
 import type { WatchlistItem } from "./trading-terminal-types";
 import ChartSettingsPanel from "@/components/trading/chart-settings-panel";
 import AddToWatchlistButton from "@/components/watchlist/add-to-watchlist-button";
+import TradeButtons from "@/components/trading/trade-buttons";
 import {
   DEFAULT_TIMEFRAME,
   defaultPeriodForTimeframe,
@@ -358,7 +359,20 @@ function OverviewPanel({
             </div>
           )}
         </div>
-        <AddToWatchlistButton item={symbol} label="Add to Watchlist" />
+        {/* Trade from where the decision is made. This screen carries the
+            chart, the OHLC and the option chain, and the only way to act on any
+            of it was to leave for another page. Same popover as the Markets
+            rows, so the order path stays identical. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <TradeButtons
+            symbol={symbol.tradingSymbol || symbol.display}
+            instrumentType={symbol.type}
+            exchange={symbol.exchange}
+            price={symbol.ltp ?? null}
+            size="md"
+          />
+          <AddToWatchlistButton item={symbol} label="Add to Watchlist" />
+        </div>
       </div>
 
       {loading ? (

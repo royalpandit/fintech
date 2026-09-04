@@ -4,6 +4,24 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Starter prompts arrive from the editor as one textarea, one prompt per line.
+ * Blank lines are dropped so a trailing newline does not become an empty chip,
+ * and the list is capped at 4 — beyond that the empty state stops being a
+ * suggestion and starts being a menu.
+ */
+export function normalizeStarterPrompts(input: unknown): string[] | undefined {
+  if (input === undefined) return undefined;
+  const raw = Array.isArray(input)
+    ? input.map((v) => String(v))
+    : String(input ?? "").split("\n");
+  return raw
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 4)
+    .map((line) => line.slice(0, 120));
+}
+
 /** GET /api/v1/admin/agents — list all agents (admin + super_admin) */
 export async function GET(req: NextRequest) {
   const auth = await requireRole(req, ["admin", "super_admin"]);
@@ -26,7 +44,8 @@ export async function POST(req: NextRequest) {
   if (!auth) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { name, description, avatar, systemPrompt, model, temperature, isActive } = body;
+  const { name, description, avatar, systemPrompt, model, temperature, isActive, starterPrompts } =
+    body;
 
   if (!name?.trim() || !systemPrompt?.trim()) {
     return NextResponse.json({ ok: false, error: "name and systemPrompt are required" }, { status: 400 });
@@ -41,6 +60,7 @@ export async function POST(req: NextRequest) {
       model: model || "gemini-2.5-flash",
       temperature: typeof temperature === "number" ? Math.max(0, Math.min(2, temperature)) : 0.7,
       isActive: isActive !== false,
+      starterPrompts: normalizeStarterPrompts(starterPrompts) ?? [],
       createdById: auth.userId,
     },
   });

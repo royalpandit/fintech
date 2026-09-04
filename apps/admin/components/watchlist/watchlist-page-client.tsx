@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import WatchlistPanel from "@/components/trading/watchlist-panel";
+import { paperTradeBase } from "@/components/trading/trade-buttons";
+import TradeDialog from "@/components/trading/trade-dialog";
 import type { WatchlistItem } from "@/components/trading/trading-terminal-types";
 import {
   activeWatchlist,
@@ -38,6 +40,12 @@ function buildExtraParam(items: WatchlistItem[]): string {
 
 export default function WatchlistPageClient() {
   const router = useRouter();
+  const pathname = usePathname();
+  const [trade, setTrade] = useState<{
+    symbol: string;
+    side: "buy" | "sell";
+    anchor: HTMLElement | null;
+  } | null>(null);
   const { lists, activeId, loading, error, version } = useWatchlistStore();
   const list = activeWatchlist(lists, activeId);
   const items = list?.items ?? [];
@@ -119,13 +127,19 @@ export default function WatchlistPageClient() {
     router.push(q ? `/user/markets?q=${encodeURIComponent(q)}` : "/user/markets");
   };
 
-  const goTrade = (item: WatchlistItem | null, side: "buy" | "sell") => {
+  /**
+   * Open the trade form over the watchlist instead of navigating to it.
+   * Leaving the page to place a one-line order threw away the list you were
+   * working through. Falls back to the full page only when there is no symbol
+   * to trade (the drawer's generic "trade" action).
+   */
+  const goTrade = (item: WatchlistItem | null, side: "buy" | "sell", el?: HTMLElement) => {
     const sym = (item?.tradingSymbol ?? item?.display ?? "").trim().toUpperCase();
-    router.push(
-      sym
-        ? `/user/virtual-trading?symbol=${encodeURIComponent(sym)}&side=${side}`
-        : "/user/virtual-trading",
-    );
+    if (!sym) {
+      router.push(paperTradeBase(pathname));
+      return;
+    }
+    setTrade({ symbol: sym, side, anchor: el ?? null });
   };
 
   return (
@@ -149,13 +163,13 @@ export default function WatchlistPageClient() {
           /* These used to bounce to Markets, which left you to find the symbol
              again and then find the trade form. Go straight to the paper-trade
              form with the symbol and side already filled in. */
-          onBuy={item => {
+          onBuy={(item, el) => {
             setSelected(item);
-            goTrade(item, "buy");
+            goTrade(item, "buy", el);
           }}
-          onSell={item => {
+          onSell={(item, el) => {
             setSelected(item);
-            goTrade(item, "sell");
+            goTrade(item, "sell", el);
           }}
           liveQuotes={liveQuotes}
         />
@@ -166,6 +180,14 @@ export default function WatchlistPageClient() {
           Create a list above and search symbols, or open{" "}
           <Link href="/user/markets">Markets</Link> to add from live search.
         </p>
+      )}
+      {trade && (
+        <TradeDialog
+          symbol={trade.symbol}
+          side={trade.side}
+          anchor={trade.anchor}
+          onClose={() => setTrade(null)}
+        />
       )}
     </section>
   );

@@ -306,9 +306,29 @@ export function serializeBasket(
   const stocks = basket.stocks?.filter((s) => !s.deletedAt).map(serializeBasketStock) ?? [];
   const stockCount = basket._count?.stocks ?? stocks.length;
   const perf = serializePerformance(basket.performance, timePeriod);
-  const alpha =
+  /*
+   * Two different numbers, deliberately kept apart.
+   *
+   * `excessReturn` is the plain difference — what the basket did minus what the
+   * index did. Simple, always available, and says nothing about risk.
+   *
+   * `alpha` is Jensen's alpha: return above what this basket's risk level
+   * predicted, using the measured beta. A basket that beat the index purely by
+   * being more volatile has positive excess return but roughly zero alpha, and
+   * calling that "alpha" overstates the manager's skill.
+   *
+   * Alpha is null whenever beta could not be measured, rather than falling back
+   * to the difference — the two are not interchangeable.
+   */
+  const excessReturn =
     perf.basketReturn != null && perf.benchmarkReturn != null
       ? Math.round((perf.basketReturn - perf.benchmarkReturn) * 100) / 100
+      : null;
+
+  const beta = toNumber(basket.performance?.beta ?? null);
+  const alpha =
+    perf.basketReturn != null && perf.benchmarkReturn != null && beta != null
+      ? Math.round((perf.basketReturn - beta * perf.benchmarkReturn) * 100) / 100
       : null;
 
   return {
@@ -343,7 +363,7 @@ export function serializeBasket(
       : null,
     createdAt: basket.createdAt.toISOString(),
     updatedAt: basket.updatedAt.toISOString(),
-    performance: { ...perf, alpha },
+    performance: { ...perf, excessReturn, alpha, beta },
   };
 }
 

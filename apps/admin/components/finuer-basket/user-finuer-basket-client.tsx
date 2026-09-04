@@ -25,31 +25,66 @@ export default function UserFinuerBasketClient() {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput.trim()), 300);
     return () => clearTimeout(t);
   }, [searchInput]);
 
+  /**
+   * Two things were wrong here and both looked like "search is broken".
+   *
+   * 1. No try/catch. `setLoading(false)` sat after the awaits, so any throw —
+   *    a non-JSON error body, a dropped connection — skipped it and left the
+   *    page shimmering forever with "—" in every stat card, while the throw
+   *    surfaced as an unhandled rejection in the dev overlay.
+   * 2. No guard against out-of-order responses. Typing runs a request per
+   *    debounced keystroke, and a slow earlier one could resolve after a later
+   *    one and overwrite the newer results with stale rows.
+   *
+   * AbortController fixes the race at the source (the superseded request is
+   * cancelled, not just ignored) and try/finally guarantees the spinner clears.
+   */
   useEffect(() => {
+    const ctrl = new AbortController();
+
     async function load() {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (marketId) params.set("market_id", marketId);
-      if (typeId) params.set("type_id", typeId);
-      if (timePeriod) params.set("time_period", timePeriod);
-      if (sortOrder) params.set("sort_order", sortOrder);
-      if (search) params.set("search", search);
-      const r = await fetch(`/api/v1/baskets?${params}`);
-      const j = await r.json();
-      if (j.ok) {
-        setBaskets(j.data);
-        if (j.meta?.markets) setMarkets(j.meta.markets);
-        if (j.meta?.types) setTypes(j.meta.types);
+      try {
+        const params = new URLSearchParams();
+        if (marketId) params.set("market_id", marketId);
+        if (typeId) params.set("type_id", typeId);
+        if (timePeriod) params.set("time_period", timePeriod);
+        if (sortOrder) params.set("sort_order", sortOrder);
+        if (search) params.set("search", search);
+
+        const r = await fetch(`/api/v1/baskets?${params}`, { signal: ctrl.signal });
+        const j = await r.json();
+        if (ctrl.signal.aborted) return;
+
+        if (j.ok) {
+          setBaskets(j.data ?? []);
+          if (j.meta?.markets) setMarkets(j.meta.markets);
+          if (j.meta?.types) setTypes(j.meta.types);
+          setLoadError("");
+        } else {
+          setBaskets([]);
+          setLoadError(j.error || "Could not load baskets.");
+        }
+      } catch (err) {
+        // An abort is this effect superseding itself, not a failure — and the
+        // newer run owns the loading state from here.
+        if (ctrl.signal.aborted || (err as Error)?.name === "AbortError") return;
+        setBaskets([]);
+        setLoadError(err instanceof Error ? err.message : "Could not load baskets.");
+      } finally {
+        if (!ctrl.signal.aborted) setLoading(false);
       }
-      setLoading(false);
     }
+
     load();
+    return () => ctrl.abort();
   }, [marketId, typeId, timePeriod, sortOrder, search]);
 
   const visibleBaskets = useMemo(() => {
@@ -76,8 +111,12 @@ export default function UserFinuerBasketClient() {
         subtitle="Curated model portfolios — returns are calculated automatically from holdings vs benchmark."
       />
 
-      <div className="finuer-basket-filters-bar" style={{ marginBottom: 12 }}>
-        <div className="finuer-basket-filter-field" style={{ flex: "1 1 220px" }}>
+      {/* One grid, not two flex rows. As flex rows each control sized to its own
+          content, so the five selects came out five different widths and their
+          labels stepped along at five different x-positions. A grid gives every
+          field an identical column and puts the labels on a single rhythm. */}
+      <div className="fb-filters">
+        <div className="fb-filter fb-filter--search">
           <span className="finuer-basket-filter-label">Search</span>
           <input
             className="finuer-basket-filter-select"
@@ -87,10 +126,8 @@ export default function UserFinuerBasketClient() {
             placeholder="Basket name, market, type, or stock…"
           />
         </div>
-      </div>
 
-      <div className="finuer-basket-filters-bar">
-        <div className="finuer-basket-filter-field">
+        <div className="fb-filter">
           <span className="finuer-basket-filter-label">Market</span>
           <select
             className="finuer-basket-filter-select"
@@ -105,7 +142,7 @@ export default function UserFinuerBasketClient() {
             ))}
           </select>
         </div>
-        <div className="finuer-basket-filter-field">
+        <div className="fb-filter">
           <span className="finuer-basket-filter-label">Type</span>
           <select
             className="finuer-basket-filter-select"
@@ -120,7 +157,7 @@ export default function UserFinuerBasketClient() {
             ))}
           </select>
         </div>
-        <div className="finuer-basket-filter-field">
+        <div className="fb-filter">
           <span className="finuer-basket-filter-label">Access</span>
           <select
             className="finuer-basket-filter-select"
@@ -132,7 +169,7 @@ export default function UserFinuerBasketClient() {
             <option value="premium">Premium</option>
           </select>
         </div>
-        <div className="finuer-basket-filter-field">
+        <div className="fb-filter">
           <span className="finuer-basket-filter-label">Performance</span>
           <select
             className="finuer-basket-filter-select"
@@ -148,7 +185,7 @@ export default function UserFinuerBasketClient() {
             <option value="since_launch">Since Launch</option>
           </select>
         </div>
-        <div className="finuer-basket-filter-field">
+        <div className="fb-filter">
           <span className="finuer-basket-filter-label">Sort By</span>
           <select
             className="finuer-basket-filter-select"
@@ -187,6 +224,14 @@ export default function UserFinuerBasketClient() {
           {Array.from({ length: 6 }, (_, i) => (
             <div key={i} className="skel" style={{ height: 300, borderRadius: 16 }} />
           ))}
+        </div>
+      ) : loadError ? (
+        /* A failed load is not an empty result. Saying "no baskets match your
+           filters" when the request never succeeded sends people off adjusting
+           filters that were never the problem. */
+        <div className="user-page-empty">
+          <p style={{ margin: 0, fontWeight: 600 }}>Could not load baskets.</p>
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--text-muted)" }}>{loadError}</p>
         </div>
       ) : visibleBaskets.length === 0 ? (
         <div className="user-page-empty">

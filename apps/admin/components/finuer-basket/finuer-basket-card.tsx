@@ -27,6 +27,8 @@ export type FinuerBasketCardData = {
     basketReturn: number | null;
     benchmarkReturn: number | null;
     alpha?: number | null;
+    excessReturn?: number | null;
+    beta?: number | null;
     performanceStatus: "outperforming" | "underperforming";
   };
 };
@@ -142,9 +144,33 @@ export default function FinuerBasketCard({
                   {formatReturnPct(p.benchmarkReturn)}
                 </span>
               </div>
+              {/* "Excess return", not "Alpha" — this is a plain subtraction with
+                  no risk adjustment, and the old label claimed more than the
+                  maths supported. Real (Jensen's) alpha sits beside it whenever
+                  beta could be measured. */}
+              {p.excessReturn != null ? (
+                <div className="finuer-basket-benchmark-stat">
+                  <span
+                    className="finuer-basket-benchmark-stat-label"
+                    title="Basket return minus benchmark return, before any risk adjustment."
+                  >
+                    Excess
+                  </span>
+                  <span className={`finuer-basket-benchmark-stat-value${fmtClass(p.excessReturn)}`}>
+                    {formatReturnPct(p.excessReturn)}
+                  </span>
+                </div>
+              ) : null}
               {p.alpha != null ? (
                 <div className="finuer-basket-benchmark-stat">
-                  <span className="finuer-basket-benchmark-stat-label">Alpha</span>
+                  <span
+                    className="finuer-basket-benchmark-stat-label"
+                    title={`Jensen's alpha — return above what this basket's risk level predicted${
+                      p.beta != null ? ` (beta ${p.beta.toFixed(2)})` : ""
+                    }.`}
+                  >
+                    Alpha
+                  </span>
                   <span className={`finuer-basket-benchmark-stat-value${fmtClass(p.alpha)}`}>
                     {formatReturnPct(p.alpha)}
                   </span>

@@ -32,7 +32,11 @@ export function optionChainExchange(underlying: string): string {
 export function optionUnderlyingKey(tradingSymbol: string, display: string): string | null {
   const sym = tradingSymbol.toUpperCase();
   const name = display.toUpperCase();
-  if (sym.endsWith("CE") || sym.endsWith("PE")) return null;
+  // An option contract is "<BASE>-<Expiry>-<Strike>-CE|PE", so the separator is
+  // part of the test. A bare endsWith("CE") also matched RELIAN-CE — the whole
+  // reason the option chain refused to open on RELIANCE while working fine on
+  // RELIANCE-Sep2026-FUT, which reduces to the same underlying.
+  if (/[-\s](CE|PE)$/.test(sym)) return null;
   if (name.includes("BANK") && (name.includes("NIFTY") || sym.includes("BANKNIFTY"))) return "BANKNIFTY";
   if (name.includes("NIFTY 50") || sym === "NIFTY 50" || sym === "NIFTY") return "NIFTY";
   if (name.includes("SENSEX") || sym.includes("SENSEX")) return "SENSEX";

@@ -47,9 +47,12 @@ export default async function PaperPortfolioSection({
         }}
       >
         <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 600 }}>Paper portfolio</h2>
-        <p style={{ margin: "0 0 16px", fontSize: 13, opacity: 0.85 }}>
-          Create a virtual wallet to hold demo stocks and options.
+        <p style={{ margin: 0, fontSize: 13, opacity: 0.85 }}>
+          No virtual holdings yet.
         </p>
+        {/* Wallet is hidden from the nav, so the "Set up paper wallet →" CTA
+            that used to sit here would have pointed at a page the user can no
+            longer reach. Restore it alongside the Wallet nav item.
         <Link
           href="/user/wallet"
           style={{
@@ -65,6 +68,7 @@ export default async function PaperPortfolioSection({
         >
           Set up paper wallet →
         </Link>
+        */}
       </article>
     );
   }
@@ -113,17 +117,23 @@ export default async function PaperPortfolioSection({
             Virtual holdings
           </h2>
         </div>
+        {/* Wallet tab is commented out of the nav — restore this link with it.
         <Link href="/user/wallet" style={{ fontSize: 12, fontWeight: 700, color: "#0ea5e9" }}>
           Wallet →
         </Link>
+        */}
       </div>
 
+      {/* Four cards, not five: Cash is the virtual wallet balance, and with the
+          Wallet tab hidden there is nowhere to see or top up that number — so
+          it read as an unexplained figure. Restore the Cash entry below and
+          switch the class back to user-stat-grid-5 together. */}
       <div
-        className="user-stat-grid-5"
+        className="user-stat-grid"
         style={{ marginBottom: 14 }}
       >
         {[
-          { label: "Cash", value: formatINR(summary.cashBalance), color: "#0ea5e9" },
+          // { label: "Cash", value: formatINR(summary.cashBalance), color: "#0ea5e9" },
           { label: "Invested", value: formatINR(summary.investedCost), color: "var(--text-muted)" },
           { label: "Holdings", value: formatINR(summary.holdingsValue), color: "#7c3aed" },
           {
@@ -164,7 +174,7 @@ export default async function PaperPortfolioSection({
       >
         {positions.length === 0 ? (
           <p style={{ margin: 0, padding: 32, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>
-            No open positions. Buy stocks or options from Markets or use the form below.
+            No open positions yet.
           </p>
         ) : (
           <div style={{ overflowX: "auto" }}>

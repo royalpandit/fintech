@@ -164,23 +164,15 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
 
   return (
     <section>
-      <div style={{ marginBottom: 20 }}>
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 22,
-            fontWeight: 600,
-            color: "var(--text)",
-            letterSpacing: -0.5,
-          }}
-        >
-          Trade History
-        </h1>
-        <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
-          {isAuthed
-            ? "Paper trades with per-trade P&L · filter by date or month"
-            : "Sign up to track every paper and broker trade"}
-        </p>
+      <div className="ui-head">
+        <div>
+          <h1 className="ui-title">Trade History</h1>
+          <p className="ui-sub">
+            {isAuthed
+              ? "Paper trades with per-trade P&L · filter by date or month"
+              : "Sign up to track every paper and broker trade"}
+          </p>
+        </div>
       </div>
 
       {!isAuthed ? (
@@ -217,7 +209,9 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
         </article>
       ) : (
         <>
-          <div className="user-stat-grid" style={{ marginBottom: 18 }}>
+          {/* data-cols="3" while the fourth card (Wallet balance) is commented
+              out below — Wallet is hidden from the nav. Restore both together. */}
+          <div className="ui-stats" data-cols="3">
             {[
               { label: "Trades (view)", value: filtered.length.toLocaleString(), color: "var(--text)" },
               {
@@ -230,23 +224,17 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
                 value: `${periodRealized >= 0 ? "+" : ""}${formatINR(periodRealized)}`,
                 color: periodRealized >= 0 ? "#16a34a" : "#dc2626",
               },
-              {
-                label: "Wallet balance",
-                value: formatINR(Number(virtualWallet?.balance ?? 0)),
-                color: "#0ea5e9",
-              },
+              // {
+              //   label: "Wallet balance",
+              //   value: formatINR(Number(virtualWallet?.balance ?? 0)),
+              //   color: "#0ea5e9",
+              // },
             ].map((s) => (
-              <article
-                key={s.label}
-                style={{
-                  background: "var(--surface)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 14,
-                  padding: 16,
-                }}
-              >
-                <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", marginBottom: 6 }}>{s.label}</p>
-                <p style={{ margin: 0, fontSize: 18, fontWeight: 600, color: s.color }}>{s.value}</p>
+              <article key={s.label} className="ui-stat">
+                <p className="ui-stat-label">{s.label}</p>
+                <p className="ui-stat-value" style={{ color: s.color }}>
+                  {s.value}
+                </p>
               </article>
             ))}
           </div>

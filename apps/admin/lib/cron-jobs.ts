@@ -8,6 +8,7 @@ import { evaluatePriceAlerts } from "@/lib/price-alert-engine";
 import { sendNotificationDigests } from "@/lib/email-digest";
 import { refreshBulkDeals, refreshFiiDii } from "@/lib/nse-market-snapshots";
 import { refreshScripMaster } from "@/lib/scrip-master";
+import { sweepFinuerBasketPerformance } from "@/lib/finuer-basket-sweep";
 
 /**
  * Background jobs, driven by /api/v1/cron.
@@ -29,7 +30,8 @@ export type CronJobName =
   | "email-digest"
   | "fii-dii"
   | "bulk-deals"
-  | "scrip-master";
+  | "scrip-master"
+  | "finuer-basket-perf";
 
 export type CronJobResult = {
   job: CronJobName;
@@ -53,6 +55,9 @@ const JOBS: Job[] = [
   { name: "fii-dii", run: refreshFiiDii },
   { name: "bulk-deals", run: refreshBulkDeals },
   { name: "scrip-master", run: refreshScripMaster },
+  // Last: it walks every basket and pulls a year of candles per holding, so it
+  // should queue behind the jobs users are actually waiting on.
+  { name: "finuer-basket-perf", run: sweepFinuerBasketPerformance },
 ];
 
 export const CRON_JOB_NAMES = JOBS.map((j) => j.name);

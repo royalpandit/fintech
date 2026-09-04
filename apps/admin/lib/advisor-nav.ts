@@ -5,7 +5,11 @@ export const ADVISOR_MODULES = [
   "Comments",
   "Messages",
   "Subscription Services",
-  "Virtual Trading",
+  // Virtual Trading is hidden from the professional sidebar for now — same call
+  // as the investor panel, where /user/virtual-trading and Wallet came out of
+  // the nav. /advisor/paper still builds and still works by URL; this only
+  // removes the link. Uncomment here AND in the "Markets" group below.
+  // "Virtual Trading",
   "Financial AI Agents",
   "Markets",
   "Watchlist",
@@ -34,7 +38,7 @@ export const ADVISOR_NAV_GROUPS: { heading: string; modules: string[] }[] = [
       "Markets",
       "Watchlist",
       "Finuer Basket",
-      "Virtual Trading",
+      // "Virtual Trading",   // see ADVISOR_MODULES above
       "Financial AI Agents",
       "Competitions",
     ],

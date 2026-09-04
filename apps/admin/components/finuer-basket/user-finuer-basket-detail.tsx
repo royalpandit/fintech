@@ -228,7 +228,26 @@ export default function UserFinuerBasketDetailClient() {
               </p>
             </div>
             <div className="user-page-card" style={{ padding: 14 }}>
-              <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>Alpha (1Y)</p>
+              <p
+                style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}
+                title="Basket return minus benchmark return, before any risk adjustment."
+              >
+                Excess (1Y)
+              </p>
+              <p style={{ margin: "4px 0 0", fontSize: 18, fontWeight: 800 }}>
+                {p.excessReturn != null ? formatReturnPct(p.excessReturn) : "—"}
+              </p>
+            </div>
+            {/* Risk-adjusted, so it only appears when beta was measurable. */}
+            <div className="user-page-card" style={{ padding: 14 }}>
+              <p
+                style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}
+                title={`Jensen's alpha — return above what this basket's risk level predicted${
+                  p.beta != null ? ` (beta ${p.beta.toFixed(2)})` : ""
+                }.`}
+              >
+                Alpha (1Y){p.beta != null ? ` · β ${p.beta.toFixed(2)}` : ""}
+              </p>
               <p style={{ margin: "4px 0 0", fontSize: 18, fontWeight: 800 }}>
                 {p.alpha != null ? formatReturnPct(p.alpha) : "—"}
               </p>

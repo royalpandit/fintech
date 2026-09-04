@@ -7,6 +7,7 @@ import {
   DocumentAttachChip,
   useDocumentAttach,
 } from "@/components/agents/document-attach";
+import AgentMarkdown from "@/components/agents/agent-markdown";
 
 interface Agent {
   id: number;
@@ -14,6 +15,8 @@ interface Agent {
   description: string;
   avatar: string;
   model: string;
+  /** Suggested openers, set per agent in /super-admin/agents. May be empty. */
+  starterPrompts?: string[];
 }
 
 interface Message {
@@ -40,49 +43,45 @@ function authHeaders() {
   return { "Content-Type": "application/json", ...(t ? { Authorization: `Bearer ${t}` } : {}) };
 }
 
-function applyInline(raw: string): string {
-  return raw
-    .replace(/\*\*(.*?)\*\*/g, (_, t) => `<strong>${t}</strong>`)
-    .replace(/\*(.*?)\*/g, (_, t) => `<em>${t}</em>`)
-    .replace(
-      /`([^`]+)`/g,
-      (_, t) =>
-        `<code style="background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:0.9em;font-family:monospace">${t}</code>`,
-    );
-}
+/**
+ * Copy an answer out of the transcript.
+ *
+ * These replies routinely get pasted into a note or a post, and selecting a
+ * long multi-block answer by hand picks up the avatar and name row with it.
+ */
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
 
-function MarkdownText({ text }: { text: string }) {
-  const lines = text.split("\n");
   return (
-    <div style={{ lineHeight: 1.65, wordBreak: "break-word" }}>
-      {lines.map((line, i) => {
-        // Horizontal rule: ***, ---, ___
-        if (/^(\*{3,}|-{3,}|_{3,})\s*$/.test(line.trim())) {
-          return <hr key={i} style={{ border: "none", borderTop: "1px solid var(--border)", margin: "10px 0" }} />;
-        }
-        // Headings
-        const h1 = line.match(/^# (.+)/);
-        if (h1) return <div key={i} style={{ fontWeight: 700, fontSize: 17, margin: "10px 0 4px" }} dangerouslySetInnerHTML={{ __html: applyInline(h1[1]) }} />;
-        const h2 = line.match(/^## (.+)/);
-        if (h2) return <div key={i} style={{ fontWeight: 700, fontSize: 15, margin: "8px 0 3px" }} dangerouslySetInnerHTML={{ __html: applyInline(h2[1]) }} />;
-        const h3 = line.match(/^### (.+)/);
-        if (h3) return <div key={i} style={{ fontWeight: 700, fontSize: 14, margin: "6px 0 2px" }} dangerouslySetInnerHTML={{ __html: applyInline(h3[1]) }} />;
-
-        // Bullets: - , • , or * followed by a space
-        const isBullet = /^[-•*]\s/.test(line);
-        const content = applyInline(isBullet ? line.slice(2) : line);
-
-        return (
-          <div
-            key={i}
-            style={{ marginBottom: isBullet ? 2 : 0, paddingLeft: isBullet ? 14 : 0, position: "relative" }}
-          >
-            {isBullet && <span style={{ position: "absolute", left: 0 }}>•</span>}
-            <span dangerouslySetInnerHTML={{ __html: content }} />
-          </div>
-        );
-      })}
-    </div>
+    <button
+      type="button"
+      className="agent-copy-btn"
+      aria-label={copied ? "Copied" : "Copy reply"}
+      title={copied ? "Copied" : "Copy reply"}
+      onClick={() => {
+        void navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1600);
+          })
+          // Clipboard access can be denied (insecure origin, permission) — say
+          // nothing rather than flashing a success state that did not happen.
+          .catch(() => {});
+      }}
+    >
+      {copied ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M20 6L9 17l-5-5" />
+        </svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="9" y="9" width="12" height="12" rx="2" />
+          <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+        </svg>
+      )}
+      <span>{copied ? "Copied" : "Copy"}</span>
+    </button>
   );
 }
 
@@ -112,7 +111,6 @@ export default function AgentChat({
   const [sessionId, setSessionId] = useState<number>(0);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const {
     fileRef,
@@ -124,10 +122,57 @@ export default function AgentChat({
     buildDocMessage,
   } = useDocumentAttach();
 
-  const scrollToBottom = () => bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  /**
+   * Auto-scroll, but only while the reader is already at the bottom.
+   *
+   * This used to be a plain scrollIntoView({ behavior: "smooth" }) in an effect
+   * keyed on `messages`. Streaming rewrites that array on every token, so the
+   * browser was starting a fresh smooth-scroll animation dozens of times a
+   * second, each one interrupting the last — that is the "laggy scroll". Worse,
+   * it fired unconditionally, so scrolling up to re-read something yanked you
+   * straight back to the bottom on the next token.
+   *
+   * Now: an instant scroll (a smooth animation cannot keep up with a token
+   * stream anyway), coalesced into one per frame, and skipped entirely when the
+   * reader has scrolled away. `pinned` drives the "Jump to latest" button.
+   */
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const pinnedRef = useRef(true);
+  const rafRef = useRef<number | null>(null);
+  const [pinned, setPinned] = useState(true);
+
+  // 80px of slack: a reader sitting a line or two off the bottom still counts
+  // as following along.
+  const PIN_SLACK = 80;
+
+  const onScroll = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < PIN_SLACK;
+    pinnedRef.current = atBottom;
+    setPinned((p) => (p === atBottom ? p : atBottom));
+  }, []);
+
+  const scrollToBottom = useCallback((smooth = false) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    pinnedRef.current = true;
+    setPinned(true);
+    el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" });
+  }, []);
 
   useEffect(() => {
-    scrollToBottom();
+    if (!pinnedRef.current) return;
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      const el = scrollerRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    });
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
   }, [messages]);
 
   const loadSessions = useCallback(async () => {
@@ -167,8 +212,9 @@ export default function AgentChat({
     inputRef.current?.focus();
   }
 
-  async function send() {
-    const typed = input.trim();
+  /** `override` lets a starter chip send its own text without typing it first. */
+  async function send(override?: string) {
+    const typed = (override ?? input).trim();
     if ((!typed && !docAttachment) || sending || uploadingDoc) return;
 
     const { display, messageForModel } = buildDocMessage(typed);
@@ -400,175 +446,106 @@ export default function AgentChat({
       )}
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            padding: "14px 20px",
-            background: "var(--surface)",
-            borderBottom: "1px solid var(--border)",
-            flexShrink: 0,
-          }}
-        >
-          <Link
-            href={backHref}
-            style={{ display: "flex", alignItems: "center", color: "var(--text-muted)", textDecoration: "none" }}
-          >
+        <header className="agent-header">
+          <Link href={backHref} className="agent-header-back" aria-label="Back to agents">
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path d="M15 18l-6-6 6-6" />
             </svg>
           </Link>
           <button
             type="button"
+            className="agent-header-btn"
             onClick={() => setSidebarOpen((v) => !v)}
-            style={{
-              border: "1px solid var(--border)",
-              background: "var(--surface-2)",
-              borderRadius: 8,
-              padding: "5px 10px",
-              cursor: "pointer",
-              fontSize: 12,
-              fontWeight: 600,
-              color: "var(--text-muted)",
-            }}
+            aria-expanded={sidebarOpen}
           >
-            ☰ History
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <span className="agent-header-btn-label">History</span>
           </button>
-          <div
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 10,
-              background: "linear-gradient(135deg,#ede9fe,#c7d2fe)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 20,
-            }}
-          >
-            {agent.avatar}
-          </div>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: 15, color: "var(--text)" }}>{agent.name}</div>
-            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{modelLabel}</div>
-          </div>
-          <div style={{ marginLeft: "auto" }}>
-            <button
-              type="button"
-              onClick={newChat}
-              style={{
-                border: "1px solid var(--border)",
-                background: "var(--surface)",
-                borderRadius: 8,
-                padding: "6px 14px",
-                cursor: "pointer",
-                fontSize: 12,
-                fontWeight: 700,
-                color: "var(--text)",
-              }}
-            >
-              New Chat
-            </button>
-          </div>
-        </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "24px 20px" }}>
+          <span className="agent-header-avatar">{agent.avatar}</span>
+          <div className="agent-header-id">
+            <div className="agent-header-name">{agent.name}</div>
+            {/* A chip, not a second line of grey text — it reads as metadata
+                rather than as a subtitle competing with the agent's name. */}
+            <span className="agent-model-chip">
+              <span className="agent-model-dot" aria-hidden />
+              {modelLabel}
+            </span>
+          </div>
+
+          <button type="button" className="agent-header-btn agent-header-new" onClick={newChat}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            <span className="agent-header-btn-label">New Chat</span>
+          </button>
+        </header>
+
+        <div
+          ref={scrollerRef}
+          onScroll={onScroll}
+          className="agent-scroller"
+        >
           {messages.length === 0 ? (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                height: "100%",
-                gap: 12,
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: 20,
-                  background: "linear-gradient(135deg,#ede9fe,#c7d2fe)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 36,
-                }}
-              >
-                {agent.avatar}
-              </div>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--text)" }}>{agent.name}</h2>
-              <p style={{ margin: 0, fontSize: 14, color: "var(--text-muted)", maxWidth: 380, lineHeight: 1.6 }}>
-                {agent.description}
-              </p>
-              <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--text-muted)" }}>
+            <div className="agent-empty">
+              <div className="agent-empty-avatar">{agent.avatar}</div>
+              <h2 className="agent-empty-name">{agent.name}</h2>
+              <p className="agent-empty-desc">{agent.description}</p>
+              {/* Only rendered when this agent actually has prompts written for
+                  it. There is no generic fallback on purpose: "Analyse a stock"
+                  under Earnings Decoder would burn the user's first turn. */}
+              {(agent.starterPrompts?.length ?? 0) > 0 && (
+                <div className="agent-starters">
+                  {agent.starterPrompts!.map((prompt) => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      className="agent-starter"
+                      onClick={() => void send(prompt)}
+                      disabled={sending}
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <p className="agent-empty-hint">
                 Ask anything · or attach a PDF / Word doc with 📎
               </p>
             </div>
           ) : (
-            <div style={{ maxWidth: 740, margin: "0 auto", display: "flex", flexDirection: "column", gap: 18 }}>
-              {messages.map((m, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    alignItems: "flex-start",
-                    flexDirection: m.role === "user" ? "row-reverse" : "row",
-                  }}
-                >
-                  <div
-                    title={m.role === "user" ? userName ?? "You" : agent.name}
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 9,
-                      flexShrink: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: m.role === "user" ? 12 : 16,
-                      fontWeight: 700,
-                      letterSpacing: 0.2,
-                      overflow: "hidden",
-                      background:
-                        m.role === "user"
-                          ? "linear-gradient(135deg,#6366f1,#4f46e5)"
-                          : "linear-gradient(135deg,#ede9fe,#c7d2fe)",
-                      color: m.role === "user" ? "#fff" : "inherit",
-                    }}
-                  >
-                    {m.role !== "user" ? (
-                      agent.avatar
-                    ) : userAvatar ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={userAvatar}
-                        alt={userName ?? "You"}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      />
-                    ) : (
-                      userInitials(userName)
-                    )}
+            /* Assistant turns are full-width blocks, not bubbles. A 75%-wide
+               bordered bubble is fine for a sentence, but these agents answer
+               with headings, tables and multi-paragraph analysis, and squeezing
+               that into a chat bubble is most of why the transcript was hard to
+               read. Only the user's own short turns stay bubbled — which also
+               makes it obvious at a glance who said what. */
+            <div className="agent-thread">
+              {messages.map((m, i) =>
+                m.role === "user" ? (
+                  <div key={i} className="agent-turn agent-turn--user">
+                    <div className="agent-user-bubble">{m.content}</div>
+                    <span className="agent-user-avatar" title={userName ?? "You"}>
+                      {userAvatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={userAvatar} alt={userName ?? "You"} />
+                      ) : (
+                        userInitials(userName)
+                      )}
+                    </span>
                   </div>
-                  <div
-                    style={{
-                      maxWidth: "75%",
-                      padding: "12px 16px",
-                      borderRadius: m.role === "user" ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
-                      background:
-                        m.role === "user" ? "linear-gradient(135deg,#6366f1,#4f46e5)" : "var(--surface)",
-                      color: m.role === "user" ? "#fff" : "var(--text)",
-                      fontSize: 14,
-                      border: m.role === "model" ? "1px solid var(--border)" : "none",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                    }}
-                  >
-                    {m.role === "model" ? (
-                      m.streaming && !m.content ? (
+                ) : (
+                  <div key={i} className="agent-turn agent-turn--model">
+                    <div className="agent-turn-head">
+                      <span className="agent-turn-avatar">{agent.avatar}</span>
+                      <span className="agent-turn-name">{agent.name}</span>
+                      {!m.streaming && m.content ? <CopyButton text={m.content} /> : null}
+                    </div>
+                    <div className="agent-turn-body">
+                      {m.streaming && !m.content ? (
                         // Nothing has streamed back yet — show that it's thinking
                         // rather than an empty bubble with a stray ellipsis.
                         <span className="agent-typing" aria-label={`${agent.name} is typing`}>
@@ -578,37 +555,46 @@ export default function AgentChat({
                         </span>
                       ) : (
                         <>
-                          <MarkdownText text={m.content} />
+                          <AgentMarkdown text={m.content} />
                           {m.streaming && <span className="agent-caret" aria-hidden />}
                         </>
-                      )
-                    ) : (
-                      <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</span>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-              <div ref={bottomRef} />
+                ),
+              )}
             </div>
           )}
         </div>
 
-        <div
-          style={{
-            padding: "16px 20px",
-            background: "var(--surface)",
-            borderTop: "1px solid var(--border)",
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ maxWidth: 740, margin: "0 auto" }}>
+        <div className="agent-footer">
+          {/* Only when the reader has scrolled away — the transcript no longer
+              drags them back down on every token, so there has to be a way
+              back. */}
+          {!pinned && messages.length > 0 && (
+            <button
+              type="button"
+              className="agent-jump"
+              onClick={() => scrollToBottom(true)}
+              aria-label="Jump to latest message"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M12 5v14M19 12l-7 7-7-7" />
+              </svg>
+              Latest
+            </button>
+          )}
+          <div className="agent-col">
             <DocumentAttachChip
               docAttachment={docAttachment}
               uploadingDoc={uploadingDoc}
               docError={docError}
               onClear={clearDoc}
             />
-            <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
+            {/* Attach, textarea and send share one rounded container so the
+                composer reads as a single control rather than three floating
+                boxes. The textarea drops its own border to avoid a box in a box. */}
+            <div className="agent-composer">
               <DocumentAttachButton
                 fileRef={fileRef}
                 disabled={sending}
@@ -625,22 +611,10 @@ export default function AgentChat({
                 }
                 rows={1}
                 disabled={sending || uploadingDoc}
+                className="agent-composer-input"
                 style={{
-                  flex: 1,
-                  padding: "12px 16px",
-                  border: "1.5px solid var(--border)",
-                  borderRadius: 12,
-                  fontSize: 14,
-                  resize: "none",
-                  outline: "none",
-                  fontFamily: "inherit",
-                  lineHeight: 1.5,
-                  minHeight: 48,
                   maxHeight: 200,
-                  overflowY: "auto",
-                  boxSizing: "border-box",
-                  background: sending || uploadingDoc ? "var(--surface-2)" : "var(--surface)",
-                  color: "var(--text)",
+                  color: sending || uploadingDoc ? "var(--text-muted)" : "var(--text)",
                 }}
                 onInput={(e) => {
                   const t = e.currentTarget;
@@ -652,17 +626,11 @@ export default function AgentChat({
                 type="button"
                 onClick={() => void send()}
                 disabled={!canSend}
+                className="agent-composer-send"
+                aria-label="Send message"
                 style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 12,
                   background: canSend ? "linear-gradient(135deg,#6366f1,#4f46e5)" : "var(--surface-2)",
-                  border: "none",
                   cursor: canSend ? "pointer" : "not-allowed",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
                 }}
               >
                 {sending ? (
@@ -693,17 +661,14 @@ export default function AgentChat({
               </button>
             </div>
           </div>
-          <p
-            style={{
-              maxWidth: 740,
-              margin: "8px auto 0",
-              fontSize: 11,
-              color: "var(--text-muted)",
-              textAlign: "center",
-            }}
-          >
-            📎 PDF / Word on every assistant · Enter to send · Powered by {modelLabel}
-          </p>
+          {/* Only on the empty state. Once you are reading answers this line is
+              just a permanent strip of chrome under every reply, and the same
+              three facts are already on the welcome card above. */}
+          {messages.length === 0 && (
+            <p className="agent-col agent-composer-hint">
+              📎 PDF / Word on every assistant · Enter to send · Powered by {modelLabel}
+            </p>
+          )}
         </div>
       </div>
       <style>{`@keyframes blink{0%,100%{opacity:1}50%{opacity:0}} @keyframes spin{to{transform:rotate(360deg)}}`}</style>
