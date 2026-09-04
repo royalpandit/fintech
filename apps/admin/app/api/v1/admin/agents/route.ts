@@ -1,26 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { normalizeStarterPrompts } from "@/lib/agent-starter-prompts";
 
 export const dynamic = "force-dynamic";
-
-/**
- * Starter prompts arrive from the editor as one textarea, one prompt per line.
- * Blank lines are dropped so a trailing newline does not become an empty chip,
- * and the list is capped at 4 — beyond that the empty state stops being a
- * suggestion and starts being a menu.
- */
-export function normalizeStarterPrompts(input: unknown): string[] | undefined {
-  if (input === undefined) return undefined;
-  const raw = Array.isArray(input)
-    ? input.map((v) => String(v))
-    : String(input ?? "").split("\n");
-  return raw
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, 4)
-    .map((line) => line.slice(0, 120));
-}
 
 /** GET /api/v1/admin/agents — list all agents (admin + super_admin) */
 export async function GET(req: NextRequest) {

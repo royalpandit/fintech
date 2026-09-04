@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { normalizeStarterPrompts } from "../route";
+import { normalizeStarterPrompts } from "@/lib/agent-starter-prompts";
 
 export const dynamic = "force-dynamic";
 
