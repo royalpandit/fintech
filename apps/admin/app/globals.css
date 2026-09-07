@@ -252,6 +252,22 @@ html[data-theme="dark"] .finuer-logo-dark {
   border-color: transparent;
   background: transparent;
   color: var(--text-muted);
+  /* Lifted above anything that might sit over it inside the drawer header, and
+     given a bigger tap area than its 38px box: at the top-right corner of a
+     phone drawer a near-miss is common, and a near-miss here does nothing at
+     all, which reads as a dead button. */
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+.admin-nav-close::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+.admin-nav-close:hover {
+  background: var(--surface);
+  color: var(--text);
 }
 .admin-nav-overlay {
   display: none;
@@ -524,11 +540,15 @@ th {
    won't shrink below their content, which pushes the page past the screen
    edge. Letting them shrink — and capping any wide media — keeps everything
    inside 100% width. Scoped to .admin-main so the sidebar is unaffected. */
-.admin-main .advisor-scope :where(div, section, article, aside, ul, table) {
+/* Descendant order was inverted: .advisor-scope sits on the shell ROOT, which
+   contains .admin-main, so ".admin-main .advisor-scope" asked for a scope
+   nested inside main and matched nothing. None of these rules have ever
+   applied. */
+.advisor-scope .admin-main :where(div, section, article, aside, ul, table) {
   min-width: 0;
 }
 
-.admin-main .advisor-scope :where(svg, img, video, canvas, table) {
+.advisor-scope .admin-main :where(svg, img, video, canvas, table) {
   max-width: 100%;
 }
 
@@ -536,12 +556,38 @@ th {
    already shrink, so the 320px rail stays on-screen on wide viewports.
    Below 1024px there's no room beside the content — stack the rail underneath. */
 @media (max-width: 1024px) {
-  .admin-main .advisor-scope > div {
+  .advisor-scope .admin-main > section > div,
+  .advisor-scope .admin-main > div {
     grid-template-columns: minmax(0, 1fr) !important;
   }
 
-  .admin-main .advisor-scope > div > aside {
+  .advisor-scope .admin-main > section > div > aside,
+  .advisor-scope .admin-main > div > aside {
+    /* A sticky rail has nothing to stick beside once it is stacked. */
     position: static !important;
+    width: auto !important;
+  }
+}
+
+/* ── Advisor pages: collapse fixed-ratio grids on a phone ──────────────────
+   Advisor pages set grid-template-columns inline — eleven "1fr 1fr", six
+   "2fr 1fr", and so on — so no stylesheet rule can reach them without
+   !important, and nothing collapses them below a laptop. Two 190px columns on
+   a 390px screen is where the panel stops being usable.
+
+   Matching on the inline value is deliberate: it hits exactly the fixed
+   ratios and leaves row layouts like "1fr auto auto" and any
+   repeat(auto-fill, ...) grid — which already reflow on their own — alone. */
+@media (max-width: 700px) {
+  .advisor-scope .admin-main [style*="1fr 1fr"],
+  .advisor-scope .admin-main [style*="2fr 1fr"],
+  .advisor-scope .admin-main [style*="1fr 2fr"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  /* Stat strips stay two-up rather than becoming four tall cards. */
+  .advisor-scope .admin-main [style*="repeat(4, 1fr)"],
+  .advisor-scope .admin-main [style*="repeat(3, 1fr)"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
 
@@ -2738,6 +2784,8 @@ body.terminal-active .us-content {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-2);
+  /* the search glyph inherits this */
+  color: var(--text-muted);
 }
 .tv-ind-search {
   flex: 1;
@@ -3898,6 +3946,19 @@ body.terminal-active .us-content {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Registration number on its own line under the expertise tags. Truncates
+   rather than wrapping, so a long number cannot change the card's height and
+   break the rail's alignment; the full value is in the title attribute. */
+.trades-adv-sebi {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .trades-adv-badge {
   flex-shrink: 0;
   padding: 2px 7px;
@@ -4683,6 +4744,16 @@ body.terminal-active .us-content {
   color: var(--text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+/* Says which price this is. A fund shows NAV, a stock shows LTP, and the two
+   are not interchangeable enough to leave unlabelled. */
+.td-ltp-label {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-transform: uppercase;
 }
 
 .td-close {
@@ -7268,22 +7339,94 @@ body.terminal-active .us-content {
 .sf-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.65);
   z-index: 5000;
+  /* A light touch: enough to push the page back and stop the text behind
+     competing for attention, not enough to smear it. 8px turned the whole
+     dashboard into fog, which reads as a rendering fault rather than depth.
+     The dim carries most of the separation; the blur only softens edges. */
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+
+  /* Centred, but scrollable rather than clipped: `align-items: center` on its
+     own centres a too-tall dialog by pushing its top edge off-screen, and the
+     top is where the close button lives. flex-start + auto margins centres it
+     when it fits and lets it scroll when it does not. */
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px 16px;
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .sf-modal-overlay {
+    animation: sf-overlay-in 0.16s ease-out;
+  }
+  .sf-composer {
+    animation: sf-composer-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+@keyframes sf-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes sf-composer-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
 .sf-composer {
   width: min(720px, 100%);
-  min-height: min(560px, 88vh);
-  max-height: min(90vh, 760px);
-  border-radius: 16px;
+  /* auto margins do the vertical centring the flex container deliberately
+     does not, so a tall dialog grows downward instead of upward. */
+  margin: auto;
+  /* Was a 560px MIN height, which forced a tall empty box on a short laptop
+     window and pushed the footer under the fold. The body scrolls instead. */
+  max-height: calc(100vh - 48px);
+  border-radius: 18px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+}
+@media (max-width: 640px) {
+  /* A centred card with margins wastes the little width a phone has, and the
+     on-screen keyboard eats the bottom half. A sheet anchored to the bottom
+     puts the text area next to the keyboard and the header out of its way. */
+  .sf-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .sf-composer {
+    width: 100%;
+    margin: 0;
+    border-radius: 18px 18px 0 0;
+    /* dvh, not vh: mobile browsers include the collapsing address bar in vh,
+       so 100vh leaves the footer under it. */
+    max-height: 92dvh;
+    /* Clear the home indicator on a notched phone. */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  /* 22px of side padding on a 360px screen leaves very little line length. */
+  .sf-composer-body {
+    padding: 14px 16px;
+  }
+  .sf-composer-head,
+  .sf-composer-foot {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .sf-composer {
+      animation: sf-sheet-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  }
+}
+@keyframes sf-sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: none; }
 }
 .sf-theme-dark {
   --sf-bg: #161616;
@@ -9063,7 +9206,11 @@ body.terminal-active .us-content {
   position: fixed;
   inset: 0;
   z-index: 6000;
-  background: rgba(0, 0, 0, 0.92);
+  /* Not quite black: a pure #000 ground makes a dark photo look like a hole in
+     the page, with no edge to tell you where the image stops. */
+  background: rgba(8, 10, 14, 0.94);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   flex-direction: column;
   animation: sf-lightbox-in 0.15s ease;
@@ -9077,72 +9224,115 @@ body.terminal-active .us-content {
   }
 }
 
+/* The controls were a bare row of grey squares pinned across the top, reading
+   as leftover chrome rather than a control bar. They are now one floating pill
+   at the bottom — out of the way of the picture, and where a viewer's hands
+   already are on a phone. Close stays top-right, on its own. */
 .sf-lightbox-toolbar {
+  position: absolute;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 4;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 12px 16px;
-  flex-shrink: 0;
-  z-index: 2;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(24, 28, 35, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 .sf-lightbox-toolbar button {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border: none;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
+  transition: background 0.13s, color 0.13s;
 }
 .sf-lightbox-toolbar button:hover {
-  background: rgba(255, 255, 255, 0.22);
-}
-.sf-lightbox-close {
-  position: absolute;
-  right: 16px;
-  top: 12px;
-}
-.sf-lightbox-zoom-label {
+  background: rgba(255, 255, 255, 0.14);
   color: #fff;
-  font-size: 13px;
+}
+.sf-lightbox-toolbar button:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Close is a destructive-ish action and belongs away from the zoom cluster, so
+   a mis-tap while zooming cannot dismiss the viewer. */
+.sf-lightbox-close {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  top: max(16px, env(safe-area-inset-top, 0px));
+  z-index: 5;
+  width: 40px !important;
+  height: 40px !important;
+  background: rgba(24, 28, 35, 0.82) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.sf-lightbox-close:hover {
+  background: rgba(220, 38, 38, 0.85) !important;
+  border-color: rgba(220, 38, 38, 0.9) !important;
+}
+
+.sf-lightbox-zoom-label {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12.5px;
   font-weight: 600;
-  min-width: 48px;
+  min-width: 46px;
   text-align: center;
+  /* Tabular so the pill does not resize as the number goes 100% -> 75%. */
+  font-variant-numeric: tabular-nums;
+  user-select: none;
 }
 
 .sf-lightbox-counter {
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 13px;
+  padding: 0 10px 0 6px;
+  margin-left: 2px;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12.5px;
   font-weight: 600;
-  margin-left: 8px;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
 }
 
 .sf-lightbox-nav {
-  position: absolute;
+  position: fixed;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 3;
+  z-index: 4;
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
-  border: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: rgba(24, 28, 35, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: rgba(255, 255, 255, 0.9);
   cursor: pointer;
+  transition: background 0.13s, color 0.13s;
 }
 .sf-lightbox-nav:hover {
-  background: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
 }
 .sf-lightbox-nav.prev {
-  left: 16px;
+  left: max(16px, env(safe-area-inset-left, 0px));
 }
 .sf-lightbox-nav.next {
-  right: 16px;
+  right: max(16px, env(safe-area-inset-right, 0px));
 }
 
 .sf-lightbox-stage {
@@ -9151,10 +9341,52 @@ body.terminal-active .us-content {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  padding: 16px;
+  /* Bottom padding clears the control pill so a tall image is never hidden
+     behind it. */
+  padding: 16px 16px 84px;
   min-height: 0;
   position: relative;
 }
+
+@media (max-width: 640px) {
+  .sf-lightbox-stage {
+    padding: 8px 8px 78px;
+  }
+  /* On a phone the arrows sit either side of the pill rather than over the
+     picture, where they covered a third of it and competed with the swipe. */
+  .sf-lightbox-nav {
+    width: 40px;
+    height: 40px;
+    top: auto;
+    bottom: max(20px, env(safe-area-inset-bottom, 0px));
+    transform: none;
+  }
+  .sf-lightbox-nav.prev {
+    left: 12px;
+  }
+  .sf-lightbox-nav.next {
+    right: 12px;
+  }
+  .sf-lightbox-toolbar {
+    /* Room for the two arrows on either side. */
+    max-width: calc(100vw - 120px);
+    gap: 2px;
+    padding: 5px;
+  }
+  .sf-lightbox-toolbar button {
+    width: 34px;
+    height: 34px;
+  }
+  .sf-lightbox-zoom-label {
+    min-width: 40px;
+    font-size: 12px;
+  }
+  .sf-lightbox-counter {
+    padding: 0 6px 0 4px;
+    font-size: 12px;
+  }
+}
+
 .sf-lightbox-img {
   max-width: none;
   max-height: none;
@@ -9171,16 +9403,9 @@ body.terminal-active .us-content {
   .sf-post-media-img {
     max-height: min(600px, 85vh);
   }
-  .sf-lightbox-nav {
-    width: 40px;
-    height: 40px;
-  }
-  .sf-lightbox-nav.prev {
-    left: 8px;
-  }
-  .sf-lightbox-nav.next {
-    right: 8px;
-  }
+  /* The lightbox nav rules that used to live here moved up beside the rest of
+     the lightbox styles. Left here they came AFTER that block and quietly won,
+     putting the arrows back over the picture. */
 }
 
 .sf-post-actions {
@@ -9302,6 +9527,9 @@ body.terminal-active .us-content {
   border-radius: 10px;
   font-size: 13px;
   background: var(--surface);
+  /* Was unset, so the input inherited the UA default (near-black) on top of
+     the dark surface it already declared. */
+  color: var(--text);
 }
 .sf-comment-form input:focus {
   outline: none;
@@ -9319,8 +9547,12 @@ body.terminal-active .us-content {
   cursor: pointer;
   white-space: nowrap;
 }
-.sf-comment-form button:hover {
+.sf-comment-form button:hover:not(:disabled) {
   background: #0284c7;
+}
+.sf-comment-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ─── Post access: Free / Paid premium ─── */
@@ -10609,6 +10841,82 @@ body.terminal-active .us-content {
   font-weight: 600;
 }
 
+/* Category filter + sort chips.
+   Both are controls on one toolbar row, so they share a height and a border
+   treatment; the label sits above the control rather than beside it so the
+   select can grow to fit long AMFI category names without shoving the sort
+   chips off the row. */
+.mf-toolbar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  /* flex-end, not center: the groups have different heights (the sort chips
+     wrap onto two rows on a narrow window) and they must stay bottom-aligned
+     on their controls, not floated around their own centres. */
+  align-items: flex-end;
+  margin-bottom: 14px;
+}
+.mf-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.mf-filter--search {
+  flex: 1;
+  min-width: 240px;
+  max-width: 460px;
+}
+.mf-filter--sorts {
+  min-width: 0;
+}
+.mf-filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.mf-filter-select {
+  height: 42px;
+  max-width: 260px;
+  padding: 0 30px 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  text-overflow: ellipsis;
+}
+.mf-filter-select:focus-visible {
+  border-color: var(--accent-blue, #2563eb);
+}
+.mf-sorts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.mf-card-trade {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+@media (max-width: 700px) {
+  /* Stack the toolbar: on a phone the search, the category and the sort chips
+     each want the full width, and side by side the select shrinks to unreadable. */
+  .mf-filter,
+  .mf-filter-select {
+    width: 100%;
+    max-width: none;
+  }
+  .mf-sorts {
+    width: 100%;
+  }
+}
+
 /* ------------------------------
    Finance professional cards (/user/advisors)
 ------------------------------ */
@@ -11754,8 +12062,10 @@ body.agent-chat-active .us-main {
   position: fixed;
   inset: 0;
   z-index: 400;
-  background: rgba(2, 6, 23, 0.55);
+  /* Matches .sf-modal-overlay so every modal separates the same way. */
+  background: rgba(2, 6, 23, 0.5);
   backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   display: grid;
   place-items: center;
   padding: 20px;
@@ -11768,8 +12078,11 @@ body.agent-chat-active .us-main {
 
 .cb-modal {
   width: 100%;
-  max-width: 460px;
-  max-height: min(88vh, 680px);
+  /* Six one-line rows do not need 460px of width or 680px of height; at that
+     size the dialog filled the screen and the list read as a long form rather
+     than a short pick-one. */
+  max-width: 420px;
+  max-height: min(86vh, 600px);
   display: flex;
   flex-direction: column;
   background: var(--surface);
@@ -11788,7 +12101,7 @@ body.agent-chat-active .us-main {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 .cb-head-icon {
   width: 38px;
@@ -11837,7 +12150,7 @@ body.agent-chat-active .us-main {
 
 .cb-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   overflow-y: auto;
   margin: 0 -4px;
   padding: 0 4px 2px;
@@ -11846,45 +12159,95 @@ body.agent-chat-active .us-main {
 .cb-option {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
   width: 100%;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1.5px solid var(--border);
+  padding: 0 8px 0 0;
+  border-radius: 11px;
+  border: 1px solid var(--border);
   background: var(--surface);
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+/* The pick target fills the row; Disconnect sits beside it. */
+.cb-option-pick {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex: 1;
+  min-width: 0;
+  padding: 9px 4px 9px 12px;
+  border: none;
+  background: none;
   color: inherit;
   font-family: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, transform 0.12s;
 }
-.cb-option:hover:not(:disabled) {
+.cb-option-pick:disabled { cursor: default; }
+
+.cb-disconnect {
+  flex-shrink: 0;
+  padding: 5px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.cb-disconnect:hover:not(:disabled) {
+  border-color: rgba(220, 38, 38, 0.5);
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+}
+.cb-disconnect:disabled { opacity: 0.5; cursor: not-allowed; }
+.cb-option:has(.cb-option-pick:hover:not(:disabled)) {
   border-color: rgba(14, 165, 233, 0.5);
   background: var(--surface-2);
-}
-.cb-option:active:not(:disabled) {
-  transform: scale(0.995);
 }
 .cb-option-on {
   border-color: #0ea5e9;
   background: rgba(14, 165, 233, 0.08);
 }
 .cb-option-done {
-  opacity: 0.6;
-  cursor: default;
+  /* Was opacity 0.6, which greyed out the Disconnect button along with the
+     rest of the row and made it look unavailable. The row reads as connected
+     from its "Connected" note and its border instead. */
+  border-color: rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.06);
 }
+.cb-option-done .cb-option-name { color: var(--text); }
 
+/* Logo and initial occupy the same grid cell: the favicon paints over the
+   coloured letter, and if it fails to load the letter is simply revealed. No
+   layout shift either way, and no broken-image glyph. */
 .cb-option-mark {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(16, 185, 129, 0.16));
-  color: #0284c7;
+  overflow: hidden;
+}
+.cb-option-initial { grid-area: 1 / 1; }
+.cb-option-logo {
+  grid-area: 1 / 1;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  /* Above the initial, and opaque so a transparent favicon does not blend
+     into the letter behind it. */
+  z-index: 1;
+  background: #fff;
+  border-radius: 4px;
+  padding: 1px;
 }
 
 .cb-option-body {
@@ -11951,8 +12314,7 @@ body.agent-chat-active .us-main {
 }
 .cb-btn-ghost,
 .cb-btn-primary {
-  flex: 1;
-  height: 42px;
+  height: 40px;
   border-radius: 11px;
   font-size: 13.5px;
   font-weight: 600;
@@ -11960,9 +12322,20 @@ body.agent-chat-active .us-main {
   cursor: pointer;
   transition: background 0.15s, opacity 0.15s;
 }
+/* Cancel takes only the room its label needs; Connect takes the rest. Two
+   equally-wide buttons make the reader choose between them, when one is the
+   action and the other is the way out. */
 .cb-btn-ghost {
+  flex: 0 0 auto;
+  padding: 0 18px;
   border: 1px solid var(--border);
   background: transparent;
+  color: var(--text-muted);
+}
+.cb-btn-primary {
+  flex: 1;
+}
+.cb-btn-ghost:hover {
   color: var(--text);
 }
 .cb-btn-ghost:hover {
@@ -13964,4 +14337,804 @@ html[data-theme="light"] .post-disclaimer {
   .wl-row-trade {
     padding-left: 4px;
   }
+}
+
+/* Standby-feed notice on the Markets board. Amber, not red: nothing is broken,
+   the numbers are simply delayed. Tinted rather than a solid pastel so it sits
+   correctly on both themes. */
+.mkt-degraded {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  padding: 9px 14px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.mkt-degraded strong {
+  font-weight: 700;
+  color: #b45309;
+}
+:root:is([data-theme="dark"]) .mkt-degraded strong {
+  color: #fbbf24;
+}
+.mkt-degraded span {
+  color: var(--text-muted);
+}
+
+/* ── Dhan token panel (/super-admin/settings) ──────────────────────────── */
+.dtp-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.dtp-facts > div {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  min-width: 0;
+}
+.dtp-facts span {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+.dtp-facts strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  /* Long values (a full timestamp, a long name) wrap instead of stretching the
+     grid column and pushing the other facts out of alignment. */
+  overflow-wrap: anywhere;
+}
+.dtp-bad { color: var(--danger, #dc2626); }
+
+.dtp-label {
+  display: block;
+  margin: 14px 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.dtp-input {
+  width: 100%;
+  resize: vertical;
+  /* Monospace so a mistyped or truncated paste is visible at a glance. */
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.dtp-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.dtp-note {
+  margin: 12px 0 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.dtp-note code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-size: 11.5px;
+}
+.dtp-note--warn {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: var(--text);
+}
+.dtp-note--error {
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  color: var(--text);
+}
+.dtp-note--ok {
+  background: rgba(22, 163, 74, 0.12);
+  border: 1px solid rgba(22, 163, 74, 0.3);
+  color: var(--text);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ADVISOR POSTS IN THE MERGED FEED
+
+   The feed interleaves two card types: community posts (.sf-post-card, built
+   on these classes) and advisor market posts. The advisor card was written
+   earlier with ~120 inline style objects and no classes at all, so the two
+   sat side by side at different radii, different paddings, no hover, and a
+   cramped left-aligned action row against a full-width one. It now shares the
+   .sf-post-card shell and .sf-post-actions bar; only what is genuinely
+   advisor-specific lives here.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.sf-adv-post {
+  position: relative;
+}
+.sf-adv-avatar-link {
+  display: flex;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+.sf-adv-author {
+  text-decoration: none;
+}
+.sf-adv-author:hover {
+  text-decoration: underline;
+}
+.sf-adv-byline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+}
+
+/* Follow toggle ---------------------------------------------------------- */
+.sf-adv-follow {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid #0ea5e9;
+  background: rgba(14, 165, 233, 0.08);
+  color: #0ea5e9;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.sf-adv-follow:hover:not(:disabled) {
+  background: rgba(14, 165, 233, 0.16);
+}
+.sf-adv-follow.is-following {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+.sf-adv-follow:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+/* Sentiment pill. Colours arrive inline from the data. */
+.sf-adv-sentiment {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* Overflow menu ---------------------------------------------------------- */
+.sf-adv-menu {
+  position: relative;
+}
+.sf-adv-menu-trigger {
+  display: flex;
+  align-items: center;
+  padding: 5px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.sf-adv-menu-trigger:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.sf-adv-menu-pop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 168px;
+  z-index: 20;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  /* Heavier than the card's own shadow so it reads as floating above it. */
+  box-shadow: 0 10px 34px rgba(15, 23, 42, 0.16);
+}
+.sf-adv-menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.sf-adv-menu-item + .sf-adv-menu-item {
+  border-top: 1px solid var(--border);
+}
+.sf-adv-menu-item:hover {
+  background: var(--surface-2);
+}
+.sf-adv-menu-item.is-danger {
+  color: var(--danger, #dc2626);
+}
+.sf-adv-menu-note {
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Body ------------------------------------------------------------------- */
+.sf-adv-content {
+  display: block;
+  padding: 12px 16px 0;
+  color: inherit;
+  text-decoration: none;
+}
+.sf-adv-title {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+a.sf-adv-content:hover .sf-adv-title {
+  color: #0ea5e9;
+}
+.sf-adv-excerpt {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  /* Three lines then ellipsis - the card is a preview, the detail page is the
+     place to read the whole thing. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Tag row ---------------------------------------------------------------- */
+.sf-adv-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 16px 0;
+}
+.sf-adv-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sf-adv-chip.is-symbol {
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+/* Translucent tints, not solid pastels: the previous #fee2e2 / #fef3c7 /
+   #d1fae5 with dark text became unreadable blocks in dark mode. */
+.sf-adv-risk {
+  text-transform: capitalize;
+  font-weight: 700;
+}
+.sf-adv-risk--low {
+  background: rgba(22, 163, 74, 0.14);
+  color: #16a34a;
+}
+.sf-adv-risk--medium {
+  background: rgba(245, 158, 11, 0.16);
+  color: #d97706;
+}
+.sf-adv-risk--high {
+  background: rgba(220, 38, 38, 0.14);
+  color: #dc2626;
+}
+
+.sf-adv-caret {
+  transition: transform 0.2s ease;
+}
+.sf-adv-caret.is-open {
+  transform: rotate(180deg);
+}
+.sf-adv-signin-link {
+  color: #0ea5e9;
+  font-weight: 600;
+}
+
+/* Replies and the reply form both sit indented under their parent comment, so
+   the thread reads as a thread rather than a flat list. */
+.sf-adv-replies {
+  margin-left: 34px;
+  margin-bottom: 8px;
+}
+.sf-adv-reply-form {
+  /* Reuses .sf-comment-form for the input and send button; only the two icon
+     buttons and the tighter scale are specific to a reply. */
+  margin-top: 0;
+}
+.sf-adv-reply-form input {
+  padding: 7px 11px;
+  font-size: 12px;
+}
+.sf-adv-reply-form button {
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+}
+.sf-adv-reply-cancel {
+  background: none !important;
+  border: none;
+  color: var(--text-muted) !important;
+  cursor: pointer;
+}
+.sf-adv-reply-cancel:hover {
+  color: var(--text) !important;
+}
+
+@media (max-width: 520px) {
+  /* 34px of indent on a phone leaves almost nothing for the reply input. */
+  .sf-adv-replies {
+    margin-left: 16px;
+  }
+}
+
+@media (max-width: 520px) {
+  /* The head crowds badly at phone width: name, follow, sentiment and the
+     overflow trigger all competing for one row. Let the right-hand cluster
+     wrap under the name instead of squeezing it to an ellipsis. */
+  .sf-adv-post .sf-post-head {
+    flex-wrap: wrap;
+  }
+  .sf-adv-post .sf-post-head-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .sf-adv-title {
+    font-size: 15px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PAPER POSITIONS TABLE (/user/portfolio)
+   ══════════════════════════════════════════════════════════════════════════ */
+.pp-table-wrap { overflow-x: auto; }
+.pp-table {
+  width: 100%;
+  font-size: 12.5px;
+  border-collapse: collapse;
+}
+.pp-table thead tr { background: var(--surface-2); }
+.pp-table th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.pp-table th.num,
+.pp-table td.num {
+  text-align: right;
+  /* Tabular figures so decimal points line up down the column. */
+  font-variant-numeric: tabular-nums;
+}
+.pp-table td {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  white-space: nowrap;
+}
+.pp-table td.strong { font-weight: 700; }
+.pp-table td.up { color: #16a34a; }
+.pp-table td.down { color: #dc2626; }
+
+.pp-row {
+  position: relative;
+  transition: background 0.12s ease;
+}
+.pp-row:hover { background: var(--surface-2); }
+.pp-row-link {
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+}
+/* The anchor is stretched over the whole row: a 12px ticker is a poor click
+   target, especially on a phone. Using ::after rather than wrapping the row in
+   a link keeps valid table markup and real anchor semantics - middle-click,
+   open-in-new-tab and keyboard focus all still work. */
+.pp-row-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.pp-row:hover .pp-row-link { color: #0ea5e9; }
+.pp-row-chev {
+  width: 24px;
+  text-align: right;
+  color: var(--text-muted);
+  font-size: 16px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.pp-row:hover .pp-row-chev { opacity: 1; }
+@media (hover: none) {
+  /* No hover on touch, so the affordance has to be permanent. */
+  .pp-row-chev { opacity: 0.6; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   HOLDING DETAIL (/user/portfolio/[symbol])
+   ══════════════════════════════════════════════════════════════════════════ */
+.hd-page { padding-bottom: 32px; }
+.hd-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  margin-bottom: 14px;
+}
+.hd-back:hover { color: var(--text); }
+
+.hd-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.hd-symbol {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.hd-sub {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.hd-head-price { text-align: right; }
+.hd-ltp {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.hd-pnl {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.hd-pnl.up { color: #16a34a; }
+.hd-pnl.down { color: #dc2626; }
+/* Says which price this is. A delayed number presented as live is how someone
+   makes a decision on data a quarter of an hour old. */
+.hd-price-note {
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+.hd-head-actions { display: flex; align-items: center; }
+
+.hd-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.hd-stat {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  min-width: 0;
+}
+.hd-stat-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.hd-stat-value {
+  display: block;
+  margin-top: 3px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.hd-section-head { margin: 26px 0 12px; }
+.hd-section-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.hd-section-head p {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-width: 68ch;
+}
+
+/* Three panels across on a desktop, stacked below. auto-fit with a wide
+   minimum gives two-up on a tablet rather than three cramped columns. */
+.hd-insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.hd-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.hd-table-wrap { overflow-x: auto; }
+.hd-table {
+  width: 100%;
+  font-size: 12.5px;
+  border-collapse: collapse;
+}
+.hd-table thead tr { background: var(--surface-2); }
+.hd-table th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.hd-table th.num,
+.hd-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.hd-table td {
+  padding: 11px 16px;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  white-space: nowrap;
+}
+.hd-side {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.hd-side--buy { background: rgba(22, 163, 74, 0.14); color: #16a34a; }
+.hd-side--sell { background: rgba(220, 38, 38, 0.14); color: #dc2626; }
+
+@media (max-width: 640px) {
+  .hd-head { padding: 16px; }
+  .hd-symbol { font-size: 22px; }
+  .hd-ltp { font-size: 20px; }
+  /* Left-align the price under the symbol rather than pinning it to the right
+     edge of a narrow card. */
+  .hd-head-price { text-align: left; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   AGENT INSIGHT PANELS
+   ══════════════════════════════════════════════════════════════════════════ */
+.hi-panel {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.hi-panel-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.hi-panel-icon { font-size: 18px; line-height: 1.2; flex-shrink: 0; }
+.hi-panel-id { flex: 1; min-width: 0; }
+.hi-panel-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+.hi-panel-blurb {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.hi-panel-refresh {
+  flex-shrink: 0;
+  display: flex;
+  padding: 5px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.hi-panel-refresh:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--text);
+}
+.hi-panel-refresh:disabled { opacity: 0.5; cursor: default; }
+.hi-spin { animation: hi-spin 1s linear infinite; }
+@keyframes hi-spin { to { transform: rotate(360deg); } }
+
+.hi-panel-body {
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+/* Placeholder lines shaped like the prose they precede, so the panel does not
+   resize sharply when the answer arrives. */
+.hi-skeleton { display: grid; gap: 9px; }
+.hi-skeleton span {
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    color-mix(in srgb, var(--surface-2) 60%, var(--border)) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: hi-shimmer 1.3s ease-in-out infinite;
+}
+@keyframes hi-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hi-skeleton span,
+  .hi-spin { animation: none; }
+}
+
+.hi-error p {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+.hi-error button {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.hi-error button:hover { border-color: #0ea5e9; color: #0ea5e9; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CONNECT-BROKER TRIGGER + EMPTY STATE
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.cb-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: 12px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.05s;
+}
+.cb-trigger:active { transform: translateY(1px); }
+
+/* On the dark gradient banner at the top of the portfolio page. */
+.cb-trigger--hero {
+  background: rgba(255, 255, 255, 0.95);
+  color: #064e3b;
+}
+.cb-trigger--hero:hover { background: #fff; }
+
+/* On an ordinary card, where white-on-white would vanish. */
+.cb-trigger--solid {
+  background: #0ea5e9;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(14, 165, 233, 0.35);
+}
+.cb-trigger--solid:hover {
+  background: #0284c7;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.3);
+}
+
+.brk-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 36px 24px 30px;
+}
+.brk-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(14, 165, 233, 0.12);
+  color: #0ea5e9;
+  margin-bottom: 2px;
+}
+.brk-empty-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.brk-empty-text {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+/* The reassurance belongs under the button, not above it: it answers the
+   hesitation someone feels after deciding to click, not before. */
+.brk-empty-note {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.85;
 }

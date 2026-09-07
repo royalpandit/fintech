@@ -23,3 +23,21 @@ export function stockInSector(symbol: string, sectorKey: string): boolean {
   const norm = normalizeTicker(symbol);
   return sector.tickers.some((t) => norm === t || norm.startsWith(t) || t.startsWith(norm));
 }
+
+
+/**
+ * Reverse lookup: which sector does this ticker belong to?
+ *
+ * MARKET_SECTORS is a curated list, not an exhaustive classification, so
+ * anything it does not recognise -- an ETF, a mutual-fund scheme code, a
+ * smaller listing -- comes back as null rather than being forced into a bucket
+ * it does not belong in. The portfolio donut groups those under "Other".
+ */
+export function sectorForSymbol(symbol: string): string | null {
+  const norm = normalizeTicker(symbol);
+  if (!norm) return null;
+  for (const sector of MARKET_SECTORS) {
+    if (sector.tickers.some((t) => t === norm)) return sector.label;
+  }
+  return null;
+}

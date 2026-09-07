@@ -374,84 +374,85 @@ model User {
   updatedAt       DateTime      @updatedAt @map("updated_at")
   deletedAt       DateTime?     @map("deleted_at")
 
-  sessions             UserSession[]
-  kycDocuments         KycDocument[]         @relation("kycOwner")
-  kycVerifications     KycDocument[]         @relation("kycVerifier")
-  consentLogs          ConsentLog[]
-  advisorProfile       AdvisorProfile?       @relation("advisorOwner")
-  advisorVerifications AdvisorProfile[]      @relation("advisorVerifier")
-  advisorMetrics       AdvisorMetricDaily[]
-  marketPosts          MarketPost[]
-  marketComments       MarketComment[]
-  marketReactions      MarketReaction[]
-  reportsFiled         ContentReport[]       @relation("reporter")
-  reportsResolved      ContentReport[]       @relation("resolver")
-  communityPosts       CommunityPost[]
-  communityComments    CommunityComment[]
-  communitySaves       CommunityPostSave[]
-  followers            UserFollow[]          @relation("following")
-  following            UserFollow[]          @relation("follower")
-  createdGroups        Group[]
-  groupMemberships     GroupMember[]
-  groupJoinRequests    GroupJoinRequest[] @relation("joinRequestUser")
-  reviewedJoinRequests GroupJoinRequest[] @relation("joinRequestReviewer")
-  groupBansReceived    GroupBan[]         @relation("bannedUser")
-  groupBansIssued      GroupBan[]         @relation("banIssuer")
-  communityPostShares  CommunityPostShare[]
-  reputationLogs       ReputationLog[]
-  broadcasts           DmBroadcast[]         @relation("analystBroadcasts")
-  services             SubscriptionService[] @relation("advisorServices")
-  serviceSubscriptions ServiceSubscription[] @relation("serviceSubscriber")
-  dmParticipations     DmThreadParticipant[]
-  dmMessages           DmMessage[]
-  brokerAccounts       BrokerAccount[]
-  portfolios           Portfolio[]
-  virtualWallet        VirtualWallet?
-  leaderboardEntries   LeaderboardEntry[]
-  bankAccounts         BankAccount[]
-  transactions         Transaction[]
-  budgets              Budget[]
-  savingsGoals         SavingsGoal[]
-  financialScores      FinancialScore[]
-  aiLogs               AiLog[]
-  aiDecisionLogs       AiDecisionLog[]
-  coursesAsAdvisor     Course[]              @relation("courseAdvisor")
-  advisorReports       AdvisorReport[]       @relation("advisorReports")
-  courseEnrollments     CourseEnrollment[]
-  subscriptionsAsUser  Subscription[]        @relation("subscriber")
-  subscriptionsAsAdv   Subscription[]        @relation("advisorSub")
-  payments             Payment[]
-  advisorWallet        AdvisorWallet?
-  payoutRequests       PayoutRequest[]       @relation("payoutOwner")
-  payoutReviews        PayoutRequest[]       @relation("payoutReviewer")
-  notifications        Notification[]
-  pushSubscriptions    WebPushSubscription[]
-  auditLogs            AuditLog[]
-  riskProfile          RiskProfile?
-  chatSessions         AiChatSession[]
-  watchlists           Watchlist[]
-  communityReactions   CommunityReaction[]
-  advisorPlans         AdvisorPlan[]
-  lessonProgress       CourseLessonProgress[]
-  courseReviews         CourseReview[]
-  devices              UserDevice[]
-  notificationPref     NotificationPreference?
-  userPreference       UserPreference?
-  priceAlerts          PriceAlert[]
-  strategies           StrategyTemplate[]
-  invoices             Invoice[]
-  blocksGiven          UserBlock[]           @relation("blocker")
-  blocksReceived       UserBlock[]           @relation("blocked")
-  sentFriendRequests   FriendRequest[]       @relation("reqFrom")
-  receivedFriendRequests FriendRequest[]     @relation("reqTo")
-  createdAgents        GeminiAgent[]         @relation("AgentCreator")
-  agentChatSessions    AgentChatSession[]
-  createdStockPickGroups StockPickGroup[]    @relation("StockPickGroupCreator")
-  communityPostUnlocks CommunityPostUnlock[]
-  marketPostUnlocks    MarketPostUnlock[]
-  createdFinuerBaskets   FinuerBasket[]      @relation("FinuerBasketCreator")
-  finuerBasketSaves      FinuerBasketSave[]
-  createdCompetitions    Competition[]       @relation("CompetitionCreator")
+  sessions                UserSession[]
+  kycDocuments            KycDocument[]            @relation("kycOwner")
+  kycVerifications        KycDocument[]            @relation("kycVerifier")
+  consentLogs             ConsentLog[]
+  advisorProfile          AdvisorProfile?          @relation("advisorOwner")
+  advisorVerifications    AdvisorProfile[]         @relation("advisorVerifier")
+  advisorMetrics          AdvisorMetricDaily[]
+  marketPosts             MarketPost[]
+  marketComments          MarketComment[]
+  marketReactions         MarketReaction[]
+  reportsFiled            ContentReport[]          @relation("reporter")
+  reportsResolved         ContentReport[]          @relation("resolver")
+  communityPosts          CommunityPost[]
+  communityComments       CommunityComment[]
+  communitySaves          CommunityPostSave[]
+  followers               UserFollow[]             @relation("following")
+  following               UserFollow[]             @relation("follower")
+  createdGroups           Group[]
+  groupMemberships        GroupMember[]
+  groupJoinRequests       GroupJoinRequest[]       @relation("joinRequestUser")
+  reviewedJoinRequests    GroupJoinRequest[]       @relation("joinRequestReviewer")
+  groupBansReceived       GroupBan[]               @relation("bannedUser")
+  groupBansIssued         GroupBan[]               @relation("banIssuer")
+  communityPostShares     CommunityPostShare[]
+  reputationLogs          ReputationLog[]
+  broadcasts              DmBroadcast[]            @relation("analystBroadcasts")
+  services                SubscriptionService[]    @relation("advisorServices")
+  serviceSubscriptions    ServiceSubscription[]    @relation("serviceSubscriber")
+  dmParticipations        DmThreadParticipant[]
+  dmMessages              DmMessage[]
+  brokerAccounts          BrokerAccount[]
+  portfolios              Portfolio[]
+  virtualWallet           VirtualWallet?
+  leaderboardEntries      LeaderboardEntry[]
+  bankAccounts            BankAccount[]
+  transactions            Transaction[]
+  budgets                 Budget[]
+  savingsGoals            SavingsGoal[]
+  financialScores         FinancialScore[]
+  aiLogs                  AiLog[]
+  aiDecisionLogs          AiDecisionLog[]
+  coursesAsAdvisor        Course[]                 @relation("courseAdvisor")
+  advisorReports          AdvisorReport[]          @relation("advisorReports")
+  courseEnrollments       CourseEnrollment[]
+  subscriptionsAsUser     Subscription[]           @relation("subscriber")
+  subscriptionsAsAdv      Subscription[]           @relation("advisorSub")
+  payments                Payment[]
+  advisorWallet           AdvisorWallet?
+  payoutRequests          PayoutRequest[]          @relation("payoutOwner")
+  payoutReviews           PayoutRequest[]          @relation("payoutReviewer")
+  notifications           Notification[]
+  pushSubscriptions       WebPushSubscription[]
+  auditLogs               AuditLog[]
+  credentialUpdates       AppCredential[]          @relation("AppCredentialUpdatedBy")
+  riskProfile             RiskProfile?
+  chatSessions            AiChatSession[]
+  watchlists              Watchlist[]
+  communityReactions      CommunityReaction[]
+  advisorPlans            AdvisorPlan[]
+  lessonProgress          CourseLessonProgress[]
+  courseReviews           CourseReview[]
+  devices                 UserDevice[]
+  notificationPref        NotificationPreference?
+  userPreference          UserPreference?
+  priceAlerts             PriceAlert[]
+  strategies              StrategyTemplate[]
+  invoices                Invoice[]
+  blocksGiven             UserBlock[]              @relation("blocker")
+  blocksReceived          UserBlock[]              @relation("blocked")
+  sentFriendRequests      FriendRequest[]          @relation("reqFrom")
+  receivedFriendRequests  FriendRequest[]          @relation("reqTo")
+  createdAgents           GeminiAgent[]            @relation("AgentCreator")
+  agentChatSessions       AgentChatSession[]
+  createdStockPickGroups  StockPickGroup[]         @relation("StockPickGroupCreator")
+  communityPostUnlocks    CommunityPostUnlock[]
+  marketPostUnlocks       MarketPostUnlock[]
+  createdFinuerBaskets    FinuerBasket[]           @relation("FinuerBasketCreator")
+  finuerBasketSaves       FinuerBasketSave[]
+  createdCompetitions     Competition[]            @relation("CompetitionCreator")
   competitionParticipants CompetitionParticipant[]
   competitionLeaderboard  CompetitionLeaderboard[]
   competitionWinners      CompetitionWinner[]
@@ -495,7 +496,7 @@ model KycDocument {
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
 
-  user      User  @relation("kycOwner", fields: [userId], references: [id], onDelete: Cascade)
+  user       User  @relation("kycOwner", fields: [userId], references: [id], onDelete: Cascade)
   verifiedBy User? @relation("kycVerifier", fields: [verifiedByAdminId], references: [id], onDelete: SetNull)
 
   @@index([userId])
@@ -521,29 +522,29 @@ model ConsentLog {
 // ─── 2) Advisor Module ───────────────────────────────────
 
 model AdvisorProfile {
-  id                 Int                @id @default(autoincrement())
-  userId             Int                @unique @map("user_id")
-  sebiRegistrationNo String             @unique @map("sebi_registration_no") @db.VarChar(100)
-  professionalType   ProfessionalType   @default(investment_advisor) @map("professional_type")
-  experienceYears    Int?               @map("experience_years")
-  bio                String?
-  expertiseTags      String[]           @default([]) @map("expertise_tags")
-  profileImageUrl    String?            @map("profile_image_url")
-  verificationStatus VerificationStatus @default(pending) @map("verification_status")
-  verifiedByAdminId  Int?               @map("verified_by_admin_id")
-  verifiedAt         DateTime?          @map("verified_at")
-  rejectionReason    String?            @map("rejection_reason")
+  id                          Int                @id @default(autoincrement())
+  userId                      Int                @unique @map("user_id")
+  sebiRegistrationNo          String             @unique @map("sebi_registration_no") @db.VarChar(100)
+  professionalType            ProfessionalType   @default(investment_advisor) @map("professional_type")
+  experienceYears             Int?               @map("experience_years")
+  bio                         String?
+  expertiseTags               String[]           @default([]) @map("expertise_tags")
+  profileImageUrl             String?            @map("profile_image_url")
+  verificationStatus          VerificationStatus @default(pending) @map("verification_status")
+  verifiedByAdminId           Int?               @map("verified_by_admin_id")
+  verifiedAt                  DateTime?          @map("verified_at")
+  rejectionReason             String?            @map("rejection_reason")
   // Self-service "are you a govt/SEBI-approved advisor?" verification form.
   // null = advisor still needs to complete the form (popup is shown on login).
-  verificationFormSubmittedAt DateTime? @map("verification_form_submitted_at")
-  verificationDetails         Json?     @map("verification_details")
+  verificationFormSubmittedAt DateTime?          @map("verification_form_submitted_at")
+  verificationDetails         Json?              @map("verification_details")
   // Paid promotion — an advisor pays to be a "Featured Analyst" (surfaced at the
   // top of Trades + in the featured rail) until `featuredUntil`. Mirrors the
   // post-level boostedUntil/boostTier pattern. Billing is BYPASSED for now (dev).
-  featuredUntil      DateTime?          @map("featured_until")
-  featuredTier       String?            @map("featured_tier") @db.VarChar(20)
-  createdAt          DateTime           @default(now()) @map("created_at")
-  updatedAt          DateTime           @updatedAt @map("updated_at")
+  featuredUntil               DateTime?          @map("featured_until")
+  featuredTier                String?            @map("featured_tier") @db.VarChar(20)
+  createdAt                   DateTime           @default(now()) @map("created_at")
+  updatedAt                   DateTime           @updatedAt @map("updated_at")
 
   user       User  @relation("advisorOwner", fields: [userId], references: [id], onDelete: Cascade)
   verifiedBy User? @relation("advisorVerifier", fields: [verifiedByAdminId], references: [id], onDelete: SetNull)
@@ -553,16 +554,16 @@ model AdvisorProfile {
 }
 
 model AdvisorMetricDaily {
-  id              Int      @id @default(autoincrement())
-  advisorUserId   Int      @map("advisor_user_id")
-  day             DateTime @db.Date
-  followersCount  Int      @default(0) @map("followers_count")
-  subscribersCount Int     @default(0) @map("subscribers_count")
-  postsCount      Int      @default(0) @map("posts_count")
-  accuracyPct     Decimal  @default(0) @map("accuracy_pct") @db.Decimal(5, 2)
-  roiPct          Decimal  @default(0) @map("roi_pct") @db.Decimal(7, 2)
-  earningsAmount  Decimal  @default(0) @map("earnings_amount") @db.Decimal(14, 2)
-  createdAt       DateTime @default(now()) @map("created_at")
+  id               Int      @id @default(autoincrement())
+  advisorUserId    Int      @map("advisor_user_id")
+  day              DateTime @db.Date
+  followersCount   Int      @default(0) @map("followers_count")
+  subscribersCount Int      @default(0) @map("subscribers_count")
+  postsCount       Int      @default(0) @map("posts_count")
+  accuracyPct      Decimal  @default(0) @map("accuracy_pct") @db.Decimal(5, 2)
+  roiPct           Decimal  @default(0) @map("roi_pct") @db.Decimal(7, 2)
+  earningsAmount   Decimal  @default(0) @map("earnings_amount") @db.Decimal(14, 2)
+  createdAt        DateTime @default(now()) @map("created_at")
 
   advisor User @relation(fields: [advisorUserId], references: [id], onDelete: Cascade)
 
@@ -574,50 +575,50 @@ model AdvisorMetricDaily {
 // ─── 3) Market Sentiment ─────────────────────────────────
 
 model MarketPost {
-  id                  Int              @id @default(autoincrement())
-  uuid                String           @unique @default(uuid())
-  advisorUserId       Int              @map("advisor_user_id")
-  title               String           @db.VarChar(200)
+  id                  Int               @id @default(autoincrement())
+  uuid                String            @unique @default(uuid())
+  advisorUserId       Int               @map("advisor_user_id")
+  title               String            @db.VarChar(200)
   content             String
-  assetType           AssetType        @map("asset_type")
-  marketSymbol        String?          @map("market_symbol") @db.VarChar(50)
+  assetType           AssetType         @map("asset_type")
+  marketSymbol        String?           @map("market_symbol") @db.VarChar(50)
   sentiment           SentimentType
-  riskLevel           RiskLevel        @map("risk_level")
-  timeframe           String?          @db.VarChar(50)
+  riskLevel           RiskLevel         @map("risk_level")
+  timeframe           String?           @db.VarChar(50)
   // ── Trades Phase 1/2 ────────────────────────────────────────────────────
-  timeframeType       TradeTimeframe?  @map("timeframe_type")
-  exchange            String?          @db.VarChar(20)
-  entryType           TradeEntryType?  @map("entry_type")
-  entryPriceMin       Decimal?         @map("entry_price_min") @db.Decimal(18, 4)
-  entryPriceMax       Decimal?         @map("entry_price_max") @db.Decimal(18, 4)
-  tradeStatus         TradeStatus      @default(awaiting_entry) @map("trade_status")
+  timeframeType       TradeTimeframe?   @map("timeframe_type")
+  exchange            String?           @db.VarChar(20)
+  entryType           TradeEntryType?   @map("entry_type")
+  entryPriceMin       Decimal?          @map("entry_price_min") @db.Decimal(18, 4)
+  entryPriceMax       Decimal?          @map("entry_price_max") @db.Decimal(18, 4)
+  tradeStatus         TradeStatus       @default(awaiting_entry) @map("trade_status")
   /// Advisor conviction 1–5 (rendered as stars).
   conviction          Int?
   // ── Trades Phase 3: manual exit / close ──
-  exitPrice           Decimal?         @map("exit_price") @db.Decimal(18, 4)
-  exitReason          String?          @map("exit_reason")
-  exitReturnPct       Decimal?         @map("exit_return_pct") @db.Decimal(8, 2)
-  closedAt            DateTime?        @map("closed_at")
+  exitPrice           Decimal?          @map("exit_price") @db.Decimal(18, 4)
+  exitReason          String?           @map("exit_reason")
+  exitReturnPct       Decimal?          @map("exit_return_pct") @db.Decimal(8, 2)
+  closedAt            DateTime?         @map("closed_at")
   // ────────────────────────────────────────────────────────────────────────
-  targetPrice         Decimal?         @map("target_price") @db.Decimal(18, 4)
-  stopLossPrice       Decimal?         @map("stop_loss_price") @db.Decimal(18, 4)
+  targetPrice         Decimal?          @map("target_price") @db.Decimal(18, 4)
+  stopLossPrice       Decimal?          @map("stop_loss_price") @db.Decimal(18, 4)
   disclaimer          String
-  complianceStatus    ComplianceStatus @default(pending) @map("compliance_status")
-  complianceRiskScore Decimal?         @map("compliance_risk_score") @db.Decimal(5, 2)
-  postAccessType      PostAccessType   @default(free) @map("post_access_type")
-  unlockPrice         Decimal?         @map("unlock_price") @db.Decimal(12, 2)
+  complianceStatus    ComplianceStatus  @default(pending) @map("compliance_status")
+  complianceRiskScore Decimal?          @map("compliance_risk_score") @db.Decimal(5, 2)
+  postAccessType      PostAccessType    @default(free) @map("post_access_type")
+  unlockPrice         Decimal?          @map("unlock_price") @db.Decimal(12, 2)
   paymentStatus       PostPaymentStatus @default(none) @map("payment_status")
   // Who can see this post: "public" (everyone) or "subscribers" (active subs only).
   // String (not enum) so a "group" audience can be added later without a migration.
-  audience            String           @default("public") @db.VarChar(20)
-  publishedAt         DateTime?        @map("published_at")
-  scheduledAt         DateTime?        @map("scheduled_at")
-  editedAt            DateTime?        @map("edited_at")
-  boostedUntil        DateTime?        @map("boosted_until")
-  boostTier           String?          @map("boost_tier") @db.VarChar(20)
-  createdAt           DateTime         @default(now()) @map("created_at")
-  updatedAt           DateTime         @updatedAt @map("updated_at")
-  deletedAt           DateTime?        @map("deleted_at")
+  audience            String            @default("public") @db.VarChar(20)
+  publishedAt         DateTime?         @map("published_at")
+  scheduledAt         DateTime?         @map("scheduled_at")
+  editedAt            DateTime?         @map("edited_at")
+  boostedUntil        DateTime?         @map("boosted_until")
+  boostTier           String?           @map("boost_tier") @db.VarChar(20)
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  deletedAt           DateTime?         @map("deleted_at")
 
   advisor    User                  @relation(fields: [advisorUserId], references: [id], onDelete: Cascade)
   comments   MarketComment[]
@@ -682,12 +683,12 @@ model MarketPostRecipient {
 }
 
 model MarketPostUnlock {
-  id              Int               @id @default(autoincrement())
-  postId          Int               @map("post_id")
-  userId          Int               @map("user_id")
-  paymentStatus   PostPaymentStatus @default(dev_bypass) @map("payment_status")
-  unlockPrice     Decimal?          @map("unlock_price") @db.Decimal(12, 2)
-  unlockedAt      DateTime          @default(now()) @map("unlocked_at")
+  id            Int               @id @default(autoincrement())
+  postId        Int               @map("post_id")
+  userId        Int               @map("user_id")
+  paymentStatus PostPaymentStatus @default(dev_bypass) @map("payment_status")
+  unlockPrice   Decimal?          @map("unlock_price") @db.Decimal(12, 2)
+  unlockedAt    DateTime          @default(now()) @map("unlocked_at")
 
   post MarketPost @relation(fields: [postId], references: [id], onDelete: Cascade)
   user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -707,9 +708,9 @@ model MarketComment {
   createdAt     DateTime  @default(now()) @map("created_at")
   deletedAt     DateTime? @map("deleted_at")
 
-  post    MarketPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent  MarketComment? @relation("commentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  post    MarketPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  MarketComment?  @relation("commentThread", fields: [parentId], references: [id], onDelete: Cascade)
   replies MarketComment[] @relation("commentThread")
 
   @@index([postId, createdAt])
@@ -733,16 +734,16 @@ model MarketReaction {
 }
 
 model ContentReport {
-  id                 Int       @id @default(autoincrement())
-  reporterUserId     Int       @map("reporter_user_id")
-  contentKind        String    @map("content_kind") @db.VarChar(50)
-  contentId          Int       @map("content_id")
-  reason             String
-  status             String    @default("open") @db.VarChar(30)
-  resolvedByAdminId  Int?      @map("resolved_by_admin_id")
-  resolutionNote     String?   @map("resolution_note")
-  createdAt          DateTime  @default(now()) @map("created_at")
-  resolvedAt         DateTime? @map("resolved_at")
+  id                Int       @id @default(autoincrement())
+  reporterUserId    Int       @map("reporter_user_id")
+  contentKind       String    @map("content_kind") @db.VarChar(50)
+  contentId         Int       @map("content_id")
+  reason            String
+  status            String    @default("open") @db.VarChar(30)
+  resolvedByAdminId Int?      @map("resolved_by_admin_id")
+  resolutionNote    String?   @map("resolution_note")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  resolvedAt        DateTime? @map("resolved_at")
 
   reporter   User  @relation("reporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
   resolvedBy User? @relation("resolver", fields: [resolvedByAdminId], references: [id], onDelete: SetNull)
@@ -771,30 +772,30 @@ model SentimentAggregate {
 // ─── 4) Community Social ─────────────────────────────────
 
 model CommunityPost {
-  id            Int            @id @default(autoincrement())
-  uuid          String         @unique @default(uuid())
-  userId        Int            @map("user_id")
-  content       String
-  mediaUrl      String?        @map("media_url")
-  postType      FeedPostType   @default(text) @map("post_type")
-  title         String?        @db.VarChar(200)
-  sentiment     SentimentType?
-  targetPrice   Decimal?       @map("target_price") @db.Decimal(18, 4)
-  stopLossPrice Decimal?       @map("stop_loss_price") @db.Decimal(18, 4)
-  thumbnailUrl  String?        @map("thumbnail_url")
-  articleBody   String?        @map("article_body")
-  category         String            @default("general") @db.VarChar(50)
-  visibility       PostVisibility    @default(public)
-  postAccessType   PostAccessType    @default(free) @map("post_access_type")
-  unlockPrice      Decimal?          @map("unlock_price") @db.Decimal(12, 2)
-  paymentStatus    PostPaymentStatus @default(none) @map("payment_status")
-  groupId          Int?              @map("group_id")
-  linkUrl          String?           @map("link_url")
-  pinnedAt         DateTime?         @map("pinned_at")
-  shareCount       Int               @default(0) @map("share_count")
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
-  deletedAt     DateTime?      @map("deleted_at")
+  id             Int               @id @default(autoincrement())
+  uuid           String            @unique @default(uuid())
+  userId         Int               @map("user_id")
+  content        String
+  mediaUrl       String?           @map("media_url")
+  postType       FeedPostType      @default(text) @map("post_type")
+  title          String?           @db.VarChar(200)
+  sentiment      SentimentType?
+  targetPrice    Decimal?          @map("target_price") @db.Decimal(18, 4)
+  stopLossPrice  Decimal?          @map("stop_loss_price") @db.Decimal(18, 4)
+  thumbnailUrl   String?           @map("thumbnail_url")
+  articleBody    String?           @map("article_body")
+  category       String            @default("general") @db.VarChar(50)
+  visibility     PostVisibility    @default(public)
+  postAccessType PostAccessType    @default(free) @map("post_access_type")
+  unlockPrice    Decimal?          @map("unlock_price") @db.Decimal(12, 2)
+  paymentStatus  PostPaymentStatus @default(none) @map("payment_status")
+  groupId        Int?              @map("group_id")
+  linkUrl        String?           @map("link_url")
+  pinnedAt       DateTime?         @map("pinned_at")
+  shareCount     Int               @default(0) @map("share_count")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  deletedAt      DateTime?         @map("deleted_at")
 
   user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   group     Group?                @relation(fields: [groupId], references: [id], onDelete: SetNull)
@@ -938,9 +939,9 @@ model FriendRequest {
 }
 
 model UserBlock {
-  blockerId  Int      @map("blocker_id")
-  blockedId  Int      @map("blocked_id")
-  createdAt  DateTime @default(now()) @map("created_at")
+  blockerId Int      @map("blocker_id")
+  blockedId Int      @map("blocked_id")
+  createdAt DateTime @default(now()) @map("created_at")
 
   blocker User @relation("blocker", fields: [blockerId], references: [id], onDelete: Cascade)
   blocked User @relation("blocked", fields: [blockedId], references: [id], onDelete: Cascade)
@@ -952,20 +953,20 @@ model UserBlock {
 }
 
 model Group {
-  id            Int           @id @default(autoincrement())
-  uuid          String        @unique @default(uuid())
-  slug          String        @unique @db.VarChar(150)
-  name          String        @unique @db.VarChar(150)
-  description   String?
-  logoUrl       String?       @map("logo_url")
-  bannerUrl     String?       @map("banner_url")
-  communityType CommunityType @default(public) @map("community_type")
+  id             Int            @id @default(autoincrement())
+  uuid           String         @unique @default(uuid())
+  slug           String         @unique @db.VarChar(150)
+  name           String         @unique @db.VarChar(150)
+  description    String?
+  logoUrl        String?        @map("logo_url")
+  bannerUrl      String?        @map("banner_url")
+  communityType  CommunityType  @default(public) @map("community_type")
   postPermission PostPermission @default(everyone) @map("post_permission")
-  rules         String?
-  createdBy     Int           @map("created_by")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-  deletedAt     DateTime?     @map("deleted_at")
+  rules          String?
+  createdBy      Int            @map("created_by")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  deletedAt      DateTime?      @map("deleted_at")
 
   creator      User               @relation(fields: [createdBy], references: [id], onDelete: Restrict)
   members      GroupMember[]
@@ -1104,18 +1105,18 @@ model DmMessage {
 /// One analyst broadcast, fanned out into every eligible subscriber's private
 /// chat as individual DmMessages. See MESSAGES-CHANGES.md.
 model DmBroadcast {
-  id             Int       @id @default(autoincrement())
-  analystUserId  Int       @map("analyst_user_id")
-  content        String
-  attachmentUrl  String?   @map("attachment_url")
-  attachmentType String?   @map("attachment_type") @db.VarChar(20)
-  attachmentName String?   @map("attachment_name")
-  recipientCount Int       @default(0) @map("recipient_count")
+  id               Int       @id @default(autoincrement())
+  analystUserId    Int       @map("analyst_user_id")
+  content          String
+  attachmentUrl    String?   @map("attachment_url")
+  attachmentType   String?   @map("attachment_type") @db.VarChar(20)
+  attachmentName   String?   @map("attachment_name")
+  recipientCount   Int       @default(0) @map("recipient_count")
   // Empty = all active subscribers; otherwise only these services' subscribers.
-  targetServiceIds Int[]   @default([]) @map("target_service_ids")
-  scheduledAt    DateTime? @map("scheduled_at")
-  sentAt         DateTime? @map("sent_at")
-  createdAt      DateTime  @default(now()) @map("created_at")
+  targetServiceIds Int[]     @default([]) @map("target_service_ids")
+  scheduledAt      DateTime? @map("scheduled_at")
+  sentAt           DateTime? @map("sent_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
 
   analyst  User        @relation("analystBroadcasts", fields: [analystUserId], references: [id], onDelete: Cascade)
   messages DmMessage[]
@@ -1145,19 +1146,19 @@ model BrokerAccount {
 }
 
 model Portfolio {
-  id                  Int       @id @default(autoincrement())
-  userId              Int       @map("user_id")
-  source              String    @default("broker") @db.VarChar(20)
-  name                String    @default("Default") @db.VarChar(120)
-  currency            String    @default("INR") @db.VarChar(10)
-  totalValue          Decimal   @default(0) @map("total_value") @db.Decimal(18, 2)
-  dayChange           Decimal   @default(0) @map("day_change") @db.Decimal(18, 2)
-  riskScore           Decimal   @default(0) @map("risk_score") @db.Decimal(5, 2)
-  diversificationScore Decimal  @default(0) @map("diversification_score") @db.Decimal(6, 2)
-  lastSyncedAt        DateTime? @map("last_synced_at")
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-  deletedAt           DateTime? @map("deleted_at")
+  id                   Int       @id @default(autoincrement())
+  userId               Int       @map("user_id")
+  source               String    @default("broker") @db.VarChar(20)
+  name                 String    @default("Default") @db.VarChar(120)
+  currency             String    @default("INR") @db.VarChar(10)
+  totalValue           Decimal   @default(0) @map("total_value") @db.Decimal(18, 2)
+  dayChange            Decimal   @default(0) @map("day_change") @db.Decimal(18, 2)
+  riskScore            Decimal   @default(0) @map("risk_score") @db.Decimal(5, 2)
+  diversificationScore Decimal   @default(0) @map("diversification_score") @db.Decimal(6, 2)
+  lastSyncedAt         DateTime? @map("last_synced_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  deletedAt            DateTime? @map("deleted_at")
 
   user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   assets     PortfolioAsset[]
@@ -1170,18 +1171,18 @@ model Portfolio {
 }
 
 model PortfolioAsset {
-  id           Int      @id @default(autoincrement())
-  portfolioId  Int      @map("portfolio_id")
-  symbol       String   @db.VarChar(50)
-  name         String?  @db.VarChar(200)
+  id           Int       @id @default(autoincrement())
+  portfolioId  Int       @map("portfolio_id")
+  symbol       String    @db.VarChar(50)
+  name         String?   @db.VarChar(200)
   assetType    AssetType @default(equity) @map("asset_type")
-  sector       String?  @db.VarChar(100)
-  quantity     Decimal  @default(0) @db.Decimal(20, 6)
-  avgPrice     Decimal  @default(0) @map("avg_price") @db.Decimal(18, 4)
-  currentPrice Decimal  @default(0) @map("current_price") @db.Decimal(18, 4)
-  costValue    Decimal  @default(0) @map("cost_value") @db.Decimal(18, 2)
-  marketValue  Decimal  @default(0) @map("market_value") @db.Decimal(18, 2)
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  sector       String?   @db.VarChar(100)
+  quantity     Decimal   @default(0) @db.Decimal(20, 6)
+  avgPrice     Decimal   @default(0) @map("avg_price") @db.Decimal(18, 4)
+  currentPrice Decimal   @default(0) @map("current_price") @db.Decimal(18, 4)
+  costValue    Decimal   @default(0) @map("cost_value") @db.Decimal(18, 2)
+  marketValue  Decimal   @default(0) @map("market_value") @db.Decimal(18, 2)
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
 
@@ -1210,13 +1211,13 @@ model TradeReal {
 }
 
 model PortfolioSnapshotDaily {
-  id                  Int      @id @default(autoincrement())
-  portfolioId         Int      @map("portfolio_id")
-  day                 DateTime @db.Date
-  totalValue          Decimal  @map("total_value") @db.Decimal(18, 2)
-  riskScore           Decimal  @map("risk_score") @db.Decimal(5, 2)
-  diversificationScore Decimal @map("diversification_score") @db.Decimal(6, 2)
-  createdAt           DateTime @default(now()) @map("created_at")
+  id                   Int      @id @default(autoincrement())
+  portfolioId          Int      @map("portfolio_id")
+  day                  DateTime @db.Date
+  totalValue           Decimal  @map("total_value") @db.Decimal(18, 2)
+  riskScore            Decimal  @map("risk_score") @db.Decimal(5, 2)
+  diversificationScore Decimal  @map("diversification_score") @db.Decimal(6, 2)
+  createdAt            DateTime @default(now()) @map("created_at")
 
   portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
 
@@ -1226,15 +1227,15 @@ model PortfolioSnapshotDaily {
 }
 
 model PortfolioAiAnalysis {
-  id              Int       @id @default(autoincrement())
-  portfolioId     Int       @map("portfolio_id")
-  analysisKind    String    @map("analysis_kind") @db.VarChar(50)
-  inputSnapshot   Json      @map("input_snapshot")
-  outputResult    Json      @map("output_result")
+  id              Int        @id @default(autoincrement())
+  portfolioId     Int        @map("portfolio_id")
+  analysisKind    String     @map("analysis_kind") @db.VarChar(50)
+  inputSnapshot   Json       @map("input_snapshot")
+  outputResult    Json       @map("output_result")
   riskLevel       RiskLevel? @map("risk_level")
-  confidenceScore Decimal?  @map("confidence_score") @db.Decimal(5, 2)
-  modelVersion    String?   @map("model_version") @db.VarChar(80)
-  createdAt       DateTime  @default(now()) @map("created_at")
+  confidenceScore Decimal?   @map("confidence_score") @db.Decimal(5, 2)
+  modelVersion    String?    @map("model_version") @db.VarChar(80)
+  createdAt       DateTime   @default(now()) @map("created_at")
 
   portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
 
@@ -1418,7 +1419,7 @@ model SavingsGoal {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
 
-  user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   contributions SavingsGoalContribution[]
 
   @@map("savings_goals")
@@ -1534,7 +1535,7 @@ model AdvisorReport {
 
 model CourseLesson {
   id              Int      @id @default(autoincrement())
-  courseId         Int      @map("course_id")
+  courseId        Int      @map("course_id")
   title           String   @db.VarChar(200)
   position        Int
   videoUrl        String?  @map("video_url")
@@ -1551,7 +1552,7 @@ model CourseLesson {
 
 model CourseEnrollment {
   id         Int      @id @default(autoincrement())
-  courseId    Int      @map("course_id")
+  courseId   Int      @map("course_id")
   userId     Int      @map("user_id")
   enrolledAt DateTime @default(now()) @map("enrolled_at")
 
@@ -1700,15 +1701,15 @@ model AdvisorWallet {
 }
 
 model PayoutRequest {
-  id               Int          @id @default(autoincrement())
-  advisorUserId    Int          @map("advisor_user_id")
-  amount           Decimal      @db.Decimal(14, 2)
-  status           PayoutStatus @default(requested)
-  destination      Json?
-  reviewedByAdminId Int?        @map("reviewed_by_admin_id")
-  reviewNote       String?      @map("review_note")
-  createdAt        DateTime     @default(now()) @map("created_at")
-  updatedAt        DateTime     @updatedAt @map("updated_at")
+  id                Int          @id @default(autoincrement())
+  advisorUserId     Int          @map("advisor_user_id")
+  amount            Decimal      @db.Decimal(14, 2)
+  status            PayoutStatus @default(requested)
+  destination       Json?
+  reviewedByAdminId Int?         @map("reviewed_by_admin_id")
+  reviewNote        String?      @map("review_note")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
 
   advisor    User  @relation("payoutOwner", fields: [advisorUserId], references: [id], onDelete: Cascade)
   reviewedBy User? @relation("payoutReviewer", fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
@@ -1737,13 +1738,13 @@ model Notification {
 
 /// Browser push endpoints. One row per browser/device a user has allowed.
 model WebPushSubscription {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  endpoint  String   @unique
-  p256dh    String
-  auth      String
-  userAgent String?  @map("user_agent") @db.VarChar(300)
-  createdAt DateTime @default(now()) @map("created_at")
+  id         Int       @id @default(autoincrement())
+  userId     Int       @map("user_id")
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?   @map("user_agent") @db.VarChar(300)
+  createdAt  DateTime  @default(now()) @map("created_at")
   lastUsedAt DateTime? @map("last_used_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1774,17 +1775,17 @@ model AuditLog {
 // ─── 11) Risk Profiling ─────────────────────────────────
 
 model RiskProfile {
-  id               Int          @id @default(autoincrement())
-  userId           Int          @unique @map("user_id")
-  riskScore        Decimal      @map("risk_score") @db.Decimal(5, 2)
-  riskAppetite     RiskAppetite @map("risk_appetite")
-  equityPct        Decimal      @default(0) @map("equity_pct") @db.Decimal(5, 2)
-  debtPct          Decimal      @default(0) @map("debt_pct") @db.Decimal(5, 2)
-  alternativesPct  Decimal      @default(0) @map("alternatives_pct") @db.Decimal(5, 2)
-  investmentHorizon String?     @map("investment_horizon") @db.VarChar(50)
-  questionnaire    Json?
-  calculatedAt     DateTime     @default(now()) @map("calculated_at")
-  updatedAt        DateTime     @updatedAt @map("updated_at")
+  id                Int          @id @default(autoincrement())
+  userId            Int          @unique @map("user_id")
+  riskScore         Decimal      @map("risk_score") @db.Decimal(5, 2)
+  riskAppetite      RiskAppetite @map("risk_appetite")
+  equityPct         Decimal      @default(0) @map("equity_pct") @db.Decimal(5, 2)
+  debtPct           Decimal      @default(0) @map("debt_pct") @db.Decimal(5, 2)
+  alternativesPct   Decimal      @default(0) @map("alternatives_pct") @db.Decimal(5, 2)
+  investmentHorizon String?      @map("investment_horizon") @db.VarChar(50)
+  questionnaire     Json?
+  calculatedAt      DateTime     @default(now()) @map("calculated_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1803,7 +1804,7 @@ model AiChatSession {
   createdAt   DateTime        @default(now()) @map("created_at")
   updatedAt   DateTime        @updatedAt @map("updated_at")
 
-  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages AiChatMessage[]
 
   @@index([userId, updatedAt(sort: Desc)])
@@ -2032,17 +2033,17 @@ model NotificationPreference {
 }
 
 model UserPreference {
-  id               Int       @id @default(autoincrement())
-  userId           Int       @unique @map("user_id")
-  theme            String    @default("light") @db.VarChar(20)
-  language         String    @default("en") @db.VarChar(10)
-  defaultCurrency  String    @default("INR") @map("default_currency") @db.VarChar(10)
-  biometricEnabled Boolean   @default(false) @map("biometric_enabled")
+  id                 Int       @id @default(autoincrement())
+  userId             Int       @unique @map("user_id")
+  theme              String    @default("light") @db.VarChar(20)
+  language           String    @default("en") @db.VarChar(10)
+  defaultCurrency    String    @default("INR") @map("default_currency") @db.VarChar(10)
+  biometricEnabled   Boolean   @default(false) @map("biometric_enabled")
   /// Finuer Pro entitlement (admin-granted until Razorpay is wired).
-  finuerProPlanId     String?   @map("finuer_pro_plan_id") @db.VarChar(40)
-  finuerProExpiresAt  DateTime? @map("finuer_pro_expires_at")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  finuerProPlanId    String?   @map("finuer_pro_plan_id") @db.VarChar(40)
+  finuerProExpiresAt DateTime? @map("finuer_pro_expires_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -2086,22 +2087,22 @@ model StrategyTemplate {
 // ─── 20b) Gemini AI Agents ────────────────────────────
 
 model GeminiAgent {
-  id           Int      @id @default(autoincrement())
-  name         String   @db.VarChar(100)
-  description  String   @db.VarChar(500)
-  avatar       String   @default("🤖") @db.VarChar(10)
-  systemPrompt String   @map("system_prompt") @db.Text
-  model        String   @default("gemini-1.5-flash") @db.VarChar(60)
-  temperature  Float    @default(0.7)
-  isActive     Boolean  @default(true) @map("is_active")
-  isSiteAssistant Boolean @default(false) @map("is_site_assistant")
+  id              Int      @id @default(autoincrement())
+  name            String   @db.VarChar(100)
+  description     String   @db.VarChar(500)
+  avatar          String   @default("🤖") @db.VarChar(10)
+  systemPrompt    String   @map("system_prompt") @db.Text
+  model           String   @default("gemini-1.5-flash") @db.VarChar(60)
+  temperature     Float    @default(0.7)
+  isActive        Boolean  @default(true) @map("is_active")
+  isSiteAssistant Boolean  @default(false) @map("is_site_assistant")
   /// Suggested first messages, shown as chips on an empty chat. Per-agent
   /// because a generic starter on a specialist agent is worse than none —
   /// "Analyse a stock" under Earnings Decoder just wastes a turn.
-  starterPrompts String[] @default([]) @map("starter_prompts")
-  createdById  Int      @map("created_by_id")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  starterPrompts  String[] @default([]) @map("starter_prompts")
+  createdById     Int      @map("created_by_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   createdBy User               @relation("AgentCreator", fields: [createdById], references: [id])
   sessions  AgentChatSession[]
@@ -2488,15 +2489,15 @@ enum FinuerRebalanceAction {
 }
 
 model FinuerBasketRebalanceEvent {
-  id          Int                   @id @default(autoincrement())
-  basketId    Int                   @map("basket_id")
-  action      FinuerRebalanceAction
-  symbol      String                @db.VarChar(30)
-  stockName   String?               @map("stock_name") @db.VarChar(120)
-  oldWeight   Decimal?              @map("old_weight") @db.Decimal(6, 2)
-  newWeight   Decimal?              @map("new_weight") @db.Decimal(6, 2)
-  reason      String?               @db.Text
-  createdAt   DateTime              @default(now()) @map("created_at")
+  id        Int                   @id @default(autoincrement())
+  basketId  Int                   @map("basket_id")
+  action    FinuerRebalanceAction
+  symbol    String                @db.VarChar(30)
+  stockName String?               @map("stock_name") @db.VarChar(120)
+  oldWeight Decimal?              @map("old_weight") @db.Decimal(6, 2)
+  newWeight Decimal?              @map("new_weight") @db.Decimal(6, 2)
+  reason    String?               @db.Text
+  createdAt DateTime              @default(now()) @map("created_at")
 
   basket FinuerBasket @relation(fields: [basketId], references: [id], onDelete: Cascade)
 
@@ -2567,37 +2568,37 @@ enum CompetitionTransactionType {
 }
 
 model Competition {
-  id                    Int                    @id @default(autoincrement())
-  title                 String                 @db.VarChar(200)
-  shortDescription      String?                @map("short_description") @db.VarChar(500)
-  description           String?                @db.Text
-  bannerImage           String?                @map("banner_image") @db.VarChar(500)
-  tags                  String[]               @default([])
-  question              String?                @db.Text
+  id                     Int                   @id @default(autoincrement())
+  title                  String                @db.VarChar(200)
+  shortDescription       String?               @map("short_description") @db.VarChar(500)
+  description            String?               @db.Text
+  bannerImage            String?               @map("banner_image") @db.VarChar(500)
+  tags                   String[]              @default([])
+  question               String?               @db.Text
   participationStartDate DateTime?             @map("participation_start_date")
   participationEndDate   DateTime?             @map("participation_end_date")
-  startDate             DateTime               @map("start_date")
-  endDate               DateTime               @map("end_date")
-  status                CompetitionStatus      @default(draft)
-  visibility            CompetitionVisibility  @default(public)
-  reputationPoints      Int                    @default(10) @map("reputation_points")
-  wrongPredictionPoints Int                    @default(0) @map("wrong_prediction_points")
-  maxPredictionsPerUser Int                    @default(1) @map("max_predictions_per_user")
-  allowPredictionChange Boolean                @default(false) @map("allow_prediction_change")
-  requireLogin          Boolean                @default(true) @map("require_login")
-  entryType             CompetitionEntryType   @default(free) @map("entry_type")
-  entryFee              Decimal                @default(0) @map("entry_fee") @db.Decimal(12, 2)
-  prizePool             Decimal                @default(0) @map("prize_pool") @db.Decimal(14, 2)
-  totalWinners          Int                    @default(0) @map("total_winners")
-  maxParticipants       Int?                   @map("max_participants")
-  winningOptionId       Int?                   @map("winning_option_id")
-  resultDeclaredAt      DateTime?              @map("result_declared_at")
-  createdById           Int?                   @map("created_by")
-  createdAt             DateTime               @default(now()) @map("created_at")
-  updatedAt             DateTime               @updatedAt @map("updated_at")
+  startDate              DateTime              @map("start_date")
+  endDate                DateTime              @map("end_date")
+  status                 CompetitionStatus     @default(draft)
+  visibility             CompetitionVisibility @default(public)
+  reputationPoints       Int                   @default(10) @map("reputation_points")
+  wrongPredictionPoints  Int                   @default(0) @map("wrong_prediction_points")
+  maxPredictionsPerUser  Int                   @default(1) @map("max_predictions_per_user")
+  allowPredictionChange  Boolean               @default(false) @map("allow_prediction_change")
+  requireLogin           Boolean               @default(true) @map("require_login")
+  entryType              CompetitionEntryType  @default(free) @map("entry_type")
+  entryFee               Decimal               @default(0) @map("entry_fee") @db.Decimal(12, 2)
+  prizePool              Decimal               @default(0) @map("prize_pool") @db.Decimal(14, 2)
+  totalWinners           Int                   @default(0) @map("total_winners")
+  maxParticipants        Int?                  @map("max_participants")
+  winningOptionId        Int?                  @map("winning_option_id")
+  resultDeclaredAt       DateTime?             @map("result_declared_at")
+  createdById            Int?                  @map("created_by")
+  createdAt              DateTime              @default(now()) @map("created_at")
+  updatedAt              DateTime              @updatedAt @map("updated_at")
 
-  createdBy     User?                      @relation("CompetitionCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  winningOption CompetitionOption?         @relation("CompetitionWinningOption", fields: [winningOptionId], references: [id], onDelete: SetNull)
+  createdBy     User?                    @relation("CompetitionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  winningOption CompetitionOption?       @relation("CompetitionWinningOption", fields: [winningOptionId], references: [id], onDelete: SetNull)
   allowedRoles  CompetitionRole[]
   options       CompetitionOption[]
   predictions   CompetitionPrediction[]
@@ -2622,23 +2623,23 @@ model CompetitionOption {
   sortOrder     Int      @default(0) @map("sort_order")
   createdAt     DateTime @default(now()) @map("created_at")
 
-  competition      Competition            @relation(fields: [competitionId], references: [id], onDelete: Cascade)
-  predictions      CompetitionPrediction[]
-  winningFor       Competition[]          @relation("CompetitionWinningOption")
+  competition Competition             @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  predictions CompetitionPrediction[]
+  winningFor  Competition[]           @relation("CompetitionWinningOption")
 
   @@index([competitionId, sortOrder])
   @@map("competition_options")
 }
 
 model CompetitionPrediction {
-  id            Int       @id @default(autoincrement())
-  competitionId Int       @map("competition_id")
-  userId        Int       @map("user_id")
-  optionId      Int       @map("option_id")
-  isCorrect     Boolean?  @map("is_correct")
-  pointsEarned  Int       @default(0) @map("points_earned")
-  submittedAt   DateTime  @default(now()) @map("submitted_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id            Int      @id @default(autoincrement())
+  competitionId Int      @map("competition_id")
+  userId        Int      @map("user_id")
+  optionId      Int      @map("option_id")
+  isCorrect     Boolean? @map("is_correct")
+  pointsEarned  Int      @default(0) @map("points_earned")
+  submittedAt   DateTime @default(now()) @map("submitted_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   competition Competition       @relation(fields: [competitionId], references: [id], onDelete: Cascade)
   user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -2679,12 +2680,12 @@ model CompetitionRole {
 }
 
 model CompetitionParticipant {
-  id            Int                        @id @default(autoincrement())
-  competitionId Int                        @map("competition_id")
-  userId        Int                        @map("user_id")
-  roleKey       CompetitionRoleKey         @map("role_key")
+  id            Int                          @id @default(autoincrement())
+  competitionId Int                          @map("competition_id")
+  userId        Int                          @map("user_id")
+  roleKey       CompetitionRoleKey           @map("role_key")
   status        CompetitionParticipantStatus @default(active)
-  joinedAt      DateTime                   @default(now()) @map("joined_at")
+  joinedAt      DateTime                     @default(now()) @map("joined_at")
 
   competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -2823,4 +2824,28 @@ model CompetitionOrder {
   @@map("competition_orders")
 }
 
+/// Operator-managed secrets that change too often to live in the environment.
+///
+/// The Dhan access token is the reason this exists: it expires every 24 hours,
+/// and on Vercel an env var change means a full redeploy for a string with a
+/// one-day life. Rows here take effect on the next request instead.
+///
+/// `value` is AES-256-GCM ciphertext (see lib/secret-crypto.ts), never
+/// plaintext, and is never returned to a browser -- the API sends a masked
+/// preview and metadata only.
+model AppCredential {
+  id          Int       @id @default(autoincrement())
+  /// Stable identifier, e.g. "dhan.accessToken".
+  key         String    @unique @db.VarChar(80)
+  value       String
+  /// When the underlying credential stops working, if it is known. Decoded
+  /// from the token itself rather than assumed, so the UI can count down.
+  expiresAt   DateTime? @map("expires_at")
+  updatedById Int?      @map("updated_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
+  updatedBy User? @relation("AppCredentialUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("app_credentials")
+}

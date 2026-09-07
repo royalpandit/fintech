@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   FiImage,
   FiSmile,
@@ -98,6 +99,33 @@ export default function PostComposerModal({
     reset();
     onClose();
   };
+
+  /*
+   * Lock the page behind the sheet.
+   *
+   * The feed scrolls inside .us-main, and without this a wheel or a touch drag
+   * over the backdrop scrolled the feed underneath — so dismissing the composer
+   * returned you to a different place in the feed than you left. Escape closes
+   * it, which a dialog is expected to do and this one did not.
+   */
+  useEffect(() => {
+    if (!open) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    document.addEventListener("keydown", onKey);
+
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+    };
+    // handleClose is recreated every render; `open` is what actually gates this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const insertAtCursor = (snippet: string) => {
     const el = textareaRef.current;
@@ -202,7 +230,7 @@ export default function PostComposerModal({
 
   if (!open) return null;
 
-  return (
+  const body = (
     <div className="sf-modal-overlay" onClick={handleClose} role="presentation">
       <div
         className={`sf-composer sf-theme-${theme}`}
@@ -486,4 +514,17 @@ export default function PostComposerModal({
       </div>
     </div>
   );
+
+  /*
+   * Rendered on <body>, not where it sits in the feed.
+   *
+   * A `position: fixed` overlay resolves against the nearest ancestor with a
+   * transform, filter, backdrop-filter, perspective, contain or will-change —
+   * and this modal is mounted deep inside the feed, under the app shell and the
+   * scrolling main column. Any one of those properties appearing on an ancestor
+   * (now or later) silently turns the backdrop into a block positioned at the
+   * bottom of the feed instead of over the viewport, which is exactly how it
+   * was rendering. Mounting on <body> means "fixed" means the viewport, always.
+   */
+  return typeof document === "undefined" ? body : createPortal(body, document.body);
 }

@@ -22,7 +22,15 @@ let cache: { data: Coin[]; at: number } | null = null;
 const TTL = 60_000;
 
 const BASE = process.env.COINGECKO_BASE_URL || "https://api.coingecko.com/api/v3";
-const MARKETS = "/coins/markets?vs_currency=inr&order=market_cap_desc&per_page=20&page=1&sparkline=false";
+// 250 is CoinGecko's per-page ceiling — one request, no pagination, and it
+// covers essentially everything with meaningful volume. The response is ~250 KB
+// and cached for a minute below, so the wider list costs one extra fetch per
+// TTL rather than one per coin.
+//
+// Only the handful of coins in CRYPTO_STREAM_SYMBOLS get live ticks; the rest
+// show this CoinGecko price, refreshed each poll. That is a deliberate trade:
+// a static-but-correct price for coin 200 beats leaving it off the board.
+const MARKETS = "/coins/markets?vs_currency=inr&order=market_cap_desc&per_page=250&page=1&sparkline=false";
 
 type Row = Record<string, unknown>;
 

@@ -1,14 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import {
-  computePortfolioSummary,
-  computePositions,
-  lastPricesFromTrades,
-  type VirtualTradeRow,
-} from "@/lib/virtual-trading";
+import { loadPortfolioOverview } from "@/lib/portfolio-overview";
 import PaperTradeForm from "./paper-trade-form";
-
-const INITIAL_BALANCE = 1_000_000;
 
 function formatINR(n: number) {
   return `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
@@ -26,9 +19,19 @@ function formatINR(n: number) {
 export default async function PaperPortfolioSection({
   userId,
   showTradeForm = true,
+  basePath = "/user/portfolio",
 }: {
   userId: number;
   showTradeForm?: boolean;
+  /**
+   * Where a position row links to.
+   *
+   * The advisor console renders this same component, and app/user/layout.tsx
+   * redirects advisors out of /user/* by role — so a hardcoded /user/portfolio
+   * link would bounce every advisor straight back to their own dashboard. Same
+   * trap the Buy/Sell buttons fell into.
+   */
+  basePath?: string;
 }) {
   const wallet = await prisma.virtualWallet.findUnique({
     where: { userId },
@@ -73,23 +76,27 @@ export default async function PaperPortfolioSection({
     );
   }
 
-  const trades: VirtualTradeRow[] = wallet.trades.map((t) => ({
-    id: t.id,
-    symbol: t.symbol,
-    side: t.side as "buy" | "sell",
-    quantity: Number(t.quantity),
-    price: Number(t.price),
-    tradedAt: t.tradedAt,
-  }));
-
-  const priceBySymbol = lastPricesFromTrades(trades);
-  const summary = computePortfolioSummary(
-    Number(wallet.balance),
-    trades,
-    priceBySymbol,
-    INITIAL_BALANCE,
-  );
-  const positions = computePositions(trades, priceBySymbol);
+  /*
+   * Priced at the market, not at cost.
+   *
+   * This used to pass lastPricesFromTrades straight in — the price each
+   * position was BOUGHT at — so LTP always equalled average cost and every
+   * position showed exactly ₹0 unrealised P&L for ever, however the market
+   * moved. loadPortfolioOverview fetches live quotes (Dhan, then Yahoo, then
+   * cost as a last resort) and derives the same summary from them.
+   */
+  const overview = await loadPortfolioOverview(userId);
+  const positions = overview?.positions ?? [];
+  const summary = {
+    cashBalance: overview?.cashBalance ?? Number(wallet.balance),
+    investedCost: overview?.investedCost ?? 0,
+    holdingsValue: overview?.holdingsValue ?? 0,
+    totalEquity: overview?.totalEquity ?? Number(wallet.balance),
+    unrealizedPnL: overview?.unrealizedPnL ?? 0,
+    realizedPnL: overview?.realizedPnL ?? 0,
+    totalPnL: overview?.totalPnL ?? 0,
+    totalPnLPct: overview?.totalPnLPct ?? 0,
+  };
 
   return (
     <div style={{ marginBottom: 24 }}>
@@ -177,57 +184,49 @@ export default async function PaperPortfolioSection({
             No open positions yet.
           </p>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
+          /* Rows link through to the holding's own page. The whole row is the
+             target rather than just the symbol: a 12px ticker is a poor hit
+             area, and on a phone it is close to unusable. */
+          <div className="pp-table-wrap">
+            <table className="pp-table">
               <thead>
-                <tr style={{ background: "var(--surface-2)" }}>
-                  {["Symbol", "Qty", "Avg cost", "LTP", "Value", "P&L", "P&L %"].map((h) => (
-                    <th
-                      key={h}
-                      style={{
-                        textAlign: "left",
-                        padding: "10px 16px",
-                        fontSize: 10,
-                        color: "var(--text-muted)",
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                      }}
-                    >
+                <tr>
+                  {["Symbol", "Qty", "Avg cost", "LTP", "Value", "P&L", "P&L %"].map((h, i) => (
+                    <th key={h} className={i === 0 ? undefined : "num"}>
                       {h}
                     </th>
                   ))}
+                  <th aria-label="Open holding" />
                 </tr>
               </thead>
               <tbody>
-                {positions.map((p) => (
-                  <tr key={p.symbol} style={{ borderTop: "1px solid var(--border)" }}>
-                    <td style={{ padding: "12px 16px", fontWeight: 600 }}>{p.symbol}</td>
-                    <td style={{ padding: "12px 16px" }}>{p.quantity}</td>
-                    <td style={{ padding: "12px 16px" }}>{formatINR(p.avgPrice)}</td>
-                    <td style={{ padding: "12px 16px" }}>{formatINR(p.lastPrice)}</td>
-                    <td style={{ padding: "12px 16px", fontWeight: 600 }}>{formatINR(p.marketValue)}</td>
-                    <td
-                      style={{
-                        padding: "12px 16px",
-                        fontWeight: 700,
-                        color: p.unrealizedPnL >= 0 ? "#16a34a" : "#dc2626",
-                      }}
-                    >
-                      {p.unrealizedPnL >= 0 ? "+" : ""}
-                      {formatINR(p.unrealizedPnL)}
-                    </td>
-                    <td
-                      style={{
-                        padding: "12px 16px",
-                        fontWeight: 700,
-                        color: p.unrealizedPnLPct >= 0 ? "#16a34a" : "#dc2626",
-                      }}
-                    >
-                      {p.unrealizedPnLPct >= 0 ? "+" : ""}
-                      {p.unrealizedPnLPct.toFixed(2)}%
-                    </td>
-                  </tr>
-                ))}
+                {positions.map((p) => {
+                  const up = p.unrealizedPnL >= 0;
+                  return (
+                    <tr key={p.symbol} className="pp-row">
+                      <td>
+                        <Link href={`${basePath}/${encodeURIComponent(p.symbol)}`} className="pp-row-link">
+                          {p.symbol}
+                        </Link>
+                      </td>
+                      <td className="num">{p.quantity}</td>
+                      <td className="num">{formatINR(p.avgPrice)}</td>
+                      <td className="num">{formatINR(p.lastPrice)}</td>
+                      <td className="num strong">{formatINR(p.marketValue)}</td>
+                      <td className={`num strong ${up ? "up" : "down"}`}>
+                        {up ? "+" : ""}
+                        {formatINR(p.unrealizedPnL)}
+                      </td>
+                      <td className={`num strong ${up ? "up" : "down"}`}>
+                        {up ? "+" : ""}
+                        {p.unrealizedPnLPct.toFixed(2)}%
+                      </td>
+                      <td className="pp-row-chev" aria-hidden>
+                        ›
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

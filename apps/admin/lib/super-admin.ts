@@ -15,7 +15,8 @@ export const SUPER_ADMIN_MODULES = [
   // Stock Basket / AI Stock Picks retired — superseded by Finuer Basket.
   // "AI Stock Picks",
   "Finuer Basket",
-  "Competition",
+  // Competition hidden for now - /super-admin/competition/* still works by URL.
+  // "Competition",
   "Notifications",
   "Audit Logs",
   "Settings",
@@ -39,7 +40,7 @@ export const MODULE_ROUTE_MAP: Record<string, string> = {
   Courses: "/super-admin/courses",
   // "AI Stock Picks": "/super-admin/stock-picks",
   "Finuer Basket": "/super-admin/finuer-basket/baskets",
-  Competition: "/super-admin/competition/list",
+  // Competition: "/super-admin/competition/list",
   Notifications: "/super-admin/notifications",
   "Audit Logs": "/super-admin/audit-logs",
   Settings: "/super-admin/settings",
@@ -59,7 +60,7 @@ export const NAV_GROUPS: { heading: string; modules: string[] }[] = [
   {
     heading: "Products",
     // "AI Stock Picks" removed — superseded by Finuer Basket.
-    modules: ["Finuer Basket", "Competition", "Courses"],
+    modules: ["Finuer Basket", "Courses"],   // "Competition" hidden - see above
   },
   { heading: "Revenue", modules: ["Subscriptions", "Finuer Pro Plans", "Sponsorship", "Payments"] },
   { heading: "System", modules: ["Notifications", "Audit Logs", "Settings"] },

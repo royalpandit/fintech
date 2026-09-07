@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { LoadingCards, LoadingInline, LoadingTableRows } from "@/components/loading-shimmer";
+import TradeButtons from "@/components/trading/trade-buttons";
+import { MF_EXCHANGE } from "@/lib/instrument-type";
+import { cleanFundCategory } from "@/lib/amfi-shared";
 
 type MutualFund = {
   code: string;
@@ -30,10 +33,7 @@ function planLabel(f: { plan: string; option: string }): string {
   return [f.plan, f.option].filter(Boolean).join(" · ");
 }
 
-function cleanCategory(c: string): string {
-  const m = c.match(/\(([^)]+)\)/);
-  return (m ? m[1] : c).trim();
-}
+
 
 const inr = (n: number) =>
   n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -60,6 +60,30 @@ function ReturnCell({ v }: { v: number | null }) {
   );
 }
 
+/**
+ * Buy/Sell for a fund.
+ *
+ * Same component and same order path as a stock — the only differences are
+ * carried in props: exchange "MF" routes pricing to the AMFI NAV, and `kind`
+ * switches the popover to fractional units with no limit price. The scheme code
+ * is the symbol on the order; the name rides along as tradingSymbol so Orders
+ * and Holdings are readable. That column is varchar(80), hence the slice.
+ */
+function FundTrade({ f }: { f: MutualFund }) {
+  if (f.nav == null) return null;
+  return (
+    <TradeButtons
+      symbol={f.code}
+      kind="mf"
+      displayName={f.name}
+      exchange={MF_EXCHANGE}
+      token={f.code}
+      tradingSymbol={f.name.slice(0, 80)}
+      price={f.nav}
+    />
+  );
+}
+
 export default function MutualFundsView() {
   const [q, setQ] = useState("");
   const [funds, setFunds] = useState<MutualFund[]>([]);
@@ -68,6 +92,8 @@ export default function MutualFundsView() {
   const [returnsLoading, setReturnsLoading] = useState(false);
   const [error, setError] = useState("");
   const [sort, setSort] = useState<SortKey>("name");
+  const [category, setCategory] = useState("all");
+  const [categories, setCategories] = useState<{ category: string; count: number }[]>([]);
 
   useEffect(() => {
     let alive = true;
@@ -75,11 +101,15 @@ export default function MutualFundsView() {
     setError("");
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/v1/market/mutual-funds?q=${encodeURIComponent(q.trim())}`);
+        const res = await fetch(
+          `/api/v1/market/mutual-funds?q=${encodeURIComponent(q.trim())}` +
+            `&category=${encodeURIComponent(category)}`,
+        );
         const j = await res.json();
         if (!alive) return;
         const list: MutualFund[] = j.ok || j.status ? j.funds ?? [] : [];
         setFunds(list);
+        if (Array.isArray(j.categories)) setCategories(j.categories);
         if (!(j.ok || j.status)) setError(j.error || "Failed to load funds");
 
         // Fetch trailing returns for the visible funds (fast list first, returns fill in).
@@ -106,8 +136,10 @@ export default function MutualFundsView() {
       alive = false;
       clearTimeout(t);
     };
-  }, [q]);
+  }, [q, category]);
 
+  // Category filtering happens server-side, over all ~14k schemes rather than
+  // the 50 on this page — filtering here would only ever narrow one pageful.
   const sorted = useMemo(() => {
     if (sort === "name") return funds;
     return [...funds].sort((a, b) => {
@@ -122,9 +154,14 @@ export default function MutualFundsView() {
 
   return (
     <section>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
-        <div style={{ position: "relative", flex: 1, minWidth: 260, maxWidth: 460 }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}>
+      {/* Every group is label-on-top so the three controls share one baseline.
+          Mixing a bare input with a labelled select pushes the select half a
+          label-height down and the row stops looking like a row. */}
+      <div className="mf-toolbar">
+        <label className="mf-filter mf-filter--search">
+          <span className="mf-filter-label">Search</span>
+          <div style={{ position: "relative", width: "100%" }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }}>
             <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
             <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
@@ -134,9 +171,27 @@ export default function MutualFundsView() {
             placeholder="Search mutual funds by scheme or AMC…"
             style={{ width: "100%", height: 42, paddingLeft: 40, paddingRight: 14, borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", fontSize: 14, outline: "none" }}
           />
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600 }}>Sort:</span>
+          </div>
+        </label>
+        <label className="mf-filter">
+          <span className="mf-filter-label">Category</span>
+          <select
+            className="mf-filter-select"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            <option value="all">All categories</option>
+            {categories.map((c) => (
+              <option key={c.category} value={c.category}>
+                {c.category} ({c.count})
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="mf-filter mf-filter--sorts">
+          <span className="mf-filter-label">Sort</span>
+          <div className="mf-sorts">
           {SORTS.map((s) => {
             const active = s.key === sort;
             return (
@@ -160,6 +215,7 @@ export default function MutualFundsView() {
               </button>
             );
           })}
+          </div>
         </div>
       </div>
 
@@ -194,13 +250,14 @@ export default function MutualFundsView() {
                 <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>1Y</th>
                 <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>3Y</th>
                 <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>5Y</th>
+                <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>Trade</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <LoadingTableRows cols={8} rows={6} />
+                <LoadingTableRows cols={9} rows={6} />
               ) : sorted.length === 0 ? (
-                <tr><td colSpan={8} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>No funds matched “{q.trim()}”.</td></tr>
+                <tr><td colSpan={9} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>No funds matched “{q.trim()}”.</td></tr>
               ) : (
                 sorted.map((f) => {
                   const ret = returns[f.code];
@@ -213,13 +270,16 @@ export default function MutualFundsView() {
                         )}
                         {f.amc && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{f.amc}</div>}
                       </td>
-                      <td style={{ padding: "12px 16px", color: "var(--text-muted)", maxWidth: 200 }}>{cleanCategory(f.category)}</td>
+                      <td style={{ padding: "12px 16px", color: "var(--text-muted)", maxWidth: 200 }}>{cleanFundCategory(f.category)}</td>
                       <td style={{ padding: "12px 16px", textAlign: "right", fontWeight: 600, color: "var(--text)" }}>{f.nav != null ? inr(f.nav) : "—"}</td>
                       <td style={{ padding: "12px 16px", textAlign: "right" }}><ReturnCell v={ret?.r3m ?? null} /></td>
                       <td style={{ padding: "12px 16px", textAlign: "right" }}><ReturnCell v={ret?.r6m ?? null} /></td>
                       <td style={{ padding: "12px 16px", textAlign: "right" }}><ReturnCell v={ret?.r1y ?? null} /></td>
                       <td style={{ padding: "12px 16px", textAlign: "right" }}><ReturnCell v={ret?.r3y ?? null} /></td>
                       <td style={{ padding: "12px 16px", textAlign: "right" }}><ReturnCell v={ret?.r5y ?? null} /></td>
+                      <td style={{ padding: "12px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <FundTrade f={f} />
+                      </td>
                     </tr>
                   );
                 })
@@ -246,7 +306,7 @@ export default function MutualFundsView() {
                       <div className="mf-card-name">{f.name}</div>
                       {planLabel(f) && <div className="mf-card-amc">{planLabel(f)}</div>}
                       {f.amc && <div className="mf-card-amc">{f.amc}</div>}
-                      <div className="mf-card-cat">{cleanCategory(f.category)}</div>
+                      <div className="mf-card-cat">{cleanFundCategory(f.category)}</div>
                     </div>
                     <div className="mf-card-nav">
                       <span className="mf-card-nav-label">NAV ₹</span>
@@ -259,6 +319,9 @@ export default function MutualFundsView() {
                     <div><span>1Y</span><ReturnCell v={ret?.r1y ?? null} /></div>
                     <div><span>3Y</span><ReturnCell v={ret?.r3y ?? null} /></div>
                     <div><span>5Y</span><ReturnCell v={ret?.r5y ?? null} /></div>
+                  </div>
+                  <div className="mf-card-trade">
+                    <FundTrade f={f} />
                   </div>
                 </div>
               );

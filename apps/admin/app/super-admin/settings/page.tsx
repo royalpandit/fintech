@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import IntegrationsManager from "./integrations-manager";
 import GeneralConfigForm from "./general-config-form";
 import SecurityForm from "./security-form";
+import DhanTokenPanel from "./dhan-token-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -118,6 +119,8 @@ export default async function SettingsPage() {
           </div>
         </article>
       </div>
+
+      <DhanTokenPanel />
 
       <IntegrationsManager serverConnected={serverConnected} />
     </section>

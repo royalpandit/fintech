@@ -59,7 +59,11 @@ export default function CryptoView() {
 
   useEffect(() => {
     if (!coins.length) return;
-    const ids = coins.map((c) => c.id).join(",");
+    // Only the top slice, not all 250. The stream server-side intersects these
+    // against its own CRYPTO_STREAM_SYMBOLS map (14 coins, all large caps), so
+    // sending the full list would add ~2.5 KB of query string to buy exactly
+    // nothing.
+    const ids = coins.slice(0, 25).map((c) => c.id).join(",");
     const geckoBtcInr = coins.find((c) => c.id === "bitcoin")?.price ?? 0;
     const usdInr = { current: 0 };
     const es = new EventSource(`/api/v1/market/crypto/stream?ids=${encodeURIComponent(ids)}`);

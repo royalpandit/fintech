@@ -17,6 +17,8 @@ export type MutualFund = {
   date: string;
 };
 
+import { cleanFundCategory } from "@/lib/amfi-shared";
+
 const AMFI_URL = "https://www.amfiindia.com/spages/NAVAll.txt";
 const TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
@@ -127,12 +129,35 @@ export async function getMutualFunds(): Promise<MutualFund[]> {
   return inflight;
 }
 
-export async function searchMutualFunds(q: string, limit = 50): Promise<MutualFund[]> {
+/** Every category present in the feed, with how many schemes carry it. */
+export async function listFundCategories(): Promise<{ category: string; count: number }[]> {
+  const all = await getMutualFunds();
+  const counts = new Map<string, number>();
+  for (const f of all) {
+    if (f.nav == null) continue;
+    const c = cleanFundCategory(f.category);
+    if (c) counts.set(c, (counts.get(c) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => a.category.localeCompare(b.category));
+}
+
+export async function searchMutualFunds(
+  q: string,
+  limit = 50,
+  category?: string,
+): Promise<MutualFund[]> {
   const all = await getMutualFunds();
   const query = q.trim().toLowerCase();
 
   // Only rank funds that actually have a NAV (skip stale/merged schemes).
-  const withNav = all.filter((f) => f.nav != null);
+  const wantCategory = category?.trim();
+  const withNav = all.filter(
+    (f) =>
+      f.nav != null &&
+      (!wantCategory || wantCategory === "all" || cleanFundCategory(f.category) === wantCategory),
+  );
 
   if (query.length < 2) {
     // Browse default: a stable alphabetical slice so the tab isn't empty.
@@ -152,3 +177,20 @@ export async function searchMutualFunds(q: string, limit = 50): Promise<MutualFu
   });
   return matches.slice(0, limit);
 }
+
+/**
+ * One scheme by its AMFI code, for the paper-trade order path.
+ *
+ * Mutual funds have no exchange token and no intraday price, so the equity
+ * quote path (lib/paper-market-quote.ts -> Dhan) cannot resolve them. Orders
+ * are priced off the published NAV instead, which is what a real MF purchase
+ * settles at: one NAV per business day, the same for everyone, no bid/ask.
+ */
+export async function getMutualFundByCode(code: string): Promise<MutualFund | null> {
+  const want = code.trim();
+  if (!want) return null;
+  const all = await getMutualFunds();
+  return all.find((f) => f.code === want) ?? null;
+}
+
+export { cleanFundCategory } from "@/lib/amfi-shared";

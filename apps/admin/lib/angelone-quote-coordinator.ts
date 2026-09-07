@@ -38,9 +38,22 @@ export function scheduleAngelRest<T>(label: string, fn: () => Promise<T>, dedupe
   const result = run as Promise<T>;
   if (dedupeKey) {
     inflight.set(dedupeKey, result);
-    result.finally(() => {
+    /*
+     * .then(cleanup, cleanup), not .finally(cleanup).
+     *
+     * .finally returns a NEW promise that rejects whenever the one it is
+     * chained to rejects. Nothing awaited that derived promise, so a failing
+     * deduped call - a Dhan 429, an expired token - produced an unhandled
+     * rejection and took the process down, even though the caller had the
+     * original result in a try/catch and handled it correctly.
+     *
+     * Passing the same handler to both arms settles the derived promise either
+     * way, so the cleanup still runs and there is nothing left unhandled.
+     */
+    const cleanup = () => {
       if (inflight.get(dedupeKey) === result) inflight.delete(dedupeKey);
-    });
+    };
+    result.then(cleanup, cleanup);
   }
   return result;
 }

@@ -21,6 +21,7 @@ import {
   FiChevronDown,
 } from "react-icons/fi";
 import { CheckCircle } from "@/components/advisor-ui/icons";
+import SebiRegNo from "@/components/advisor-ui/sebi-reg-no";
 import CommunityFeedItem from "@/components/feed/community-feed-item";
 import { LoadingCards } from "@/components/loading-shimmer";
 import PostComposerModal from "@/components/social/post-composer-modal";
@@ -306,45 +307,27 @@ function PostCard({
   if (blocked) return null;
 
   return (
-    <article
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        borderRadius: 14,
-        padding: 18,
-        position: "relative",
-      }}
-    >
-      {/* Header */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "center" }}>
-        <Link
-          href={`/user/advisors/${post.advisor?.id}`}
-          style={{ display: "flex", flexShrink: 0, textDecoration: "none" }}
-        >
+    /* Same shell as the community card (.sf-post-card). Advisor and community
+       posts sit next to each other in one merged stream, and until now they
+       were built two different ways - one on the .sf-* classes, this one on
+       ~120 inline style objects - so the feed read as two feeds spliced
+       together. */
+    <article className="sf-post-card sf-adv-post">
+      <div className="sf-post-head">
+        <div className="sf-post-head-left">
+        <Link href={`/user/advisors/${post.advisor?.id}`} className="sf-adv-avatar-link">
           <ProfileAvatar
             src={postState.advisor?.advisorProfile?.profileImageUrl}
             name={postState.advisor?.fullName ?? "??"}
-            size={38}
-            radius={9}
-            fontSize={12}
+            size={42}
+            radius={12}
+            fontSize={14}
           />
         </Link>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-            <Link
-              href={`/user/advisors/${post.advisor?.id}`}
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: "var(--text)",
-                textDecoration: "none",
-                maxWidth: "100%",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
+        <div className="sf-post-meta">
+          <div className="sf-post-name-row">
+            <Link href={`/user/advisors/${post.advisor?.id}`} className="sf-post-author sf-adv-author">
               {post.advisor?.fullName}
             </Link>
             <CheckCircle size={12} style={{ color: "#10b981" }} />
@@ -353,132 +336,68 @@ function PostCard({
               professionalType={post.advisor?.advisorProfile?.professionalType ?? null}
             />
           </div>
-          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            {post.advisor?.advisorProfile?.sebiRegistrationNo} · {formatRelativeTime(when)}
+          {/* Registration number then timestamp. Interpolating the number raw
+              left a dangling "· 2h ago" for any advisor without one on file. */}
+          <div className="sf-post-time sf-adv-byline">
+            <SebiRegNo
+              value={post.advisor?.advisorProfile?.sebiRegistrationNo}
+              fallback="SEBI registration pending"
+            />{" "}
+            · {formatRelativeTime(when)}
           </div>
         </div>
 
-        {/* Follow toggle */}
+        </div>
+
+        <div className="sf-post-head-right">
         {isAuthed && post.advisor && (
           <button
             type="button"
             onClick={onFollow}
             disabled={followLoading}
             title={following ? "Unfollow" : "Follow"}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              padding: "5px 12px",
-              borderRadius: 8,
-              border: following ? "1px solid var(--border)" : "1px solid #0ea5e9",
-              background: following ? "var(--surface-2)" : "rgba(14,165,233,0.08)",
-              color: following ? "var(--text-muted)" : "#0ea5e9",
-              fontSize: 11,
-              fontWeight: 700,
-              cursor: followLoading ? "wait" : "pointer",
-            }}
+            className={`sf-adv-follow${following ? " is-following" : ""}`}
           >
             {following ? <FiUserCheck size={12} /> : <FiUserPlus size={12} />}
             {following ? "Following" : "Follow"}
           </button>
         )}
 
-        {/* Sentiment pill */}
-        <span
-          style={{
-            padding: "3px 10px",
-            borderRadius: 999,
-            background: `${sColor}1a`,
-            color: sColor,
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: 0.5,
-            textTransform: "uppercase",
-            flexShrink: 0,
-          }}
-        >
+        {/* Bullish / bearish / neutral. Colour comes from the data, so it
+            stays inline; everything else about the pill is in CSS. */}
+        <span className="sf-adv-sentiment" style={{ background: `${sColor}1a`, color: sColor }}>
           {postState.sentiment}
         </span>
 
         {/* Three-dot menu */}
-        <div ref={menuRef} style={{ position: "relative" }}>
+        <div ref={menuRef} className="sf-adv-menu">
           <button
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--text-muted)",
-              display: "flex",
-              alignItems: "center",
-              padding: 4,
-              borderRadius: 6,
-            }}
+            className="sf-adv-menu-trigger"
+            aria-label="Post options"
+            aria-expanded={menuOpen}
           >
             <FiMoreHorizontal size={16} />
           </button>
 
           {menuOpen && (
-            <div
-              style={{
-                position: "absolute",
-                right: 0,
-                top: "calc(100% + 4px)",
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                borderRadius: 10,
-                boxShadow: "0 8px 32px rgba(15,23,42,0.12)",
-                zIndex: 20,
-                minWidth: 160,
-                overflow: "hidden",
-              }}
-            >
+            <div className="sf-adv-menu-pop" role="menu">
               {isAuthed && !reported && (
                 <button
                   type="button"
                   onClick={() => { setMenuOpen(false); onReport(); }}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "10px 14px",
-                    background: "none",
-                    border: "none",
-                    fontSize: 13,
-                    color: "#dc2626",
-                    cursor: "pointer",
-                    textAlign: "left",
-                  }}
+                  className="sf-adv-menu-item is-danger"
                 >
                   <FiFlag size={13} /> Report post
                 </button>
               )}
-              {reported && (
-                <div style={{ padding: "10px 14px", fontSize: 12, color: "var(--text-muted)" }}>
-                  Reported — thanks
-                </div>
-              )}
+              {reported && <div className="sf-adv-menu-note">Reported — thanks</div>}
               {isAuthed && post.advisor && (
                 <button
                   type="button"
                   onClick={() => { setMenuOpen(false); onBlock(); }}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "10px 14px",
-                    background: "none",
-                    border: "none",
-                    fontSize: 13,
-                    color: "var(--text)",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    borderTop: "1px solid var(--border)",
-                  }}
+                  className="sf-adv-menu-item"
                 >
                   <FiSlash size={13} /> Block advisor
                 </button>
@@ -486,69 +405,20 @@ function PostCard({
             </div>
           )}
         </div>
+        </div>
       </div>
 
       {/* Content */}
       <div className={`premium-post-body${locked ? " is-locked" : ""}`}>
         {locked ? (
-          <div style={{ textDecoration: "none", color: "inherit" }}>
-            <h3
-              style={{
-                margin: "0 0 8px",
-                fontSize: 17,
-                fontWeight: 700,
-                color: "var(--text)",
-                letterSpacing: -0.2,
-              }}
-            >
-              {postState.title}
-            </h3>
-            <p
-              className="premium-text-blur"
-              style={{
-                margin: 0,
-                fontSize: 14,
-                color: "var(--text)",
-                lineHeight: 1.55,
-                display: "-webkit-box",
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}
-            >
-              {postState.content}
-            </p>
+          <div className="sf-adv-content">
+            <h3 className="sf-adv-title">{postState.title}</h3>
+            <p className="sf-adv-excerpt premium-text-blur">{postState.content}</p>
           </div>
         ) : (
-          <Link
-            href={`/user/markets/${postState.id}?from=feed`}
-            style={{ textDecoration: "none", color: "inherit" }}
-          >
-            <h3
-              style={{
-                margin: "0 0 8px",
-                fontSize: 17,
-                fontWeight: 700,
-                color: "var(--text)",
-                letterSpacing: -0.2,
-              }}
-            >
-              {postState.title}
-            </h3>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 14,
-                color: "var(--text)",
-                lineHeight: 1.55,
-                display: "-webkit-box",
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}
-            >
-              {postState.content}
-            </p>
+          <Link href={`/user/markets/${postState.id}?from=feed`} className="sf-adv-content">
+            <h3 className="sf-adv-title">{postState.title}</h3>
+            <p className="sf-adv-excerpt">{postState.content}</p>
           </Link>
         )}
         {locked && <PremiumPostOverlay onUnlock={premium.openUnlock} />}
@@ -577,54 +447,15 @@ function PostCard({
       />
 
       {/* Tags */}
-      <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+      {/* Risk used solid pastels (#fee2e2 / #fef3c7 / #d1fae5) with dark text -
+          unreadable blocks on a dark background. The tints are now translucent
+          and defined per level in CSS, so both themes work. */}
+      <div className="sf-adv-tags">
         {postState.marketSymbol && (
-          <span
-            style={{
-              padding: "4px 10px",
-              borderRadius: 999,
-              background: "var(--surface-2)",
-              color: "var(--text)",
-              fontSize: 11,
-              fontWeight: 700,
-            }}
-          >
-            {postState.marketSymbol}
-          </span>
+          <span className="sf-adv-chip is-symbol">{postState.marketSymbol}</span>
         )}
-        <span
-          style={{
-            padding: "4px 10px",
-            borderRadius: 999,
-            background: "var(--surface-2)",
-            color: "var(--text)",
-            fontSize: 11,
-            fontWeight: 600,
-          }}
-        >
-          {postState.assetType.toUpperCase()}
-        </span>
-        <span
-          style={{
-            padding: "4px 10px",
-            borderRadius: 999,
-            background:
-              postState.riskLevel === "high"
-                ? "#fee2e2"
-                : postState.riskLevel === "medium"
-                  ? "#fef3c7"
-                  : "#d1fae5",
-            color:
-              postState.riskLevel === "high"
-                ? "#991b1b"
-                : postState.riskLevel === "medium"
-                  ? "#92400e"
-                  : "#047857",
-            fontSize: 11,
-            fontWeight: 700,
-            textTransform: "capitalize",
-          }}
-        >
+        <span className="sf-adv-chip">{postState.assetType.toUpperCase()}</span>
+        <span className={`sf-adv-chip sf-adv-risk sf-adv-risk--${postState.riskLevel}`}>
           {postState.riskLevel} risk
         </span>
       </div>
@@ -637,78 +468,37 @@ function PostCard({
       />
 
       {/* Action bar */}
-      <div
-        style={{
-          marginTop: 14,
-          paddingTop: 14,
-          borderTop: "1px solid var(--border)",
-          display: "flex",
-          gap: 16,
-          alignItems: "center",
-        }}
-      >
-        {/* Like */}
+      {/* Same bar as the community card: full-width targets that share the row
+          evenly, rather than two small links crowded at the left edge. */}
+      <div className="sf-post-actions">
         <button
           type="button"
           onClick={isAuthed ? onLike : undefined}
           title={isAuthed ? (liked ? "Unlike" : "Like") : "Sign in to like"}
-          style={{
-            border: "none",
-            background: "transparent",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            color: liked ? "#e11d48" : "var(--text-muted)",
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: isAuthed ? "pointer" : "default",
-            transition: "color 0.15s",
-          }}
+          className={`sf-action-btn${liked ? " liked" : ""}`}
         >
-          <FiHeart
-            size={13}
-            style={{ fill: liked ? "#e11d48" : "none", color: liked ? "#e11d48" : "var(--text-muted)" }}
-          />
+          <FiHeart size={14} />
           {likeCount}
         </button>
 
-        {/* Comments toggle */}
         <button
           type="button"
           onClick={onToggleComments}
-          style={{
-            border: "none",
-            background: "transparent",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            color: expanded ? "#0ea5e9" : "var(--text-muted)",
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
+          className={`sf-action-btn${expanded ? " active" : ""}`}
         >
-          <FiMessageSquare size={13} />
+          <FiMessageSquare size={14} />
           {commentCount} {commentCount === 1 ? "comment" : "comments"}
-          <FiChevronDown
-            size={11}
-            style={{
-              transition: "transform 0.2s",
-              transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-            }}
-          />
+          <FiChevronDown size={12} className={`sf-adv-caret${expanded ? " is-open" : ""}`} />
         </button>
       </div>
 
       {/* Comment section */}
       {expanded && (
-        <div style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+        <div className="sf-comments">
           {commentsLoading ? (
-            <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>Loading comments…</p>
+            <p className="sf-comments-loading">Loading comments…</p>
           ) : comments.length === 0 ? (
-            <p style={{ margin: "0 0 12px", fontSize: 12, color: "var(--text-muted)" }}>
-              No comments yet — be the first.
-            </p>
+            <p className="sf-comments-empty">No comments yet — be the first.</p>
           ) : (
             <div style={{ marginBottom: 12 }}>
               {comments.map((c) => (
@@ -720,7 +510,7 @@ function PostCard({
                   />
                   {/* Replies */}
                   {c.replies.length > 0 && (
-                    <div style={{ marginLeft: 34, marginBottom: 8 }}>
+                    <div className="sf-adv-replies">
                       {c.replies.map((r) => (
                         <CommentBubble
                           key={r.id}
@@ -733,15 +523,7 @@ function PostCard({
                   )}
                   {/* Reply form */}
                   {replyToId === c.id && isAuthed && (
-                    <div
-                      style={{
-                        marginLeft: 34,
-                        marginBottom: 8,
-                        display: "flex",
-                        gap: 8,
-                        alignItems: "center",
-                      }}
-                    >
+                    <div className="sf-adv-replies sf-comment-form sf-adv-reply-form">
                       <input
                         autoFocus
                         value={commentInput}
@@ -753,43 +535,20 @@ function PostCard({
                           }
                         }}
                         placeholder={`Reply to ${c.user.fullName}…`}
-                        style={{
-                          flex: 1,
-                          border: "1px solid var(--border)",
-                          borderRadius: 8,
-                          padding: "7px 11px",
-                          fontSize: 12,
-                          outline: "none",
-                        }}
                       />
                       <button
                         type="button"
                         onClick={() => onSubmitComment(c.id)}
                         disabled={submitting || !commentInput.trim()}
-                        style={{
-                          background: "#0ea5e9",
-                          border: "none",
-                          borderRadius: 8,
-                          color: "#fff",
-                          padding: "7px 10px",
-                          cursor: submitting ? "wait" : "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                        }}
+                        aria-label="Send reply"
                       >
                         <FiSend size={12} />
                       </button>
                       <button
                         type="button"
                         onClick={() => onSetReply(null)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "var(--text-muted)",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                        }}
+                        className="sf-adv-reply-cancel"
+                        aria-label="Cancel reply"
                       >
                         <FiX size={12} />
                       </button>
@@ -802,7 +561,7 @@ function PostCard({
 
           {/* New comment input */}
           {isAuthed ? (
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div className="sf-comment-form">
               <input
                 value={replyToId ? "" : commentInput}
                 onChange={(e) => { if (!replyToId) onCommentInput(e.target.value); }}
@@ -813,39 +572,18 @@ function PostCard({
                   }
                 }}
                 placeholder="Write a comment…"
-                style={{
-                  flex: 1,
-                  border: "1px solid var(--border)",
-                  borderRadius: 8,
-                  padding: "8px 12px",
-                  fontSize: 13,
-                  outline: "none",
-                }}
               />
               <button
                 type="button"
                 onClick={() => onSubmitComment()}
                 disabled={submitting || !commentInput.trim() || !!replyToId}
-                style={{
-                  background: "#0ea5e9",
-                  border: "none",
-                  borderRadius: 8,
-                  color: "#fff",
-                  padding: "8px 12px",
-                  cursor: submitting ? "wait" : "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
               >
                 <FiSend size={12} /> Post
               </button>
             </div>
           ) : (
-            <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
-              <Link href="/login" style={{ color: "#0ea5e9", fontWeight: 600 }}>
+            <p className="sf-comments-empty">
+              <Link href="/login" className="sf-adv-signin-link">
                 Sign in
               </Link>{" "}
               to join the conversation.

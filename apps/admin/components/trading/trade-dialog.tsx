@@ -35,6 +35,10 @@ export default function TradeDialog({
   side: initialSide,
   price,
   exchange,
+  kind = "equity",
+  displayName,
+  token,
+  tradingSymbol,
   anchor,
   onClose,
 }: {
@@ -44,6 +48,16 @@ export default function TradeDialog({
    *  without another quote request. */
   price?: number | null;
   exchange?: string | null;
+  /**
+   * Mutual funds are the same order, priced differently: whole units of a
+   * scheme at the day's published NAV rather than shares at a live LTP. There
+   * is no order book behind them, so no limit price and no intraday fill.
+   */
+  kind?: "equity" | "mf";
+  /** Human-readable name when `symbol` is an opaque code (an AMFI scheme id). */
+  displayName?: string;
+  token?: string | null;
+  tradingSymbol?: string | null;
   anchor?: HTMLElement | null;
   onClose: () => void;
 }) {
@@ -144,14 +158,27 @@ export default function TradeDialog({
   }, []);
 
   const sym = symbol.trim().toUpperCase();
+  const isMf = kind === "mf";
+  // The scheme code is meaningless on screen; the fund name is what was
+  // clicked. Orders still travel under the code.
+  const title = displayName?.trim() || sym;
+  const unitWord = isMf ? "units" : "qty";
+  const priceLabel = isMf ? "NAV" : "LTP";
   const unit = orderType === "LIMIT" ? Number(limitPrice) || 0 : price ?? 0;
   const estimate = unit > 0 ? unit * qty : null;
+
+  /** Funds are bought in fractional units; shares are not. */
+  const step = isMf ? 0.001 : 1;
+  const clampQty = (v: number) =>
+    isMf ? Math.max(step, Math.round(v * 1000) / 1000) : Math.max(1, Math.floor(v));
 
   async function submit() {
     setError("");
     setDone("");
-    if (!Number.isFinite(qty) || qty <= 0) return setError("Quantity must be at least 1.");
-    if (orderType === "LIMIT" && !(Number(limitPrice) > 0)) {
+    if (!Number.isFinite(qty) || qty <= 0) {
+      return setError(isMf ? "Enter at least 0.001 units." : "Quantity must be at least 1.");
+    }
+    if (!isMf && orderType === "LIMIT" && !(Number(limitPrice) > 0)) {
       return setError("Enter a limit price.");
     }
 
@@ -160,10 +187,16 @@ export default function TradeDialog({
       const res = await placePaperOrder({
         symbol: sym,
         side,
-        orderType,
+        // A fund has one NAV per day and no book to rest an order against, so
+        // "limit" has nothing to mean here.
+        orderType: isMf ? "MARKET" : orderType,
         quantity: qty,
-        limitPrice: orderType === "LIMIT" ? Number(limitPrice) : undefined,
+        limitPrice: !isMf && orderType === "LIMIT" ? Number(limitPrice) : undefined,
         exchange: exchange ?? undefined,
+        token: token ?? undefined,
+        // Carries the fund name onto the order so Orders and Holdings show
+        // something readable instead of a six-digit scheme code.
+        tradingSymbol: tradingSymbol ?? displayName ?? undefined,
       });
       if (!res.ok) {
         setError(res.text);
@@ -181,9 +214,10 @@ export default function TradeDialog({
        * fill is still there in the bell afterwards. Rejections get the same
        * treatment: the toast says it now, the notification keeps the reason.
        */
+      const what = isMf ? `${qty} units of ${title}` : `${qty} ${sym}`;
       const filled = res.executed
-        ? `${side === "buy" ? "Bought" : "Sold"} ${qty} ${sym}`
-        : `${side === "buy" ? "Buy" : "Sell"} order placed for ${qty} ${sym}`;
+        ? `${side === "buy" ? "Bought" : "Sold"} ${what}`
+        : `${side === "buy" ? "Buy" : "Sell"} order placed for ${what}`;
       toast.show(filled, "success");
 
       setDone(res.text);
@@ -226,16 +260,24 @@ export default function TradeDialog({
             : { top: 0, left: 0, visibility: "hidden" }
       }
       role="dialog"
-      aria-label={`${side === "buy" ? "Buy" : "Sell"} ${sym} with virtual funds`}
+      aria-label={`${side === "buy" ? "Buy" : "Sell"} ${title} with virtual funds`}
     >
       <div className="td-head">
         <div className="td-head-id">
-          <div className="td-sym">{sym}</div>
+          <div className="td-sym" title={title}>
+            {title}
+          </div>
           {/* Stated every time: this sits beside live NSE prices and none of it
               is real money. */}
-          <div className="td-note">Paper trade · virtual funds</div>
+          <div className="td-note">
+            {isMf ? "Paper trade · units at NAV" : "Paper trade · virtual funds"}
+          </div>
         </div>
-        {price != null && price > 0 && <div className="td-ltp">₹{inr(price)}</div>}
+        {price != null && price > 0 && (
+          <div className="td-ltp">
+            <span className="td-ltp-label">{priceLabel}</span>₹{inr(price)}
+          </div>
+        )}
         <button type="button" className="td-close" onClick={onClose} aria-label="Close">
           ×
         </button>
@@ -262,13 +304,13 @@ export default function TradeDialog({
         </div>
 
         <label className="td-label" htmlFor="td-qty">
-          Quantity
+          {isMf ? "Units" : "Quantity"}
         </label>
         <div className="td-stepper">
           <button
             type="button"
-            onClick={() => setQty((q) => Math.max(1, q - 1))}
-            aria-label="Decrease quantity"
+            onClick={() => setQty((q) => clampQty(q - step))}
+            aria-label={`Decrease ${unitWord}`}
           >
             −
           </button>
@@ -276,29 +318,41 @@ export default function TradeDialog({
             id="td-qty"
             className="td-qty-input"
             type="number"
-            min={1}
+            min={step}
+            step={step}
             value={qty}
-            onChange={(e) => setQty(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+            onChange={(e) => setQty(clampQty(Number(e.target.value) || step))}
           />
-          <button type="button" onClick={() => setQty((q) => q + 1)} aria-label="Increase quantity">
+          <button
+            type="button"
+            onClick={() => setQty((q) => clampQty(q + step))}
+            aria-label={`Increase ${unitWord}`}
+          >
             +
           </button>
         </div>
 
-        <label className="td-label" htmlFor="td-type">
-          Order type
-        </label>
-        <select
-          id="td-type"
-          className="td-select"
-          value={orderType}
-          onChange={(e) => setOrderType(e.target.value as PaperOrderType)}
-        >
-          <option value="MARKET">Market (live price)</option>
-          <option value="LIMIT">Limit</option>
-        </select>
+        {/* Funds have one price a day and no book, so there is no order type to
+            choose — offering "Limit" would be a control that cannot do
+            anything. */}
+        {!isMf && (
+          <>
+            <label className="td-label" htmlFor="td-type">
+              Order type
+            </label>
+            <select
+              id="td-type"
+              className="td-select"
+              value={orderType}
+              onChange={(e) => setOrderType(e.target.value as PaperOrderType)}
+            >
+              <option value="MARKET">Market (live price)</option>
+              <option value="LIMIT">Limit</option>
+            </select>
+          </>
+        )}
 
-        {orderType === "LIMIT" && (
+        {!isMf && orderType === "LIMIT" && (
           <>
             <label className="td-label" htmlFor="td-limit">
               Limit price
@@ -332,7 +386,9 @@ export default function TradeDialog({
           onClick={() => void submit()}
           disabled={busy}
         >
-          {busy ? "Placing…" : `${side === "buy" ? "Buy" : "Sell"} ${qty} ${sym}`}
+          {busy
+            ? "Placing…"
+            : `${side === "buy" ? "Buy" : "Sell"} ${qty}${isMf ? " units" : ` ${sym}`}`}
         </button>
       </div>
     </div>

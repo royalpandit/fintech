@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { FiHeart, FiMessageSquare, FiStar, FiChevronDown } from "react-icons/fi";
 import { CheckCircle } from "@/components/advisor-ui/icons";
+import SebiRegNo from "@/components/advisor-ui/sebi-reg-no";
 import TradePanel from "@/components/trades/trade-panel";
 import {
   DEFAULT_FEED_FILTERS,
@@ -49,6 +50,7 @@ type AdvisorCard = {
   fullName: string;
   image: string | null;
   expertise: string[];
+  sebiRegistrationNo: string | null;
   tradeCount: number;
   sponsored: boolean;
 };
@@ -99,9 +101,16 @@ function AdvisorRailCard({ a }: { a: AdvisorCard }) {
           {a.fullName}
           <CheckCircle size={12} style={{ color: "#10b981" }} />
         </span>
+        {/* Expertise on one line, the registration number on its own beneath
+            it. The meta line previously fell back to the words "SEBI
+            Registered" when an advisor had no tags - a claim with nothing
+            behind it. The number replaces the claim. */}
         <span className="trades-adv-meta">
-          {a.expertise.length ? a.expertise.join(" · ") : "SEBI Registered"}
+          {a.expertise.length ? a.expertise.join(" · ") : "Analyst"}
           {a.tradeCount > 0 ? ` · ${a.tradeCount} call${a.tradeCount > 1 ? "s" : ""}` : ""}
+        </span>
+        <span className="trades-adv-sebi">
+          <SebiRegNo value={a.sebiRegistrationNo} />
         </span>
       </span>
       {a.sponsored && <span className="trades-adv-badge">Sponsored</span>}
@@ -365,8 +374,16 @@ export default function TradesClient({
                           <CheckCircle size={13} style={{ color: "#10b981" }} />
                           {sponsored && <span className="trades-promoted">Promoted</span>}
                         </div>
+                        {/* Was the bare claim "SEBI Registered Analyst". These
+                            are buy/sell calls, and the number - which was
+                            already in props, just never rendered - is what
+                            makes that claim checkable. */}
                         <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                          SEBI Registered Analyst · {formatRelativeTime(t.publishedAt ?? t.createdAt)}
+                          <SebiRegNo
+                            value={t.advisor?.advisorProfile?.sebiRegistrationNo}
+                            fallback="SEBI registration pending"
+                          />{" "}
+                          · {formatRelativeTime(t.publishedAt ?? t.createdAt)}
                         </div>
                       </div>
                       <span

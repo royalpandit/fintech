@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err } from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/auth";
+import { getMutualFunds } from "@/lib/amfi";
+import { isMutualFundSymbol } from "@/lib/instrument-type";
 import {
   computePortfolioSummary,
   computePositions,
@@ -40,6 +42,31 @@ export async function GET(req: NextRequest) {
   }));
 
   let priceBySymbol = lastPricesFromTrades(trades);
+
+  /*
+   * Mark fund holdings to the published NAV.
+   *
+   * lastPricesFromTrades falls back to the price a position was bought at, so
+   * without this a mutual fund would sit at its purchase NAV for ever and show
+   * exactly zero unrealised P&L no matter how the fund performed. Equities get
+   * a live quote pushed in through ?quotes= by the client; funds have no such
+   * feed, and the AMFI list is already cached for six hours, so reading it here
+   * costs nothing after the first call.
+   */
+  const fundCodes = [...new Set(trades.map((t) => t.symbol).filter(isMutualFundSymbol))];
+  if (fundCodes.length) {
+    try {
+      const funds = await getMutualFunds();
+      const navByCode = new Map(funds.map((f) => [f.code, f.nav]));
+      for (const code of fundCodes) {
+        const nav = navByCode.get(code);
+        if (nav != null && nav > 0) priceBySymbol[code.toUpperCase()] = nav;
+      }
+    } catch {
+      // AMFI unreachable — fall through to the purchase price rather than
+      // failing the whole summary over one holding.
+    }
+  }
 
   const quotesParam = new URL(req.url).searchParams.get("quotes");
   if (quotesParam) {

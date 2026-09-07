@@ -7,6 +7,7 @@ import {
   useState,
   type TouchEvent as ReactTouchEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   FiX,
   FiZoomIn,
@@ -99,6 +100,22 @@ function ImageLightbox({
     return () => window.removeEventListener("resize", onResize);
   }, [open, applyFit]);
 
+  /*
+   * Fit again once the overlay has actually been laid out.
+   *
+   * Two ways the onLoad path alone gets it wrong: a cached image is already
+   * `complete` when it mounts, so onLoad never fires at all; and even when it
+   * does, it can fire before the stage has been given its height, in which case
+   * computeFitZoom divides by a stage of ~0 and the picture ends up at the
+   * wrong scale. A frame later the layout is settled and the measurement is
+   * real.
+   */
+  useEffect(() => {
+    if (!open) return;
+    const id = requestAnimationFrame(() => applyFit());
+    return () => cancelAnimationFrame(id);
+  }, [open, index, applyFit]);
+
   const zoomIn = () => setZoomMul(z => Math.min(5 / fitZoom, z + 0.25));
   const zoomOut = () => setZoomMul(z => Math.max(0.25 / fitZoom, z - 0.25));
   const resetView = () => {
@@ -165,7 +182,7 @@ function ImageLightbox({
 
   const zoomPct = Math.round(zoomMul * 100);
 
-  return (
+  const body = (
     <div
       className="sf-lightbox-overlay"
       onClick={onClose}
@@ -258,6 +275,18 @@ function ImageLightbox({
       </div>
     </div>
   );
+
+  /*
+   * On <body>, not inside the post card.
+   *
+   * A `position: fixed` overlay resolves against the nearest ancestor with a
+   * transform, filter, contain or will-change — and this viewer is mounted deep
+   * inside a feed post, under the app shell. When that happens `inset: 0` spans
+   * the ancestor rather than the viewport, so the stage becomes document-tall
+   * and the picture centres far below the fold, which is how it was rendering.
+   * I could not pin down which ancestor; portalling makes it moot.
+   */
+  return typeof document === "undefined" ? body : createPortal(body, document.body);
 }
 
 function FeedImagePreview({

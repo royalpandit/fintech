@@ -34,3 +34,38 @@ export async function POST(req: NextRequest) {
 
   return ok({ connected: true, broker: body.broker_name, account_id: account.id });
 }
+
+
+/**
+ * DELETE /api/v1/portfolio/connect?broker=Zerodha
+ *
+ * Unlink a broker. The account row goes; the portfolio is only soft-deleted.
+ *
+ * That distinction matters: Portfolio cascades to tradesReal and assets, so a
+ * hard delete would take the user's entire real trade history with it because
+ * they unlinked an account. Setting deletedAt hides it everywhere (every query
+ * already filters on deletedAt: null) and reconnecting the same broker later
+ * revives the same portfolio rather than starting a second one.
+ */
+export async function DELETE(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (!auth) return err("Unauthorized", 401);
+  const userId = auth.userId;
+
+  const broker = (req.nextUrl.searchParams.get("broker") ?? "").trim();
+  if (!broker) return err("broker is required");
+
+  const account = await prisma.brokerAccount.findUnique({
+    where: { userId_brokerName: { userId, brokerName: broker } },
+    select: { id: true },
+  });
+  if (!account) return err("That broker is not connected", 404);
+
+  await prisma.brokerAccount.delete({ where: { id: account.id } });
+  await prisma.portfolio.updateMany({
+    where: { userId, source: "broker", name: broker, deletedAt: null },
+    data: { deletedAt: new Date() },
+  });
+
+  return ok({ disconnected: true, broker });
+}

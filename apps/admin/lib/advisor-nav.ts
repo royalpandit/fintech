@@ -14,7 +14,8 @@ export const ADVISOR_MODULES = [
   "Markets",
   "Watchlist",
   "Finuer Basket",
-  "Competitions",
+  // Competitions hidden for now - /advisor/competition still works by URL.
+  // "Competitions",
   "Courses",
   "Earnings",
   "Analytics",
@@ -40,7 +41,7 @@ export const ADVISOR_NAV_GROUPS: { heading: string; modules: string[] }[] = [
       "Finuer Basket",
       // "Virtual Trading",   // see ADVISOR_MODULES above
       "Financial AI Agents",
-      "Competitions",
+      // "Competitions",   // see ADVISOR_MODULES above
     ],
   },
   { heading: "Inbox", modules: ["Messages", "Notifications"] },

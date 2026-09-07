@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "prisma generate && next dev -p 3001",
     "build": "prisma generate && next build",
+    "build:verify": "prisma generate && node scripts/build-verify.js",
     "start": "next start -p 3000",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
@@ -23,7 +24,8 @@
     "db:sponsorship-tiers": "prisma db execute --file scripts/sql/sponsorship-tiers-migration.sql",
     "db:agent-starter-prompts": "prisma db execute --file scripts/sql/agent-starter-prompts-migration.sql",
     "db:basket-last-calculated": "prisma db execute --file scripts/sql/finuer-basket-last-calculated-migration.sql",
-    "db:basket-beta": "prisma db execute --file scripts/sql/finuer-basket-beta-migration.sql"
+    "db:basket-beta": "prisma db execute --file scripts/sql/finuer-basket-beta-migration.sql",
+    "db:app-credentials": "prisma db execute --file scripts/sql/app-credentials-migration.sql"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1106.0",

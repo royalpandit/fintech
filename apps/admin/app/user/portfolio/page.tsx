@@ -7,11 +7,13 @@ import {
   FiBarChart2,
   FiTarget,
   FiTrendingUp,
+  FiLink,
 } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
 import ConnectBrokerButton from "@/components/portfolio/connect-broker-button";
+import { loadPortfolioOverview } from "@/lib/portfolio-overview";
 import PaperPortfolioSection from "@/components/paper/paper-portfolio-section";
 import AreaChart from "@/components/advisor-ui/area-chart";
 import DonutChart from "@/components/advisor-ui/donut-chart";
@@ -46,7 +48,7 @@ export default async function PortfolioPage() {
   const isAuthed = Boolean(auth);
   const userId = auth?.userId ?? null;
 
-  const [portfolios, holdings, snapshots, brokerAccounts, liveHoldings] =
+  const [portfolios, holdings, snapshots, brokerAccounts, liveHoldings, paper] =
     await Promise.all([
       userId
         ? prisma.portfolio.findMany({
@@ -72,11 +74,25 @@ export default async function PortfolioPage() {
         : Promise.resolve([]),
       // Always try to fetch live Angel One holdings
       getHoldings().catch(() => [] as Awaited<ReturnType<typeof getHoldings>>),
+      /*
+       * The paper book, priced at the market.
+       *
+       * Everything below used to read the `portfolios` row and its assets,
+       * which only a broker sync writes. With no broker connected that is all
+       * zeroes — so the page showed a ₹0 portfolio, an empty allocation donut
+       * and "No holdings synced yet" directly above a positions table holding
+       * real stock. These are the numbers the investor actually has.
+       */
+      userId ? loadPortfolioOverview(userId) : Promise.resolve(null),
     ]);
 
   const activePortfolio = portfolios[0];
-  const totalValue = activePortfolio ? Number(activePortfolio.totalValue) : 0;
-  const dayChange = activePortfolio ? Number(activePortfolio.dayChange) : 0;
+  const brokerValue = activePortfolio ? Number(activePortfolio.totalValue) : 0;
+  // Broker-synced value plus the paper book. Either can be zero; the sum is
+  // what the investor is actually looking at.
+  const totalValue = brokerValue + (paper?.holdingsValue ?? 0);
+  const dayChange =
+    (activePortfolio ? Number(activePortfolio.dayChange) : 0) + (paper?.dayChange ?? 0);
   const riskScore = activePortfolio ? Number(activePortfolio.riskScore) : 0;
   const diversificationScore = activePortfolio
     ? Number(activePortfolio.diversificationScore)
@@ -87,12 +103,22 @@ export default async function PortfolioPage() {
     value: Number(s.totalValue),
   }));
 
-  // Sector grouping for donut
+  /*
+   * Sector grouping for the donut.
+   *
+   * Broker-synced assets carry their own sector; paper holdings do not, so
+   * those are classified through lib/market-sectors (RELIANCE → Energy, INFY →
+   * IT). Anything the curated list does not recognise — an ETF, a fund scheme
+   * code — lands in "Other" rather than being guessed into a real sector.
+   */
   const sectorTotals = new Map<string, number>();
   for (const h of holdings) {
     const sector = h.sector ?? "Others";
     const value = Number(h.currentPrice ?? h.averagePrice) * Number(h.quantity);
     sectorTotals.set(sector, (sectorTotals.get(sector) ?? 0) + value);
+  }
+  for (const p of paper?.positions ?? []) {
+    sectorTotals.set(p.sector, (sectorTotals.get(p.sector) ?? 0) + p.marketValue);
   }
   const sectorSlices = Array.from(sectorTotals.entries())
     .sort(([, a], [, b]) => b - a)
@@ -104,6 +130,11 @@ export default async function PortfolioPage() {
       detail: formatINR(value, true),
     }));
   const sectorTotal = sectorSlices.reduce((s, x) => s + x.value, 0);
+
+  const chartSymbol =
+    (paper?.positions ?? [])
+      .filter((p) => !/^\d{4,8}$/.test(p.symbol))
+      .sort((a, b) => b.marketValue - a.marketValue)[0]?.symbol ?? "NIFTY 50";
 
   return (
     <section>
@@ -243,15 +274,22 @@ export default async function PortfolioPage() {
                 value: `${dayChange >= 0 ? "+" : ""}${formatINR(dayChange, true)}`,
                 color: dayChange >= 0 ? "#16a34a" : "#dc2626",
               },
+              /*
+               * Invested and unrealised P&L replace Risk Score and
+               * Diversification. Those two are only ever written by a broker
+               * sync, so they read "0.0 / 10" and "0%" for every user without
+               * one — a scored assessment that was never actually scored.
+               * These are computed from the holdings on screen.
+               */
               {
-                label: "Risk Score",
-                value: `${riskScore.toFixed(1)} / 10`,
-                color: riskScore < 4 ? "#16a34a" : riskScore < 7 ? "#f59e0b" : "#dc2626",
+                label: "Invested",
+                value: formatINR(paper?.investedCost ?? 0, true),
+                color: "var(--text)",
               },
               {
-                label: "Diversification",
-                value: `${diversificationScore.toFixed(0)}%`,
-                color: "#0ea5e9",
+                label: "Unrealised P&L",
+                value: `${(paper?.unrealizedPnL ?? 0) >= 0 ? "+" : ""}${formatINR(paper?.unrealizedPnL ?? 0, true)}`,
+                color: (paper?.unrealizedPnL ?? 0) >= 0 ? "#16a34a" : "#dc2626",
               },
             ].map((s) => (
               <article
@@ -327,13 +365,36 @@ export default async function PortfolioPage() {
           >
             <div style={{ padding: "16px 18px", borderBottom: "1px solid var(--border)" }}>
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
-                Holdings ({holdings.length})
+                Broker Holdings ({holdings.length})
               </h3>
             </div>
             {holdings.length === 0 ? (
-              <p style={{ margin: 0, padding: 32, textAlign: "center", color: "var(--text-muted)" }}>
-                No holdings synced yet.
-              </p>
+              /* "No holdings synced yet" read as "you own nothing", directly
+                 above a paper positions table full of stock. An empty state
+                 should say what is missing AND offer the one action that fixes
+                 it, rather than leaving the user to find the button elsewhere
+                 on the page. */
+              <div className="brk-empty">
+                <span className="brk-empty-icon" aria-hidden>
+                  <FiLink size={22} />
+                </span>
+                <h4 className="brk-empty-title">No broker account connected</h4>
+                <p className="brk-empty-text">
+                  Link a broker to pull your real holdings, cost basis and P&amp;L in
+                  alongside everything else here.
+                  {(paper?.positions.length ?? 0) > 0
+                    ? " Your paper positions are already shown above."
+                    : ""}
+                </p>
+                <ConnectBrokerButton
+                  label="Connect a broker"
+                  variant="solid"
+                  connectedBrokers={brokerAccounts.map((b) => b.brokerName)}
+                />
+                <p className="brk-empty-note">
+                  Read-only access. We never place orders through your broker.
+                </p>
+              </div>
             ) : (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
@@ -451,7 +512,12 @@ export default async function PortfolioPage() {
             >
               Live Chart — OHLCV
             </h3>
-            <LiveCandleChart defaultSymbol="NIFTY 50" />
+            {/* Opens on the largest holding rather than NIFTY 50. On a
+                portfolio page the index is the least relevant chart available:
+                it is the one thing the investor does not own. Falls back to
+                NIFTY when there is nothing held, and skips fund scheme codes,
+                which have no candle chart. */}
+            <LiveCandleChart defaultSymbol={chartSymbol} />
           </article>
 
           {/* ── Angel One Live Holdings ── */}

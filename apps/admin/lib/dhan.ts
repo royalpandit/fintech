@@ -40,14 +40,17 @@ export type {
 
 const BASE = "https://api.dhan.co/v2";
 
-function dhanHeaders() {
+// Async because the access token is resolved from the database first (it
+// rotates daily and is managed from /super-admin/settings), with a short
+// in-process cache in front so this is not a query per request.
+async function dhanHeaders() {
   const clientId = process.env.DHAN_CLIENT_ID?.trim();
   if (!clientId) {
     throw new Error("DHAN_CLIENT_ID not set in apps/admin/.env");
   }
   return {
     "Content-Type": "application/json",
-    "access-token": getDhanAccessToken(),
+    "access-token": await getDhanAccessToken(),
     "client-id": clientId,
   };
 }
@@ -320,7 +323,7 @@ async function dhanPost<T>(path: string, body: unknown): Promise<T> {
   console.log(`[Dhan] POST ${path}`, JSON.stringify(body).slice(0, 300));
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
-    headers: dhanHeaders(),
+    headers: await dhanHeaders(),
     body: JSON.stringify(body),
     cache: "no-store",
   });
@@ -498,7 +501,7 @@ export interface Holding {
 
 export async function getHoldings(): Promise<Holding[]> {
   const res = await fetch(`${BASE}/portfolio/holdings`, {
-    headers: dhanHeaders(),
+    headers: await dhanHeaders(),
     cache: "no-store",
   });
   const json = await res.json() as { data?: Array<Record<string, unknown>> };
@@ -542,7 +545,7 @@ export interface Position {
 
 export async function getPositions(): Promise<Position[]> {
   const res = await fetch(`${BASE}/portfolio/positions`, {
-    headers: dhanHeaders(),
+    headers: await dhanHeaders(),
     cache: "no-store",
   });
   const json = await res.json() as { data?: Array<Record<string, unknown>> };

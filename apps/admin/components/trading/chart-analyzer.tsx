@@ -93,7 +93,7 @@ function analyze(candles: Candle[]): Analysis | null {
 }
 
 const VERDICT_TONE: Record<string, { bg: string; color: string; line: string }> = {
-  Bullish: { bg: "rgba(22,163,74,0.12)", color: "#15803d", line: "The technical setup looks constructive." },
+  Bullish: { bg: "rgba(22,163,74,0.12)", color: "#16a34a", line: "The technical setup looks constructive." },
   Bearish: { bg: "rgba(220,38,38,0.12)", color: "#b91c1c", line: "The technical setup looks weak." },
   Neutral: { bg: "var(--surface-2)", color: "var(--text-muted)", line: "The technical setup is mixed / range-bound." },
 };

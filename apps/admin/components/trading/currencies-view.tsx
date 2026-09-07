@@ -43,8 +43,20 @@ export default function CurrenciesView() {
 
   // Matches the ISO code ("USD", "usd/inr") and the display name ("Dollar").
   const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase().replace(/\s*\/\s*inr$/, "");
-    if (!needle) return rates;
+    const needle = q
+      .trim()
+      .toLowerCase()
+      // Every row on this tab IS a pair against the rupee, so the INR half of
+      // whatever the user typed carries no information — strip it from either
+      // side ("usd/inr", "inr/usd") and match on the other currency.
+      .replace(/\s*\/\s*inr$/, "")
+      .replace(/^inr\s*\/\s*/, "")
+      .trim();
+    // A bare "inr" is the same request with the other half left off. INR is the
+    // quote currency of every row and never a row of its own, so matching it
+    // against code/name found nothing and the tab claimed "0 of 165" — which
+    // reads as "we have no rupee data" on a page that is entirely rupee data.
+    if (!needle || needle === "inr") return rates;
     return rates.filter(
       (r) => r.code.toLowerCase().includes(needle) || r.name.toLowerCase().includes(needle),
     );

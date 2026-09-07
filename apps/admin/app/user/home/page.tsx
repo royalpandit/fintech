@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { FiArrowUpRight, FiArrowDownRight } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
+import { loadPortfolioOverview } from "@/lib/portfolio-overview";
 import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
 // Stock Basket retired — superseded by Finuer Basket.
@@ -82,6 +83,7 @@ export default async function UserDashboardPage({
     featuredCourses,
     totalAdvisors,
     totalApprovedPosts,
+    paper,
   ] = await Promise.all([
     userId
       ? prisma.portfolio.findMany({
@@ -156,6 +158,16 @@ export default async function UserDashboardPage({
     prisma.marketPost.count({
       where: { complianceStatus: "approved", deletedAt: null },
     }),
+    /*
+     * The paper book, priced at the market.
+     *
+     * Every headline number below used to come from the `portfolios` row and
+     * the daily snapshots table, both of which only a broker sync writes. With
+     * no broker connected they are empty, so each figure fell through to a
+     * hardcoded literal and the dashboard reported a ₹1,25,430 portfolio with
+     * ₹2,450.75 of P&L to a user who owned nothing.
+     */
+    userId ? loadPortfolioOverview(userId) : Promise.resolve(null),
   ]);
 
   // Hydrate top advisors
@@ -170,11 +182,12 @@ export default async function UserDashboardPage({
 
   // ════ Compute KPIs ════
   const activePortfolio = portfolios[0];
-  const totalValue = activePortfolio ? Number(activePortfolio.totalValue) : 0;
-  const totalInvested = holdings.reduce(
-    (s, h) => s + Number(h.averagePrice) * Number(h.quantity),
-    0,
-  );
+  // Broker-synced value plus the paper book; either half can legitimately be 0.
+  const totalValue =
+    (activePortfolio ? Number(activePortfolio.totalValue) : 0) + (paper?.holdingsValue ?? 0);
+  const totalInvested =
+    holdings.reduce((s, h) => s + Number(h.averagePrice) * Number(h.quantity), 0) +
+    (paper?.investedCost ?? 0);
   const currentHoldingsValue = holdings.reduce(
     (s, h) => s + Number(h.currentPrice ?? h.averagePrice) * Number(h.quantity),
     0,
@@ -192,9 +205,19 @@ export default async function UserDashboardPage({
     sortedSnaps.length > 1
       ? Number(sortedSnaps[sortedSnaps.length - 2].totalValue)
       : totalInvested;
-  const todayPnL = todayValue - yesterdayValue;
+  /*
+   * Day change comes from the live book first.
+   *
+   * The snapshot pair below only exists once a broker sync has been writing
+   * daily rows; without one, todayValue and yesterdayValue are both derived
+   * from zeroes and the result is a flat 0 — which is what made the hardcoded
+   * fallbacks below look plausible in the first place.
+   */
+  const snapshotPnL = todayValue - yesterdayValue;
+  const todayPnL = paper?.dayChange ?? snapshotPnL;
   const todayPnLPct =
-    yesterdayValue > 0 ? ((todayValue - yesterdayValue) / yesterdayValue) * 100 : 0;
+    paper?.dayChangePct ??
+    (yesterdayValue > 0 ? ((todayValue - yesterdayValue) / yesterdayValue) * 100 : 0);
 
   // const buyingPower = wallet?.balance ? Number(wallet.balance) : 0;
 
@@ -352,7 +375,7 @@ export default async function UserDashboardPage({
                     letterSpacing: -0.6,
                   }}
                 >
-                  {formatINR(totalValue || 125430.5)}
+                  {formatINR(totalValue)}
                 </p>
                 <span
                   style={{
@@ -425,7 +448,7 @@ export default async function UserDashboardPage({
                   letterSpacing: -0.6,
                 }}
               >
-                {formatINR(totalInvested || 98750)}
+                {formatINR(totalInvested)}
               </p>
             </article>
 
@@ -458,7 +481,7 @@ export default async function UserDashboardPage({
                 }}
               >
                 {positiveDelta ? "+" : "−"}
-                {formatINR(Math.abs(todayPnL || 2450.75))}
+                {formatINR(Math.abs(todayPnL))}
               </p>
               <p
                 style={{
@@ -504,7 +527,7 @@ export default async function UserDashboardPage({
                   letterSpacing: -0.6,
                 }}
               >
-                {formatINR(buyingPower || 26680.5)}
+                {formatINR(buyingPower)}
               </p>
             </article>
             */}
@@ -586,7 +609,7 @@ export default async function UserDashboardPage({
                 <DonutChart
                   slices={donutHoldings}
                   centerLabel="Total"
-                  centerValue={formatINR(totalValue || 125430.5, true)}
+                  centerValue={formatINR(totalValue, true)}
                   size={170}
                   thickness={26}
                 />
@@ -660,49 +683,18 @@ export default async function UserDashboardPage({
                           pnlPct,
                         };
                       })
-                    : [
-                        // Fallback rows so the screen is never empty
-                        {
-                          symbol: "AAPL",
-                          company: "Apple Inc.",
-                          shares: 50,
-                          avg: 150,
-                          curr: 169.3,
-                          value: 8465,
-                          pnl: 965,
-                          pnlPct: 12.87,
-                        },
-                        {
-                          symbol: "RELIANCE",
-                          company: "Reliance Ind.",
-                          shares: 100,
-                          avg: 2105,
-                          curr: 2280,
-                          value: 228000,
-                          pnl: 17500,
-                          pnlPct: 8.31,
-                        },
-                        {
-                          symbol: "TCS",
-                          company: "Tata Cons. Svcs.",
-                          shares: 75,
-                          avg: 3250,
-                          curr: 3465,
-                          value: 259875,
-                          pnl: 16125,
-                          pnlPct: 6.62,
-                        },
-                        {
-                          symbol: "HDFCBANK",
-                          company: "HDFC Bank",
-                          shares: 80,
-                          avg: 1450,
-                          curr: 1640,
-                          value: 131200,
-                          pnl: 15200,
-                          pnlPct: 13.1,
-                        },
-                      ]
+                    : /*
+                       * Was four invented positions - 50 AAPL, 100 RELIANCE and
+                       * so on, with made-up average prices and P&L - under a
+                       * comment reading "so the screen is never empty".
+                       *
+                       * On an investor dashboard that is indistinguishable from
+                       * a real portfolio: it showed share counts, cost basis and
+                       * a green +12.87% gain for stocks nobody owned. An empty
+                       * table is the honest answer, and the empty state below
+                       * says what to do about it.
+                       */
+                      []
                   ).map((row) => {
                     const positive = row.pnl >= 0;
                     const color = SYMBOL_COLORS[row.symbol] ?? "#64748b";
@@ -770,6 +762,25 @@ export default async function UserDashboardPage({
                       </tr>
                     );
                   })}
+                  {holdings.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        style={{
+                          padding: "28px 12px",
+                          textAlign: "center",
+                          fontSize: 12,
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        No holdings yet.{" "}
+                        <Link href="/user/portfolio" style={{ color: "#0ea5e9", fontWeight: 600 }}>
+                          Connect a broker
+                        </Link>{" "}
+                        to see your positions here.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

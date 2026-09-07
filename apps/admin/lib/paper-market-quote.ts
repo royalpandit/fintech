@@ -1,5 +1,6 @@
-﻿import { getOHLC, searchSymbol } from "@/lib/dhan";
-import { isEquityInstrument, isIndexInstrument } from "@/lib/instrument-type";
+﻿import { getMutualFundByCode } from "@/lib/amfi";
+import { getOHLC, searchSymbol } from "@/lib/dhan";
+import { isEquityInstrument, isIndexInstrument, isMutualFundExchange } from "@/lib/instrument-type";
 
 export type QuoteInput = {
   symbol: string;
@@ -18,7 +19,7 @@ const tokenCache = new Map<string, { token: string; exchange: string }>();
  * user type one freehand — have no token to pass, and orders used to be
  * rejected outright rather than looking one up.
  */
-async function resolveToken(
+export async function resolveToken(
   symbol: string,
   exchange: string,
 ): Promise<{ token: string; exchange: string } | null> {
@@ -76,6 +77,13 @@ const quoteCache = new Map<string, { ltp: number; at: number }>();
 
 /** Fetch live LTP for a single instrument (server-side). */
 export async function fetchLiveLtp(input: QuoteInput): Promise<number> {
+  // Mutual funds price off the AMFI NAV, not the exchange feed. They have no
+  // token and no intraday quote, so everything below this point — searchScrip,
+  // getOHLC, the 2s cache — is the wrong machinery for them.
+  if (isMutualFundExchange(input.exchange)) {
+    return fetchMutualFundNav(input.symbol);
+  }
+
   const symbol = normalizePaperSymbol(input.symbol);
   let token = input.token?.trim() || "";
   let exchange = (input.exchange || "NSE").toUpperCase();
@@ -109,3 +117,22 @@ export function normalizePaperSymbol(symbol: string): string {
   return symbol.trim().toUpperCase().split("-")[0].replace(/\.(NS|BO)$/i, "").replace(/\s+/g, "");
 }
 
+/**
+ * NAV for an AMFI scheme code, used as the fill price.
+ *
+ * No cache of its own: getMutualFunds() already holds the whole NAVAll feed for
+ * six hours, and NAV only changes once per business day, so a second cache
+ * would add staleness without saving a request.
+ *
+ * Schemes whose NAV is missing (merged or wound up, but still listed) are
+ * rejected rather than filled at zero.
+ */
+async function fetchMutualFundNav(code: string): Promise<number> {
+  const fund = await getMutualFundByCode(code);
+  if (!fund) throw new Error(`Unknown mutual fund scheme "${code}"`);
+  const nav = fund.nav;
+  if (nav == null || !Number.isFinite(nav) || nav <= 0) {
+    throw new Error(`No published NAV for ${fund.name}`);
+  }
+  return nav;
+}

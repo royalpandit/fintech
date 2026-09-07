@@ -193,26 +193,26 @@ function AddIndicatorModal({ onAdd, onClose, candles }: {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: "#fff", borderRadius: 14, padding: "24px 24px 20px", width: "min(520px,95vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}>
+      <div style={{ background: "var(--surface)", borderRadius: 14, padding: "24px 24px 20px", width: "min(520px,95vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#0f172a" }}>Add Custom Indicator</h2>
+          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--text)" }}>Add Custom Indicator</h2>
           <button type="button" onClick={onClose}
-            style={{ border: "none", background: "transparent", fontSize: 22, lineHeight: 1, cursor: "pointer", color: "#64748b", padding: "0 4px" }}>×</button>
+            style={{ border: "none", background: "transparent", fontSize: 22, lineHeight: 1, cursor: "pointer", color: "var(--text-muted)", padding: "0 4px" }}>×</button>
         </div>
 
         {/* Preset chips */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 7 }}>Quick presets</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 7 }}>Quick presets</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
             {PRESET_FORMULAS.map(pf => (
               <button key={pf.label} type="button"
                 onClick={() => { setFormula(pf.formula); setName(pf.label); setError(""); setPreview(null); }}
                 style={{ padding: "4px 10px", borderRadius: 20, border: "1px solid", fontSize: 11, fontWeight: 600, cursor: "pointer",
-                  borderColor: formula === pf.formula ? "#0ea5e9" : "#e2e8f0",
-                  background: formula === pf.formula ? "#0ea5e9" : "#f8fafc",
-                  color: formula === pf.formula ? "#fff" : "#334155" }}>
+                  borderColor: formula === pf.formula ? "#0ea5e9" : "var(--border)",
+                  background: formula === pf.formula ? "#0ea5e9" : "var(--surface-2)",
+                  color: formula === pf.formula ? "#fff" : "var(--text)" }}>
                 {pf.label}
               </button>
             ))}
@@ -221,43 +221,43 @@ function AddIndicatorModal({ onAdd, onClose, candles }: {
 
         {/* Name */}
         <div style={{ marginBottom: 13 }}>
-          <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 5 }}>Name</label>
+          <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 5 }}>Name</label>
           <input value={name} onChange={e => setName(e.target.value)}
-            style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 13, color: "#0f172a", outline: "none", boxSizing: "border-box" }} />
+            style={{ width: "100%", padding: "8px 10px", border: "1px solid var(--border)", borderRadius: 7, fontSize: 13, color: "var(--text)", outline: "none", boxSizing: "border-box" }} />
         </div>
 
         {/* Formula */}
         <div style={{ marginBottom: 10 }}>
-          <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 5 }}>Formula</label>
+          <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 5 }}>Formula</label>
           <textarea value={formula} rows={3}
             onChange={e => { setFormula(e.target.value); setError(""); setPreview(null); }}
-            style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 13, fontFamily: "monospace", color: "#0f172a", outline: "none", resize: "vertical", boxSizing: "border-box" }} />
-          <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 4, lineHeight: 1.7 }}>
-            <b style={{ color: "#64748b" }}>Variables:</b> <code>c</code> close · <code>o</code> open · <code>h</code> high · <code>l</code> low · <code>v</code> volume<br />
-            <b style={{ color: "#64748b" }}>Functions:</b> <code>SMA(n)</code> · <code>EMA(n)</code> · <code>STDDEV(n)</code> · <code>RSI(n)</code> · <code>VWAP()</code>
+            style={{ width: "100%", padding: "8px 10px", border: "1px solid var(--border)", borderRadius: 7, fontSize: 13, fontFamily: "monospace", color: "var(--text)", outline: "none", resize: "vertical", boxSizing: "border-box" }} />
+          <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4, lineHeight: 1.7 }}>
+            <b style={{ color: "var(--text-muted)" }}>Variables:</b> <code>c</code> close · <code>o</code> open · <code>h</code> high · <code>l</code> low · <code>v</code> volume<br />
+            <b style={{ color: "var(--text-muted)" }}>Functions:</b> <code>SMA(n)</code> · <code>EMA(n)</code> · <code>STDDEV(n)</code> · <code>RSI(n)</code> · <code>VWAP()</code>
           </div>
         </div>
 
         {/* Feedback */}
         {error && (
-          <div style={{ padding: "8px 10px", borderRadius: 7, background: "#fee2e2", color: "#dc2626", fontSize: 11, fontWeight: 600, marginBottom: 12 }}>
+          <div style={{ padding: "8px 10px", borderRadius: 7, background: "rgba(220,38,38,0.14)", color: "#dc2626", fontSize: 11, fontWeight: 600, marginBottom: 12 }}>
             {error}
           </div>
         )}
         {preview !== null && !error && (
-          <div style={{ padding: "8px 10px", borderRadius: 7, background: "#dcfce7", color: "#15803d", fontSize: 11, fontWeight: 600, marginBottom: 12 }}>
+          <div style={{ padding: "8px 10px", borderRadius: 7, background: "rgba(22,163,74,0.14)", color: "#16a34a", fontSize: 11, fontWeight: 600, marginBottom: 12 }}>
             Last value: {preview.toFixed(2)} ✓
           </div>
         )}
 
         {/* Color */}
         <div style={{ marginBottom: 14 }}>
-          <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 7 }}>Color</label>
+          <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 7 }}>Color</label>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {IND_COLORS.map(col => (
               <button key={col} type="button" onClick={() => setColor(col)}
                 style={{ width: 26, height: 26, borderRadius: "50%", background: col, cursor: "pointer", padding: 0,
-                  border: color === col ? "3px solid #0f172a" : "2px solid transparent", outline: "none" }} />
+                  border: color === col ? "3px solid var(--text)" : "2px solid transparent", outline: "none" }} />
             ))}
           </div>
         </div>
@@ -265,28 +265,28 @@ function AddIndicatorModal({ onAdd, onClose, candles }: {
         {/* Line options */}
         <div style={{ display: "flex", gap: 20, marginBottom: 22 }}>
           <div>
-            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6 }}>Width</label>
+            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6 }}>Width</label>
             <div style={{ display: "flex", gap: 4 }}>
               {[1, 2, 3].map(w => (
                 <button key={w} type="button" onClick={() => setLineWidth(w)}
                   style={{ width: 36, height: 28, border: "1px solid", borderRadius: 5, cursor: "pointer", fontSize: 11, fontWeight: 700,
-                    borderColor: lineWidth === w ? "#0ea5e9" : "#e2e8f0",
-                    background: lineWidth === w ? "rgba(14,165,233,0.1)" : "#fff",
-                    color: lineWidth === w ? "#0ea5e9" : "#64748b" }}>
+                    borderColor: lineWidth === w ? "#0ea5e9" : "var(--border)",
+                    background: lineWidth === w ? "rgba(14,165,233,0.1)" : "var(--surface)",
+                    color: lineWidth === w ? "#0ea5e9" : "var(--text-muted)" }}>
                   {w}px
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6 }}>Style</label>
+            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6 }}>Style</label>
             <div style={{ display: "flex", gap: 4 }}>
               {([{ label: "—", val: 0 }, { label: "- -", val: 2 }, { label: "···", val: 3 }] as const).map(ls => (
                 <button key={ls.val} type="button" onClick={() => setLineStyle(ls.val)}
                   style={{ padding: "4px 12px", border: "1px solid", borderRadius: 5, cursor: "pointer", fontSize: 12, fontWeight: 700,
-                    borderColor: lineStyle === ls.val ? "#0ea5e9" : "#e2e8f0",
-                    background: lineStyle === ls.val ? "rgba(14,165,233,0.1)" : "#fff",
-                    color: lineStyle === ls.val ? "#0ea5e9" : "#64748b" }}>
+                    borderColor: lineStyle === ls.val ? "#0ea5e9" : "var(--border)",
+                    background: lineStyle === ls.val ? "rgba(14,165,233,0.1)" : "var(--surface)",
+                    color: lineStyle === ls.val ? "#0ea5e9" : "var(--text-muted)" }}>
                   {ls.label}
                 </button>
               ))}
@@ -297,11 +297,11 @@ function AddIndicatorModal({ onAdd, onClose, candles }: {
         {/* Actions */}
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button type="button" onClick={validate}
-            style={{ padding: "9px 16px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "#f8fafc", color: "#0f172a" }}>
+            style={{ padding: "9px 16px", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "var(--surface-2)", color: "var(--text)" }}>
             Preview
           </button>
           <button type="button" onClick={onClose}
-            style={{ padding: "9px 16px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "#f8fafc", color: "#64748b" }}>
+            style={{ padding: "9px 16px", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "var(--surface-2)", color: "var(--text-muted)" }}>
             Cancel
           </button>
           <button type="button" onClick={handleAdd}
@@ -346,13 +346,13 @@ function OverviewPanel({
     <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
       <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
         <div>
-          <h3 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 600, color: "#0f172a" }}>{symbol.display}</h3>
-          <div style={{ fontSize: 12, color: "#64748b" }}>
+          <h3 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 600, color: "var(--text)" }}>{symbol.display}</h3>
+          <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
             {symbol.exchange} · {symbol.type} · Token {symbol.token}
           </div>
           {symbol.ltp !== undefined && (
             <div style={{ marginTop: 12, display: "flex", alignItems: "baseline", gap: 10 }}>
-              <span style={{ fontSize: 28, fontWeight: 600, color: "#0f172a" }}>{fmtP(symbol.ltp)}</span>
+              <span style={{ fontSize: 28, fontWeight: 600, color: "var(--text)" }}>{fmtP(symbol.ltp)}</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: up ? "#16a34a" : "#dc2626" }}>
                 {up ? "▲" : "▼"} {fmtPct(symbol.changePct ?? dayChange ?? undefined)}
               </span>
@@ -376,19 +376,19 @@ function OverviewPanel({
       </div>
 
       {loading ? (
-        <p style={{ color: "#94a3b8", fontSize: 13 }}>Loading overview…</p>
+        <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Loading overview…</p>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12 }}>
           {stats.map(s => (
-            <div key={s.label} style={{ background: "#f8fafc", border: "1px solid #eef0f4", borderRadius: 10, padding: "12px 14px" }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>{s.label}</div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{s.value}</div>
+            <div key={s.label} style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>{s.label}</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)" }}>{s.value}</div>
             </div>
           ))}
         </div>
       )}
 
-      <p style={{ marginTop: 24, fontSize: 11, color: "#94a3b8", lineHeight: 1.6 }}>
+      <p style={{ marginTop: 24, fontSize: 11, color: "var(--text-muted)", lineHeight: 1.6 }}>
         Live quote via Angel One SmartAPI. Select a symbol from search to update chart, overview, and option chain together.
       </p>
     </div>
@@ -1044,7 +1044,7 @@ function TradingTerminalInner({
           <button key={tool.id} type="button" title={tool.title} onClick={() => setActiveTool(tool.id)}
             style={{ width: 30, height: 30, border: "none", borderRadius: 6, cursor: "pointer",
               background: activeTool === tool.id ? "rgba(14,165,233,0.12)" : "transparent",
-              color: activeTool === tool.id ? "#0ea5e9" : "#64748b",
+              color: activeTool === tool.id ? "#0ea5e9" : "var(--text-muted)",
               display: "flex", alignItems: "center", justifyContent: "center" }}>
             {tool.icon}
           </button>
@@ -1055,7 +1055,7 @@ function TradingTerminalInner({
           title="Chart settings"
           aria-expanded={showSettings}
           onClick={() => setShowSettings(v => !v)}
-          style={{ width: 30, height: 30, border: "none", borderRadius: 6, cursor: "pointer", background: showSettings ? "rgba(14,165,233,0.16)" : "transparent", color: showSettings ? "#0ea5e9" : "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}
+          style={{ width: 30, height: 30, border: "none", borderRadius: 6, cursor: "pointer", background: showSettings ? "rgba(14,165,233,0.16)" : "transparent", color: showSettings ? "#0ea5e9" : "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
         </button>
@@ -1078,34 +1078,34 @@ function TradingTerminalInner({
       <div className="tt-panel-center">
 
         {/* Symbol header */}
-        <div style={{ background: "#fff", borderBottom: "1px solid #eef0f4", padding: "8px 16px", display: "flex", alignItems: "center", gap: 14, flexShrink: 0, flexWrap: "wrap" }}>
+        <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", padding: "8px 16px", display: "flex", alignItems: "center", gap: 14, flexShrink: 0, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{selected.display}</span>
-            <span style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, background: "#f1f5f9", padding: "1px 6px", borderRadius: 4 }}>{selected.exchange} · {timeframeLabel(timeframe)}</span>
+            <span style={{ fontSize: 15, fontWeight: 600, color: "var(--text)" }}>{selected.display}</span>
+            <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, background: "var(--surface-2)", padding: "1px 6px", borderRadius: 4 }}>{selected.exchange} · {timeframeLabel(timeframe)}</span>
           </div>
           {selected.ltp !== undefined && (
             <>
-              <span style={{ fontSize: 18, fontWeight: 600, color: "#0f172a", letterSpacing: "-0.5px" }}>
+              <span style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", letterSpacing: "-0.5px" }}>
                 ₹{selected.ltp.toLocaleString("en-IN")}
               </span>
               <span style={{ fontSize: 12, fontWeight: 700, color: up ? "#16a34a" : "#dc2626" }}>
                 {up ? "▲" : "▼"} {fmtPct(selected.changePct)}
-                <span style={{ fontWeight: 500, marginLeft: 4, color: "#64748b" }}>({up ? "+" : ""}{fmtP(selected.change)})</span>
+                <span style={{ fontWeight: 500, marginLeft: 4, color: "var(--text-muted)" }}>({up ? "+" : ""}{fmtP(selected.change)})</span>
               </span>
             </>
           )}
           {headerOhlc && (
-            <div style={{ display: "flex", gap: 10, marginLeft: "auto", fontSize: 11, color: "#64748b" }}>
+            <div style={{ display: "flex", gap: 10, marginLeft: "auto", fontSize: 11, color: "var(--text-muted)" }}>
               {(["O", "H", "L", "C"] as const).map((l, idx) => (
-                <span key={l}><b style={{ color: "#0f172a" }}>{l}</b> {fmtP([headerOhlc.open, headerOhlc.high, headerOhlc.low, headerOhlc.close][idx])}</span>
+                <span key={l}><b style={{ color: "var(--text)" }}>{l}</b> {fmtP([headerOhlc.open, headerOhlc.high, headerOhlc.low, headerOhlc.close][idx])}</span>
               ))}
-              <span><b style={{ color: "#0f172a" }}>Vol</b> {Number(headerOhlc.volume).toLocaleString("en-IN")}</span>
+              <span><b style={{ color: "var(--text)" }}>Vol</b> {Number(headerOhlc.volume).toLocaleString("en-IN")}</span>
             </div>
           )}
         </div>
 
         {/* Toolbar */}
-        <div style={{ background: "#fff", borderBottom: "1px solid #eef0f4", padding: "0 16px", display: "flex", alignItems: "center", flexShrink: 0 }}>
+        <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", padding: "0 16px", display: "flex", alignItems: "center", flexShrink: 0 }}>
           {([
             { id: "chart" as const, label: "Chart" },
             { id: "overview" as const, label: "Overview" },
@@ -1113,7 +1113,7 @@ function TradingTerminalInner({
           ]).map(t => (
             <button key={t.id} type="button" onClick={() => setCenterTab(t.id)}
               style={{ padding: "9px 14px", border: "none", background: "transparent", fontWeight: 700, fontSize: 12, cursor: "pointer",
-                color: centerTab === t.id ? "#0ea5e9" : "#64748b",
+                color: centerTab === t.id ? "#0ea5e9" : "var(--text-muted)",
                 borderBottom: centerTab === t.id ? "2px solid #0ea5e9" : "2px solid transparent",
                 letterSpacing: 0.3, whiteSpace: "nowrap" }}>
               {t.label}
@@ -1208,7 +1208,7 @@ function TradingTerminalInner({
             <>
               <div style={{ flex: 1, position: "relative", margin: "8px 16px 0", overflow: "hidden" }}>
                 {candleLoading ? (
-                  <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "#94a3b8", fontSize: 13 }}>
+                  <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "var(--text-muted)", fontSize: 13 }}>
                     Loading chart data…
                   </div>
                 ) : candleError ? (
@@ -1216,7 +1216,7 @@ function TradingTerminalInner({
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="#dc2626"/></svg>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#dc2626", textAlign: "center", maxWidth: 360 }}>{candleError}</div>
                     <button type="button" onClick={() => fetchCandles(false)}
-                      style={{ marginTop: 4, padding: "7px 16px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "#f8fafc", color: "#0f172a" }}>
+                      style={{ marginTop: 4, padding: "7px 16px", border: "1px solid var(--border)", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "var(--surface-2)", color: "var(--text)" }}>
                       Retry
                     </button>
                   </div>
@@ -1253,12 +1253,12 @@ function TradingTerminalInner({
               </div>
 
               {/* Period selector — only show periods within the interval's max-day limit */}
-              <div style={{ background: "#fff", borderTop: "1px solid #eef0f4", display: "flex", alignItems: "center", padding: "4px 16px", gap: 2, flexShrink: 0 }}>
+              <div style={{ background: "var(--surface)", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "4px 16px", gap: 2, flexShrink: 0 }}>
                 {PERIODS.filter(p => p.days <= maxDaysForTimeframe(timeframe)).map(p => (
                   <button key={p.label} type="button" onClick={() => setPeriod(p)}
                     style={{ padding: "3px 10px", border: "none", borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: "pointer",
                       background: period.label === p.label ? "rgba(14,165,233,0.12)" : "transparent",
-                      color: period.label === p.label ? "#0ea5e9" : "#64748b" }}>
+                      color: period.label === p.label ? "#0ea5e9" : "var(--text-muted)" }}>
                     {p.label}
                   </button>
                 ))}

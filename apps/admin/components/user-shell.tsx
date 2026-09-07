@@ -84,7 +84,9 @@ const INVESTING_NAV: NavItem[] = [
   // Stock Basket (AI stock picks) retired — superseded by Finuer Basket.
   // { label: "Stock Basket", href: "/user/stock-picks", Icon: FiTarget },
   { label: "Finuer Basket", href: "/user/finuer-basket", Icon: FiBriefcase },
-  { label: "Competition", href: "/user/competition", Icon: FiAward },
+  // Competition is hidden for now. The routes under /user/competition still
+  // build and still work by URL; this only removes the sidebar link.
+  // { label: "Competition", href: "/user/competition", Icon: FiAward },
   // Virtual Trading and Wallet are hidden from the investor nav for now. The
   // routes still exist and still work if you know the URL — this only takes
   // them out of the sidebar. Uncomment both lines to bring the tabs back.
@@ -100,7 +102,7 @@ const INVESTING_NAV: NavItem[] = [
 const BOTTOM_NAV: NavItem[] = [
   { label: "Feed", href: "/user/feed", Icon: FiHome },
   { label: "Pros", href: "/user/advisors", Icon: FiUsers },
-  { label: "Compete", href: "/user/competition", Icon: FiAward },
+  // { label: "Compete", href: "/user/competition", Icon: FiAward },   // hidden - see INVESTING_NAV
   { label: "Messages", href: "/user/messages", Icon: FiMessageCircle },
   { label: "Alerts", href: "/user/notifications", Icon: FiBell },
 ];

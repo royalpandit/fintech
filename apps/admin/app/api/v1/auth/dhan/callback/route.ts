@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     searchParams.get("token");
 
   if (directToken) {
-    storeDhanToken(directToken, 86_400); // 24 h
+    await storeDhanToken(directToken, { expiresInSeconds: 86_400 });
     return NextResponse.redirect(
       new URL("/super-admin?dhan=authorized", req.url),
     );
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
         console.error("[Dhan OAuth] token exchange failed:", data);
         return NextResponse.redirect(new URL("/super-admin?dhan=error", req.url));
       }
-      storeDhanToken(data.access_token, data.expires_in ?? 86_400);
+      await storeDhanToken(data.access_token, { expiresInSeconds: data.expires_in ?? 86_400 });
       return NextResponse.redirect(new URL("/super-admin?dhan=authorized", req.url));
     } catch (e) {
       console.error("[Dhan OAuth] callback error:", e);

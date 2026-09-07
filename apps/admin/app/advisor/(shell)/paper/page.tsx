@@ -61,7 +61,7 @@ export default async function AdvisorPaperPage() {
         </article>
       </div>
 
-      <PaperPortfolioSection userId={auth.userId} />
+      <PaperPortfolioSection userId={auth.userId} basePath="/advisor/portfolio" />
     </section>
   );
 }

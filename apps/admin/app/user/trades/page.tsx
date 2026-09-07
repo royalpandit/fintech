@@ -123,6 +123,7 @@ export default async function TradesPage() {
     userId: true,
     profileImageUrl: true,
     expertiseTags: true,
+    sebiRegistrationNo: true,
     user: { select: { id: true, fullName: true } },
   } as const;
 
@@ -152,6 +153,7 @@ export default async function TradesPage() {
     fullName: r.user.fullName,
     image: r.profileImageUrl,
     expertise: r.expertiseTags.slice(0, 2),
+    sebiRegistrationNo: r.sebiRegistrationNo,
     tradeCount: tradeCount.get(r.userId) ?? 0,
     sponsored,
   });

@@ -5,17 +5,19 @@ import Link from "next/link";
 import { FiArrowUpRight, FiArrowDownRight, FiBarChart2 } from "react-icons/fi";
 import MarketSearch from "@/components/trading/market-search";
 import MutualFundsView from "@/components/trading/mutual-funds-view";
-import CryptoView from "@/components/trading/crypto-view";
-import CurrenciesView from "@/components/trading/currencies-view";
+// Hidden from Markets - see the TABS list below.
+// import CryptoView from "@/components/trading/crypto-view";
+// import CurrenciesView from "@/components/trading/currencies-view";
 import MarketsAllView from "@/components/trading/markets-all-view";
 import MarketsPlaceholder from "@/components/trading/markets-placeholder";
-import GlobalMarketsView from "@/components/trading/global-markets-view";
+// import GlobalMarketsView from "@/components/trading/global-markets-view";
 import IpoView from "@/components/trading/ipo-view";
 import EtfView from "@/components/trading/etf-view";
 import AddToWatchlistButton from "@/components/watchlist/add-to-watchlist-button";
 import TradeButtons from "@/components/trading/trade-buttons";
 import type { WatchlistItem } from "@/components/trading/trading-terminal-types";
 import { MARKET_SECTORS, stockInSector } from "@/lib/market-sectors";
+import { quoteRefreshMs } from "@/lib/market-refresh";
 
 type OverviewRow = {
   symbol: string;
@@ -59,10 +61,10 @@ type MarketTab =
   | "mf"
   | "etf"
   | "commodities"
-  | "ipo"
-  | "crypto"
-  | "currencies"
-  | "global";
+  | "ipo";
+// | "crypto"
+// | "currencies"
+// | "global";
 
 const TABS: { key: MarketTab; label: string }[] = [
   { key: "all", label: "All" },
@@ -71,9 +73,18 @@ const TABS: { key: MarketTab; label: string }[] = [
   { key: "etf", label: "ETFs" },
   { key: "commodities", label: "Commodities" },
   { key: "ipo", label: "IPO" },
-  { key: "crypto", label: "Crypto" },
-  { key: "currencies", label: "Currencies" },
-  { key: "global", label: "Global" },
+  /*
+   * Crypto, Currencies and Global are hidden for now.
+   *
+   * Commented rather than deleted: the views, their API routes and their live
+   * feeds all still work, so putting a tab back is uncommenting its line here,
+   * its entry in MarketTab above, its import at the top, and its render line
+   * below. Leaving them in place also means no dead API routes to rediscover
+   * later.
+   */
+  // { key: "crypto", label: "Crypto" },
+  // { key: "currencies", label: "Currencies" },
+  // { key: "global", label: "Global" },
 ];
 
 export default function MarketsOverview() {
@@ -84,12 +95,16 @@ export default function MarketsOverview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updatedAt, setUpdatedAt] = useState<string>("");
+  /** Set when the board is running on the Yahoo standby feed. */
+  const [degraded, setDegraded] = useState("");
 
   const needsStockData = tab === "all" || tab === "stocks";
 
   useEffect(() => {
     if (!needsStockData) return;
     let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
     const load = async () => {
       try {
         const res = await fetch("/api/v1/market/overview", { cache: "no-store" });
@@ -99,23 +114,42 @@ export default function MarketsOverview() {
           setIndices(json.indices ?? []);
           setStocks(json.stocks ?? []);
           setError("");
+          setDegraded(json.degraded ? String(json.source ?? "fallback") : "");
           setUpdatedAt(new Date().toLocaleTimeString("en-IN"));
         } else if (json.rateLimited) {
           setError("Live quotes paused (rate limit). Retrying…");
         } else {
           setError(json.error || "Failed to load market data");
         }
+        return Number(json.refreshMs) || undefined;
       } catch {
         if (alive) setError("Network error");
       } finally {
         if (alive) setLoading(false);
       }
     };
-    load();
-    const id = setInterval(load, 10_000);
+
+    /*
+     * setTimeout chained after each response, not setInterval.
+     *
+     * At a three-second cadence a slow response matters: setInterval would fire
+     * the next request whether or not the last one came back, so one stalled
+     * fetch during a rate-limit pause produces a pile of overlapping requests
+     * that makes the pause worse. Waiting for the response first means at most
+     * one in flight, and it also lets the server dictate the interval — it
+     * returns a slower one when the market is shut or when the board has fallen
+     * back to Yahoo.
+     */
+    const tick = async () => {
+      const serverMs = await load();
+      if (!alive) return;
+      timer = setTimeout(tick, serverMs ?? quoteRefreshMs());
+    };
+    void tick();
+
     return () => {
       alive = false;
-      clearInterval(id);
+      if (timer) clearTimeout(timer);
     };
   }, [needsStockData]);
 
@@ -192,8 +226,8 @@ export default function MarketsOverview() {
 
       {tab === "all" && <MarketsAllView stocks={stocks} indices={indices} loading={loading} />}
       {tab === "mf" && <MutualFundsView />}
-      {tab === "crypto" && <CryptoView />}
-      {tab === "currencies" && <CurrenciesView />}
+      {/* {tab === "crypto" && <CryptoView />} */}
+      {/* {tab === "currencies" && <CurrenciesView />} */}
       {tab === "etf" && <EtfView />}
       {tab === "commodities" && (
         <MarketsPlaceholder
@@ -203,7 +237,7 @@ export default function MarketsOverview() {
         />
       )}
       {tab === "ipo" && <IpoView />}
-      {tab === "global" && <GlobalMarketsView />}
+      {/* {tab === "global" && <GlobalMarketsView />} */}
 
       {tab === "stocks" && (
       <>
@@ -222,6 +256,20 @@ export default function MarketsOverview() {
       </div>
 
       <MarketSearch />
+
+      {/* Not an error — the board is working, just not off the exchange feed.
+          Saying which source is on air matters here: these prices are delayed,
+          and someone reading a stale number as live would draw the wrong
+          conclusion from it. */}
+      {degraded && !error && (
+        <div className="mkt-degraded">
+          <strong>Delayed prices</strong>
+          <span>
+            Live feed unavailable — showing Yahoo Finance data, which lags the
+            exchange by around 15 minutes. Trading uses live prices only.
+          </span>
+        </div>
+      )}
 
       {error && (
         <div

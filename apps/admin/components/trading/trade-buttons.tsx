@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import TradeDialog from "@/components/trading/trade-dialog";
-import { isEquityInstrument, isIndexInstrument } from "@/lib/instrument-type";
+import { isEquityInstrument, isIndexInstrument, MF_EXCHANGE } from "@/lib/instrument-type";
 
 /**
 
@@ -73,10 +73,20 @@ import { isEquityInstrument, isIndexInstrument } from "@/lib/instrument-type";
 const EXTRA_TRADABLE_TYPES = new Set(["", "ETF"]);
 const TRADABLE_EXCHANGES = new Set(["", "NSE", "BSE"]);
 
+/**
+ * Mutual funds are now an exception to the note above.
+ *
+ * They are still not on the exchange feed and still have no intraday LTP — but
+ * lib/paper-market-quote.ts now prices exchange "MF" off the AMFI NAV instead
+ * of Dhan, so an order does fill. The rest of the path (wallet debit, holdings,
+ * P&L) is unchanged, because it only ever needed a symbol and a price.
+ */
 export function isPaperTradable(instrumentType?: string | null, exchange?: string | null): boolean {
+  const ex = (exchange ?? "").trim().toUpperCase();
+  if (ex === MF_EXCHANGE) return true;
   const t = (instrumentType ?? "").trim().toUpperCase();
   const typeOk = EXTRA_TRADABLE_TYPES.has(t) || isEquityInstrument(t) || isIndexInstrument(t);
-  return typeOk && TRADABLE_EXCHANGES.has((exchange ?? "").trim().toUpperCase());
+  return typeOk && TRADABLE_EXCHANGES.has(ex);
 }
 
 /**
@@ -100,6 +110,10 @@ export default function TradeButtons({
   instrumentType,
   exchange,
   price,
+  kind = "equity",
+  displayName,
+  token,
+  tradingSymbol,
   size = "sm",
   className = "",
 }: {
@@ -111,6 +125,12 @@ export default function TradeButtons({
   /** Last traded price, when the caller has it — lets the popover show an
    *  order estimate without a second quote request. */
   price?: number | null;
+  /** "mf" swaps the popover to units-at-NAV. See TradeDialog. */
+  kind?: "equity" | "mf";
+  /** Readable label when `symbol` is a code (AMFI scheme id). */
+  displayName?: string;
+  token?: string | null;
+  tradingSymbol?: string | null;
   size?: "sm" | "md";
   className?: string;
 }) {
@@ -118,6 +138,7 @@ export default function TradeButtons({
   // The popover points at this, and re-measures it on scroll.
   const anchorRef = useRef<HTMLSpanElement>(null);
   const sym = (symbol ?? "").trim().toUpperCase();
+  const label = displayName?.trim() || sym;
 
   if (!sym) return null;
   if (!isPaperTradable(instrumentType, exchange)) return null;
@@ -128,8 +149,8 @@ export default function TradeButtons({
         <button
           type="button"
           className="trade-btn trade-btn--buy"
-          title={`Buy ${sym} with virtual funds`}
-          aria-label={`Buy ${sym} with virtual funds`}
+          title={`Buy ${label} with virtual funds`}
+          aria-label={`Buy ${label} with virtual funds`}
           onClick={() => setOpen((v) => (v === "buy" ? null : "buy"))}
         >
           B<span className="trade-btn-full">uy</span>
@@ -137,8 +158,8 @@ export default function TradeButtons({
         <button
           type="button"
           className="trade-btn trade-btn--sell"
-          title={`Sell ${sym} with virtual funds`}
-          aria-label={`Sell ${sym} with virtual funds`}
+          title={`Sell ${label} with virtual funds`}
+          aria-label={`Sell ${label} with virtual funds`}
           onClick={() => setOpen((v) => (v === "sell" ? null : "sell"))}
         >
           S<span className="trade-btn-full">ell</span>
@@ -151,6 +172,10 @@ export default function TradeButtons({
           side={open}
           price={price}
           exchange={exchange}
+          kind={kind}
+          displayName={displayName}
+          token={token}
+          tradingSymbol={tradingSymbol}
           anchor={anchorRef.current}
           onClose={() => setOpen(null)}
         />

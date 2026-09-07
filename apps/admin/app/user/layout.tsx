@@ -4,6 +4,7 @@ import { requireAuthToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import UserShell from "@/components/user-shell";
 import AdvisorApprovalWatcher from "@/components/advisor-approval-watcher";
+import { loadPortfolioOverview } from "@/lib/portfolio-overview";
 
 // Guests can browse user-facing pages without an account.
 // Auth-only roles (advisor, admin, super_admin) get punted to their own consoles.
@@ -54,7 +55,7 @@ export default async function UserLayout({ children }: { children: React.ReactNo
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    const [u, unread, wallet, todayPortfolio, yesterdayPortfolio] = await Promise.all([
+    const [u, unread, wallet, todayPortfolio, yesterdayPortfolio, paper] = await Promise.all([
       prisma.user.findUnique({
         where: { id: auth.userId },
         select: { fullName: true, email: true, status: true, emailVerifiedAt: true, avatarUrl: true },
@@ -72,6 +73,18 @@ export default async function UserLayout({ children }: { children: React.ReactNo
         },
         orderBy: { day: "desc" },
       }),
+      /*
+       * The live paper book.
+       *
+       * The two snapshot queries above only return rows once a broker sync has
+       * been writing them daily. Without one they are both null, todayValue and
+       * yesterdayValue are both 0, and the sidebar showed "+₹0 (+0.00%)"
+       * permanently — which is what it has been doing.
+       *
+       * Cached for 15s inside loadPortfolioOverview, so rendering the shell on
+       * every page does not mean a quote request on every page.
+       */
+      loadPortfolioOverview(auth.userId),
     ]);
 
     if (u && u.status !== "suspended") {
@@ -89,9 +102,13 @@ export default async function UserLayout({ children }: { children: React.ReactNo
       const yesterdayValue = yesterdayPortfolio?.totalValue
         ? Number(yesterdayPortfolio.totalValue)
         : 0;
-      todayPnL = todayValue - yesterdayValue;
+
+      // Broker snapshots when they exist, the live paper book otherwise.
+      const snapshotPnL = todayValue - yesterdayValue;
+      todayPnL = paper?.dayChange ?? snapshotPnL;
       todayPnLPct =
-        yesterdayValue > 0 ? ((todayValue - yesterdayValue) / yesterdayValue) * 100 : 0;
+        paper?.dayChangePct ??
+        (yesterdayValue > 0 ? ((todayValue - yesterdayValue) / yesterdayValue) * 100 : 0);
     }
   }
 

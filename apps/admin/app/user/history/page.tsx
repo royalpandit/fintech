@@ -64,6 +64,9 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
           where: { portfolio: { userId } },
           orderBy: { tradedAt: "desc" },
           take: 100,
+          // The portfolio IS the broker connection - one per linked account,
+          // named for it - so its name is where the broker comes from.
+          include: { portfolio: { select: { name: true } } },
         })
       : Promise.resolve([]),
     userId
@@ -104,6 +107,8 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
     realizedPnL: number | null;
     fees?: number;
     at: Date;
+    /** Where the trade was placed. Paper fills have no broker behind them. */
+    broker: string;
   };
 
   const all: Row[] = [
@@ -117,6 +122,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
       value: t.value,
       realizedPnL: t.realizedPnL,
       at: t.tradedAt,
+      broker: "Finuer Paper",
     })),
     ...realTrades.map((t) => ({
       id: `r-${t.id}`,
@@ -129,6 +135,9 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
       realizedPnL: null,
       fees: Number(t.fees),
       at: t.tradedAt,
+      // `source` is the sync mechanism ("broker", "manual"); the portfolio name
+      // is the broker itself. Fall through both before giving up.
+      broker: t.portfolio?.name?.trim() || t.source || "Broker",
     })),
   ].sort((a, b) => b.at.getTime() - a.at.getTime());
 
@@ -262,7 +271,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
                 <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: "var(--surface-2)" }}>
-                      {["Type", "Date", "Symbol", "Side", "Qty", "Price", "Value", "P&L", "When"].map((h) => (
+                      {["Type", "Broker", "Date", "Symbol", "Side", "Qty", "Price", "Value", "P&L", "When"].map((h) => (
                         <th
                           key={h}
                           style={{
@@ -289,12 +298,18 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
                               borderRadius: 999,
                               fontSize: 10,
                               fontWeight: 700,
-                              background: row.kind === "virtual" ? "#dbeafe" : "#d1fae5",
-                              color: row.kind === "virtual" ? "#1e40af" : "#047857",
+                              background:
+                                row.kind === "virtual"
+                                  ? "rgba(37,99,235,0.14)"
+                                  : "rgba(22,163,74,0.14)",
+                              color: row.kind === "virtual" ? "#2563eb" : "#16a34a",
                             }}
                           >
                             {row.kind}
                           </span>
+                        </td>
+                        <td style={{ padding: "12px 18px", fontSize: 11.5, whiteSpace: "nowrap" }}>
+                          {row.broker}
                         </td>
                         <td style={{ padding: "12px 18px", fontSize: 11, color: "var(--text-muted)" }}>
                           {row.at.toLocaleDateString("en-IN")}
@@ -307,8 +322,11 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
                               borderRadius: 999,
                               fontSize: 10,
                               fontWeight: 700,
-                              background: row.side === "buy" ? "#d1fae5" : "#fee2e2",
-                              color: row.side === "buy" ? "#047857" : "#991b1b",
+                              background:
+                                row.side === "buy"
+                                  ? "rgba(22,163,74,0.14)"
+                                  : "rgba(220,38,38,0.14)",
+                              color: row.side === "buy" ? "#16a34a" : "#dc2626",
                             }}
                           >
                             {row.side}

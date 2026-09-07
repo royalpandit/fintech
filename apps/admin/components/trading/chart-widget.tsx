@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
+import { useThemeVersion } from "@/lib/use-theme-version";
 import type { Candle } from "@/lib/angelone-types";
 import {
   nseChartLocalization,
@@ -516,13 +517,21 @@ export default function ChartWidget({
   }, [screenshotTrigger]);
 
   // ── Main chart build / silent data refresh ─────────────────────────────────
+  // Rebuilds every chart when the user toggles light/dark -- the canvas caches
+  // its resolved colours and will not re-read them on its own.
+  const themeVersion = useThemeVersion();
+
   useEffect(() => {
     const mainEl = mainPaneRef.current;
     if (!mainEl || candles.length === 0) return;
 
+    // themeVersion belongs in the STRUCTURE key, not just the dep list: a
+    // matching key takes the dataOnly fast path below, which reuses the
+    // existing chart and would keep every colour it resolved under the old
+    // theme. Changing the key forces the rebuild that re-reads them.
     const key = chartStructureKey(
       chartType,
-      `${indicatorLayoutKey(chartIndicators)}|oi:${oiProfile?.chain ? "1" : "0"}`,
+      `${indicatorLayoutKey(chartIndicators)}|oi:${oiProfile?.chain ? "1" : "0"}|theme:${themeVersion}`,
       customOverlayIndicators,
       customOscIndicators,
     );
@@ -673,7 +682,7 @@ export default function ChartWidget({
       } else if (ohlcTypes.includes(chartType)) {
         const hollow = chartType === "hollow";
         mainSeries = chart.addSeries(lc.CandlestickSeries, {
-          upColor: hollow ? "#ffffff" : "#16a34a",
+          upColor: hollow ? "var(--surface)" : "#16a34a",
           downColor: "#dc2626",
           borderUpColor: "#16a34a", borderDownColor: "#dc2626",
           wickUpColor: "#16a34a", wickDownColor: "#dc2626",
@@ -815,7 +824,7 @@ export default function ChartWidget({
       indicatorSeriesRef.current.clear();
       structureKeyRef.current = "";
     };
-  }, [candles, rawCandles, chartType, chartIndicators, customOverlayIndicators, customOscIndicators, lowerPaneIds, hasCustomOsc, oiProfile?.chain]);
+  }, [candles, rawCandles, chartType, chartIndicators, customOverlayIndicators, customOscIndicators, lowerPaneIds, hasCustomOsc, oiProfile?.chain, themeVersion]);
 
   // Re-anchor when symbol / timeframe / period changes (structure may stay identical).
   useEffect(() => {
@@ -856,7 +865,7 @@ export default function ChartWidget({
 
   if (rawCandles.length === 0) {
     return (
-      <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "var(--text-muted)", fontSize: 13, background: "#fafafa" }}>
+      <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "var(--text-muted)", fontSize: 13, background: "var(--surface-2)" }}>
         Loading chart…
       </div>
     );
@@ -900,8 +909,8 @@ export default function ChartWidget({
           style={{
             flex: "0 0 auto",
             height: 100,
-            borderTop: "1px solid #eef0f4",
-            background: "#fafafa",
+            borderTop: "1px solid var(--border)",
+            background: "var(--surface-2)",
           }}
         />
       ))}
@@ -911,8 +920,8 @@ export default function ChartWidget({
           style={{
             flex: "0 0 auto",
             height: 100,
-            borderTop: "1px solid #eef0f4",
-            background: "#fafafa",
+            borderTop: "1px solid var(--border)",
+            background: "var(--surface-2)",
           }}
         />
       )}

@@ -4,6 +4,7 @@ import { FiHeart, FiMessageSquare, FiAlertTriangle } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import PostModerationActions from "@/components/views/market-post-moderation-actions";
 import ProfileAvatar from "@/components/user/profile-avatar";
+import SebiRegNo from "@/components/advisor-ui/sebi-reg-no";
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -130,7 +131,11 @@ export default async function MarketPostDetailView({
               <div>
                 <p style={{ margin: 0, fontWeight: 600, fontSize: 22 }}>{post.advisor.fullName}</p>
                 <p className="page-subtitle" style={{ margin: 0 }}>
-                  {post.advisor.advisorProfile?.sebiRegistrationNo ?? "No SEBI on file"} •{" "}
+                  <SebiRegNo
+                    value={post.advisor.advisorProfile?.sebiRegistrationNo}
+                    fallback="SEBI registration pending"
+                  />{" "}
+                  •{" "}
                   <span style={{ color: advisorVerified ? "#0b5bb5" : "#b45309", fontWeight: 700 }}>
                     {advisorVerified ? "Verified" : "Unverified"}
                   </span>
