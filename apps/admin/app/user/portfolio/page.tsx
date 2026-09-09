@@ -1,5 +1,4 @@
-﻿import Link from "next/link";
-import type { ComponentType } from "react";
+﻿import type { ComponentType } from "react";
 import { cookies } from "next/headers";
 import {
   FiBriefcase,
@@ -14,7 +13,6 @@ import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
 import ConnectBrokerButton from "@/components/portfolio/connect-broker-button";
 import { loadPortfolioOverview } from "@/lib/portfolio-overview";
-import PaperPortfolioSection from "@/components/paper/paper-portfolio-section";
 import AreaChart from "@/components/advisor-ui/area-chart";
 import DonutChart from "@/components/advisor-ui/donut-chart";
 import LiveCandleChart from "@/components/live-candle-chart";
@@ -93,11 +91,6 @@ export default async function PortfolioPage() {
   const totalValue = brokerValue + (paper?.holdingsValue ?? 0);
   const dayChange =
     (activePortfolio ? Number(activePortfolio.dayChange) : 0) + (paper?.dayChange ?? 0);
-  const riskScore = activePortfolio ? Number(activePortfolio.riskScore) : 0;
-  const diversificationScore = activePortfolio
-    ? Number(activePortfolio.diversificationScore)
-    : 0;
-
   const chartData = snapshots.map((s) => ({
     label: dayLabel(s.day),
     value: Number(s.totalValue),
@@ -153,7 +146,7 @@ export default async function PortfolioPage() {
         </h1>
         <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
           {isAuthed
-            ? "Paper holdings + connected broker portfolio"
+            ? "Connected broker portfolio & live holdings"
             : "Connect your broker for AI-powered portfolio insights"}
         </p>
         </div>
@@ -168,7 +161,51 @@ export default async function PortfolioPage() {
         */}
       </div>
 
-      {isAuthed && userId ? <PaperPortfolioSection userId={userId} showTradeForm={false} /> : null}
+      {isAuthed && !activePortfolio && (
+        <article
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: 14,
+            padding: 24,
+            marginBottom: 18,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <span
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                background: "rgba(14,165,233,0.1)",
+                color: "#0ea5e9",
+                display: "grid",
+                placeItems: "center",
+                flexShrink: 0,
+              }}
+            >
+              <FiLink size={20} />
+            </span>
+            <div>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>
+                No broker connected
+              </p>
+              <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--text-muted)" }}>
+                Link your broker to sync real holdings, P&amp;L, and sector allocation.
+              </p>
+            </div>
+          </div>
+          <ConnectBrokerButton
+            label="Connect broker"
+            variant="solid"
+            connectedBrokers={brokerAccounts.map((b) => b.brokerName)}
+          />
+        </article>
+      )}
 
       {!isAuthed || !activePortfolio ? (
         <article
