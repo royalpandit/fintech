@@ -1,8 +1,9 @@
 import "server-only";
 
 import { fetchJson } from "@/lib/provider-failover";
-import type { ExtendedQuoteData } from "@/lib/dhan";
+import type { ExtendedQuoteData, CandleInterval } from "@/lib/dhan";
 import type { QuoteInstrument } from "@/lib/dhan";
+import { unixSecToIsoIst } from "@/lib/nse-market-time";
 
 /**
  * Yahoo Finance as a standby quote source for Indian instruments.
@@ -160,4 +161,112 @@ export async function getYahooQuotes(
   }
   if (!out.length) throw new Error("Yahoo returned no usable quotes");
   return out;
+}
+
+/* -- Historical candles -------------------------------------------------- */
+
+export type YahooCandle = {
+  timestamp: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+};
+
+/** Map Dhan intervals to Yahoo Finance interval strings. */
+const YAHOO_INTERVAL: Partial<Record<CandleInterval, string>> = {
+  ONE_MINUTE:     "1m",
+  THREE_MINUTE:   "5m",
+  FIVE_MINUTE:    "5m",
+  TEN_MINUTE:     "15m",
+  FIFTEEN_MINUTE: "15m",
+  THIRTY_MINUTE:  "30m",
+  ONE_HOUR:       "1h",
+  ONE_DAY:        "1d",
+};
+
+/** Convert a day count to the nearest Yahoo range param. */
+function daysToYahooRange(days: number): string {
+  if (days <= 5)   return "5d";
+  if (days <= 30)  return "1mo";
+  if (days <= 90)  return "3mo";
+  if (days <= 180) return "6mo";
+  if (days <= 365) return "1y";
+  if (days <= 730) return "2y";
+  return "5y";
+}
+
+type YahooChartFull = {
+  chart?: {
+    result?: Array<{
+      timestamp?: number[];
+      indicators?: {
+        quote?: Array<{
+          open?: (number | null)[];
+          high?: (number | null)[];
+          low?: (number | null)[];
+          close?: (number | null)[];
+          volume?: (number | null)[];
+        }>;
+      };
+    }>;
+    error?: { description?: string } | null;
+  };
+};
+
+/**
+ * Historical OHLCV candles from Yahoo Finance.
+ *
+ * Used as a fallback when Dhan's candle API is unavailable (expired token,
+ * rate limit, or network failure). Yahoo data is ~15 min delayed for NSE and
+ * unofficial — every caller that surfaces it should label the source.
+ *
+ * Returns an empty array (never throws) so the candle route can decide whether
+ * to serve stale Dhan data, Yahoo data, or an error.
+ */
+export async function getYahooCandles(opts: {
+  tradingSymbol: string;
+  exchange: string;
+  interval: CandleInterval;
+  days: number;
+}): Promise<YahooCandle[]> {
+  const ticker = yahooTickerFor(opts.tradingSymbol, opts.exchange);
+  if (!ticker) return [];
+
+  const yInterval = YAHOO_INTERVAL[opts.interval] ?? "1d";
+  const range = daysToYahooRange(opts.days);
+
+  try {
+    const data = await fetchJson<YahooChartFull>(
+      `${BASE}/${encodeURIComponent(ticker)}?interval=${yInterval}&range=${range}`,
+      { headers: HEADERS, timeoutMs: 10_000 },
+    );
+
+    const result = data.chart?.result?.[0];
+    const timestamps = result?.timestamp;
+    const quote = result?.indicators?.quote?.[0];
+
+    if (!timestamps?.length || !quote) return [];
+
+    const candles: YahooCandle[] = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      const o = quote.open?.[i];
+      const h = quote.high?.[i];
+      const l = quote.low?.[i];
+      const c = quote.close?.[i];
+      if (o == null || h == null || l == null || c == null) continue;
+      candles.push({
+        timestamp: unixSecToIsoIst(timestamps[i]!),
+        open:   o,
+        high:   h,
+        low:    l,
+        close:  c,
+        volume: quote.volume?.[i] ?? 0,
+      });
+    }
+    return candles;
+  } catch {
+    return [];
+  }
 }

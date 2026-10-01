@@ -3,6 +3,7 @@ import { getCandles, resolveMarketExchange, type CandleInterval } from "@/lib/dh
 import { enrichCandlesWithVolume } from "@/lib/chart-volume";
 import { angelCandleRange } from "@/lib/nse-market-time";
 import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
+import { getYahooCandles, yahooTickerFor } from "@/lib/yahoo-quote";
 
 export const dynamic = "force-dynamic";
 
@@ -40,43 +41,75 @@ export async function GET(req: NextRequest) {
 
     console.log("[candles] token=%s exchange=%s interval=%s from=%s to=%s", token, exchange, interval, fromdate, todate);
 
-    if (isRateLimited()) {
-      return NextResponse.json({
-        ok: false,
-        error: "Angel One rate limit — chart refresh paused. Please wait.",
-        rateLimited: true,
-      }, { status: 200 });
+    // If Dhan is rate-limited, fall straight through to Yahoo
+    if (!isRateLimited()) {
+      try {
+        const cacheKey = `candles:v2:${token}:${exchange}:${interval}:${days}`;
+        const candles = await withMarketCache(cacheKey, 20_000, async () => {
+          const raw = await getCandles({
+            exchange,
+            symboltoken: token,
+            tradingSymbol,
+            instrumentType,
+            interval,
+            fromdate,
+            todate,
+          });
+          return enrichCandlesWithVolume(raw, {
+            exchange,
+            symboltoken: token,
+            tradingSymbol,
+            instrumentType,
+            interval,
+            fromdate,
+            todate,
+          });
+        });
+        if (candles.length > 0) {
+          const volSample = candles.find(c => c.volume > 0)?.volume ?? 0;
+          console.log("[candles] dhan: %d candles (sample vol %s)", candles.length, volSample);
+          return NextResponse.json({ ok: true, token, data: candles, source: "dhan" });
+        }
+        console.warn("[candles] Dhan returned 0 candles — trying Yahoo");
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        handleRateLimitMessage(msg);
+        console.warn("[candles] Dhan failed (%s) — trying Yahoo", msg);
+      }
     }
 
-    const cacheKey = `candles:v2:${token}:${exchange}:${interval}:${days}`;
-    const candles = await withMarketCache(cacheKey, 20_000, async () => {
-      const raw = await getCandles({
-        exchange,
-        symboltoken: token,
-        tradingSymbol,
-        instrumentType,
-        interval,
-        fromdate,
-        todate,
-      });
-      return enrichCandlesWithVolume(raw, {
-        exchange,
-        symboltoken: token,
-        tradingSymbol,
-        instrumentType,
-        interval,
-        fromdate,
-        todate,
-      });
-    });
-    const volSample = candles.find(c => c.volume > 0)?.volume ?? 0;
-    console.log("[candles] got %d candles (sample vol %s)", candles.length, volSample);
-    return NextResponse.json({ ok: true, token, data: candles });
+    // Yahoo fallback for historical candles
+    const sym = tradingSymbol ?? token ?? "";
+    const yahooTicker = yahooTickerFor(sym, exchange);
+    if (yahooTicker) {
+      const yahooCacheKey = `candles:yahoo:${exchange}:${sym}:${interval}:${days}`;
+      const yahooCandles = await withMarketCache(yahooCacheKey, 60_000, () =>
+        getYahooCandles({ tradingSymbol: sym, exchange, interval, days }),
+      );
+      if (yahooCandles.length > 0) {
+        console.log("[candles] yahoo fallback: %d candles for %s", yahooCandles.length, yahooTicker);
+        return NextResponse.json({
+          ok: true,
+          token,
+          data: yahooCandles,
+          source: "yahoo",
+          degraded: true,
+          degradedReason: "Dhan unavailable — showing Yahoo Finance data (15 min delayed)",
+        });
+      }
+    }
+
+    return NextResponse.json({
+      ok: false,
+      error: isRateLimited() ? "Dhan rate limited and Yahoo has no data for this instrument" : "No candle data available",
+      rateLimited: isRateLimited(),
+      data: [],
+    }, { status: 200 });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     handleRateLimitMessage(msg);
     console.error("[candles] ERROR:", msg);
-    return NextResponse.json({ ok: false, error: msg, rateLimited: isRateLimited() }, { status: 200 });
+    return NextResponse.json({ ok: false, error: msg, rateLimited: isRateLimited(), data: [] }, { status: 200 });
   }
 }
 

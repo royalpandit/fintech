@@ -1,6 +1,7 @@
 ﻿import { NextResponse, type NextRequest } from "next/server";
 import { getExtendedQuotes, MARKET_INSTRUMENTS, type QuoteInstrument } from "@/lib/dhan";
 import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
+import { getYahooQuotes } from "@/lib/yahoo-quote";
 
 export const dynamic = "force-dynamic";
 
@@ -49,51 +50,88 @@ export async function GET(req: NextRequest) {
       ...extraInstruments.filter(e => !seen.has(e.symboltoken)),
     ];
 
-    const cacheKey = `live:${all.map(i => `${i.exchange}:${i.symboltoken}`).sort().join(",")}`;
-
-    const quoteMap = await withMarketCache(cacheKey, 20_000, async () => {
-      const quotes = await getExtendedQuotes(all);
-      const merged = new Map<string, Record<string, unknown>>();
-      for (const q of quotes) merged.set(q.symbolToken, q as unknown as Record<string, unknown>);
-      return merged;
-    });
-
     const symMap: Record<string, string> = Object.fromEntries(MARKET_INSTRUMENTS.map(m => [m.token, m.symbol]));
-    const enriched = all.map(inst => {
-      const q = quoteMap.get(inst.symboltoken);
-      if (!q) {
+
+    function buildResponse(
+      quoteMap: Map<string, Record<string, unknown>>,
+      source: "dhan" | "yahoo",
+    ) {
+      const enriched = all.map(inst => {
+        const q = quoteMap.get(inst.symboltoken);
+        if (!q) {
+          return {
+            symbolToken: inst.symboltoken,
+            tradingSymbol: inst.tradingSymbol,
+            exchange: inst.exchange,
+            ltp: 0, open: 0, high: 0, low: 0, close: 0,
+            percentChange: 0, netChange: 0,
+            displaySymbol: symMap[inst.symboltoken] ?? inst.tradingSymbol,
+          };
+        }
         return {
-          symbolToken: inst.symboltoken,
-          tradingSymbol: inst.tradingSymbol,
-          exchange: inst.exchange,
-          ltp: 0,
-          open: 0,
-          high: 0,
-          low: 0,
-          close: 0,
-          percentChange: 0,
-          netChange: 0,
+          symbolToken: String(q.symbolToken ?? inst.symboltoken),
+          tradingSymbol: String(q.tradingSymbol ?? inst.tradingSymbol),
+          exchange: String(q.exchange ?? inst.exchange),
+          ltp: Number(q.ltp) || 0,
+          open: Number(q.open) || 0,
+          high: Number(q.high) || 0,
+          low: Number(q.low) || 0,
+          close: Number(q.close) || 0,
+          percentChange: Number(q.percentChange) || 0,
+          netChange: Number(q.netChange) || 0,
+          tradeVolume: q.tradeVolume != null ? Number(q.tradeVolume) : undefined,
+          volume: q.tradeVolume != null ? Number(q.tradeVolume) : undefined,
           displaySymbol: symMap[inst.symboltoken] ?? inst.tradingSymbol,
         };
-      }
-      return {
-        symbolToken: String(q.symbolToken ?? inst.symboltoken),
-        tradingSymbol: String(q.tradingSymbol ?? inst.tradingSymbol),
-        exchange: String(q.exchange ?? inst.exchange),
-        ltp: Number(q.ltp) || 0,
-        open: Number(q.open) || 0,
-        high: Number(q.high) || 0,
-        low: Number(q.low) || 0,
-        close: Number(q.close) || 0,
-        percentChange: Number(q.percentChange) || 0,
-        netChange: Number(q.netChange) || 0,
-        tradeVolume: q.tradeVolume != null ? Number(q.tradeVolume) : undefined,
-        volume: q.tradeVolume != null ? Number(q.tradeVolume) : undefined,
-        displaySymbol: symMap[inst.symboltoken] ?? inst.tradingSymbol,
-      };
-    });
+      });
+      return NextResponse.json({
+        ok: true,
+        data: enriched,
+        source,
+        ts: Date.now(),
+        ...(source === "yahoo" ? { degraded: true, degradedReason: "Dhan unavailable — showing Yahoo Finance data (15 min delayed)" } : {}),
+      });
+    }
 
-    return NextResponse.json({ ok: true, data: enriched, ts: Date.now() });
+    // Try Dhan first
+    if (!isRateLimited()) {
+      try {
+        const cacheKey = `live:${all.map(i => `${i.exchange}:${i.symboltoken}`).sort().join(",")}`;
+        const quoteMap = await withMarketCache(cacheKey, 20_000, async () => {
+          const quotes = await getExtendedQuotes(all);
+          const merged = new Map<string, Record<string, unknown>>();
+          for (const q of quotes) merged.set(q.symbolToken, q as unknown as Record<string, unknown>);
+          return merged;
+        });
+        const hasData = Array.from(quoteMap.values()).some(q => Number(q.ltp) > 0);
+        if (hasData) return buildResponse(quoteMap, "dhan");
+        console.warn("[/api/v1/market/live] Dhan returned all-zero quotes — trying Yahoo");
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        handleRateLimitMessage(msg);
+        console.warn("[/api/v1/market/live] Dhan failed (%s) — trying Yahoo", msg);
+      }
+    }
+
+    // Yahoo fallback for live quotes
+    try {
+      const allWithSymbol = all.filter(
+        (i): i is QuoteInstrument & { tradingSymbol: string } => Boolean(i.tradingSymbol),
+      );
+      const yahooQuotes = await getYahooQuotes(allWithSymbol);
+      if (yahooQuotes.length > 0) {
+        const yahooMap = new Map<string, Record<string, unknown>>();
+        for (const q of yahooQuotes) {
+          yahooMap.set(q.symbolToken, q as unknown as Record<string, unknown>);
+        }
+        console.log("[/api/v1/market/live] yahoo fallback: %d quotes", yahooQuotes.length);
+        return buildResponse(yahooMap, "yahoo");
+      }
+    } catch (yahooErr) {
+      console.error("[/api/v1/market/live] Yahoo also failed:", yahooErr);
+    }
+
+    return NextResponse.json({ ok: false, error: "All quote sources unavailable", rateLimited: isRateLimited(), data: [] }, { status: 200 });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     handleRateLimitMessage(msg);
