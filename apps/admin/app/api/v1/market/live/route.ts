@@ -89,11 +89,28 @@ export async function GET(req: NextRequest) {
         data: enriched,
         source,
         ts: Date.now(),
-        ...(source === "yahoo" ? { degraded: true, degradedReason: "Dhan unavailable — showing Yahoo Finance data (15 min delayed)" } : {}),
       });
     }
 
-    // Try Dhan first
+    // Yahoo is primary — fast, no token needed
+    try {
+      const allWithSymbol = all.filter(
+        (i): i is QuoteInstrument & { tradingSymbol: string } => Boolean(i.tradingSymbol),
+      );
+      const yahooQuotes = await getYahooQuotes(allWithSymbol);
+      if (yahooQuotes.length > 0) {
+        const yahooMap = new Map<string, Record<string, unknown>>();
+        for (const q of yahooQuotes) {
+          yahooMap.set(q.symbolToken, q as unknown as Record<string, unknown>);
+        }
+        console.log("[/api/v1/market/live] yahoo: %d quotes", yahooQuotes.length);
+        return buildResponse(yahooMap, "yahoo");
+      }
+    } catch (yahooErr) {
+      console.warn("[/api/v1/market/live] Yahoo failed, trying Dhan:", yahooErr);
+    }
+
+    // Dhan fallback when Yahoo has no mapping for an instrument
     if (!isRateLimited()) {
       try {
         const cacheKey = `live:${all.map(i => `${i.exchange}:${i.symboltoken}`).sort().join(",")}`;
@@ -105,30 +122,11 @@ export async function GET(req: NextRequest) {
         });
         const hasData = Array.from(quoteMap.values()).some(q => Number(q.ltp) > 0);
         if (hasData) return buildResponse(quoteMap, "dhan");
-        console.warn("[/api/v1/market/live] Dhan returned all-zero quotes — trying Yahoo");
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
         handleRateLimitMessage(msg);
-        console.warn("[/api/v1/market/live] Dhan failed (%s) — trying Yahoo", msg);
+        console.error("[/api/v1/market/live] Dhan also failed:", msg);
       }
-    }
-
-    // Yahoo fallback for live quotes
-    try {
-      const allWithSymbol = all.filter(
-        (i): i is QuoteInstrument & { tradingSymbol: string } => Boolean(i.tradingSymbol),
-      );
-      const yahooQuotes = await getYahooQuotes(allWithSymbol);
-      if (yahooQuotes.length > 0) {
-        const yahooMap = new Map<string, Record<string, unknown>>();
-        for (const q of yahooQuotes) {
-          yahooMap.set(q.symbolToken, q as unknown as Record<string, unknown>);
-        }
-        console.log("[/api/v1/market/live] yahoo fallback: %d quotes", yahooQuotes.length);
-        return buildResponse(yahooMap, "yahoo");
-      }
-    } catch (yahooErr) {
-      console.error("[/api/v1/market/live] Yahoo also failed:", yahooErr);
     }
 
     return NextResponse.json({ ok: false, error: "All quote sources unavailable", rateLimited: isRateLimited(), data: [] }, { status: 200 });

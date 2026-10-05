@@ -41,7 +41,22 @@ export async function GET(req: NextRequest) {
 
     console.log("[candles] token=%s exchange=%s interval=%s from=%s to=%s", token, exchange, interval, fromdate, todate);
 
-    // If Dhan is rate-limited, fall straight through to Yahoo
+    // Yahoo is primary for historical candles — no token needed
+    const sym = tradingSymbol ?? token ?? "";
+    const yahooTicker = yahooTickerFor(sym, exchange);
+    if (yahooTicker) {
+      const yahooCacheKey = `candles:yahoo:${exchange}:${sym}:${interval}:${days}`;
+      const yahooCandles = await withMarketCache(yahooCacheKey, 60_000, () =>
+        getYahooCandles({ tradingSymbol: sym, exchange, interval, days }),
+      );
+      if (yahooCandles.length > 0) {
+        console.log("[candles] yahoo: %d candles for %s", yahooCandles.length, yahooTicker);
+        return NextResponse.json({ ok: true, token, data: yahooCandles, source: "yahoo" });
+      }
+      console.warn("[candles] Yahoo returned 0 candles for %s — trying Dhan", yahooTicker);
+    }
+
+    // Dhan fallback (derivatives, unlisted, any instrument Yahoo can't price)
     if (!isRateLimited()) {
       try {
         const cacheKey = `candles:v2:${token}:${exchange}:${interval}:${days}`;
@@ -70,38 +85,16 @@ export async function GET(req: NextRequest) {
           console.log("[candles] dhan: %d candles (sample vol %s)", candles.length, volSample);
           return NextResponse.json({ ok: true, token, data: candles, source: "dhan" });
         }
-        console.warn("[candles] Dhan returned 0 candles — trying Yahoo");
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
         handleRateLimitMessage(msg);
-        console.warn("[candles] Dhan failed (%s) — trying Yahoo", msg);
-      }
-    }
-
-    // Yahoo fallback for historical candles
-    const sym = tradingSymbol ?? token ?? "";
-    const yahooTicker = yahooTickerFor(sym, exchange);
-    if (yahooTicker) {
-      const yahooCacheKey = `candles:yahoo:${exchange}:${sym}:${interval}:${days}`;
-      const yahooCandles = await withMarketCache(yahooCacheKey, 60_000, () =>
-        getYahooCandles({ tradingSymbol: sym, exchange, interval, days }),
-      );
-      if (yahooCandles.length > 0) {
-        console.log("[candles] yahoo fallback: %d candles for %s", yahooCandles.length, yahooTicker);
-        return NextResponse.json({
-          ok: true,
-          token,
-          data: yahooCandles,
-          source: "yahoo",
-          degraded: true,
-          degradedReason: "Dhan unavailable — showing Yahoo Finance data (15 min delayed)",
-        });
+        console.error("[candles] Dhan also failed:", msg);
       }
     }
 
     return NextResponse.json({
       ok: false,
-      error: isRateLimited() ? "Dhan rate limited and Yahoo has no data for this instrument" : "No candle data available",
+      error: "No candle data available from Yahoo or Dhan",
       rateLimited: isRateLimited(),
       data: [],
     }, { status: 200 });

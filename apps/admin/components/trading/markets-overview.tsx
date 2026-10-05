@@ -5,12 +5,11 @@ import Link from "next/link";
 import { FiArrowUpRight, FiArrowDownRight, FiBarChart2 } from "react-icons/fi";
 import MarketSearch from "@/components/trading/market-search";
 import MutualFundsView from "@/components/trading/mutual-funds-view";
-// Hidden from Markets - see the TABS list below.
-// import CryptoView from "@/components/trading/crypto-view";
-// import CurrenciesView from "@/components/trading/currencies-view";
+import CryptoView from "@/components/trading/crypto-view";
+import CurrenciesView from "@/components/trading/currencies-view";
 import MarketsAllView from "@/components/trading/markets-all-view";
 import MarketsPlaceholder from "@/components/trading/markets-placeholder";
-// import GlobalMarketsView from "@/components/trading/global-markets-view";
+import GlobalMarketsView from "@/components/trading/global-markets-view";
 import IpoView from "@/components/trading/ipo-view";
 import EtfView from "@/components/trading/etf-view";
 import AddToWatchlistButton from "@/components/watchlist/add-to-watchlist-button";
@@ -61,10 +60,10 @@ type MarketTab =
   | "mf"
   | "etf"
   | "commodities"
-  | "ipo";
-// | "crypto"
-// | "currencies"
-// | "global";
+  | "ipo"
+  | "crypto"
+  | "currencies"
+  | "global";
 
 const TABS: { key: MarketTab; label: string }[] = [
   { key: "all", label: "All" },
@@ -73,18 +72,9 @@ const TABS: { key: MarketTab; label: string }[] = [
   { key: "etf", label: "ETFs" },
   { key: "commodities", label: "Commodities" },
   { key: "ipo", label: "IPO" },
-  /*
-   * Crypto, Currencies and Global are hidden for now.
-   *
-   * Commented rather than deleted: the views, their API routes and their live
-   * feeds all still work, so putting a tab back is uncommenting its line here,
-   * its entry in MarketTab above, its import at the top, and its render line
-   * below. Leaving them in place also means no dead API routes to rediscover
-   * later.
-   */
-  // { key: "crypto", label: "Crypto" },
-  // { key: "currencies", label: "Currencies" },
-  // { key: "global", label: "Global" },
+  { key: "crypto", label: "Crypto" },
+  { key: "currencies", label: "Currencies" },
+  { key: "global", label: "Global" },
 ];
 
 export default function MarketsOverview() {
@@ -226,8 +216,8 @@ export default function MarketsOverview() {
 
       {tab === "all" && <MarketsAllView stocks={stocks} indices={indices} loading={loading} />}
       {tab === "mf" && <MutualFundsView />}
-      {/* {tab === "crypto" && <CryptoView />} */}
-      {/* {tab === "currencies" && <CurrenciesView />} */}
+      {tab === "crypto" && <CryptoView />}
+      {tab === "currencies" && <CurrenciesView />}
       {tab === "etf" && <EtfView />}
       {tab === "commodities" && (
         <MarketsPlaceholder
@@ -237,7 +227,7 @@ export default function MarketsOverview() {
         />
       )}
       {tab === "ipo" && <IpoView />}
-      {/* {tab === "global" && <GlobalMarketsView />} */}
+      {tab === "global" && <GlobalMarketsView />}
 
       {tab === "stocks" && (
       <>

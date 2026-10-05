@@ -123,29 +123,23 @@ function respond(quotes: Map<string, ExtendedQuoteData>, source: Source, reason:
  * board to delayed prices instead of emptying it.
  */
 export async function GET() {
-  // A live rate-limit block is a reason to use the standby feed, not a reason
-  // to return an empty board.
+  // Yahoo is primary — no token expiry, always available
+  const yahoo = await yahooQuotes();
+  if (yahoo) return respond(yahoo, "yahoo", "");
+
+  // Dhan fallback when Yahoo fails (e.g. network issue on server)
   if (isRateLimited()) {
-    const fallback = await yahooQuotes();
-    return fallback
-      ? respond(fallback, "yahoo", "Dhan rate limit")
-      : NextResponse.json({ ok: false, rateLimited: true, indices: [], stocks: [] });
+    return NextResponse.json({ ok: false, rateLimited: true, indices: [], stocks: [] });
   }
 
   if (Date.now() < dhanBlockedUntil) {
-    const fallback = await yahooQuotes();
-    if (fallback) return respond(fallback, "yahoo", "Dhan credentials rejected");
-    // Standby is down too — let Dhan be retried rather than serving nothing.
-    dhanBlockedUntil = 0;
+    return NextResponse.json({ ok: false, error: "Dhan credentials rejected", indices: [], stocks: [] });
   }
 
   try {
     const quotes = await withMarketCache("overview:full", quoteRefreshMs(), async () =>
       byToken(await getExtendedQuotes(INSTRUMENTS)),
     );
-    // Dhan can answer 200 with nothing usable, so an empty board counts as a
-    // failure and falls through to the standby feed rather than rendering
-    // thirteen rows of zeroes.
     if (quotes.size === 0) throw new Error("Dhan returned no quotes");
     return respond(quotes, "dhan", "");
   } catch (err) {
@@ -153,17 +147,10 @@ export async function GET() {
     handleRateLimitMessage(msg);
     if (isAuthFailure(msg)) {
       dhanBlockedUntil = Date.now() + AUTH_COOLDOWN_MS;
-      console.error(
-        "[/api/v1/market/overview] Dhan auth rejected — check DHAN_ACCESS_TOKEN " +
-          `(it expires daily). Serving Yahoo for ${AUTH_COOLDOWN_MS / 1000}s. ${msg}`,
-      );
+      console.error("[/api/v1/market/overview] Dhan auth rejected:", msg);
     } else {
-      console.error("[/api/v1/market/overview] Dhan failed, trying Yahoo:", msg);
+      console.error("[/api/v1/market/overview] Dhan failed:", msg);
     }
-
-    const fallback = await yahooQuotes();
-    return fallback
-      ? respond(fallback, "yahoo", msg)
-      : NextResponse.json({ ok: false, error: msg, indices: [], stocks: [] }, { status: 200 });
+    return NextResponse.json({ ok: false, error: msg, indices: [], stocks: [] }, { status: 200 });
   }
 }
