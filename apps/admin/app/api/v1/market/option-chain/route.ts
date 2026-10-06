@@ -36,7 +36,14 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     console.error("[/api/v1/market/option-chain]", msg);
-    return NextResponse.json({ ok: false, error: msg, data: null }, { status: 200 });
+    const is429 = /429|Too Many Requests/i.test(msg);
+    const is401 = /401|Unauthorized|invalid token|808/i.test(msg);
+    const userMsg = is429
+      ? "Option chain data is temporarily unavailable (rate limit). Please try again in a moment."
+      : is401
+        ? "Option chain requires a connected Dhan broker account."
+        : msg;
+    return NextResponse.json({ ok: false, error: userMsg, data: null, rateLimited: is429 }, { status: 200 });
   }
 }
 

@@ -403,10 +403,19 @@ export default function OptionChainPanel({
   }
 
   if (error && !chain) {
+    const needsBroker = /broker account|Unauthorized|invalid token/i.test(error);
     return (
       <div className="oc-empty">
-        <p className="oc-error">{error}</p>
-        <button type="button" className="oc-btn" onClick={() => loadChain()}>Retry</button>
+        <p className="oc-error">
+          {needsBroker
+            ? "Option chain requires a connected Dhan broker account."
+            : error}
+        </p>
+        {needsBroker ? (
+          <a href="/user/portfolio" className="oc-btn" style={{ textDecoration: "none" }}>Connect broker</a>
+        ) : (
+          <button type="button" className="oc-btn" onClick={() => loadChain()}>Retry</button>
+        )}
       </div>
     );
   }
