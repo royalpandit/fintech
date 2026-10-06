@@ -4,6 +4,7 @@ import { enrichCandlesWithVolume } from "@/lib/chart-volume";
 import { angelCandleRange } from "@/lib/nse-market-time";
 import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
 import { getYahooCandles, yahooTickerFor } from "@/lib/yahoo-quote";
+import { MARKET_INSTRUMENTS } from "@/lib/angelone-shared";
 
 export const dynamic = "force-dynamic";
 
@@ -41,8 +42,14 @@ export async function GET(req: NextRequest) {
 
     console.log("[candles] token=%s exchange=%s interval=%s from=%s to=%s", token, exchange, interval, fromdate, todate);
 
-    // Yahoo is primary for historical candles — no token needed
-    const sym = tradingSymbol ?? token ?? "";
+    // Yahoo is primary for historical candles — no token needed.
+    // When tradingSymbol is missing, resolve the numeric token to its symbol
+    // (e.g. "11536" → "TCS") so Yahoo gets a valid ticker like "TCS.NS".
+    const rawSym = tradingSymbol ?? token ?? "";
+    const resolved = /^\d+$/.test(rawSym)
+      ? (MARKET_INSTRUMENTS.find(m => m.token === rawSym)?.symbol ?? rawSym)
+      : rawSym;
+    const sym = resolved;
     const yahooTicker = yahooTickerFor(sym, exchange);
     if (yahooTicker) {
       const yahooCacheKey = `candles:yahoo:${exchange}:${sym}:${interval}:${days}`;
