@@ -50,8 +50,26 @@ export async function GET(req: NextRequest) {
         getYahooCandles({ tradingSymbol: sym, exchange, interval, days }),
       );
       if (yahooCandles.length > 0) {
-        console.log("[candles] yahoo: %d candles for %s", yahooCandles.length, yahooTicker);
-        return NextResponse.json({ ok: true, token, data: yahooCandles, source: "yahoo" });
+        console.log("[candles] yahoo: %d candles (%s) for %s", yahooCandles.length, interval, yahooTicker);
+        return NextResponse.json({ ok: true, token, data: yahooCandles, source: "yahoo", interval });
+      }
+
+      // Yahoo often lacks intraday data for BSE/small-cap stocks.
+      // Auto-downgrade to daily so the chart always shows something.
+      if (interval !== "ONE_DAY") {
+        const dailyCacheKey = `candles:yahoo:${exchange}:${sym}:ONE_DAY:365`;
+        const dailyCandles = await withMarketCache(dailyCacheKey, 300_000, () =>
+          getYahooCandles({ tradingSymbol: sym, exchange, interval: "ONE_DAY", days: 365 }),
+        );
+        if (dailyCandles.length > 0) {
+          console.log("[candles] yahoo daily fallback: %d candles for %s", dailyCandles.length, yahooTicker);
+          return NextResponse.json({
+            ok: true, token, data: dailyCandles, source: "yahoo",
+            interval: "ONE_DAY",
+            degraded: true,
+            degradedReason: "Intraday data not available — showing daily candles",
+          });
+        }
       }
       console.warn("[candles] Yahoo returned 0 candles for %s — trying Dhan", yahooTicker);
     }

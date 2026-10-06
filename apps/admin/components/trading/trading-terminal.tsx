@@ -572,7 +572,7 @@ function TradingTerminalInner({
       console.log(`[Chart] live quotes HTTP ${res.status} ok=${json.ok} rateLimited=${json.rateLimited} count=${json.data?.length ?? 0}`, json.ok ? "" : json.error);
       if (json.rateLimited) {
         setCandleError(prev =>
-          prev?.includes("rate limit") ? prev : "Dhan API rate limit — live updates paused briefly."
+          prev?.includes("rate limit") ? prev : "Live updates paused briefly — retrying."
         );
         return;
       }
@@ -686,10 +686,10 @@ function TradingTerminalInner({
 
   useMarketStream(streamSymbols, handleStreamTick, centerTab === "chart" && !candleLoading);
 
-  // REST fallback for OHLC / % change on watchlist (WebSocket = LTP only)
+  // Yahoo live quote poll — 5s on chart tab for live candle tick, 15s elsewhere
   useEffect(() => {
     fetchQuotes();
-    const ms = centerTab === "chart" ? 30_000 : 60_000;
+    const ms = centerTab === "chart" ? 5_000 : 15_000;
     const id = setInterval(fetchQuotes, ms);
     return () => clearInterval(id);
   }, [fetchQuotes, centerTab]);
