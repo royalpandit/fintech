@@ -406,18 +406,25 @@ export default function OptionChainPanel({
 
   if (error && !chain) {
     const needsBroker = /broker account|Unauthorized|invalid token/i.test(error);
+    if (needsBroker) {
+      return (
+        <div className="oc-empty">
+          <div>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>
+              Option chain needs a broker connection
+            </p>
+            <p style={{ margin: "6px auto 14px", fontSize: 12, color: "var(--text-muted)", maxWidth: 360, lineHeight: 1.5 }}>
+              NSE option chain data comes from a broker feed. Charts and live quotes work without one.
+            </p>
+            <a href="/user/portfolio" className="oc-btn" style={{ textDecoration: "none" }}>Connect broker</a>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="oc-empty">
-        <p className="oc-error">
-          {needsBroker
-            ? "Option chain requires a connected Dhan broker account."
-            : error}
-        </p>
-        {needsBroker ? (
-          <a href="/user/portfolio" className="oc-btn" style={{ textDecoration: "none" }}>Connect broker</a>
-        ) : (
-          <button type="button" className="oc-btn" onClick={() => loadChain()}>Retry</button>
-        )}
+        <p className="oc-error">{error}</p>
+        <button type="button" className="oc-btn" onClick={() => loadChain()}>Retry</button>
       </div>
     );
   }
