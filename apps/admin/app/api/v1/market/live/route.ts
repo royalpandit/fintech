@@ -12,15 +12,6 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: NextRequest) {
   try {
-    if (isRateLimited()) {
-      return NextResponse.json({
-        ok: false,
-        error: "Dhan API rate limit — live quotes paused.",
-        rateLimited: true,
-        data: [],
-      });
-    }
-
     const { searchParams } = new URL(req.url);
     const extraParam = searchParams.get("extra") ?? "";
 
@@ -129,7 +120,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: false, error: "All quote sources unavailable", rateLimited: isRateLimited(), data: [] }, { status: 200 });
+    return NextResponse.json({ ok: false, error: "Live updates paused briefly — retrying.", rateLimited: isRateLimited(), data: [] }, { status: 200 });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     handleRateLimitMessage(msg);
