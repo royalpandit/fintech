@@ -19,16 +19,9 @@ async function getYahooCrumb(): Promise<{ crumb: string; cookie: string }> {
     headers: { "User-Agent": UA },
     redirect: "follow",
   });
-  const rawCookies: string[] = [];
-  // Node 18+ has getSetCookie(); fall back to raw header
-  if (typeof (cookieRes.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie === "function") {
-    const fn = (cookieRes.headers as unknown as { getSetCookie: () => string[] }).getSetCookie;
-    rawCookies.push(...fn());
-  } else {
-    const raw = cookieRes.headers.get("set-cookie");
-    if (raw) rawCookies.push(raw);
-  }
-  const cookie = rawCookies.map(c => c.split(";")[0]).join("; ");
+  // Extract cookies — use get("set-cookie") which works in all Node versions
+  const rawCookie = cookieRes.headers.get("set-cookie") ?? "";
+  const cookie = rawCookie.split(",").map(c => c.split(";")[0].trim()).filter(Boolean).join("; ");
 
   // Step 2: Exchange cookies for a crumb
   const crumbRes = await fetch(`${YAHOO_BASE}/v1/test/getcrumb`, {
