@@ -42,15 +42,19 @@ export async function GET(req: NextRequest) {
       cacheKey,
       45_000,
       3 * 60_000,
-      () => getOptionChain(underlying, spot ? Number(spot) : undefined, expiry, { profile }),
+      // Check circuit breaker inside fn so background SWR refreshes also bail early
+      () => {
+        if (isDhanAuthBlocked()) throw new Error(AUTH_ERROR);
+        return getOptionChain(underlying, spot ? Number(spot) : undefined, expiry, { profile });
+      },
     );
     return NextResponse.json({ ok: true, data: chain });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     console.error("[/api/v1/market/option-chain]", msg);
     const is401 = /401|Unauthorized|invalid token|808/i.test(msg);
-    const is429 = /429|Too Many Requests/i.test(msg);
-    if (is401) blockDhanAuth();
+    const is429 = /429|Too Many Requests|805/i.test(msg);
+    if (is401 || is429) blockDhanAuth();
     const userMsg = is401 ? AUTH_ERROR
       : is429 ? "Option chain temporarily unavailable — too many requests."
       : msg;
