@@ -138,6 +138,7 @@ export default function OptionChainPanel({
   const [silentRefreshing, setSilentRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ratePaused, setRatePaused] = useState(false);
+  const [authRequired, setAuthRequired] = useState(false);
   const [expiry, setExpiry] = useState<string>("");
   const [strikeFilter, setStrikeFilter] = useState("");
   const [lastTick, setLastTick] = useState<number | null>(null);
@@ -215,6 +216,7 @@ export default function OptionChainPanel({
       } else if (!silent || !hasData) {
         setChain(null);
         setError(json.error ?? "Failed to load option chain");
+        if (json.authRequired) setAuthRequired(true);
       }
     } catch (e) {
       if (!silent || !hasData) {
@@ -228,7 +230,7 @@ export default function OptionChainPanel({
 
   const refreshQuotes = useCallback(async () => {
     const c = chainRef.current;
-    if (!c?.tokens?.length || ratePaused) return;
+    if (!c?.tokens?.length || ratePaused || authRequired) return;
     if (typeof document !== "undefined" && document.hidden) return;
     setSilentRefreshing(true);
     try {
@@ -320,7 +322,7 @@ export default function OptionChainPanel({
     [],
   );
 
-  useMarketStream(streamSymbols, handleStreamTick, !!chain?.tokens?.length && !ratePaused);
+  useMarketStream(streamSymbols, handleStreamTick, !!chain?.tokens?.length && !ratePaused && !authRequired);
 
   // REST refresh for OI / volume (FULL mode) — slower; LTP also from WebSocket
   useEffect(() => {

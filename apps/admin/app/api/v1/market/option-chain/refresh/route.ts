@@ -1,16 +1,17 @@
 ﻿import { NextResponse, type NextRequest } from "next/server";
 import { refreshOptionChainQuotes } from "@/lib/dhan";
 import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
+import { blockDhanAuth, isDhanAuthBlocked } from "../route";
 
 export const dynamic = "force-dynamic";
 
 /** POST /api/v1/market/option-chain/refresh — silent LTP/OI refresh for live chain */
 export async function POST(req: NextRequest) {
   try {
-    if (isRateLimited()) {
+    if (isDhanAuthBlocked() || isRateLimited()) {
       return NextResponse.json({
         ok: false,
-        error: "Rate limit — option chain refresh paused",
+        error: "Option chain refresh paused",
         rateLimited: true,
         quotes: {},
       });
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     handleRateLimitMessage(msg);
+    if (/401|Unauthorized|invalid token|808/i.test(msg)) blockDhanAuth();
     return NextResponse.json({
       ok: false,
       error: msg,
