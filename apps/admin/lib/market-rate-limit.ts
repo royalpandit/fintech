@@ -75,6 +75,30 @@ export async function withSWRCache<T>(
   if (isRateLimited()) {
     throw new Error("Dhan API rate limit — updates paused. Please wait a few seconds.");
   }
+  return swr(key, ttlMs, staleTtlMs, fn);
+}
+
+/**
+ * Stale-while-revalidate without the Dhan guard.
+ *
+ * For feeds that never touch Dhan — Yahoo quotes, the NSE option chain — which
+ * must keep serving while Dhan is throttled or its token has expired.
+ */
+export async function withFeedCache<T>(
+  key: string,
+  ttlMs: number,
+  staleTtlMs: number,
+  fn: () => Promise<T>,
+): Promise<T> {
+  return swr(key, ttlMs, staleTtlMs, fn);
+}
+
+async function swr<T>(
+  key: string,
+  ttlMs: number,
+  staleTtlMs: number,
+  fn: () => Promise<T>,
+): Promise<T> {
   const now = Date.now();
   const hit = cache.get(key) as CacheEntry<T> | undefined;
 

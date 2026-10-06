@@ -240,6 +240,8 @@ export default function OptionChainPanel({
         body: JSON.stringify({
           exchange: c.exchange,
           tokens: c.tokens.map(t => t.token),
+          symbol: c.underlying,
+          expiry: c.expiry,
         }),
         cache: "no-store",
       });
