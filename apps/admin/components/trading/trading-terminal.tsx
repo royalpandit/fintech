@@ -1215,10 +1215,31 @@ function TradingTerminalInner({
                   <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 24 }}>
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="#dc2626"/></svg>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#dc2626", textAlign: "center", maxWidth: 360 }}>{candleError}</div>
-                    <button type="button" onClick={() => fetchCandles(false)}
-                      style={{ marginTop: 4, padding: "7px 16px", border: "1px solid var(--border)", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "var(--surface-2)", color: "var(--text)" }}>
-                      Retry
-                    </button>
+                    {selected.underlying ? (
+                      /* The contract cannot be charted, but the stock it is
+                         written on can — and that is the chart the trader
+                         actually reads the position against. */
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelected({
+                            display: selected.underlying!,
+                            tradingSymbol: selected.underlying!,
+                            token: selected.underlying!,
+                            exchange: "NSE",
+                            type: "EQ",
+                          })
+                        }
+                        style={{ marginTop: 4, padding: "7px 16px", border: "none", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "#0ea5e9", color: "#fff" }}
+                      >
+                        Chart {selected.underlying} instead
+                      </button>
+                    ) : (
+                      <button type="button" onClick={() => fetchCandles(false)}
+                        style={{ marginTop: 4, padding: "7px 16px", border: "1px solid var(--border)", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "var(--surface-2)", color: "var(--text)" }}>
+                        Retry
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <>

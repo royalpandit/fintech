@@ -125,9 +125,22 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    /*
+     * An F&O contract has no free candle source at all. Yahoo carries US
+     * options only — every NSE ticker comes back with an empty chain — and
+     * NSE publishes the live option chain but answers 503 for per-contract
+     * history. So this is a broker feature, not an outage, and it says so
+     * rather than naming providers the reader has no way to act on.
+     */
+    const derivative =
+      /^(NFO|BFO|CDS|MCX)$/i.test(exchange) || /^(OPT|FUT)/i.test(instrumentType ?? "");
+
     return NextResponse.json({
       ok: false,
-      error: "No candle data available from Yahoo or Dhan",
+      error: derivative
+        ? "Charts for F&O contracts need a connected broker — no free feed publishes option or futures candles."
+        : "No candle data available for this instrument.",
+      derivative,
       rateLimited: isRateLimited(),
       data: [],
     }, { status: 200 });

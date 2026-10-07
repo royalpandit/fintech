@@ -18,5 +18,6 @@ export function optionLegToWatchlist(
     ltp: leg.ltp,
     change: leg.change,
     changePct: leg.changePct,
+    underlying,
   };
 }

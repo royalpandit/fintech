@@ -16,4 +16,9 @@ export interface WatchlistItem {
    * change figures frozen at whatever the last REST poll returned.
    */
   prevClose?: number;
+  /**
+   * For an F&O leg, the cash symbol it is written on. No free feed charts the
+   * contract itself, so this is what the chart offers instead.
+   */
+  underlying?: string;
 }
