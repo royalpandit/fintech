@@ -1,6 +1,4 @@
-import { NextRequest } from "next/server";
 import { ok, err } from "@/lib/api-helpers";
-import { requireAuth } from "@/lib/auth";
 import { fetchJson, firstSuccess, type Provider } from "@/lib/provider-failover";
 
 export const dynamic = "force-dynamic";
@@ -48,10 +46,7 @@ function toCoins(rows: Row[]): Coin[] {
   return coins;
 }
 
-export async function GET(req: NextRequest) {
-  const auth = await requireAuth(req);
-  if (!auth) return err("Unauthorized", 401);
-
+export async function GET() {
   if (cache && Date.now() - cache.at < TTL) return ok({ coins: cache.data, cached: true });
 
   const apiKey = process.env.COINGECKO_API_KEY?.trim();

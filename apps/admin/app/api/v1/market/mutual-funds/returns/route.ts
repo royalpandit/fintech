@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 import { ok, err } from "@/lib/api-helpers";
-import { requireAuth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -88,9 +87,6 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await requireAuth(req);
-  if (!auth) return err("Unauthorized", 401);
-
   const codesParam = new URL(req.url).searchParams.get("codes") ?? "";
   const codes = codesParam
     .split(",")

@@ -1,16 +1,20 @@
 import { NextRequest } from "next/server";
 import { ok, err } from "@/lib/api-helpers";
-import { requireAuth } from "@/lib/auth";
 import { listFundCategories, searchMutualFunds } from "@/lib/amfi";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/v1/market/mutual-funds?q=…
-// Mutual-fund search/browse backed by AMFI's free NAV feed.
+/*
+ * GET /api/v1/market/mutual-funds?q=…
+ *
+ * Mutual-fund search/browse backed by AMFI's free NAV feed.
+ *
+ * Public, like every other tab on the Markets page. This sat behind auth on the
+ * assumption that the page was authed, which it is not — guests read indices,
+ * charts and the option chain, so the Funds tab answered 401 and rendered
+ * empty. Nothing here is per-user and AMFI costs no quota.
+ */
 export async function GET(req: NextRequest) {
-  const auth = await requireAuth(req);
-  if (!auth) return err("Unauthorized", 401);
-
   const params = new URL(req.url).searchParams;
   const q = params.get("q") ?? "";
   const category = params.get("category") ?? "";

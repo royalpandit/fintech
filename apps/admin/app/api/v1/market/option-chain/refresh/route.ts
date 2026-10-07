@@ -18,8 +18,10 @@ export async function POST(req: NextRequest) {
     const symbol = body.symbol;
     if (!symbol) return NextResponse.json({ ok: true, quotes: {}, ts: Date.now() });
 
+    // Key must match the one GET builds, trailing ":s" and all, or the tick
+    // refetches the chain the initial load already has cached.
     const chain = await withFeedCache(
-      `nse-oc:${symbol}:${body.expiry ?? "near"}`,
+      `nse-oc:${symbol}:${body.expiry ?? "near"}:s`,
       60_000,
       2 * 60_000,
       () => getNseOptionChain({ symbol, expiry: body.expiry }),
