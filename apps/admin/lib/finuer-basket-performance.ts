@@ -1,7 +1,6 @@
 ﻿import type { FinuerBasketStock, FinuerBenchmark } from "@prisma/client";
-import { getCandles, getLTP, searchSymbol, type SearchResult } from "@/lib/dhan";
+import { getYahooCandles } from "@/lib/yahoo-quote";
 import type { Candle } from "@/lib/angelone-types";
-import { isEquityInstrument, isIndexInstrument } from "@/lib/instrument-type";
 import { computePerformanceStatus, toNumber } from "@/lib/finuer-basket";
 import { prisma } from "@/lib/prisma";
 
@@ -19,12 +18,12 @@ const PERIOD_DAYS = {
   fiveYear: 365 * 5,
 } as const;
 
-const BENCHMARK_INDEX: Record<string, { symbol: string; token: string; exchange: string }> = {
-  "nifty 50":   { symbol: "NIFTY",     token: "13", exchange: "IDX_I" },
-  "nifty50":    { symbol: "NIFTY",     token: "13", exchange: "IDX_I" },
-  "nifty bank": { symbol: "BANKNIFTY", token: "25", exchange: "IDX_I" },
-  "bank nifty": { symbol: "BANKNIFTY", token: "25", exchange: "IDX_I" },
-  "sensex":     { symbol: "SENSEX",    token: "51", exchange: "IDX_I" },
+const BENCHMARK_INDEX: Record<string, { symbol: string; exchange: string }> = {
+  "nifty 50":   { symbol: "NIFTY",     exchange: "IDX_I" },
+  "nifty50":    { symbol: "NIFTY",     exchange: "IDX_I" },
+  "nifty bank": { symbol: "BANKNIFTY", exchange: "IDX_I" },
+  "bank nifty": { symbol: "BANKNIFTY", exchange: "IDX_I" },
+  "sensex":     { symbol: "SENSEX",    exchange: "IDX_I" },
 };
 
 function round4(n: number | null): number | null {
@@ -39,33 +38,6 @@ export function validateBasketWeights(weights: (number | null | undefined)[]): v
   }
 }
 
-/**
- * Pick the tradable instrument for a plain symbol out of a scrip-master search.
- *
- * searchSymbol keeps derivatives (segment "D"), and the master lists them
- * first, so `searchSymbol("NSE", "RELIANCE")` opens with
- * RELIANCE-Sep2026-700-CE and friends. Both callers below did
- * `hits.find(exact tradingSymbol) ?? hits[0]`, so any symbol whose equity row
- * is not an exact string match silently priced the basket off an option
- * contract — and for a holding entered as "RELIANCE" against Dhan's naming,
- * that is what happened.
- *
- * Returns null rather than falling through to hits[0]: for a published return
- * figure, no number is much better than a number computed from the wrong
- * instrument.
- */
-function pickInstrument(hits: SearchResult[], symbol: string): SearchResult | null {
-  const want = symbol.toUpperCase().trim();
-  const bare = (h: SearchResult) => (h.tradingSymbol ?? "").toUpperCase().replace(/-EQ$/, "");
-
-  return (
-    hits.find((h) => isEquityInstrument(h.instrumentType) && bare(h) === want) ??
-    hits.find((h) => isIndexInstrument(h.instrumentType) && bare(h) === want) ??
-    hits.find((h) => isEquityInstrument(h.instrumentType)) ??
-    hits.find((h) => isIndexInstrument(h.instrumentType)) ??
-    null
-  );
-}
 /** Every window we report, longest first. */
 type Window = keyof typeof PERIOD_DAYS;
 const WINDOWS: Window[] = ["fiveYear", "threeYear", "oneYear", "sixMonth", "threeMonth", "oneMonth"];
@@ -74,25 +46,19 @@ const LONGEST_DAYS = PERIOD_DAYS.fiveYear;
 /** One instrument's market data: the current price and a single long history. */
 type Series = { current: number | null; candles: Candle[] };
 
-function fmtDhanDate(d: Date): string {
-  const p = (v: number) => String(v).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} 09:15`;
-}
-
 /**
- * Fetch one instrument's data once: resolve the token, take a live quote, and
- * pull a single candle series long enough to cover every window we report.
+ * One instrument's data in a single request: a daily series long enough to
+ * cover every window we report, and the current price.
  *
- * This replaces a per-window fetch. Previously each of the seven windows called
- * its own resolve + quote + history, so a five-holding basket fired roughly a
- * hundred Dhan requests, all concurrently. Dhan answered a large share of them
- * with `805 Too many requests`, and because the benchmark was calculated after
- * the holdings it queued behind that storm and came back empty — which is
- * exactly why the benchmark column showed "—" while the basket column had
- * numbers.
+ * Both come from the one series. Yahoo's final daily bar is the live session
+ * once trading opens and its close tracks the quote exactly, so asking for a
+ * price separately would be a second call for a number already in hand.
  *
- * One series per instrument instead: ~3 calls rather than ~21, and every window
- * is derived from the same data, so the windows are also mutually consistent.
+ * Prices came from the broker before, which is why a basket sat frozen at
+ * whatever CMP was last written to the database: an expired token failed both
+ * the quote and the history, and the catch below falls back to the stored
+ * price with no candles — no candles meaning every window reports "—".
+ * Yahoo needs no credentials and cannot expire out from under the page.
  */
 async function loadSeries(
   symbol: string,
@@ -100,37 +66,19 @@ async function loadSeries(
   storedPrice: number | null,
 ): Promise<Series> {
   try {
-    const hit = pickInstrument(await searchSymbol(exchange, symbol), symbol);
-    if (!hit?.token) return { current: storedPrice, candles: [] };
-
-    const exch = hit.exchange ?? exchange;
-    const to = new Date();
-    const from = new Date(to);
-    from.setDate(from.getDate() - LONGEST_DAYS - 5);
-
-    const candles = await getCandles({
-      exchange: exch,
-      symboltoken: hit.token,
-      tradingSymbol: hit.tradingSymbol,
+    const candles = await getYahooCandles({
+      tradingSymbol: symbol,
+      exchange,
       interval: "ONE_DAY",
-      fromdate: fmtDhanDate(from),
-      todate: fmtDhanDate(to),
+      days: LONGEST_DAYS + 5,
     });
+    if (!candles.length) return { current: storedPrice, candles: [] };
 
-    let current: number | null = null;
-    const rows = await getLTP([{ exchange: exch, symboltoken: hit.token }]);
-    const ltp = Number(rows[0]?.ltp);
-    if (Number.isFinite(ltp) && ltp > 0) current = ltp;
-
-    // No live quote (throttled, or the segment is shut) — the newest candle
-    // close is the same market's price, so use it rather than dropping the
-    // instrument and nulling the whole basket.
-    if (current == null && candles.length) {
-      const lastClose = Number(candles[candles.length - 1].close);
-      if (Number.isFinite(lastClose) && lastClose > 0) current = lastClose;
-    }
-
-    return { current: current ?? storedPrice, candles };
+    const lastClose = Number(candles[candles.length - 1]!.close);
+    return {
+      current: Number.isFinite(lastClose) && lastClose > 0 ? lastClose : storedPrice,
+      candles,
+    };
   } catch {
     return { current: storedPrice, candles: [] };
   }
@@ -139,8 +87,8 @@ async function loadSeries(
 /**
  * The close `daysAgo` days back, read out of an already-loaded series.
  *
- * Returns null when the series does not actually reach that far. Dhan silently
- * returns a shorter history than requested for some instruments, and the old
+ * Returns null when the series does not actually reach that far. A feed can
+ * silently return a shorter history than requested, and the old
  * code took `candles.find(c => date >= target)` — which the OLDEST bar always
  * satisfies once the series starts after the target. A 5Y window would quietly
  * use a three-month-old price and publish it as a five-year return. A wrong
@@ -183,8 +131,7 @@ async function basketReturns(
   const prices = new Map<string, number>();
   if (!weighted.length) return { returns: out, prices, series: [] };
 
-  // Sequential: these calls share one rate limiter, so firing them together
-  // only produces 429s that then have to be retried.
+  // Sequential: one upstream, one request per holding, and a basket is small.
   const loaded: { stock: StockRow; weight: number; series: Series }[] = [];
   for (const stock of weighted) {
     const stored = toNumber(stock.entryPrice) ?? toNumber(stock.cmp);
@@ -312,46 +259,26 @@ async function benchmarkReturns(
   const out: WindowReturns = {};
 
   /*
-   * Resolve the index.
-   *
-   * The known-index mapping wins when the name matches, because it carries the
-   * quote-feed token and segment directly. The two identifiers live in
-   * different namespaces: the feed wants IDX_I, but the scrip master lists
-   * indices under the cash exchange — searchSymbol("IDX_I", "NIFTY") returns
-   * nothing while "NSE" returns the INDEX row.
+   * Resolve the index. The known-index mapping wins when the name matches,
+   * since a benchmark saved with a blank symbol still has a name.
    */
   const mapped = BENCHMARK_INDEX[benchmark.name.toLowerCase()];
   const exch = mapped?.exchange ?? benchmark.exchange ?? "NSE";
   const sym = benchmark.symbol?.trim() || mapped?.symbol;
 
   try {
-    let symboltoken = mapped?.token;
-    if (!symboltoken && sym) {
-      symboltoken = pickInstrument(await searchSymbol("NSE", sym), sym)?.token;
-    }
-    if (!symboltoken) return { returns: out, series: [] };
+    if (!sym) return { returns: out, series: [] };
 
-    const to = new Date();
-    const from = new Date(to);
-    from.setDate(from.getDate() - LONGEST_DAYS - 5);
-
-    const candles = await getCandles({
-      exchange: exch,
-      symboltoken,
+    const candles = await getYahooCandles({
       tradingSymbol: sym,
+      exchange: exch,
       interval: "ONE_DAY",
-      fromdate: fmtDhanDate(from),
-      todate: fmtDhanDate(to),
+      days: LONGEST_DAYS + 5,
     });
+    if (!candles.length) return { returns: out, series: [] };
 
-    let current: number | null = null;
-    const rows = await getLTP([{ exchange: exch, symboltoken }]);
-    const ltp = Number(rows[0]?.ltp);
-    if (Number.isFinite(ltp) && ltp > 0) current = ltp;
-    if (current == null && candles.length) {
-      const lastClose = Number(candles[candles.length - 1].close);
-      if (Number.isFinite(lastClose) && lastClose > 0) current = lastClose;
-    }
+    const lastClose = Number(candles[candles.length - 1]!.close);
+    const current = Number.isFinite(lastClose) && lastClose > 0 ? lastClose : null;
     if (current == null) return { returns: out, series: candles };
 
     for (const w of WINDOWS) {
@@ -389,10 +316,8 @@ export async function recalculateBasketPerformance(basketId: number) {
 
   validateBasketWeights(stocks.map((s) => toNumber(s.weightPct)));
 
-  // One pass per side, not one per window. The old code ran seven
-  // weightedBasketReturn calls concurrently and then seven benchmarkReturn
-  // calls, each re-resolving and re-fetching from scratch — about a hundred
-  // Dhan requests for a five-holding basket, most of which came back 429.
+  // One pass per side, not one per window: every window is derived from the
+  // same series, so they cannot disagree with each other.
   const { returns: b, prices, series: basketSeries } = await basketReturns(stocks);
   const { returns: bm, series: benchSeries } = await benchmarkReturns(basket.benchmark);
 
