@@ -15,7 +15,6 @@ import ConnectBrokerButton from "@/components/portfolio/connect-broker-button";
 import { loadPortfolioOverview } from "@/lib/portfolio-overview";
 import AreaChart from "@/components/advisor-ui/area-chart";
 import DonutChart from "@/components/advisor-ui/donut-chart";
-import LiveCandleChart from "@/components/live-candle-chart";
 import { getHoldings } from "@/lib/dhan";
 
 export const dynamic = "force-dynamic";
@@ -123,11 +122,6 @@ export default async function PortfolioPage() {
       detail: formatINR(value, true),
     }));
   const sectorTotal = sectorSlices.reduce((s, x) => s + x.value, 0);
-
-  const chartSymbol =
-    (paper?.positions ?? [])
-      .filter((p) => !/^\d{4,8}$/.test(p.symbol))
-      .sort((a, b) => b.marketValue - a.marketValue)[0]?.symbol ?? "NIFTY 50";
 
   return (
     <section>
@@ -532,29 +526,6 @@ export default async function PortfolioPage() {
                 </table>
               </div>
             )}
-          </article>
-
-          {/* ── Live Market Chart ── */}
-          <article
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 14,
-              padding: 18,
-              marginTop: 14,
-            }}
-          >
-            <h3
-              style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "var(--text)" }}
-            >
-              Live Chart — OHLCV
-            </h3>
-            {/* Opens on the largest holding rather than NIFTY 50. On a
-                portfolio page the index is the least relevant chart available:
-                it is the one thing the investor does not own. Falls back to
-                NIFTY when there is nothing held, and skips fund scheme codes,
-                which have no candle chart. */}
-            <LiveCandleChart defaultSymbol={chartSymbol} />
           </article>
 
           {/* ── Angel One Live Holdings ── */}

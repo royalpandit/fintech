@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import WalletActions from "@/components/paper/wallet-actions";
 import PaperTradeForm from "@/components/paper/paper-trade-form";
 import PaperPortfolioSection from "@/components/paper/paper-portfolio-section";
+import LiveCandleChart from "@/components/live-candle-chart";
 import { computeFinuerScore, FREE_BALANCE_CAP, UNLOCK_SCORE } from "@/lib/finuer-score";
 
 export const dynamic = "force-dynamic";
@@ -90,6 +91,23 @@ export default async function UserVirtualTradingPage({
           </p>
         </article>
       </div>
+
+      <article
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: 14,
+          padding: 18,
+          marginTop: 14,
+        }}
+      >
+        <h2 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 600, color: "var(--text)" }}>
+          Live Chart — OHLCV
+        </h2>
+        {/* Opens on whatever the Buy/Sell shortcut deep-linked in, so the chart
+            and the order form above are looking at the same thing. */}
+        <LiveCandleChart defaultSymbol={presetSymbol || "NIFTY 50"} />
+      </article>
 
       {/* The Quick trade card above is this page's order entry — the section
           would otherwise render a second, identical form underneath. */}

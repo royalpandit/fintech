@@ -12,8 +12,11 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const token         = searchParams.get("token");
-    const tradingSymbol = searchParams.get("tradingSymbol") ?? undefined;
+    const token = searchParams.get("token");
+    // `symbol` is the plain-name alias callers use when they have no token —
+    // Yahoo prices off the name, so a token is not something they need to know.
+    const tradingSymbol =
+      searchParams.get("tradingSymbol") ?? searchParams.get("symbol") ?? undefined;
     const instrumentType = searchParams.get("instrumentType") ?? undefined;
     const exchange = resolveMarketExchange({
       exchange: searchParams.get("exchange") ?? "NSE",
@@ -36,11 +39,15 @@ export async function GET(req: NextRequest) {
     const maxDays = INTERVAL_MAX[interval] ?? 60;
     const days    = Math.min(maxDays, Math.max(1, Number(searchParams.get("days") ?? "90")));
 
-    if (!token) return NextResponse.json({ ok: false, error: "Missing token" }, { status: 400 });
+    // Only Dhan needs a token; Yahoo runs off the symbol, so either will do.
+    if (!token && !tradingSymbol) {
+      return NextResponse.json({ ok: false, error: "Missing token or symbol" }, { status: 400 });
+    }
 
     const { fromdate, todate } = angelCandleRange(days);
 
-    console.log("[candles] token=%s exchange=%s interval=%s from=%s to=%s", token, exchange, interval, fromdate, todate);
+    console.log("[candles] token=%s symbol=%s exchange=%s interval=%s from=%s to=%s",
+      token, tradingSymbol, exchange, interval, fromdate, todate);
 
     // Yahoo is primary for historical candles — no token needed.
     // When tradingSymbol is missing, resolve the numeric token to its symbol
@@ -81,8 +88,9 @@ export async function GET(req: NextRequest) {
       console.warn("[candles] Yahoo returned 0 candles for %s — trying Dhan", yahooTicker);
     }
 
-    // Dhan fallback (derivatives, unlisted, any instrument Yahoo can't price)
-    if (!isRateLimited()) {
+    // Dhan fallback (derivatives, unlisted, any instrument Yahoo can't price).
+    // Needs the security id, so symbol-only callers stop at Yahoo.
+    if (token && !isRateLimited()) {
       try {
         const cacheKey = `candles:v2:${token}:${exchange}:${interval}:${days}`;
         const candles = await withMarketCache(cacheKey, 20_000, async () => {
