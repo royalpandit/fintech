@@ -206,6 +206,25 @@ function candleTime(c: Candle) {
   return parseCandleTimestampToUnix(c.timestamp);
 }
 
+/**
+ * Resolve a CSS custom property to the colour it currently holds.
+ *
+ * lightweight-charts paints onto a canvas, and a canvas has no idea what
+ * `var(--border)` means: assigning it to fillStyle is invalid, so the
+ * assignment is dropped and whatever colour was there stays. Axis labels, grid
+ * lines and the scale borders were all handed CSS variables, which is why the
+ * dates along the bottom were missing — they were drawn every frame, in the
+ * canvas default black, on a near-black chart.
+ *
+ * The caller re-reads these whenever `themeVersion` changes, so a theme switch
+ * repaints with the new palette.
+ */
+function cssColor(name: string, fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
+
 function chartStructureKey(
   chartType: ChartType,
   indicatorKey: string,
@@ -601,18 +620,23 @@ export default function ChartWidget({
       const layoutPaneCount = paneIds.length + (customPane ? 1 : 0);
       const { mainH, paneH } = computeChartLayout(totalH, layoutPaneCount);
 
+      // Canvas needs real colours, not CSS variables — see cssColor above.
+      const surface = cssColor("--surface", "#131415");
+      const border = cssColor("--border", "#232527");
+      const textMuted = cssColor("--text-muted", "#9ba3aa");
+
       const chartOpts = {
         layout: {
-          background: { type: lc.ColorType.Solid, color: "var(--surface)" },
-          textColor: "var(--text-muted)", fontSize: 11,
+          background: { type: lc.ColorType.Solid, color: surface },
+          textColor: textMuted, fontSize: 11,
           fontFamily: "Inter, system-ui, sans-serif",
         },
         localization: nseChartLocalization,
-        grid:      { vertLines: { color: "var(--border)" }, horzLines: { color: "var(--border)" } },
+        grid:      { vertLines: { color: border }, horzLines: { color: border } },
         crosshair: { mode: lc.CrosshairMode.Normal },
-        rightPriceScale: { borderColor: "var(--border)" },
+        rightPriceScale: { borderColor: border },
         timeScale: {
-          borderColor: "var(--border)",
+          borderColor: border,
           timeVisible: !hasLowerPanes,
           secondsVisible: false,
           rightOffset: 8,
@@ -682,7 +706,7 @@ export default function ChartWidget({
       } else if (ohlcTypes.includes(chartType)) {
         const hollow = chartType === "hollow";
         mainSeries = chart.addSeries(lc.CandlestickSeries, {
-          upColor: hollow ? "var(--surface)" : "#16a34a",
+          upColor: hollow ? surface : "#16a34a",
           downColor: "#dc2626",
           borderUpColor: "#16a34a", borderDownColor: "#dc2626",
           wickUpColor: "#16a34a", wickDownColor: "#dc2626",

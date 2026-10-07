@@ -86,14 +86,14 @@ export default function CandlestickChart({
             x2={W - padR}
             y1={g.y}
             y2={g.y}
-            stroke="var(--border)"
+            style={{ stroke: "var(--border)" }}
             strokeDasharray="3 5"
           />
           <text
             x={padL - 6}
             y={g.y + 4}
             fontSize="10"
-            fill="var(--text-muted)"
+            style={{ fill: "var(--text-muted)" }}
             textAnchor="end"
           >
             {fmtPrice(g.price)}
@@ -141,7 +141,7 @@ export default function CandlestickChart({
           x={toX(i)}
           y={height - 8}
           fontSize="10"
-          fill="var(--text-muted)"
+          style={{ fill: "var(--text-muted)" }}
           textAnchor="middle"
         >
           {fmtDate(data[i].timestamp)}
