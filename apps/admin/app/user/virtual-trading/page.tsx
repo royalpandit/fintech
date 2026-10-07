@@ -9,9 +9,17 @@ import WalletActions from "@/components/paper/wallet-actions";
 import PaperTradeForm from "@/components/paper/paper-trade-form";
 import PaperPortfolioSection from "@/components/paper/paper-portfolio-section";
 import LiveCandleChart from "@/components/live-candle-chart";
+import DonutChart from "@/components/advisor-ui/donut-chart";
+import { loadPortfolioOverview } from "@/lib/portfolio-overview";
 import { computeFinuerScore, FREE_BALANCE_CAP, UNLOCK_SCORE } from "@/lib/finuer-score";
 
 export const dynamic = "force-dynamic";
+
+function formatINR(n: number) {
+  if (Math.abs(n) >= 100000) return `₹${(n / 100000).toFixed(2)}L`;
+  if (Math.abs(n) >= 1000) return `₹${(n / 1000).toFixed(1)}k`;
+  return `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+}
 
 /**
  * Virtual Trading — the investor counterpart to the advisor's /advisor/paper.
@@ -35,10 +43,22 @@ export default async function UserVirtualTradingPage({
   const presetSymbol = (searchParams?.symbol ?? "").trim().toUpperCase();
   const presetSide = searchParams?.side === "sell" ? "sell" : "buy";
 
-  const [wallet, finuer] = await Promise.all([
+  const [wallet, finuer, overview] = await Promise.all([
     prisma.virtualWallet.findUnique({ where: { userId: auth.userId } }),
     computeFinuerScore(auth.userId),
+    // Sector split of the paper book. It used to sit on Portfolio, mixed in
+    // with broker holdings — but these are the virtual positions, so the split
+    // describing them belongs beside them.
+    loadPortfolioOverview(auth.userId),
   ]);
+
+  const sectorSlices = (overview?.sectors ?? []).slice(0, 6).map((s, i) => ({
+    label: s.sector,
+    value: s.value,
+    color: ["#0ea5e9", "#10b981", "#f59e0b", "#7c3aed", "#dc2626", "#64748b"][i],
+    detail: formatINR(s.value),
+  }));
+  const sectorTotal = sectorSlices.reduce((t, x) => t + x.value, 0);
 
   return (
     <section className="user-page-section">
@@ -92,22 +112,60 @@ export default async function UserVirtualTradingPage({
         </article>
       </div>
 
-      <article
-        style={{
-          background: "var(--surface)",
-          border: "1px solid var(--border)",
-          borderRadius: 14,
-          padding: 18,
-          marginTop: 14,
-        }}
-      >
-        <h2 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 600, color: "var(--text)" }}>
-          Live Chart — OHLCV
-        </h2>
-        {/* Opens on whatever the Buy/Sell shortcut deep-linked in, so the chart
-            and the order form above are looking at the same thing. */}
-        <LiveCandleChart defaultSymbol={presetSymbol || "NIFTY 50"} />
-      </article>
+      <div className="user-split-chart" style={{ marginTop: 14 }}>
+        <article
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: 14,
+            padding: 18,
+          }}
+        >
+          <h2 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 600, color: "var(--text)" }}>
+            Live Chart — OHLCV
+          </h2>
+          {/* Opens on whatever the Buy/Sell shortcut deep-linked in, so the chart
+              and the order form above are looking at the same thing. */}
+          <LiveCandleChart defaultSymbol={presetSymbol || "NIFTY 50"} />
+        </article>
+
+        <article
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: 14,
+            padding: 18,
+          }}
+        >
+          <h2 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 600, color: "var(--text)" }}>
+            Sector Allocation
+          </h2>
+          {sectorTotal === 0 ? (
+            <p
+              style={{
+                margin: 0,
+                height: 220,
+                display: "grid",
+                placeItems: "center",
+                color: "var(--text-muted)",
+                fontSize: 12,
+                textAlign: "center",
+                padding: "0 12px",
+              }}
+            >
+              Buy something above and the split across sectors shows up here.
+            </p>
+          ) : (
+            <DonutChart
+              slices={sectorSlices}
+              centerLabel="Holdings"
+              centerValue={formatINR(sectorTotal)}
+              size={170}
+              thickness={26}
+            />
+          )}
+        </article>
+      </div>
 
       {/* The Quick trade card above is this page's order entry — the section
           would otherwise render a second, identical form underneath. */}

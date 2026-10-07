@@ -1,4 +1,4 @@
-﻿import type { ComponentType } from "react";
+import type { ComponentType } from "react";
 import { cookies } from "next/headers";
 import {
   FiBriefcase,
@@ -12,12 +12,24 @@ import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import AuthGate from "@/components/auth-gate";
 import ConnectBrokerButton from "@/components/portfolio/connect-broker-button";
-import { loadPortfolioOverview } from "@/lib/portfolio-overview";
 import AreaChart from "@/components/advisor-ui/area-chart";
-import DonutChart from "@/components/advisor-ui/donut-chart";
 import { getHoldings } from "@/lib/dhan";
 
 export const dynamic = "force-dynamic";
+
+/*
+ * Portfolio is the connected broker's book and nothing else.
+ *
+ * It used to blend the paper book in — paper positions in the holdings table,
+ * paper value in the totals, paper sectors in the allocation donut — so a user
+ * with no broker still saw a populated "portfolio" made of simulated trades.
+ * Virtual money and real money reading as one balance is the wrong thing to
+ * show on the page someone checks to see what they own.
+ *
+ * So: no broker, one card asking them to connect one. Broker connected, their
+ * real holdings. The paper book and its sector donut live on Virtual Trading,
+ * which is where that money is.
+ */
 
 function formatINR(n: number, compact = false) {
   if (!n && n !== 0) return "₹0";
@@ -45,7 +57,7 @@ export default async function PortfolioPage() {
   const isAuthed = Boolean(auth);
   const userId = auth?.userId ?? null;
 
-  const [portfolios, holdings, snapshots, brokerAccounts, liveHoldings, paper] =
+  const [portfolios, holdings, snapshots, brokerAccounts, liveHoldings] =
     await Promise.all([
       userId
         ? prisma.portfolio.findMany({
@@ -69,146 +81,73 @@ export default async function PortfolioPage() {
       userId
         ? prisma.brokerAccount.findMany({ where: { userId } })
         : Promise.resolve([]),
-      // Always try to fetch live Angel One holdings
       getHoldings().catch(() => [] as Awaited<ReturnType<typeof getHoldings>>),
-      /*
-       * The paper book, priced at the market.
-       *
-       * Everything below used to read the `portfolios` row and its assets,
-       * which only a broker sync writes. With no broker connected that is all
-       * zeroes — so the page showed a ₹0 portfolio, an empty allocation donut
-       * and "No holdings synced yet" directly above a positions table holding
-       * real stock. These are the numbers the investor actually has.
-       */
-      userId ? loadPortfolioOverview(userId) : Promise.resolve(null),
     ]);
 
+  /*
+   * A linked account is the signal, not a synced portfolio row. The sync runs
+   * after the link, so gating on the row would show the connect card again to
+   * someone who had just connected.
+   */
+  const hasBroker = brokerAccounts.length > 0 || liveHoldings.length > 0;
+
   const activePortfolio = portfolios[0];
-  const brokerValue = activePortfolio ? Number(activePortfolio.totalValue) : 0;
-  // Broker-synced value plus the paper book. Either can be zero; the sum is
-  // what the investor is actually looking at.
-  const totalValue = brokerValue + (paper?.holdingsValue ?? 0);
-  const dayChange =
-    (activePortfolio ? Number(activePortfolio.dayChange) : 0) + (paper?.dayChange ?? 0);
+  const totalValue = activePortfolio ? Number(activePortfolio.totalValue) : 0;
+  const dayChange = activePortfolio ? Number(activePortfolio.dayChange) : 0;
+
+  // Cost and P&L off the synced holdings, so the strip always agrees with the
+  // table under it rather than with a separately stored figure.
+  let investedCost = 0;
+  let unrealisedPnL = 0;
+  for (const h of holdings) {
+    const avg = Number(h.averagePrice);
+    const cur = Number(h.currentPrice ?? h.averagePrice);
+    const qty = Number(h.quantity);
+    investedCost += avg * qty;
+    unrealisedPnL += (cur - avg) * qty;
+  }
+
   const chartData = snapshots.map((s) => ({
     label: dayLabel(s.day),
     value: Number(s.totalValue),
   }));
 
-  /*
-   * Sector grouping for the donut.
-   *
-   * Broker-synced assets carry their own sector; paper holdings do not, so
-   * those are classified through lib/market-sectors (RELIANCE → Energy, INFY →
-   * IT). Anything the curated list does not recognise — an ETF, a fund scheme
-   * code — lands in "Other" rather than being guessed into a real sector.
-   */
-  const sectorTotals = new Map<string, number>();
-  for (const h of holdings) {
-    const sector = h.sector ?? "Others";
-    const value = Number(h.currentPrice ?? h.averagePrice) * Number(h.quantity);
-    sectorTotals.set(sector, (sectorTotals.get(sector) ?? 0) + value);
-  }
-  for (const p of paper?.positions ?? []) {
-    sectorTotals.set(p.sector, (sectorTotals.get(p.sector) ?? 0) + p.marketValue);
-  }
-  const sectorSlices = Array.from(sectorTotals.entries())
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 6)
-    .map(([sector, value], i) => ({
-      label: sector,
-      value,
-      color: ["#0ea5e9", "#10b981", "#f59e0b", "#7c3aed", "#dc2626", "#64748b"][i],
-      detail: formatINR(value, true),
-    }));
-  const sectorTotal = sectorSlices.reduce((s, x) => s + x.value, 0);
-
   return (
     <section>
       <div className="page-head" style={{ marginBottom: 20 }}>
         <div>
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 22,
-            fontWeight: 600,
-            color: "var(--text)",
-            letterSpacing: -0.5,
-          }}
-        >
-          Portfolio
-        </h1>
-        <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 12 }}>
-          {isAuthed
-            ? "Connected broker portfolio & live holdings"
-            : "Connect your broker for AI-powered portfolio insights"}
-        </p>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 22,
+              fontWeight: 600,
+              color: "var(--text)",
+              letterSpacing: -0.5,
+            }}
+          >
+            Portfolio
+          </h1>
+          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
+            {hasBroker
+              ? "Holdings synced from your connected broker"
+              : "Connect a broker to see your real holdings here"}
+          </p>
         </div>
-
-        {/* Trade CTA pointed at Virtual Trading, which is hidden from the nav.
-            Uncomment with that tab.
-        {isAuthed && (
-          <Link href="/user/virtual-trading" className="vt-ai-cta">
-            Trade
-          </Link>
-        )}
-        */}
-      </div>
-
-      {isAuthed && !activePortfolio && (
-        <article
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: 14,
-            padding: 24,
-            marginBottom: 18,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 16,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <span
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                background: "rgba(14,165,233,0.1)",
-                color: "#0ea5e9",
-                display: "grid",
-                placeItems: "center",
-                flexShrink: 0,
-              }}
-            >
-              <FiLink size={20} />
-            </span>
-            <div>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>
-                No broker connected
-              </p>
-              <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--text-muted)" }}>
-                Link your broker to sync real holdings, P&amp;L, and sector allocation.
-              </p>
-            </div>
-          </div>
+        {hasBroker && (
           <ConnectBrokerButton
-            label="Connect broker"
-            variant="solid"
+            label="Manage brokers"
             connectedBrokers={brokerAccounts.map((b) => b.brokerName)}
           />
-        </article>
-      )}
+        )}
+      </div>
 
-      {!isAuthed || !activePortfolio ? (
+      {!hasBroker ? (
         <article
           style={{
             background: "linear-gradient(135deg, #0f172a, #064e3b)",
             color: "#fff",
             borderRadius: 18,
             padding: 36,
-            marginBottom: 18,
           }}
           className="user-split-hero"
         >
@@ -230,15 +169,8 @@ export default async function PortfolioPage() {
             >
               <FiBriefcase size={13} /> PORTFOLIO INTELLIGENCE
             </span>
-            <h2
-              style={{
-                margin: 0,
-                fontSize: 28,
-                fontWeight: 600,
-                letterSpacing: -0.6,
-              }}
-            >
-              Connect once. Get AI insights forever.
+            <h2 style={{ margin: 0, fontSize: 28, fontWeight: 600, letterSpacing: -0.6 }}>
+              Connect your broker to see your portfolio
             </h2>
             <p
               style={{
@@ -249,8 +181,8 @@ export default async function PortfolioPage() {
                 maxWidth: 460,
               }}
             >
-              We securely sync your holdings via OAuth and analyze diversification,
-              concentration risk, sector exposure, and rebalancing opportunities.
+              Link Dhan, Angel One or any supported broker and your real holdings,
+              cost basis and P&amp;L appear here. Read-only — we never place orders.
             </p>
             <AuthGate
               isAuthenticated={isAuthed}
@@ -262,6 +194,9 @@ export default async function PortfolioPage() {
                 connectedBrokers={brokerAccounts.map((b) => b.brokerName)}
               />
             </AuthGate>
+            <p style={{ margin: "14px 0 0", fontSize: 11.5, color: "rgba(255,255,255,0.6)" }}>
+              Practising with virtual money? That book lives in Virtual Trading.
+            </p>
           </div>
           <div style={{ display: "grid", gap: 8 }}>
             {(
@@ -296,7 +231,6 @@ export default async function PortfolioPage() {
         </article>
       ) : (
         <>
-          {/* Stats strip */}
           <div className="user-stat-grid" style={{ marginBottom: 18 }}>
             {[
               { label: "Total Value", value: formatINR(totalValue, true), color: "var(--text)" },
@@ -305,22 +239,11 @@ export default async function PortfolioPage() {
                 value: `${dayChange >= 0 ? "+" : ""}${formatINR(dayChange, true)}`,
                 color: dayChange >= 0 ? "#16a34a" : "#dc2626",
               },
-              /*
-               * Invested and unrealised P&L replace Risk Score and
-               * Diversification. Those two are only ever written by a broker
-               * sync, so they read "0.0 / 10" and "0%" for every user without
-               * one — a scored assessment that was never actually scored.
-               * These are computed from the holdings on screen.
-               */
-              {
-                label: "Invested",
-                value: formatINR(paper?.investedCost ?? 0, true),
-                color: "var(--text)",
-              },
+              { label: "Invested", value: formatINR(investedCost, true), color: "var(--text)" },
               {
                 label: "Unrealised P&L",
-                value: `${(paper?.unrealizedPnL ?? 0) >= 0 ? "+" : ""}${formatINR(paper?.unrealizedPnL ?? 0, true)}`,
-                color: (paper?.unrealizedPnL ?? 0) >= 0 ? "#16a34a" : "#dc2626",
+                value: `${unrealisedPnL >= 0 ? "+" : ""}${formatINR(unrealisedPnL, true)}`,
+                color: unrealisedPnL >= 0 ? "#16a34a" : "#dc2626",
               },
             ].map((s) => (
               <article
@@ -342,8 +265,16 @@ export default async function PortfolioPage() {
             ))}
           </div>
 
-          <div className="user-split-chart">
-            <article style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: 18 }}>
+          {chartData.length > 0 && (
+            <article
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                borderRadius: 14,
+                padding: 18,
+                marginBottom: 18,
+              }}
+            >
               <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
                 Portfolio Value — 90 days
               </h3>
@@ -354,37 +285,8 @@ export default async function PortfolioPage() {
                 valueFormatter={(n) => formatINR(n, true)}
               />
             </article>
+          )}
 
-            <article style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: 18 }}>
-              <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
-                Sector Allocation
-              </h3>
-              {sectorTotal === 0 ? (
-                <p
-                  style={{
-                    margin: 0,
-                    height: 220,
-                    display: "grid",
-                    placeItems: "center",
-                    color: "var(--text-muted)",
-                    fontSize: 12,
-                  }}
-                >
-                  No sectors tagged.
-                </p>
-              ) : (
-                <DonutChart
-                  slices={sectorSlices}
-                  centerLabel="Total"
-                  centerValue={formatINR(sectorTotal, true)}
-                  size={170}
-                  thickness={26}
-                />
-              )}
-            </article>
-          </div>
-
-          {/* Holdings table */}
           <article
             style={{
               background: "var(--surface)",
@@ -400,30 +302,14 @@ export default async function PortfolioPage() {
               </h3>
             </div>
             {holdings.length === 0 ? (
-              /* "No holdings synced yet" read as "you own nothing", directly
-                 above a paper positions table full of stock. An empty state
-                 should say what is missing AND offer the one action that fixes
-                 it, rather than leaving the user to find the button elsewhere
-                 on the page. */
               <div className="brk-empty">
                 <span className="brk-empty-icon" aria-hidden>
                   <FiLink size={22} />
                 </span>
-                <h4 className="brk-empty-title">No broker account connected</h4>
+                <h4 className="brk-empty-title">Nothing synced yet</h4>
                 <p className="brk-empty-text">
-                  Link a broker to pull your real holdings, cost basis and P&amp;L in
-                  alongside everything else here.
-                  {(paper?.positions.length ?? 0) > 0
-                    ? " Your paper positions are already shown above."
-                    : ""}
-                </p>
-                <ConnectBrokerButton
-                  label="Connect a broker"
-                  variant="solid"
-                  connectedBrokers={brokerAccounts.map((b) => b.brokerName)}
-                />
-                <p className="brk-empty-note">
-                  Read-only access. We never place orders through your broker.
+                  Your broker is linked. Holdings appear here once the first sync
+                  completes.
                 </p>
               </div>
             ) : (
@@ -470,28 +356,31 @@ export default async function PortfolioPage() {
                                 style={{
                                   width: 28,
                                   height: 28,
-                                  borderRadius: 7,
-                                  background: color + "1a",
-                                  color,
+                                  borderRadius: 8,
+                                  background: color,
+                                  color: "#fff",
                                   display: "grid",
                                   placeItems: "center",
                                   fontSize: 10,
-                                  fontWeight: 600,
+                                  fontWeight: 700,
+                                  flexShrink: 0,
                                 }}
                               >
-                                {h.symbol.slice(0, 1)}
+                                {h.symbol.slice(0, 2)}
                               </div>
-                              <strong>{h.symbol}</strong>
+                              <span style={{ fontWeight: 700, color: "var(--text)" }}>{h.symbol}</span>
                             </div>
                           </td>
                           <td style={{ padding: "12px 18px", color: "var(--text-muted)" }}>
                             {h.sector ?? "—"}
                           </td>
-                          <td style={{ padding: "12px 18px", textAlign: "right" }}>{qty}</td>
-                          <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                          <td style={{ padding: "12px 18px", textAlign: "right", color: "var(--text)" }}>
+                            {qty}
+                          </td>
+                          <td style={{ padding: "12px 18px", textAlign: "right", color: "var(--text)" }}>
                             {formatINR(ap)}
                           </td>
-                          <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                          <td style={{ padding: "12px 18px", textAlign: "right", color: "var(--text)" }}>
                             {formatINR(cp)}
                           </td>
                           <td style={{ padding: "12px 18px", textAlign: "right", fontWeight: 600 }}>
@@ -528,7 +417,7 @@ export default async function PortfolioPage() {
             )}
           </article>
 
-          {/* ── Angel One Live Holdings ── */}
+          {/* Live from the broker, alongside whatever the last sync wrote. */}
           {liveHoldings.length > 0 && (
             <article
               style={{
@@ -550,7 +439,7 @@ export default async function PortfolioPage() {
                 }}
               >
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
-                  Angel One Holdings — Live ({liveHoldings.length})
+                  Live Holdings ({liveHoldings.length})
                 </h3>
                 <span
                   style={{
@@ -597,9 +486,7 @@ export default async function PortfolioPage() {
                             <strong>{h.symbolname || h.tradingsymbol}</strong>
                             <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{h.exchange}</div>
                           </td>
-                          <td style={{ padding: "12px 18px", textAlign: "right" }}>
-                            {h.quantity}
-                          </td>
+                          <td style={{ padding: "12px 18px", textAlign: "right" }}>{h.quantity}</td>
                           <td style={{ padding: "12px 18px", textAlign: "right" }}>
                             {formatINR(h.averageprice)}
                           </td>
@@ -641,4 +528,3 @@ export default async function PortfolioPage() {
     </section>
   );
 }
-
