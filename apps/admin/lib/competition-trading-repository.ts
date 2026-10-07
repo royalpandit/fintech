@@ -6,7 +6,8 @@ import {
   calcTotalReturn,
   type BuySellInput,
 } from "@/lib/competition-trading";
-import { getLTP, searchSymbol, type QuoteInstrument } from "@/lib/dhan";
+import { searchSymbol, type QuoteInstrument } from "@/lib/dhan";
+import { getYahooQuotes } from "@/lib/yahoo-quote";
 
 export class CompetitionTradingRepository {
   async getCompetitionOrThrow(competitionId: number) {
@@ -83,7 +84,8 @@ export class CompetitionTradingRepository {
     holdings: { stockSymbol: string; exchange: string; symbolToken: string | null; currentPrice: unknown }[],
   ): Promise<Record<string, number>> {
     const prices: Record<string, number> = {};
-    const withToken: QuoteInstrument[] = [];
+    // Yahoo prices by name, and every row below sets one.
+    const withToken: (QuoteInstrument & { tradingSymbol: string })[] = [];
 
     for (const h of holdings) {
       const sym = h.stockSymbol.toUpperCase();
@@ -100,7 +102,7 @@ export class CompetitionTradingRepository {
 
     if (withToken.length > 0) {
       try {
-        const quotes = await getLTP(withToken);
+        const quotes = await getYahooQuotes(withToken);
         for (const q of quotes) {
           const sym = (q.tradingSymbol ?? "").toUpperCase();
           if (sym && q.ltp > 0) prices[sym] = q.ltp;
@@ -240,7 +242,7 @@ export class CompetitionTradingRepository {
 
     if (input.symbolToken) {
       try {
-        const quotes = await getLTP([
+        const quotes = await getYahooQuotes([
           {
             exchange: input.exchange ?? "NSE",
             symboltoken: input.symbolToken,
@@ -258,14 +260,18 @@ export class CompetitionTradingRepository {
       (r) => r.tradingSymbol.toUpperCase() === input.stockSymbol.toUpperCase(),
     );
     if (match?.token) {
-      const quotes = await getLTP([
-        {
-          exchange: match.exchange,
-          symboltoken: match.token,
-          tradingSymbol: match.tradingSymbol,
-        },
-      ]);
-      if (quotes[0]?.ltp > 0) return quotes[0].ltp;
+      try {
+        const quotes = await getYahooQuotes([
+          {
+            exchange: match.exchange,
+            symboltoken: match.token,
+            tradingSymbol: match.tradingSymbol,
+          },
+        ]);
+        if (quotes[0]?.ltp > 0) return quotes[0].ltp;
+      } catch {
+        /* fall through to the explicit error below */
+      }
     }
 
     throw new Error("Unable to fetch stock price — provide price manually");

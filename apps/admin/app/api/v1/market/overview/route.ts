@@ -1,9 +1,8 @@
 ﻿import { NextResponse } from "next/server";
-import { getExtendedQuotes, type ExtendedQuoteData, type QuoteInstrument } from "@/lib/dhan";
+import type { ExtendedQuoteData, QuoteInstrument } from "@/lib/dhan";
 import { MARKET_INSTRUMENTS } from "@/lib/angelone-shared";
-import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
 import { getYahooQuotes } from "@/lib/yahoo-quote";
-import { FALLBACK_REFRESH_MS, quoteRefreshMs } from "@/lib/market-refresh";
+import { FALLBACK_REFRESH_MS } from "@/lib/market-refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +22,7 @@ export type OverviewRow = {
   week52Low: number | null;
 };
 
-type Source = "dhan" | "yahoo";
+type Source = "yahoo";
 
 const INSTRUMENTS: (QuoteInstrument & { tradingSymbol: string })[] = MARKET_INSTRUMENTS.map((m) => ({
   exchange: m.exchange,
@@ -38,32 +37,11 @@ function byToken(rows: ExtendedQuoteData[]): Map<string, ExtendedQuoteData> {
 }
 
 /*
- * Yahoo gets its own cache, deliberately not withMarketCache.
- *
- * That helper throws the moment Dhan is rate-limited — which is one of the
- * exact situations this path exists to survive. Its TTL is also longer:
- * Dhan answers the whole board in a single batched request, while Yahoo needs
- * one request per symbol, so the standby feed runs at a slower tick on purpose.
+ * Yahoo needs one request per symbol rather than one batched call for the whole
+ * board, so this holds a result for FALLBACK_REFRESH_MS and the client is told
+ * to poll at that same cadence — the two cannot drift apart.
  */
 let yahooCache: { rows: ExtendedQuoteData[]; expires: number } | null = null;
-
-/*
- * Stop re-trying a credential we know is dead.
- *
- * An expired DHAN_ACCESS_TOKEN fails the same way every time, and at a
- * three-second poll that is a doomed round trip to Dhan twenty times a minute,
- * each one delaying the standby data behind it. Auth failures only — a
- * timeout or a 5xx is transient and deserves the next attempt.
- *
- * The window is deliberately short, and the token is read from the environment
- * at boot, so the restart needed to install a new one also clears this.
- */
-const AUTH_COOLDOWN_MS = 30_000;
-let dhanBlockedUntil = 0;
-
-function isAuthFailure(msg: string): boolean {
-  return /HTTP 401|HTTP 403|"808"|authentication failed|invalid token/i.test(msg);
-}
 
 async function yahooQuotes(): Promise<Map<string, ExtendedQuoteData> | null> {
   try {
@@ -105,12 +83,10 @@ function respond(quotes: Map<string, ExtendedQuoteData>, source: Source, reason:
     indices: rows.filter((r) => r.type === "INDEX"),
     stocks: rows.filter((r) => r.type === "EQ"),
     source,
-    // Said out loud in the UI: on the standby feed these are delayed
-    // third-party prices, not the live exchange feed the product implies.
-    ...(source === "yahoo" ? { degraded: true, degradedReason: reason } : {}),
-    // The client polls at whatever cadence produced this payload, so the two
-    // cannot drift apart.
-    refreshMs: source === "yahoo" ? FALLBACK_REFRESH_MS : quoteRefreshMs(),
+    // Said out loud in the UI: these are delayed third-party prices, not the
+    // live exchange feed the product implies.
+    ...(reason ? { degraded: true, degradedReason: reason } : {}),
+    refreshMs: FALLBACK_REFRESH_MS,
     ts: Date.now(),
   });
 }
@@ -118,39 +94,16 @@ function respond(quotes: Map<string, ExtendedQuoteData>, source: Source, reason:
 /**
  * GET /api/v1/market/overview
  *
- * Indices + equities with LTP, % change and 52-week high/low. Dhan is the
- * primary feed; Yahoo stands behind it so an expired Dhan token degrades the
- * board to delayed prices instead of emptying it.
+ * Indices + equities with LTP, % change and 52-week high/low, from Yahoo.
+ * No credentials anywhere on this path, so there is no token to expire and
+ * empty the board.
  */
 export async function GET() {
-  // Yahoo is primary — no token expiry, always available
   const yahoo = await yahooQuotes();
   if (yahoo) return respond(yahoo, "yahoo", "");
 
-  // Dhan fallback when Yahoo fails (e.g. network issue on server)
-  if (isRateLimited()) {
-    return NextResponse.json({ ok: false, rateLimited: true, indices: [], stocks: [] });
-  }
-
-  if (Date.now() < dhanBlockedUntil) {
-    return NextResponse.json({ ok: false, error: "Dhan credentials rejected", indices: [], stocks: [] });
-  }
-
-  try {
-    const quotes = await withMarketCache("overview:full", quoteRefreshMs(), async () =>
-      byToken(await getExtendedQuotes(INSTRUMENTS)),
-    );
-    if (quotes.size === 0) throw new Error("Dhan returned no quotes");
-    return respond(quotes, "dhan", "");
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    handleRateLimitMessage(msg);
-    if (isAuthFailure(msg)) {
-      dhanBlockedUntil = Date.now() + AUTH_COOLDOWN_MS;
-      console.error("[/api/v1/market/overview] Dhan auth rejected:", msg);
-    } else {
-      console.error("[/api/v1/market/overview] Dhan failed:", msg);
-    }
-    return NextResponse.json({ ok: false, error: msg, indices: [], stocks: [] }, { status: 200 });
-  }
+  return NextResponse.json(
+    { ok: false, error: "Market data is briefly unavailable.", indices: [], stocks: [] },
+    { status: 200 },
+  );
 }

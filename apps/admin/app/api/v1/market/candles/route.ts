@@ -1,8 +1,7 @@
 ﻿import { NextResponse, type NextRequest } from "next/server";
-import { getCandles, resolveMarketExchange, type CandleInterval } from "@/lib/dhan";
-import { enrichCandlesWithVolume } from "@/lib/chart-volume";
+import { resolveMarketExchange, type CandleInterval } from "@/lib/dhan";
 import { angelCandleRange } from "@/lib/nse-market-time";
-import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
+import { withFeedCache } from "@/lib/market-rate-limit";
 import { getYahooCandles, yahooTickerFor } from "@/lib/yahoo-quote";
 import { MARKET_INSTRUMENTS } from "@/lib/angelone-shared";
 
@@ -60,7 +59,7 @@ export async function GET(req: NextRequest) {
     const yahooTicker = yahooTickerFor(sym, exchange);
     if (yahooTicker) {
       const yahooCacheKey = `candles:yahoo:${exchange}:${sym}:${interval}:${days}`;
-      const yahooCandles = await withMarketCache(yahooCacheKey, 60_000, () =>
+      const yahooCandles = await withFeedCache(yahooCacheKey, 60_000, 5 * 60_000, () =>
         getYahooCandles({ tradingSymbol: sym, exchange, interval, days }),
       );
       if (yahooCandles.length > 0) {
@@ -72,7 +71,7 @@ export async function GET(req: NextRequest) {
       // Auto-downgrade to daily so the chart always shows something.
       if (interval !== "ONE_DAY") {
         const dailyCacheKey = `candles:yahoo:${exchange}:${sym}:ONE_DAY:365`;
-        const dailyCandles = await withMarketCache(dailyCacheKey, 300_000, () =>
+        const dailyCandles = await withFeedCache(dailyCacheKey, 300_000, 10 * 60_000, () =>
           getYahooCandles({ tradingSymbol: sym, exchange, interval: "ONE_DAY", days: 365 }),
         );
         if (dailyCandles.length > 0) {
@@ -85,52 +84,15 @@ export async function GET(req: NextRequest) {
           });
         }
       }
-      console.warn("[candles] Yahoo returned 0 candles for %s — trying Dhan", yahooTicker);
-    }
-
-    // Dhan fallback (derivatives, unlisted, any instrument Yahoo can't price).
-    // Needs the security id, so symbol-only callers stop at Yahoo.
-    if (token && !isRateLimited()) {
-      try {
-        const cacheKey = `candles:v2:${token}:${exchange}:${interval}:${days}`;
-        const candles = await withMarketCache(cacheKey, 20_000, async () => {
-          const raw = await getCandles({
-            exchange,
-            symboltoken: token,
-            tradingSymbol,
-            instrumentType,
-            interval,
-            fromdate,
-            todate,
-          });
-          return enrichCandlesWithVolume(raw, {
-            exchange,
-            symboltoken: token,
-            tradingSymbol,
-            instrumentType,
-            interval,
-            fromdate,
-            todate,
-          });
-        });
-        if (candles.length > 0) {
-          const volSample = candles.find(c => c.volume > 0)?.volume ?? 0;
-          console.log("[candles] dhan: %d candles (sample vol %s)", candles.length, volSample);
-          return NextResponse.json({ ok: true, token, data: candles, source: "dhan" });
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        handleRateLimitMessage(msg);
-        console.error("[candles] Dhan also failed:", msg);
-      }
+      console.warn("[candles] Yahoo returned 0 candles for %s", yahooTicker);
     }
 
     /*
      * An F&O contract has no free candle source at all. Yahoo carries US
      * options only — every NSE ticker comes back with an empty chain — and
      * NSE publishes the live option chain but answers 503 for per-contract
-     * history. So this is a broker feature, not an outage, and it says so
-     * rather than naming providers the reader has no way to act on.
+     * history. So it says what is actually true rather than naming a provider
+     * the reader has no way to act on.
      */
     const derivative =
       /^(NFO|BFO|CDS|MCX)$/i.test(exchange) || /^(OPT|FUT)/i.test(instrumentType ?? "");
@@ -138,17 +100,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       ok: false,
       error: derivative
-        ? "Charts for F&O contracts need a connected broker — no free feed publishes option or futures candles."
+        ? "No free feed publishes option or futures candles — chart the underlying instead."
         : "No candle data available for this instrument.",
       derivative,
-      rateLimited: isRateLimited(),
       data: [],
     }, { status: 200 });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    handleRateLimitMessage(msg);
     console.error("[candles] ERROR:", msg);
-    return NextResponse.json({ ok: false, error: msg, rateLimited: isRateLimited(), data: [] }, { status: 200 });
+    return NextResponse.json({ ok: false, error: msg, data: [] }, { status: 200 });
   }
 }
 

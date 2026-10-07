@@ -1,18 +1,20 @@
-/**
- * Dhan market-feed stream hub.
- * Replaces the Angel One WebSocket with REST LTP polling every 2 s,
- * keeping the same public interface (subscribeMany / getStatus) so the
- * SSE stream route works unchanged.
+/*
+ * Market-feed stream hub.
+ *
+ * The push side is dormant. It polled the broker for LTP, and subscriptions
+ * are keyed `EXCHANGE:TOKEN` with no symbol in them — which is exactly what a
+ * free feed needs, since Yahoo prices by name and nothing free prices an
+ * option contract by any key at all.
+ *
+ * Nothing is lost by it being quiet: both callers already poll on their own and
+ * faster. The terminal refreshes quotes from Yahoo every 5 s against this hub's
+ * 15, and the option chain re-reads NSE every 15 s. So the hub keeps its
+ * interface and its bookkeeping, and simply emits no ticks until there is a
+ * feed it can legitimately pull from.
  */
 
 import "server-only";
-
-import { getLTP } from "@/lib/dhan";
-import {
-  recordWsTick,
-  setWsConnectionCount,
-  trackSubscription,
-} from "@/lib/angelone-metrics";
+import { setWsConnectionCount, trackSubscription } from "@/lib/angelone-metrics";
 
 export type StreamTick = {
   token: string;
@@ -35,46 +37,16 @@ class DhanStreamHub {
     return { exchange: key.slice(0, i), token: key.slice(i + 1) };
   }
 
-  private start() {
-    if (this.timer) return;
-    this.timer = setInterval(() => void this.poll(), 15_000);
-  }
+  /*
+   * No timer while there is no feed to poll. Subscriptions are still tracked,
+   * so wiring a free push source later means restoring this and nothing else.
+   */
+  private start() {}
 
   private stop() {
     if (!this.timer) return;
     clearInterval(this.timer);
     this.timer = null;
-  }
-
-  private async poll() {
-    const keys = [...this.refCounts.keys()].filter(k => (this.refCounts.get(k) ?? 0) > 0);
-    if (!keys.length) return;
-
-    const instruments = keys
-      .map(k => this.parseMeta(k))
-      .filter(Boolean)
-      .map(m => ({ exchange: m!.exchange, symboltoken: m!.token }));
-
-    try {
-      const quotes = await getLTP(instruments);
-      for (const q of quotes) {
-        // Quote exchange comes back as Dhan segment ("NSE_EQ") — form the same
-        // key used for subscription so listeners resolve correctly.
-        const key = `${q.exchange}:${q.symbolToken}`;
-        const set = this.listeners.get(key);
-        if (!set?.size) continue;
-        const tick: StreamTick = {
-          token:    q.symbolToken,
-          exchange: q.exchange,
-          ltp:      q.ltp,
-          ts:       Date.now(),
-        };
-        recordWsTick();
-        for (const fn of set) fn(tick);
-      }
-    } catch {
-      // Transient — next tick will retry
-    }
   }
 
   async subscribe(exchange: string, token: string, listener: Listener): Promise<() => void> {

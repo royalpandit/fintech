@@ -23,6 +23,7 @@ export default function MarketDepthPanel({
   const [data, setData] = useState<MarketDepthQuote | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -39,6 +40,9 @@ export default function MarketDepthPanel({
         setError(null);
       } else {
         setError(json.error ?? "Failed to load depth");
+        // Depth needs a broker; without one it will never arrive, so stop the
+        // poll rather than asking again every ten seconds forever.
+        if (json.brokerRequired) setUnavailable(true);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error");
@@ -49,9 +53,13 @@ export default function MarketDepthPanel({
 
   useEffect(() => {
     load(false);
+  }, [load]);
+
+  useEffect(() => {
+    if (unavailable) return;
     const id = setInterval(() => load(true), 10_000);
     return () => clearInterval(id);
-  }, [load]);
+  }, [load, unavailable]);
 
   const down = (data?.percentChange ?? symbol.changePct ?? 0) < 0;
   const totalQty = (data?.totalBuyQty ?? 0) + (data?.totalSellQty ?? 0);

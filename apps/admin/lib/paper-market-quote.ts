@@ -1,5 +1,6 @@
 ﻿import { getMutualFundByCode } from "@/lib/amfi";
-import { getOHLC, searchSymbol } from "@/lib/dhan";
+import { searchSymbol } from "@/lib/dhan";
+import { getYahooQuotes } from "@/lib/yahoo-quote";
 import { isEquityInstrument, isIndexInstrument, isMutualFundExchange } from "@/lib/instrument-type";
 
 export type QuoteInput = {
@@ -9,8 +10,8 @@ export type QuoteInput = {
   tradingSymbol?: string | null;
 };
 
-// Symbol → token lookups hit AngelOne's searchScrip endpoint, which is slow and
-// rate-limited. Tokens are stable for the life of the process, so cache them.
+// Symbol → token lookups read the scrip master, which is a large download on
+// first use. Tokens are stable for the life of the process, so cache them.
 const tokenCache = new Map<string, { token: string; exchange: string }>();
 
 /**
@@ -79,7 +80,7 @@ const quoteCache = new Map<string, { ltp: number; at: number }>();
 export async function fetchLiveLtp(input: QuoteInput): Promise<number> {
   // Mutual funds price off the AMFI NAV, not the exchange feed. They have no
   // token and no intraday quote, so everything below this point — searchScrip,
-  // getOHLC, the 2s cache — is the wrong machinery for them.
+  // the live quote path, the 2s cache — is the wrong machinery for them.
   if (isMutualFundExchange(input.exchange)) {
     return fetchMutualFundNav(input.symbol);
   }
@@ -101,9 +102,12 @@ export async function fetchLiveLtp(input: QuoteInput): Promise<number> {
   const hit = quoteCache.get(cacheKey);
   if (hit && Date.now() - hit.at < QUOTE_TTL_MS) return hit.ltp;
 
-  const results = await getOHLC([{ exchange, symboltoken: token }]);
-  const q = results[0];
-  const ltp = q?.ltp;
+  // Priced off the symbol, not the token: the lookup above is what validates
+  // the ticker and settles the exchange, and no credential is involved here.
+  const results = await getYahooQuotes([
+    { exchange, symboltoken: token, tradingSymbol: symbol },
+  ]);
+  const ltp = results[0]?.ltp;
   if (ltp == null || !Number.isFinite(ltp) || ltp <= 0) {
     // Nothing is cached on failure — a stale price must never fill an order.
     throw new Error(`Live price unavailable for ${input.symbol}`);

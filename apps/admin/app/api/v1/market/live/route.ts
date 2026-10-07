@@ -1,6 +1,5 @@
 ﻿import { NextResponse, type NextRequest } from "next/server";
-import { getExtendedQuotes, MARKET_INSTRUMENTS, type QuoteInstrument } from "@/lib/dhan";
-import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
+import { MARKET_INSTRUMENTS, type QuoteInstrument } from "@/lib/dhan";
 import { getYahooQuotes } from "@/lib/yahoo-quote";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +44,7 @@ export async function GET(req: NextRequest) {
 
     function buildResponse(
       quoteMap: Map<string, Record<string, unknown>>,
-      source: "dhan" | "yahoo",
+      source: "yahoo",
     ) {
       const enriched = all.map(inst => {
         const q = quoteMap.get(inst.symboltoken);
@@ -98,39 +97,14 @@ export async function GET(req: NextRequest) {
         return buildResponse(yahooMap, "yahoo");
       }
     } catch (yahooErr) {
-      console.warn("[/api/v1/market/live] Yahoo failed, trying Dhan:", yahooErr);
+      console.warn("[/api/v1/market/live] Yahoo failed:", yahooErr);
     }
 
-    // Dhan fallback when Yahoo has no mapping for an instrument
-    if (!isRateLimited()) {
-      try {
-        const cacheKey = `live:${all.map(i => `${i.exchange}:${i.symboltoken}`).sort().join(",")}`;
-        const quoteMap = await withMarketCache(cacheKey, 20_000, async () => {
-          const quotes = await getExtendedQuotes(all);
-          const merged = new Map<string, Record<string, unknown>>();
-          for (const q of quotes) merged.set(q.symbolToken, q as unknown as Record<string, unknown>);
-          return merged;
-        });
-        const hasData = Array.from(quoteMap.values()).some(q => Number(q.ltp) > 0);
-        if (hasData) return buildResponse(quoteMap, "dhan");
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        handleRateLimitMessage(msg);
-        console.error("[/api/v1/market/live] Dhan also failed:", msg);
-      }
-    }
-
-    return NextResponse.json({ ok: false, error: "Live updates paused briefly — retrying.", rateLimited: isRateLimited(), data: [] }, { status: 200 });
+    return NextResponse.json({ ok: false, error: "Live updates paused briefly — retrying.", data: [] }, { status: 200 });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    handleRateLimitMessage(msg);
     console.error("[/api/v1/market/live]", msg);
-    return NextResponse.json({
-      ok: false,
-      error: msg,
-      rateLimited: isRateLimited(),
-      data: [],
-    }, { status: 200 });
+    return NextResponse.json({ ok: false, error: msg, data: [] }, { status: 200 });
   }
 }
 

@@ -8,8 +8,6 @@ import {
   type VirtualPosition,
   type VirtualTradeRow,
 } from "@/lib/virtual-trading";
-import { resolveToken } from "@/lib/paper-market-quote";
-import { getOHLC } from "@/lib/dhan";
 import { getYahooQuotes } from "@/lib/yahoo-quote";
 import { getMutualFunds } from "@/lib/amfi";
 import { isMutualFundSymbol } from "@/lib/instrument-type";
@@ -97,57 +95,23 @@ async function priceSymbols(symbols: string[]): Promise<Map<string, Quote>> {
   }
 
   if (equities.length) {
-    const resolved: { symbol: string; token: string; exchange: string }[] = [];
-    for (const symbol of equities) {
-      try {
-        const hit = await resolveToken(symbol, "NSE");
-        if (hit) resolved.push({ symbol, token: hit.token, exchange: hit.exchange });
-      } catch {
-        /* unresolvable symbol - Yahoo gets a try below */
-      }
-    }
-
-    if (resolved.length) {
-      try {
-        const rows = await getOHLC(
-          resolved.map((r) => ({ exchange: r.exchange, symboltoken: r.token })),
-        );
-        const byToken = new Map(rows.map((r) => [String(r.symbolToken), r]));
-        for (const r of resolved) {
-          const q = byToken.get(r.token);
-          const ltp = Number(q?.ltp);
-          if (Number.isFinite(ltp) && ltp > 0) {
-            const close = Number(q?.close);
-            out.set(r.symbol, {
-              price: ltp,
-              previousClose: Number.isFinite(close) && close > 0 ? close : null,
-            });
-          }
+    // One source now: Yahoo prices off the symbol, so there is no token to
+    // resolve and no credential that can expire and leave the book unpriced.
+    try {
+      const rows = await getYahooQuotes(
+        equities.map((s) => ({ exchange: "NSE", symboltoken: s, tradingSymbol: s })),
+      );
+      for (const r of rows) {
+        const ltp = Number(r.ltp);
+        if (Number.isFinite(ltp) && ltp > 0) {
+          out.set(r.tradingSymbol.toUpperCase(), {
+            price: ltp,
+            previousClose: Number(r.close) > 0 ? Number(r.close) : null,
+          });
         }
-      } catch {
-        /* rate limited or token expired - Yahoo below */
       }
-    }
-
-    // Whatever the feed could not price, try the standby source.
-    const missing = equities.filter((s) => !out.has(s));
-    if (missing.length) {
-      try {
-        const rows = await getYahooQuotes(
-          missing.map((s) => ({ exchange: "NSE", symboltoken: s, tradingSymbol: s })),
-        );
-        for (const r of rows) {
-          const ltp = Number(r.ltp);
-          if (Number.isFinite(ltp) && ltp > 0) {
-            out.set(r.tradingSymbol.toUpperCase(), {
-              price: ltp,
-              previousClose: Number(r.close) > 0 ? Number(r.close) : null,
-            });
-          }
-        }
-      } catch {
-        /* nothing more to try */
-      }
+    } catch {
+      /* leave them unpriced; the caller falls back to cost */
     }
   }
 

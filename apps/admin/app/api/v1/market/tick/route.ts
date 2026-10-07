@@ -1,6 +1,6 @@
-﻿import { NextResponse, type NextRequest } from "next/server";
-import { getOHLC } from "@/lib/dhan";
-import { handleRateLimitMessage, isRateLimited, withMarketCache } from "@/lib/market-rate-limit";
+import { NextResponse, type NextRequest } from "next/server";
+import { getYahooQuotes } from "@/lib/yahoo-quote";
+import { withFeedCache } from "@/lib/market-rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -11,43 +11,30 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const exchange = searchParams.get("exchange") ?? "NSE";
-  const symbol   = searchParams.get("symbol") ?? "";
-  const token    = searchParams.get("token") ?? "";
+  const symbol = searchParams.get("symbol") ?? "";
+  const token = searchParams.get("token") ?? "";
 
-  if (!symbol || !token) return NextResponse.json({ ok: false, error: "Missing symbol/token" });
-
-  if (isRateLimited()) {
-    return NextResponse.json({
-      ok: false,
-      error: "Angel One rate limit — tick paused",
-      rateLimited: true,
-    });
-  }
+  // Yahoo prices off the name, so the token is only an identity for the reply.
+  if (!symbol) return NextResponse.json({ ok: false, error: "Missing symbol" });
 
   try {
-    const cacheKey = `tick:${exchange}:${token}`;
-    const results = await withMarketCache(cacheKey, 15_000, () =>
-      getOHLC([{ exchange, symboltoken: token }]),
+    const rows = await withFeedCache(`tick:${exchange}:${symbol}`, 15_000, 60_000, () =>
+      getYahooQuotes([{ exchange, symboltoken: token || symbol, tradingSymbol: symbol }]),
     );
-    const q = results[0];
+    const q = rows[0];
     if (!q) return NextResponse.json({ ok: false, error: "No data" });
     return NextResponse.json({
-      ok:        true,
-      ltp:       q.ltp,
-      open:      q.open,
-      high:      q.high,
-      low:       q.low,
+      ok: true,
+      ltp: q.ltp,
+      open: q.open,
+      high: q.high,
+      low: q.low,
       netChange: q.netChange,
       pctChange: q.percentChange,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown";
-    handleRateLimitMessage(msg);
-    return NextResponse.json({
-      ok: false,
-      error: msg,
-      rateLimited: isRateLimited(),
-    });
+    console.error("[/api/v1/market/tick]", msg);
+    return NextResponse.json({ ok: false, error: msg });
   }
 }
-
