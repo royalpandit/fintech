@@ -22,13 +22,15 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    const profile = searchParams.get("profile") === "1";
+
     // NSE blocks rapid polling, so one fetch is shared for 60 s and served
     // stale for another two minutes while it refreshes behind the request.
     const chain = await withFeedCache(
-      `nse-oc:${underlying}:${expiry ?? "near"}`,
+      `nse-oc:${underlying}:${expiry ?? "near"}:${profile ? "p" : "s"}`,
       60_000,
       2 * 60_000,
-      () => getNseOptionChain({ symbol: underlying, expiry }),
+      () => getNseOptionChain({ symbol: underlying, expiry, profile }),
     );
 
     if (chain && chain.rows.length > 0) {

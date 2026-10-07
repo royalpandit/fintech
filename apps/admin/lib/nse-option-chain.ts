@@ -120,6 +120,8 @@ type NseLeg = {
   totalTradedVolume?: number;
   strikePrice?: number;
   underlyingValue?: number;
+  buyPrice1?: number;
+  sellPrice1?: number;
 };
 
 type ChainV3 = {
@@ -131,10 +133,23 @@ type ChainV3 = {
 
 function toLeg(raw: NseLeg | undefined): OptionLeg | undefined {
   if (!raw?.identifier) return undefined;
+  const bid = raw.buyPrice1 ?? 0;
+  const ask = raw.sellPrice1 ?? 0;
+  const last = raw.lastPrice ?? 0;
+
+  /*
+   * A strike away from the money often has not traded today: NSE sends
+   * lastPrice 0 while still quoting a bid and an ask. Showing and trading that
+   * as 0 is wrong — the contract has a price, it just has no last trade — so
+   * the mid stands in when both sides are quoted.
+   */
+  const mid = bid > 0 && ask > 0 ? (bid + ask) / 2 : 0;
+  const ltp = last > 0 ? last : mid;
+
   return {
     tradingsymbol: raw.identifier,
     token: raw.identifier,
-    ltp: raw.lastPrice ?? 0,
+    ltp,
     change: raw.change ?? 0,
     changePct: raw.pChange ?? 0,
     oi: raw.openInterest ?? 0,
@@ -150,9 +165,34 @@ function expiryLabel(code: string): string {
   return m ? `${m[1]} ${m[2]} ${m[3].slice(2)}` : code;
 }
 
+/**
+ * Trim the ladder to the strikes around spot.
+ *
+ * NSE returns every listed strike — 348 of them for NIFTY, reaching from 1500
+ * to past 30000. The far ones have never traded, so handing the panel the full
+ * set fills the screen with zero rows and buries the money. Keeps `radius`
+ * strikes either side of the one nearest spot.
+ */
+function centerOnSpot(rows: OptionChainRow[], spot: number, radius: number): OptionChainRow[] {
+  if (spot <= 0 || rows.length <= radius * 2 + 1) return rows;
+
+  let atm = 0;
+  let best = Infinity;
+  for (let i = 0; i < rows.length; i++) {
+    const d = Math.abs(rows[i]!.strike - spot);
+    if (d < best) {
+      best = d;
+      atm = i;
+    }
+  }
+  return rows.slice(Math.max(0, atm - radius), Math.min(rows.length, atm + radius + 1));
+}
+
 export async function getNseOptionChain(opts: {
   symbol: string;
   expiry?: string;
+  /** Wider ladder for the OI profile overlay, which charts the whole curve. */
+  profile?: boolean;
 }): Promise<OptionChainData | null> {
   const symbol = opts.symbol.replace(/\s+/g, "").toUpperCase();
   const isIndex = isIndexUnderlying(symbol);
@@ -171,23 +211,24 @@ export async function getNseOptionChain(opts: {
   const data = chain?.records?.data ?? [];
   if (data.length === 0) return null;
 
-  const rows: OptionChainRow[] = [];
-  const tokens: { token: string; exchange: string }[] = [];
+  const all: OptionChainRow[] = [];
   let spot = chain?.records?.underlyingValue ?? 0;
 
   for (const d of data) {
     const strike = d.strikePrice ?? d.CE?.strikePrice ?? d.PE?.strikePrice;
     if (strike == null) continue;
     if (!spot) spot = d.CE?.underlyingValue ?? d.PE?.underlyingValue ?? 0;
-
-    const ce = toLeg(d.CE);
-    const pe = toLeg(d.PE);
-    if (ce) tokens.push({ token: ce.token, exchange: "NFO" });
-    if (pe) tokens.push({ token: pe.token, exchange: "NFO" });
-    rows.push({ strike, ce, pe });
+    all.push({ strike, ce: toLeg(d.CE), pe: toLeg(d.PE) });
   }
 
-  rows.sort((a, b) => a.strike - b.strike);
+  all.sort((a, b) => a.strike - b.strike);
+  const rows = centerOnSpot(all, spot, opts.profile ? 35 : 15);
+
+  const tokens: { token: string; exchange: string }[] = [];
+  for (const r of rows) {
+    if (r.ce) tokens.push({ token: r.ce.token, exchange: "NFO" });
+    if (r.pe) tokens.push({ token: r.pe.token, exchange: "NFO" });
+  }
 
   return {
     underlying: symbol,
