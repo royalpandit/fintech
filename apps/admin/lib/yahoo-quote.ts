@@ -84,7 +84,7 @@ type YahooChart = {
         fiftyTwoWeekHigh?: number;
         fiftyTwoWeekLow?: number;
       };
-      indicators?: { quote?: Array<{ open?: (number | null)[] }> };
+      indicators?: { quote?: Array<{ open?: (number | null)[]; close?: (number | null)[] }> };
     }>;
     error?: { description?: string } | null;
   };
@@ -94,6 +94,33 @@ const num = (v: unknown): number => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
+
+/**
+ * The previous session's close, taken from the daily bars.
+ *
+ * Not `chartPreviousClose`: that is the close before the *range* begins, so on
+ * the 5-day chart this endpoint requests it is six sessions old. It priced
+ * BHARTIARTL at +6.46% against a +2.38% day and printed NIFTY and SENSEX green
+ * on a day both were red. `previousClose` would be right but comes back empty
+ * here, so the series is the only honest source.
+ *
+ * Once trading opens the final bar is the current session and its close tracks
+ * the live price, which makes the bar before it yesterday's close. Before the
+ * open there is no bar for today and the final one is already what we want.
+ */
+function previousCloseFromSeries(
+  closes: (number | null)[] | undefined,
+  ltp: number,
+  fallback: number,
+): number {
+  const valid = (closes ?? []).filter((c): c is number => c != null && Number.isFinite(c) && c > 0);
+  if (!valid.length) return fallback;
+
+  const last = valid[valid.length - 1]!;
+  const lastBarIsToday = Math.abs(last - ltp) <= Math.max(0.01, ltp * 1e-6);
+  if (!lastBarIsToday) return last;
+  return valid.length >= 2 ? valid[valid.length - 2]! : fallback;
+}
 
 async function fetchOne(
   inst: QuoteInstrument & { tradingSymbol: string },
@@ -111,13 +138,15 @@ async function fetchOne(
   const ltp = num(meta?.regularMarketPrice);
   if (ltp <= 0) return null;
 
-  // Yahoo leaves `previousClose` null on this endpoint and puts the value in
-  // `chartPreviousClose`; reading only the former yielded a 0 close and a
-  // -100% change on every row.
-  const prevClose = num(meta?.chartPreviousClose ?? meta?.previousClose);
+  const bars = result?.indicators?.quote?.[0];
+  const prevClose = previousCloseFromSeries(
+    bars?.close,
+    ltp,
+    num(meta?.previousClose ?? meta?.chartPreviousClose),
+  );
 
   // Today's open is the last daily bar's open — the meta block has no open.
-  const opens = result?.indicators?.quote?.[0]?.open ?? [];
+  const opens = bars?.open ?? [];
   const open = num(opens[opens.length - 1]);
 
   const netChange = prevClose ? ltp - prevClose : 0;
