@@ -26,7 +26,8 @@
     "db:basket-last-calculated": "prisma db execute --file scripts/sql/finuer-basket-last-calculated-migration.sql",
     "db:basket-beta": "prisma db execute --file scripts/sql/finuer-basket-beta-migration.sql",
     "db:app-credentials": "prisma db execute --file scripts/sql/app-credentials-migration.sql",
-    "seed:content-agents": "tsx scripts/seed-content-agents.ts"
+    "seed:content-agents": "tsx scripts/seed-content-agents.ts",
+    "db:content-agents": "prisma db execute --file scripts/sql/content-agents-migration.sql"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1106.0",
