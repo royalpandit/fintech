@@ -12,6 +12,10 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/v1/cron?job=content-agents",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/v1/cron?job=broadcasts",
       "schedule": "*/5 * * * *"
     },

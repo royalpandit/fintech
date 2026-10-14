@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       description: description.trim(),
       avatar: avatar?.trim() || "🤖",
       systemPrompt: systemPrompt.trim(),
-      model: model || "gemini-2.5-flash",
+      model: model || "gemini-flash-latest",
       temperature: typeof temperature === "number" ? Math.max(0, Math.min(2, temperature)) : 0.7,
       isActive: isActive !== false,
       starterPrompts: normalizeStarterPrompts(starterPrompts) ?? [],

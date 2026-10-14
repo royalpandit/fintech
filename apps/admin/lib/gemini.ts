@@ -157,5 +157,74 @@ export async function geminiChat(opts: {
     }),
   });
   const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  return joinParts(data);
+}
+
+/**
+ * Every text part, not just the first.
+ *
+ * A grounded answer frequently arrives split across parts, and reading
+ * `parts[0]` alone returned the opening sentence and dropped the rest.
+ */
+function joinParts(data: unknown): string {
+  const parts = (data as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  })?.candidates?.[0]?.content?.parts;
+  if (!Array.isArray(parts)) return "";
+  return parts.map(p => p?.text ?? "").join("").trim();
+}
+
+/**
+ * Same call, but it throws instead of returning an empty string.
+ *
+ * The scheduled writers record why a run produced nothing, and "" cannot say
+ * whether the key was rejected, the model refused, or grounding timed out.
+ */
+export async function geminiGenerateStrict(opts: {
+  model: string;
+  systemPrompt: string;
+  temperature: number;
+  userMessage: string;
+  signal?: AbortSignal;
+}): Promise<{ text: string; grounded: boolean }> {
+  const { model, systemPrompt, temperature, userMessage, signal } = opts;
+  const res = await fetch(`${BASE}/${model}:generateContent?key=${apiKey()}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    signal,
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: "user", parts: [{ text: userMessage }] }],
+      generationConfig: { temperature, maxOutputTokens: MAX_OUTPUT_TOKENS },
+      tools: GROUNDING_TOOLS,
+    }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const msg = (data as { error?: { message?: string } })?.error?.message;
+    throw new Error(`Gemini HTTP ${res.status}: ${msg ?? "unknown error"}`);
+  }
+
+  const text = joinParts(data);
+  if (!text) {
+    const reason = (data as { candidates?: { finishReason?: string }[] })
+      ?.candidates?.[0]?.finishReason;
+    throw new Error(`Gemini returned no text${reason ? ` (finishReason ${reason})` : ""}`);
+  }
+
+  /*
+   * Whether the model actually searched, rather than answering from memory.
+   *
+   * Grounding is offered but not compelled — the model decides. Asked for a
+   * commodities post it once skipped the search and still produced "gold
+   * $4,160/oz" and a US 10-year at 5.27%, against a real $4,185.80 and 5.217%.
+   * Close enough to pass a reading, wrong enough to publish, and pure luck
+   * either way. Callers that assert current facts check this.
+   */
+  const grounded = Boolean(
+    (data as { candidates?: { groundingMetadata?: unknown }[] })?.candidates?.[0]?.groundingMetadata,
+  );
+
+  return { text, grounded };
 }

@@ -9,6 +9,7 @@ import { sendNotificationDigests } from "@/lib/email-digest";
 import { refreshBulkDeals, refreshFiiDii } from "@/lib/nse-market-snapshots";
 import { refreshScripMaster } from "@/lib/scrip-master";
 import { sweepFinuerBasketPerformance } from "@/lib/finuer-basket-sweep";
+import { runContentAgents } from "@/lib/content-agents/sweep";
 
 /**
  * Background jobs, driven by /api/v1/cron.
@@ -21,6 +22,7 @@ import { sweepFinuerBasketPerformance } from "@/lib/finuer-basket-sweep";
 
 export type CronJobName =
   | "scheduled-posts"
+  | "content-agents"
   | "broadcasts"
   | "subscriptions"
   | "finuer-pro"
@@ -45,6 +47,9 @@ type Job = { name: CronJobName; run: () => Promise<unknown> };
 
 const JOBS: Job[] = [
   { name: "scheduled-posts", run: publishDueScheduledPosts },
+  // Writes to Gemini with grounding, so it is slower than its neighbours and
+  // caps itself per sweep rather than draining a backlog in one tick.
+  { name: "content-agents", run: runContentAgents },
   { name: "broadcasts", run: sendDueBroadcasts },
   { name: "subscriptions", run: sweepAllSubscriptionLifecycles },
   { name: "finuer-pro", run: sweepAllFinuerProLifecycles },

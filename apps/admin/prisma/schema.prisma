@@ -391,6 +391,7 @@ model User {
   communitySaves          CommunityPostSave[]
   followers               UserFollow[]             @relation("following")
   following               UserFollow[]             @relation("follower")
+  contentAgent            ContentAgent?            @relation("ContentAgentBot")
   createdGroups           Group[]
   groupMemberships        GroupMember[]
   groupJoinRequests       GroupJoinRequest[]       @relation("joinRequestUser")
@@ -2086,13 +2087,102 @@ model StrategyTemplate {
 
 // ─── 20b) Gemini AI Agents ────────────────────────────
 
+/// Where a content agent publishes.
+///
+/// Market commentary goes to the market feed, which is also where SEBI-registered
+/// advisors post. The code already gates that boundary: entry/target/stop-loss
+/// fields require a registered professional type, so an agent post never sets
+/// them and never needs a fabricated registration number. Wealth and psychology
+/// writing is editorial rather than market calls, so it goes to the community feed.
+enum ContentAgentTarget {
+  market_post
+  community_post
+
+  @@map("content_agent_target")
+}
+
+enum ContentAgentRunStatus {
+  pending
+  published
+  failed
+  skipped
+
+  @@map("content_agent_run_status")
+}
+
+/// One of the hundred scheduled writers.
+///
+/// Distinct from GeminiAgent, which is a chat persona a user talks to. These
+/// publish on a timetable with nobody in the conversation, so they carry a slot
+/// list, a bot author and a destination feed instead of chat sessions.
+model ContentAgent {
+  id           Int                @id @default(autoincrement())
+  /// 1–100, matching the brief, so an agent can be found by the number people use.
+  agentNo      Int                @unique @map("agent_no")
+  slug         String             @unique @db.VarChar(80)
+  name         String             @db.VarChar(120)
+  department   String             @db.VarChar(120)
+  systemPrompt String             @map("system_prompt") @db.Text
+  target       ContentAgentTarget
+  /// Feed category for community posts; ignored for market posts.
+  category     String             @default("general") @db.VarChar(50)
+  /// IST times as "HH:MM". Length is the posts-per-day count, and the brief puts
+  /// each agent where its content is actually read — pre-market before the open,
+  /// closing analysis after it.
+  slots        String[]           @default([])
+  /// The account these post as. One per agent, so the feed reads as a desk
+  /// rather than one account posting two hundred times.
+  botUserId    Int                @unique @map("bot_user_id")
+  model        String             @default("gemini-flash-latest") @db.VarChar(60)
+  temperature  Float              @default(0.85)
+  isActive     Boolean            @default(true) @map("is_active")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+
+  botUser User              @relation("ContentAgentBot", fields: [botUserId], references: [id], onDelete: Cascade)
+  runs    ContentAgentRun[]
+
+  @@index([isActive])
+  @@map("content_agents")
+}
+
+/// One agent's attempt at one slot on one day.
+///
+/// The unique key is what makes the sweep safe to run as often as it likes: a
+/// slot that already has a row is never written twice, so an overlapping or
+/// retried cron cannot double-post. Failures are recorded rather than dropped,
+/// so a quiet agent is visible instead of merely absent.
+model ContentAgentRun {
+  id              Int                   @id @default(autoincrement())
+  agentId         Int                   @map("agent_id")
+  /// IST calendar day the slot belongs to.
+  runDate         DateTime              @map("run_date") @db.Date
+  slot            String                @db.VarChar(5)
+  status          ContentAgentRunStatus @default(pending)
+  marketPostId    Int?                  @map("market_post_id")
+  communityPostId Int?                  @map("community_post_id")
+  error           String?
+  tokensUsed      Int?                  @map("tokens_used")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  agent ContentAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, runDate, slot])
+  @@index([runDate])
+  @@index([status])
+  @@map("content_agent_runs")
+}
+
 model GeminiAgent {
   id              Int      @id @default(autoincrement())
   name            String   @db.VarChar(100)
   description     String   @db.VarChar(500)
   avatar          String   @default("🤖") @db.VarChar(10)
   systemPrompt    String   @map("system_prompt") @db.Text
-  model           String   @default("gemini-1.5-flash") @db.VarChar(60)
+  /// An alias, not a pin: gemini-1.5-flash sat here until Google retired it,
+  /// and a dead default fails every chat with a 404 that reads like an outage.
+  model           String   @default("gemini-flash-latest") @db.VarChar(60)
   temperature     Float    @default(0.7)
   isActive        Boolean  @default(true) @map("is_active")
   isSiteAssistant Boolean  @default(false) @map("is_site_assistant")
