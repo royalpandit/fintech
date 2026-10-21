@@ -24,6 +24,7 @@ const CONCURRENCY = 2;
 
 type DueAgent = {
   id: number;
+  agentNo: number;
   name: string;
   systemPrompt: string;
   model: string;
@@ -138,8 +139,8 @@ export async function runContentAgents(): Promise<{
   const agents = await prisma.contentAgent.findMany({
     where: { isActive: true },
     select: {
-      id: true, name: true, systemPrompt: true, model: true, temperature: true,
-      target: true, category: true, botUserId: true, slots: true,
+      id: true, agentNo: true, name: true, systemPrompt: true, model: true,
+      temperature: true, target: true, category: true, botUserId: true, slots: true,
     },
   });
 

@@ -1,5 +1,4 @@
 import "server-only";
-import { getYahooQuotes } from "@/lib/yahoo-quote";
 import { withFeedCache } from "@/lib/market-rate-limit";
 
 /*
@@ -27,7 +26,30 @@ export type ContextPack =
   | "news"
   | "none";
 
-/** Which facts an agent needs, from the category the catalogue already gives it. */
+/**
+ * Which facts an agent needs.
+ *
+ * Category alone was too coarse. "sectors" covers both Sector Pre-Open, which
+ * reads index levels, and the AI and Defence desks, which need news — and
+ * handed index levels the AI writer correctly replied that it had no AI data
+ * and declined. Same for Corporate Announcement Movers, filed under "stocks"
+ * and given large-cap prices when what it reports is announcements.
+ *
+ * So the agents whose beat is events rather than levels are named here, and
+ * category decides the rest.
+ */
+const NEWS_AGENTS = new Set([
+  13, 14, 15, 16, // policy, regulatory, announcements, orders
+  63, 64, 65, 66, 67, 68, 71, 72, // AI, semis, defence, power, data centres, cyber, EV, trends
+  77, 78, 80, // government policy, budget, geopolitics
+  51, // management quality
+]);
+
+export function packForAgent(agentNo: number, category: string): ContextPack {
+  if (NEWS_AGENTS.has(agentNo)) return "news";
+  return packForCategory(category);
+}
+
 export function packForCategory(category: string): ContextPack {
   switch (category) {
     case "market":
@@ -61,56 +83,95 @@ const num = (v: unknown, dp = 2) => {
   return Number.isFinite(n) ? n.toFixed(dp) : "n/a";
 };
 
-function line(label: string, q: { ltp?: number; close?: number; percentChange?: number; high?: number; low?: number }) {
-  const pct = Number(q.percentChange);
-  const sign = Number.isFinite(pct) && pct >= 0 ? "+" : "";
-  return `  ${label.padEnd(16)} ${num(q.ltp).padStart(10)}   ${sign}${num(pct)}%   prev close ${num(q.close)}   day ${num(q.low)}–${num(q.high)}`;
+const YAHOO = "https://query1.finance.yahoo.com/v8/finance/chart";
+const YAHOO_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+  Accept: "application/json",
+};
+
+type Row = { label: string; ticker: string };
+
+/*
+ * Yahoo tickers, written out rather than derived.
+ *
+ * lib/yahoo-quote maps Indian names — RELIANCE to RELIANCE.NS, SENSEX to
+ * ^BSESN — and returns null for anything that is not one, which is every
+ * ticker on this page: ^GSPC, GC=F and USDINR=X all came back null and took
+ * the commodities, global and currency packs down with them. Three of six
+ * packs produced nothing at all, so every agent on them failed.
+ *
+ * Here the ticker IS the identifier, so there is nothing to resolve.
+ */
+async function quote(row: Row): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `${YAHOO}/${encodeURIComponent(row.ticker)}?interval=1d&range=5d`,
+      { headers: YAHOO_HEADERS, signal: AbortSignal.timeout(10_000), cache: "no-store" },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      chart?: { result?: { meta?: Record<string, unknown>; indicators?: { quote?: { close?: (number | null)[] }[] } }[] };
+    };
+    const r = json.chart?.result?.[0];
+    const ltp = Number(r?.meta?.regularMarketPrice);
+    if (!Number.isFinite(ltp) || ltp <= 0) return null;
+
+    // Same rule the quote path uses: the final daily bar is the live session
+    // once trading opens, so the previous close is the bar before it.
+    const closes = (r?.indicators?.quote?.[0]?.close ?? []).filter(
+      (c): c is number => c != null && Number.isFinite(c),
+    );
+    const last = closes[closes.length - 1];
+    const prev =
+      last != null && Math.abs(last - ltp) <= Math.max(0.01, ltp * 1e-6)
+        ? closes[closes.length - 2]
+        : last;
+
+    const pct = prev ? ((ltp - prev) / prev) * 100 : 0;
+    const sign = pct >= 0 ? "+" : "";
+    const dp = ltp < 10 ? 4 : 2;
+    return `  ${row.label.padEnd(16)} ${num(ltp, dp).padStart(11)}   ${sign}${num(pct)}%   prev close ${num(prev, dp)}`;
+  } catch {
+    return null;
+  }
 }
 
-async function quotes(items: { label: string; symbol: string; exchange: string }[]) {
-  const rows = await getYahooQuotes(
-    items.map(i => ({ exchange: i.exchange, symboltoken: i.symbol, tradingSymbol: i.symbol })),
-  );
-  const by = new Map(rows.map(r => [r.tradingSymbol.toUpperCase(), r]));
-  return items
-    .map(i => {
-      const q = by.get(i.symbol.toUpperCase());
-      return q && Number(q.ltp) > 0 ? line(i.label, q) : null;
-    })
-    .filter(Boolean)
-    .join("\n");
+async function quotes(rows: Row[]): Promise<string> {
+  const out = await Promise.all(rows.map(quote));
+  return out.filter(Boolean).join("\n");
 }
 
-const INDIAN_INDICES = [
-  { label: "NIFTY 50", symbol: "NIFTY 50", exchange: "IDX_I" },
-  { label: "SENSEX", symbol: "SENSEX", exchange: "IDX_I" },
-  { label: "NIFTY BANK", symbol: "NIFTY BANK", exchange: "IDX_I" },
+const INDIAN_INDICES: Row[] = [
+  { label: "NIFTY 50", ticker: "^NSEI" },
+  { label: "SENSEX", ticker: "^BSESN" },
+  { label: "NIFTY BANK", ticker: "^NSEBANK" },
 ];
 
-const WATCHLIST = [
+const WATCHLIST: Row[] = [
   "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK",
   "SBIN", "BHARTIARTL", "ITC", "LT", "AXISBANK",
-].map(s => ({ label: s, symbol: s, exchange: "NSE" }));
+].map(s => ({ label: s, ticker: `${s}.NS` }));
 
-const COMMODITIES = [
-  { label: "Gold $/oz", symbol: "GC=F", exchange: "NSE" },
-  { label: "Silver $/oz", symbol: "SI=F", exchange: "NSE" },
-  { label: "Copper $/lb", symbol: "HG=F", exchange: "NSE" },
-  { label: "Brent $/bbl", symbol: "BZ=F", exchange: "NSE" },
+const COMMODITIES: Row[] = [
+  { label: "Gold $/oz", ticker: "GC=F" },
+  { label: "Silver $/oz", ticker: "SI=F" },
+  { label: "Copper $/lb", ticker: "HG=F" },
+  { label: "Brent $/bbl", ticker: "BZ=F" },
 ];
 
-const GLOBAL = [
-  { label: "S&P 500", symbol: "^GSPC", exchange: "IDX_I" },
-  { label: "Nasdaq", symbol: "^IXIC", exchange: "IDX_I" },
-  { label: "Dow", symbol: "^DJI", exchange: "IDX_I" },
-  { label: "Nikkei", symbol: "^N225", exchange: "IDX_I" },
-  { label: "Hang Seng", symbol: "^HSI", exchange: "IDX_I" },
+const GLOBAL: Row[] = [
+  { label: "S&P 500", ticker: "^GSPC" },
+  { label: "Nasdaq", ticker: "^IXIC" },
+  { label: "Dow", ticker: "^DJI" },
+  { label: "Nikkei", ticker: "^N225" },
+  { label: "Hang Seng", ticker: "^HSI" },
 ];
 
-const CURRENCY = [
-  { label: "USD/INR", symbol: "USDINR=X", exchange: "IDX_I" },
-  { label: "Dollar Index", symbol: "DX-Y.NYB", exchange: "IDX_I" },
-  { label: "US 10Y %", symbol: "^TNX", exchange: "IDX_I" },
+const CURRENCY: Row[] = [
+  { label: "USD/INR", ticker: "USDINR=X" },
+  { label: "Dollar Index", ticker: "DX-Y.NYB" },
+  { label: "US 10Y %", ticker: "^TNX" },
 ];
 
 /*

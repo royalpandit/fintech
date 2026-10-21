@@ -1,7 +1,7 @@
 import "server-only";
 import { groqComplete } from "@/lib/groq";
 import { HOUSE_RULES } from "@/lib/content-agents/catalogue";
-import { buildContext, packForCategory } from "@/lib/content-agents/context";
+import { buildContext, packForAgent } from "@/lib/content-agents/context";
 
 /**
  * The writer had nothing it could honestly write about.
@@ -129,13 +129,14 @@ function istNow(): string {
 }
 
 export async function generateDraft(agent: {
+  agentNo: number;
   name: string;
   systemPrompt: string;
   model: string;
   temperature: number;
   category: string;
 }): Promise<DraftPost> {
-  const pack = packForCategory(agent.category);
+  const pack = packForAgent(agent.agentNo, agent.category);
   const facts = await buildContext(pack);
 
   // A pack that needs figures and could not get them. Caller decides; for a
