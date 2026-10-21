@@ -52,6 +52,11 @@ export default function OptionOrderSheet({
         side: side === "BUY" ? "buy" : "sell",
         quantity: Math.max(1, Number(qty) || 0),
         price: execPrice,
+        // Without these the server sees only a bare symbol and has nothing to
+        // identify the contract by, so it cannot find a price for the leg.
+        token: symbol.token,
+        exchange: symbol.exchange,
+        tradingSymbol: symbol.tradingSymbol,
       });
       setMsg({ ok: result.ok, text: result.text });
     } catch {

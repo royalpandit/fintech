@@ -5,7 +5,20 @@ export function paperSymbolFromWatchlist(item: {
   tradingSymbol: string;
 }): string {
   const raw = (item.tradingSymbol || item.display).trim().toUpperCase();
-  return raw.split("-")[0].replace(/\.(NS|BO)$/i, "").replace(/\s+/g, "");
+
+  /*
+   * An option identifier is kept whole.
+   *
+   * NSE writes them as OPTSTKRELIANCE27-10-2026PE1100.00, and the cleanup
+   * below took everything before the first hyphen — which turned that into
+   * "OPTSTKRELIANCE27" and left the server with a symbol matching nothing. The
+   * hyphens are the expiry date, not a suffix.
+   */
+  if (/^OPT(IDX|STK)/.test(raw)) return raw.replace(/\s+/g, "");
+
+  // Cash symbols: drop a trailing -EQ and a Yahoo suffix, nothing more. Taking
+  // everything before the first hyphen would also eat M&M-style names.
+  return raw.replace(/\s+/g, "").replace(/-EQ$/i, "").replace(/\.(NS|BO)$/i, "");
 }
 
 export type PaperOrderType = "MARKET" | "LIMIT" | "SL" | "SL-M";

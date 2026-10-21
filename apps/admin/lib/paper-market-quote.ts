@@ -76,6 +76,64 @@ export async function resolveToken(
 const QUOTE_TTL_MS = 2_000;
 const quoteCache = new Map<string, { ltp: number; at: number }>();
 
+/*
+ * NSE names a contract OPTSTKRELIANCE27-10-2026PE1100.00:
+ * OPT, STK or IDX, the underlying, the expiry, the side, the strike.
+ */
+const OPTION_ID = /^OPT(IDX|STK)([A-Z&-]+?)(\d{2}-\d{2}-\d{4})(CE|PE)([\d.]+)$/;
+
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+/**
+ * Price for one option leg, read back off the chain.
+ *
+ * An option cannot be priced the way a share is. Yahoo carries no Indian
+ * contracts at all, and NSE publishes the chain but will not quote a single
+ * leg, so a market order on a leg had nothing to fill against and simply hung.
+ *
+ * The chain it was picked from is the honest source, and it is already cached
+ * for a minute, so this usually costs nothing. The price is taken server-side
+ * rather than trusting a figure posted by the browser, which would let an order
+ * fill at any price the caller fancied.
+ *
+ * Returns null when this is not an option, so cash flows on untouched.
+ */
+async function optionLegPrice(input: QuoteInput): Promise<number | null> {
+  const id = (input.tradingSymbol || input.token || input.symbol || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+  const m = OPTION_ID.exec(id);
+  if (!m) return null;
+
+  const [, , underlying, ddmmyyyy, side, strikeRaw] = m;
+  const [dd, mm, yyyy] = ddmmyyyy!.split("-");
+  const expiry = `${dd}-${MONTHS[Number(mm) - 1]}-${yyyy}`;
+  const strike = Number(strikeRaw);
+
+  const { getNseOptionChain } = await import("@/lib/nse-option-chain");
+  const { withFeedCache } = await import("@/lib/market-rate-limit");
+
+  // Same key the chain routes use, so an open panel has already paid for this.
+  const chain = await withFeedCache(
+    `nse-oc:${underlying}:${expiry}:s`,
+    60_000,
+    2 * 60_000,
+    () => getNseOptionChain({ symbol: underlying!, expiry }),
+  );
+
+  const row = chain?.rows.find(r => Math.abs(r.strike - strike) < 0.001);
+  const leg = side === "CE" ? row?.ce : row?.pe;
+  const price = Number(leg?.ltp);
+
+  if (!Number.isFinite(price) || price <= 0) {
+    throw new Error(
+      `No live price for ${underlying} ${expiry} ${strike} ${side} — the contract is not quoted right now`,
+    );
+  }
+  return price;
+}
+
 /** Fetch live LTP for a single instrument (server-side). */
 export async function fetchLiveLtp(input: QuoteInput): Promise<number> {
   // Mutual funds price off the AMFI NAV, not the exchange feed. They have no
@@ -84,6 +142,11 @@ export async function fetchLiveLtp(input: QuoteInput): Promise<number> {
   if (isMutualFundExchange(input.exchange)) {
     return fetchMutualFundNav(input.symbol);
   }
+
+  // An option leg is priced from the chain it was picked off, not the cash feed
+  // below — no free source quotes a single contract on demand.
+  const optionPrice = await optionLegPrice(input);
+  if (optionPrice != null) return optionPrice;
 
   const symbol = normalizePaperSymbol(input.symbol);
   let token = input.token?.trim() || "";
