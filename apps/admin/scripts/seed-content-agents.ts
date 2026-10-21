@@ -12,6 +12,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { AGENTS, agentBotEmail } from "../lib/content-agents/catalogue";
+import { groqModelForAgent } from "../lib/content-agents/models";
 
 function sslForDb(url: string | undefined) {
   if (!url) return undefined;
@@ -83,6 +84,7 @@ async function main() {
         category: a.category,
         slots: a.slots,
         botUserId: bot.id,
+        model: groqModelForAgent(a.no),
       },
       create: {
         agentNo: a.no,
@@ -94,6 +96,7 @@ async function main() {
         category: a.category,
         slots: a.slots,
         botUserId: bot.id,
+        model: groqModelForAgent(a.no),
       },
     });
 

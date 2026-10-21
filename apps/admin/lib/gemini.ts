@@ -58,12 +58,13 @@ export function streamGeminiChat(opts: {
   const { model, systemPrompt, temperature, history, userMessage } = opts;
   const url = `${BASE}/${model}:streamGenerateContent?alt=sse&key=${apiKey()}`;
 
-  const body = JSON.stringify({
-    system_instruction: { parts: [{ text: systemPrompt }] },
-    contents: buildContents(history, userMessage),
-    generationConfig: { temperature, maxOutputTokens: MAX_OUTPUT_TOKENS },
-    tools: GROUNDING_TOOLS,
-  });
+  const payload = (grounded: boolean) =>
+    JSON.stringify({
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: buildContents(history, userMessage),
+      generationConfig: { temperature, maxOutputTokens: MAX_OUTPUT_TOKENS },
+      ...(grounded ? { tools: GROUNDING_TOOLS } : {}),
+    });
 
   const encoder = new TextEncoder();
 
@@ -72,11 +73,26 @@ export function streamGeminiChat(opts: {
       let fullText = "";
       let finishReason = "";
       try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body,
-        });
+        const send = (grounded: boolean) =>
+          fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload(grounded),
+          });
+
+        /*
+         * Grounding has its own quota, and it is small.
+         *
+         * Search grounding is metered separately from generation, so once it is
+         * spent every chat returned 429 and the assistant was simply down —
+         * while the identical request without tools answered fine. An answer
+         * from the model's own knowledge is worth having; no answer is not.
+         */
+        let res = await send(true);
+        if (res.status === 429) {
+          console.warn("[Gemini] grounding quota spent — retrying without search");
+          res = await send(false);
+        }
 
         if (!res.ok || !res.body) {
           const errText = await res.text();
@@ -146,16 +162,24 @@ export async function geminiChat(opts: {
 }): Promise<string> {
   const { model, systemPrompt, temperature, history, userMessage } = opts;
   const url = `${BASE}/${model}:generateContent?key=${apiKey()}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents: buildContents(history, userMessage),
-      generationConfig: { temperature, maxOutputTokens: MAX_OUTPUT_TOKENS },
-      tools: GROUNDING_TOOLS,
-    }),
-  });
+
+  const send = (grounded: boolean) =>
+    fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: buildContents(history, userMessage),
+        generationConfig: { temperature, maxOutputTokens: MAX_OUTPUT_TOKENS },
+        ...(grounded ? { tools: GROUNDING_TOOLS } : {}),
+      }),
+    });
+
+  // Grounding is metered separately and runs out well before generation does.
+  // See the note in streamGeminiChat.
+  let res = await send(true);
+  if (res.status === 429) res = await send(false);
+
   const data = await res.json();
   return joinParts(data);
 }

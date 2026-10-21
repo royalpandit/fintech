@@ -17,8 +17,9 @@ import "server-only";
 
 const BASE = "https://api.groq.com/openai/v1";
 
-/** 131k context, and the strongest of the three text models the free tier serves. */
-export const GROQ_DEFAULT_MODEL = "openai/gpt-oss-120b";
+// Model ids and the per-agent split live in ./content-agents/models, which
+// carries no server-only guard so the seed script can read them too.
+export { GROQ_MODELS, GROQ_DEFAULT_MODEL, groqModelForAgent } from "@/lib/content-agents/models";
 
 function apiKey(): string {
   const k = process.env.GROQ_API_KEY?.trim();
@@ -64,9 +65,22 @@ export async function groqComplete(opts: {
     );
   }
 
-  const text = (data as { choices?: { message?: { content?: string } }[] })
-    ?.choices?.[0]?.message?.content?.trim();
+  const choice = (data as {
+    choices?: { message?: { content?: string }; finish_reason?: string }[];
+  })?.choices?.[0];
 
+  /*
+   * These models think before answering, and the thinking is billed against
+   * max_tokens. Given twenty it spent all twenty reasoning and returned an
+   * empty string with finish_reason "length" — so a ceiling that is merely
+   * tight does not fail loudly, it truncates the post mid-sentence. Caught
+   * here rather than published half-written.
+   */
+  if (choice?.finish_reason === "length") {
+    throw new Error("Groq hit the token ceiling — the post would be cut off");
+  }
+
+  const text = choice?.message?.content?.trim();
   if (!text) throw new Error("Groq returned an empty completion");
   return text;
 }
