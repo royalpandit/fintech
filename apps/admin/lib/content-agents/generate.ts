@@ -1,13 +1,31 @@
 import "server-only";
-import { geminiGenerateStrict } from "@/lib/gemini";
+import { groqComplete } from "@/lib/groq";
 import { HOUSE_RULES } from "@/lib/content-agents/catalogue";
+import { buildContext, packForCategory } from "@/lib/content-agents/context";
+
+/**
+ * The writer had nothing it could honestly write about.
+ *
+ * Not a failure — a quiet slot is the correct outcome when the day's data does
+ * not cover an agent's beat, and the sweep records it as such so a feed outage
+ * stays distinguishable from a day with no IPOs in it.
+ */
+export class SkipRun extends Error {
+  constructor(reason: string) {
+    super(reason);
+    this.name = "SkipRun";
+  }
+}
 
 export type DraftPost = {
   title: string;
   content: string;
   sentiment: "bullish" | "bearish" | "neutral";
   symbol: string | null;
-  /** Whether the model searched before writing. See the gate in the sweep. */
+  /**
+   * Whether verified figures were handed to the writer. False means the feeds
+   * were unreachable, and a factual post is not published without them.
+   */
   grounded: boolean;
 };
 
@@ -37,8 +55,21 @@ function parseDraft(raw: string): Omit<DraftPost, "grounded"> {
     throw new Error(`Unparseable JSON: ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  const title = String(obj.title ?? "").trim();
-  const content = String(obj.content ?? "").trim();
+  /*
+   * The writer is allowed to decline.
+   *
+   * An agent whose beat is not in today's data has two options, and only one of
+   * them is acceptable: say nothing, or invent. Asked for upcoming IPOs on a day
+   * whose headlines had none, an early draft wrote a full post about a company
+   * that is already listed. Giving it a way to refuse is what makes "do not
+   * invent" an instruction it can actually follow.
+   */
+  if (typeof obj.skip === "string" && obj.skip.trim()) {
+    throw new SkipRun(obj.skip.trim().slice(0, 120));
+  }
+
+  const title = stripDecoration(String(obj.title ?? "").trim());
+  const content = stripDecoration(String(obj.content ?? "").trim());
   if (!title || !content) throw new Error("Model returned an empty title or body");
 
   const s = String(obj.sentiment ?? "neutral").toLowerCase();
@@ -56,6 +87,25 @@ function parseDraft(raw: string): Omit<DraftPost, "grounded"> {
     sentiment,
     symbol,
   };
+}
+
+/*
+ * Emoji and markdown bold, asked for and still arriving.
+ *
+ * The brief wants a finance creator's voice, not a decorated one, and the posts
+ * render as plain text anyway — so literal asterisks show up as asterisks. The
+ * instruction is in the prompt; this is for when the model ignores it, which it
+ * does perhaps one time in five.
+ */
+function stripDecoration(s: string): string {
+  return s
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{20E3}]/gu, "")
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/(^|\s)\*(\S[^*]*?)\*(?=\s|$)/g, "$1$2")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /** Today in IST, written the way a person would read it. */
@@ -83,31 +133,46 @@ export async function generateDraft(agent: {
   systemPrompt: string;
   model: string;
   temperature: number;
+  category: string;
 }): Promise<DraftPost> {
-  /*
-   * The date and time are stated because the model has no clock.
-   *
-   * Without them a pre-market post written at 07:15 would reason about
-   * whichever session its training data ended on, and grounding would be asked
-   * to verify facts against no particular day. Saying when it is turns "today"
-   * into something searchable.
-   */
-  const userMessage = [
-    `It is ${istToday()}, ${istNow()} IST.`,
-    `Write today's post as "${agent.name}".`,
-    "Search for the current facts before writing — do not rely on memory for any",
-    "price, level, date or number.",
-  ].join("\n");
+  const pack = packForCategory(agent.category);
+  const facts = await buildContext(pack);
 
-  const { text: raw, grounded } = await geminiGenerateStrict({
+  // A pack that needs figures and could not get them. Caller decides; for a
+  // market post that means no post rather than an invented one.
+  if (facts === null) {
+    return { title: "", content: "", sentiment: "neutral", symbol: null, grounded: false };
+  }
+
+  /*
+   * The date is stated because the model has no clock, and the figures are
+   * stated because it has no search. Between them it knows when it is writing
+   * and what is true, which is everything it needs and nothing it can invent.
+   */
+  const parts = [`It is ${istToday()}, ${istNow()} IST.`];
+  if (facts) {
+    parts.push(
+      "",
+      "VERIFIED DATA — fetched just now. These are the only figures you may quote.",
+      "Do not state any other number as fact. If something you want to say is not",
+      "in this block, write about it qualitatively or leave it out.",
+      "",
+      facts,
+      "",
+    );
+  }
+  parts.push(`Write today's post as "${agent.name}".`);
+
+  const raw = await groqComplete({
     model: agent.model,
     systemPrompt: `${agent.systemPrompt}\n\n${HOUSE_RULES}`,
+    userMessage: parts.join("\n"),
     temperature: agent.temperature,
-    userMessage,
-    signal: AbortSignal.timeout(90_000),
+    signal: AbortSignal.timeout(60_000),
   });
 
-  return { ...parseDraft(raw), grounded };
+  // "none" packs carry no figures to verify, so they are never gated on data.
+  return { ...parseDraft(raw), grounded: pack === "none" ? true : Boolean(facts) };
 }
 
 /**

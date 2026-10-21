@@ -2133,7 +2133,7 @@ model ContentAgent {
   /// The account these post as. One per agent, so the feed reads as a desk
   /// rather than one account posting two hundred times.
   botUserId    Int                @unique @map("bot_user_id")
-  model        String             @default("gemini-flash-latest") @db.VarChar(60)
+  model        String             @default("openai/gpt-oss-120b") @db.VarChar(60)
   temperature  Float              @default(0.85)
   isActive     Boolean            @default(true) @map("is_active")
   createdAt    DateTime           @default(now()) @map("created_at")

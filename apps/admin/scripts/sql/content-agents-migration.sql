@@ -87,3 +87,12 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- chat agent created since then carries a model id that 404s. Only the default
 -- for new rows; rows already holding the dead id are a separate data fix.
 ALTER TABLE "gemini_agents" ALTER COLUMN "model" SET DEFAULT 'gemini-flash-latest';
+
+-- Switched the writers from Gemini to Groq. Gemini's Google Search grounding
+-- sits behind a quota a handful of calls exhausted, and two hundred posts a day
+-- would need billing; Groq's free tier allows a thousand requests a day. Groq
+-- cannot search, so lib/content-agents/context.ts now fetches the figures and
+-- the prompt carries them — which is a better source than a search engine's
+-- reading of them anyway.
+ALTER TABLE "content_agents" ALTER COLUMN "model" SET DEFAULT 'openai/gpt-oss-120b';
+UPDATE "content_agents" SET "model" = 'openai/gpt-oss-120b' WHERE "model" <> 'openai/gpt-oss-120b';

@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { AGENT_DISCLAIMER, generateDraft } from "@/lib/content-agents/generate";
+import { AGENT_DISCLAIMER, generateDraft, SkipRun } from "@/lib/content-agents/generate";
 
 /*
  * The scheduled sweep.
@@ -14,8 +14,8 @@ import { AGENT_DISCLAIMER, generateDraft } from "@/lib/content-agents/generate";
  * worse than a missing one.
  *
  * Nothing is batched across agents: one failure is one empty slot, not a lost
- * tick. Concurrency is small because each generation performs a grounded search,
- * and two hundred of those a day is already the budget.
+ * tick. Concurrency is small because the free tier meters tokens per minute,
+ * and a burst of six would meet that ceiling rather than the daily one.
  */
 
 const GRACE_MINUTES = 25;
@@ -73,21 +73,19 @@ async function publishDraft(agent: DueAgent): Promise<{ marketPostId?: number; c
   const draft = await generateDraft(agent);
 
   /*
-   * A market post must show its working.
+   * No figures, no post.
    *
-   * Grounding is offered to every generation but the model decides whether to
-   * use it, and when it declines it still writes with total confidence: a
-   * commodities draft skipped the search and quoted gold at $4,160/oz against a
-   * real $4,185.80. Near enough to read as correct, wrong enough to publish,
-   * and no better than a coin toss after a sharp move.
+   * The writer cannot search, so every number it is allowed to use was fetched
+   * for it. When the feeds are unreachable that block is empty, and a market
+   * post written without it would be recalled from training data — which is how
+   * a draft once quoted gold at $4,160/oz against a real $4,185.80. Near enough
+   * to read as correct, wrong enough to publish.
    *
-   * So a post that asserts current facts and cannot show it searched does not
-   * go out. The slot stays empty and the run says why, which is the brief's own
-   * rule — verify, or leave it out. Community writing is reasoning and stories
-   * with no live numbers to get wrong, so it is not held to this.
+   * So the slot stays empty and the run says why, which is the brief's own rule:
+   * verify, or leave it out.
    */
-  if (agent.target === "market_post" && !draft.grounded) {
-    throw new Error("Not published: the model wrote without searching, so its figures are unverified");
+  if (!draft.grounded) {
+    throw new Error("Not published: live figures were unavailable, so nothing could be verified");
   }
 
   if (agent.target === "market_post") {
@@ -188,12 +186,20 @@ export async function runContentAgents(): Promise<{
         published++;
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        // A declined slot is not a broken one, and the two should not look
+        // alike when someone asks why an agent went quiet.
+        const declined = err instanceof SkipRun;
         await prisma.contentAgentRun.update({
           where: { id: runId },
-          data: { status: "failed", error: message.slice(0, 500) },
+          data: { status: declined ? "skipped" : "failed", error: message.slice(0, 500) },
         });
-        console.error("[content-agents] %s @ %s failed: %s", agent.name, agent.slot, message);
-        failed++;
+        if (declined) {
+          console.log("[content-agents] %s @ %s skipped: %s", agent.name, agent.slot, message);
+          skipped++;
+        } else {
+          console.error("[content-agents] %s @ %s failed: %s", agent.name, agent.slot, message);
+          failed++;
+        }
       }
     }
   };

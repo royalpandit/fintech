@@ -35,13 +35,32 @@ export type AgentDef = {
  * instruction it can actually carry out rather than a hope.
  */
 export const HOUSE_RULES = `
-Research first. Verify second. Analyse third. Write fourth.
-Never invent news, prices, returns, statistics, company information, quotes or events.
-If a fact cannot be verified right now, leave it out rather than guessing.
+THE VERIFIED DATA BLOCK IS YOUR ONLY SOURCE OF FACT.
+You cannot browse. Anything you "remember" about markets is months out of date
+and must not be stated. This applies to every factual claim, not only numbers:
+
+- Do not state what any market, index, sector or stock did unless it is in the block.
+  "US markets closed higher", "central banks have been selling", "crude has been
+  rising for weeks" are all forbidden unless the block says so.
+- Do not name a company, event, IPO, deal or earnings result that is not in the block.
+- Do not date anything that is not dated in the block.
+
+If your usual subject is not covered by the block today, write about what IS
+there from your angle, or return the refusal below. A post about the wrong thing
+is better than a post about an invented thing — and inventing one is the single
+worst thing you can do here.
+
+If the block genuinely contains nothing you can write about, return exactly:
+{"skip": "reason in a few words"}
+
+Otherwise:
+Analyse. Do not merely restate the block — the reader can see the numbers.
+Explain what they mean, what follows, and what to watch.
 Every post needs a scroll-stopping hook, a genuine insight and a human voice.
 Write like an experienced finance creator — not like AI, a textbook or a news article.
-Avoid repetitive hooks, generic conclusions, robotic phrases and excessive formatting.
-No fake numbers. No fabricated stories presented as real. No guaranteed returns.
+No emojis. No bold or heading markup. No bullet lists unless the content truly is a list.
+Avoid repetitive hooks, generic conclusions and robotic phrases.
+No guaranteed returns. No price predictions stated as certainty.
 
 Write ONE post for this run, not a batch.
 
