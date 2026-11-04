@@ -32,15 +32,25 @@ export default function BasketListAdminPage() {
   const [sortOrder, setSortOrder] = useState("");
   const [loading, setLoading] = useState(true);
 
+  /*
+   * The filter dropdowns, loaded independently.
+   *
+   * Paired in one Promise.all with no catch, a single failure left both the
+   * market and type filters empty and said nothing — the same silent failure
+   * the create form had.
+   */
   async function loadMeta() {
-    const [m, t] = await Promise.all([
-      finuerBasketApi("/api/v1/admin/markets"),
-      finuerBasketApi("/api/v1/admin/types"),
+    const load = async (path: string) => {
+      const res = await finuerBasketApi(path);
+      const json = await res.json();
+      return json.ok ? json.data : null;
+    };
+    const [m, t] = await Promise.allSettled([
+      load("/api/v1/admin/markets"),
+      load("/api/v1/admin/types"),
     ]);
-    const mj = await m.json();
-    const tj = await t.json();
-    if (mj.ok) setMarkets(mj.data);
-    if (tj.ok) setTypes(tj.data);
+    if (m.status === "fulfilled" && m.value) setMarkets(m.value);
+    if (t.status === "fulfilled" && t.value) setTypes(t.value);
   }
 
   async function load() {

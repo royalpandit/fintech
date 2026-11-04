@@ -35,18 +35,54 @@ export default function BasketFormPage({ basketId }: { basketId?: number }) {
     [benchmarks, marketId],
   );
 
+  /*
+   * Market, type and benchmark, each loaded on its own.
+   *
+   * These were one Promise.all with no catch, so a single failing request took
+   * all three down: the rejection escaped, no setter ran, and every dropdown
+   * stayed empty with nothing on screen to say why. An expired session looked
+   * exactly like a missing feature — the form renders, the selects are there,
+   * and they simply have nothing in them.
+   *
+   * Now one failure costs one dropdown, and the reason is shown.
+   */
   async function loadMeta() {
-    const [m, t, b] = await Promise.all([
-      finuerBasketApi("/api/v1/admin/markets"),
-      finuerBasketApi("/api/v1/admin/types"),
-      finuerBasketApi("/api/v1/admin/benchmarks"),
-    ]);
-    const mj = await m.json();
-    const tj = await t.json();
-    const bj = await b.json();
-    if (mj.ok) setMarkets(mj.data);
-    if (tj.ok) setTypes(tj.data);
-    if (bj.ok) setBenchmarks(bj.data);
+    const sources = [
+      { key: "markets", path: "/api/v1/admin/markets", set: setMarkets },
+      { key: "types", path: "/api/v1/admin/types", set: setTypes },
+      { key: "benchmarks", path: "/api/v1/admin/benchmarks", set: setBenchmarks },
+    ] as const;
+
+    const results = await Promise.allSettled(
+      sources.map(async (s) => {
+        const res = await finuerBasketApi(s.path);
+        if (res.status === 401 || res.status === 403) {
+          throw new Error("session");
+        }
+        const json = await res.json();
+        if (!json.ok) throw new Error(json.error || `${s.key} unavailable`);
+        return json.data;
+      }),
+    );
+
+    const failed: string[] = [];
+    let sessionExpired = false;
+
+    results.forEach((r, i) => {
+      const s = sources[i]!;
+      if (r.status === "fulfilled") {
+        (s.set as (v: unknown) => void)(r.value);
+      } else {
+        if ((r.reason as Error)?.message === "session") sessionExpired = true;
+        failed.push(s.key);
+      }
+    });
+
+    if (sessionExpired) {
+      setError("Your session has expired — sign in again to load markets and types.");
+    } else if (failed.length) {
+      setError(`Could not load ${failed.join(", ")}. Reload the page to try again.`);
+    }
   }
 
   async function loadBasket() {
