@@ -3,6 +3,14 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import {
+  PROFESSIONAL_TYPES,
+  REGULATED_REGISTRATION_TYPES,
+  registrationFieldLabel,
+  registrationFieldPlaceholder,
+  type ProfessionalDetails,
+  type ProfessionalType,
+} from "@/lib/professional-types";
 
 type Role = "user" | "advisor" | "admin" | "super_admin";
 type Status = "active" | "pending" | "suspended";
@@ -16,12 +24,17 @@ export default function CreateUserPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<Role>("user");
   const [status, setStatus] = useState<Status>("active");
-  const [sebi, setSebi] = useState("");
+  const [professionalType, setProfessionalType] = useState<ProfessionalType>("investment_advisor");
+  const [registrationNo, setRegistrationNo] = useState("");
+  const [details, setDetails] = useState<ProfessionalDetails>({});
   const [experienceYears, setExperienceYears] = useState("");
   const [bio, setBio] = useState("");
-  const [autoApproveAdvisor, setAutoApproveAdvisor] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const setDetail = (key: string, value: string) => {
+    setDetails((current) => ({ ...current, [key]: value }));
+  };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -50,10 +63,11 @@ export default function CreateUserPage() {
           status,
           ...(role === "advisor"
             ? {
-                sebiRegistrationNo: sebi.trim().toUpperCase(),
+                professionalType,
+                registrationNo: registrationNo.trim().toUpperCase(),
+                details,
                 experienceYears: experienceYears ? Number(experienceYears) : undefined,
                 bio: bio.trim() || undefined,
-                autoApproveAdvisor,
               }
             : {}),
         }),
@@ -182,19 +196,116 @@ export default function CreateUserPage() {
                 }}
               >
                 <p style={{ margin: 0, marginBottom: 12, fontWeight: 600, fontSize: 14 }}>
-                  SEBI Advisor Details
+                  Professional Details
                 </p>
-                <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div>
-                    <p className="metric-label">SEBI Registration No</p>
+                <div>
+                  <p className="metric-label">Profession</p>
+                  <select
+                    className="input"
+                    value={professionalType}
+                    onChange={(e) => setProfessionalType(e.target.value as ProfessionalType)}
+                    required
+                  >
+                    {PROFESSIONAL_TYPES.map((item) => (
+                      <option key={item.value} value={item.value}>{item.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {(professionalType === "advisory_firm" ||
+                  professionalType === "wealth_manager" ||
+                  professionalType === "financial_platform" ||
+                  professionalType === "listed_company") && (
+                  <div style={{ marginTop: 12 }}>
+                    <p className="metric-label">Registered Company / Entity Name</p>
                     <input
                       className="input"
-                      placeholder="INA000012345"
-                      value={sebi}
-                      onChange={(e) => setSebi(e.target.value.toUpperCase())}
+                      value={details.entityName ?? ""}
+                      onChange={(e) => setDetail("entityName", e.target.value)}
                       required
                     />
                   </div>
+                )}
+                {(professionalType === "advisory_firm" || professionalType === "wealth_manager") && (
+                  <div style={{ marginTop: 12 }}>
+                    <p className="metric-label">Registration category</p>
+                    <select
+                      className="input"
+                      value={details.regulatoryType ?? ""}
+                      onChange={(e) => setDetail("regulatoryType", e.target.value)}
+                      required
+                    >
+                      <option value="">Select registration category</option>
+                      {REGULATED_REGISTRATION_TYPES.map((item) => (
+                        <option key={item.value} value={item.value}>{item.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {professionalType !== "finance_creator" && (
+                  <div style={{ marginTop: 12 }}>
+                    <p className="metric-label">{registrationFieldLabel(professionalType, details)}</p>
+                    <input
+                      className="input"
+                      placeholder={registrationFieldPlaceholder(professionalType, details)}
+                      value={registrationNo}
+                      onChange={(e) => setRegistrationNo(e.target.value.toUpperCase())}
+                      disabled={
+                        (professionalType === "advisory_firm" || professionalType === "wealth_manager") &&
+                        !details.regulatoryType
+                      }
+                      required
+                    />
+                  </div>
+                )}
+                {professionalType === "listed_company" && (
+                  <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                    <div>
+                      <p className="metric-label">Exchange</p>
+                      <select
+                        className="input"
+                        value={details.exchange ?? ""}
+                        onChange={(e) => setDetail("exchange", e.target.value)}
+                        required
+                      >
+                        <option value="">Select</option>
+                        <option value="NSE">NSE</option>
+                        <option value="BSE">BSE</option>
+                      </select>
+                    </div>
+                    <div>
+                      <p className="metric-label">Exchange ticker</p>
+                      <input
+                        className="input"
+                        value={details.ticker ?? ""}
+                        onChange={(e) => setDetail("ticker", e.target.value.toUpperCase())}
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+                {professionalType === "finance_creator" && (
+                  <div style={{ marginTop: 12 }}>
+                    <p className="metric-label">Instagram profile URL</p>
+                    <input
+                      className="input"
+                      type="url"
+                      value={details.instagramUrl ?? ""}
+                      onChange={(e) => setDetail("instagramUrl", e.target.value)}
+                      placeholder="https://www.instagram.com/yourprofile"
+                      required
+                    />
+                    <p className="metric-label" style={{ marginTop: 12 }}>YouTube profile URL</p>
+                    <input
+                      className="input"
+                      type="url"
+                      value={details.youtubeUrl ?? ""}
+                      onChange={(e) => setDetail("youtubeUrl", e.target.value)}
+                      placeholder="https://www.youtube.com/@yourchannel"
+                      required
+                    />
+                  </div>
+                )}
+                <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div>
                     <p className="metric-label">Experience (years)</p>
                     <input
@@ -218,14 +329,9 @@ export default function CreateUserPage() {
                     onChange={(e) => setBio(e.target.value)}
                   />
                 </div>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: 14 }}>
-                  <input
-                    type="checkbox"
-                    checked={autoApproveAdvisor}
-                    onChange={(e) => setAutoApproveAdvisor(e.target.checked)}
-                  />
-                  Auto-approve advisor verification (skip pending queue)
-                </label>
+                <p className="page-subtitle" style={{ marginTop: 12 }}>
+                  This profile will remain pending until a reviewer checks the submitted details against official records.
+                </p>
               </div>
             )}
 
@@ -270,8 +376,7 @@ export default function CreateUserPage() {
             <div className="card" style={{ marginTop: 12 }}>
               <p style={{ marginTop: 0, fontWeight: 600 }}>Advisor verification</p>
               <p className="page-subtitle">
-                SEBI registration number is validated (format: INA followed by 9 digits). Uncheck
-                auto-approve to require manual review.
+                Registration formats are checked on submission, but do not prove authenticity. Every professional profile requires manual review.
               </p>
             </div>
             <div className="card" style={{ marginTop: 12 }}>

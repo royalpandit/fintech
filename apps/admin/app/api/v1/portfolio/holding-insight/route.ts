@@ -3,9 +3,11 @@ import { requireAuth } from "@/lib/auth";
 import { loadHolding } from "@/lib/holding-position";
 import {
   getHoldingInsight,
+  hasCachedHoldingInsight,
   HOLDING_AGENTS,
   type HoldingAgentKey,
 } from "@/lib/holding-insight";
+import { PRO_AI_MONTHLY_QUERY_LIMIT, reserveUserAiQuery } from "@/lib/user-ai-quota";
 
 export const dynamic = "force-dynamic";
 // Three of these run in parallel from the page, and a grounded Gemini call on a
@@ -55,6 +57,27 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  const cached = hasCachedHoldingInsight(auth.userId, agent, holding.context);
+  const quota = cached
+    ? null
+    : await reserveUserAiQuery(auth.userId, auth.role, "holding_insight");
+  if (quota && !quota.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "AI_QUERY_LIMIT",
+        error: quota.isPro
+          ? `You've used all ${PRO_AI_MONTHLY_QUERY_LIMIT} Finuer Pro AI queries for this month. Your limit resets next month.`
+          : `You've used your ${quota.limit} free AI queries. Upgrade to Finuer Pro for ${PRO_AI_MONTHLY_QUERY_LIMIT} queries per month.`,
+        used: quota.used,
+        limit: quota.limit,
+        isPro: quota.isPro,
+        upgradeUrl: "/user/subscriptions#finuer-pro",
+      },
+      { status: 402 },
+    );
+  }
+
   const result = await getHoldingInsight(auth.userId, agent, holding.context);
   if (!result.ok) {
     // 200 with ok:false: the panel renders the reason in place. A 5xx here
@@ -67,5 +90,6 @@ export async function GET(req: NextRequest) {
     agent: result.agent,
     text: result.text ?? "",
     cached: result.cached,
+    quota,
   });
 }

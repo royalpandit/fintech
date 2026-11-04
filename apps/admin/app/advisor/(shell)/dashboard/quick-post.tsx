@@ -66,7 +66,7 @@ export default function QuickPost() {
           sentiment,
           riskLevel: "medium",
           targetPrice: targetPrice ? Number(targetPrice) : undefined,
-          disclaimer: DEFAULT_DISCLAIMER,
+          disclaimer: targetPrice ? DEFAULT_DISCLAIMER : undefined,
         }),
       });
       const data = await response.json();

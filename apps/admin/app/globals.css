@@ -11157,13 +11157,6 @@ body.terminal-active .us-content {
   flex: 1;
   min-width: 0;
 }
-.chart-page-analyzer {
-  flex-shrink: 0;
-  padding: 14px 12px 20px;
-  background: var(--surface-2);
-  border-top: 1px solid var(--border);
-}
-
 @media (max-width: 1023px) {
   .chart-page-terminal {
     min-height: min(560px, calc(100vh - 140px));

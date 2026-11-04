@@ -233,7 +233,11 @@ export default async function UserAdvisorsPage({
                       <span>{adv.fullName}</span>
                       <CheckCircle size={12} style={{ color: "#10b981", flexShrink: 0 }} />
                     </div>
-                    <div className="fp-card-sebi">{adv.advisorProfile?.sebiRegistrationNo}</div>
+                    <div className="fp-card-sebi">
+                      {adv.advisorProfile?.professionalType === "finance_creator"
+                        ? "Social profile links submitted"
+                        : adv.advisorProfile?.sebiRegistrationNo}
+                    </div>
                   </div>
                   {featured && <span className="fp-card-featured">Featured</span>}
                 </Link>
@@ -251,8 +255,11 @@ export default async function UserAdvisorsPage({
                     </span>
                   ))}
                   {tags.length > 2 && (
-                    <span className="fp-card-tag" title={tags.slice(2).join(", ")}>
-                      +{tags.length - 2}
+                    <span
+                      className="fp-card-tag"
+                      title={`More specialties: ${tags.slice(2).join(", ")}`}
+                    >
+                      +{tags.length - 2} more
                     </span>
                   )}
                 </div>

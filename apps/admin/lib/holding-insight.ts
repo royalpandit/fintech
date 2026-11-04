@@ -173,6 +173,15 @@ function cacheKey(userId: number, key: HoldingAgentKey, ctx: HoldingContext): st
   ].join(":");
 }
 
+export function hasCachedHoldingInsight(
+  userId: number,
+  key: HoldingAgentKey,
+  ctx: HoldingContext,
+): boolean {
+  const hit = cache.get(cacheKey(userId, key, ctx));
+  return Boolean(hit && Date.now() - hit.at < TTL_MS);
+}
+
 /*
  * One flat shape rather than a discriminated union.
  *

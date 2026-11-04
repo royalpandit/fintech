@@ -13,7 +13,18 @@
       "PowerShell(Select-String -Path \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\components\\\\user-shell.tsx\" -Pattern \"children|us-main|us-content\" | ForEach-Object { $_.LineNumber.ToString\\(\\) + \": \" + $_.Line })",
       "PowerShell(Select-String -Path \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\app\\\\globals.css\" -Pattern \"us-header|header-h|--us-h\" | Select-Object -First 10 | ForEach-Object { $_.LineNumber.ToString\\(\\) + \": \" + $_.Line })",
       "PowerShell(Select-String -Path \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\app\\\\globals.css\" -Pattern \"us-body|us-sidebar\" | Select-Object -First 15 | ForEach-Object { $_.LineNumber.ToString\\(\\) + \": \" + $_.Line })",
-      "PowerShell(Get-ChildItem \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\components\\\\trading\" | ForEach-Object { $_.Name + \" \\(\" + $_.Length + \" bytes\\)\" }; Write-Host \"---\"; Get-ChildItem \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\app\\\\api\\\\v1\\\\market\" | ForEach-Object { $_.Name }; Write-Host \"---\"; Test-Path \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\app\\\\api\\\\v1\\\\orders\\\\route.ts\")"
+      "PowerShell(Get-ChildItem \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\components\\\\trading\" | ForEach-Object { $_.Name + \" \\(\" + $_.Length + \" bytes\\)\" }; Write-Host \"---\"; Get-ChildItem \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\app\\\\api\\\\v1\\\\market\" | ForEach-Object { $_.Name }; Write-Host \"---\"; Test-Path \"d:\\\\corescent\\\\fintech\\\\apps\\\\admin\\\\app\\\\api\\\\v1\\\\orders\\\\route.ts\")",
+      "Bash(git -C \"d:/corescent/fintech\" log --format=\"%H %ae %s\" -5)",
+      "Bash(git -C \"d:/corescent/fintech\" remote -v)",
+      "Bash(git -C \"d:/corescent/fintech\" push yash main --force)",
+      "Bash(git -C \"d:/corescent/fintech\" push origin main --force)",
+      "Bash(git -C \"d:/corescent/fintech\" add apps/admin/app/user/portfolio/page.tsx)",
+      "Bash(git -C d:/corescent/fintech commit -m ' *)",
+      "Bash(git -C \"d:/corescent/fintech\" ls-files --others --cached --exclude-standard)",
+      "Bash(git -C \"d:/corescent/fintech\" add apps/admin/app/api/v1/dhan/webhook/route.ts)"
+    ],
+    "additionalDirectories": [
+      "d:\\corescent\\fintech\\apps\\admin\\app\\api\\v1\\dhan"
     ]
   }
 }

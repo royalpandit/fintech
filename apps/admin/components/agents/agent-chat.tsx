@@ -111,6 +111,7 @@ export default function AgentChat({
   const [sessionId, setSessionId] = useState<number>(0);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [quota, setQuota] = useState<{ used: number; limit: number; isPro: boolean } | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const {
     fileRef,
@@ -241,6 +242,9 @@ export default function AgentChat({
         try {
           const j = await res.json();
           if (j?.error) detail = String(j.error);
+          if (j?.code === "AI_QUERY_LIMIT") {
+            setQuota({ used: Number(j.used), limit: Number(j.limit), isPro: Boolean(j.isPro) });
+          }
         } catch {
           /* not JSON — keep the status line */
         }
@@ -272,6 +276,7 @@ export default function AgentChat({
               setSessionId(d.sessionId);
               gotSession = true;
             }
+            if (d.quota) setQuota(d.quota);
             if (d.text) {
               fullText += d.text;
               const ft = fullText;
@@ -666,7 +671,15 @@ export default function AgentChat({
               three facts are already on the welcome card above. */}
           {messages.length === 0 && (
             <p className="agent-col agent-composer-hint">
-              📎 PDF / Word on every assistant · Enter to send · Powered by {modelLabel}
+              3 free AI queries per account · Finuer Pro includes 50/month · 📎 PDF / Word · Powered by {modelLabel}
+            </p>
+          )}
+          {quota && (
+            <p className="agent-col agent-composer-hint">
+              AI queries used: {quota.used}/{quota.limit}{quota.isPro ? " this month" : " free"}
+              {!quota.isPro && quota.used >= quota.limit && (
+                <> · <Link href="/user/subscriptions#finuer-pro">Upgrade to Finuer Pro</Link> for 50/month</>
+              )}
             </p>
           )}
         </div>

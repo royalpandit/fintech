@@ -10,7 +10,11 @@ import { CheckCircle } from "@/components/advisor-ui/icons";
 import FollowToggle from "@/components/FollowToggle";
 import SubscribeButton from "@/components/subscribe-button";
 import { marketPostAudienceWhere } from "@/lib/post-visibility";
-import { professionalTypeLabel } from "@/lib/professional-types";
+import {
+  professionalDetailsFromUnknown,
+  professionalTypeLabel,
+  registrationCaption,
+} from "@/lib/professional-types";
 import { computeAnalystPerformance } from "@/lib/trades";
 import { can } from "@/lib/capabilities";
 import MessageAdvisorButton from "./MessageAdvisorButton";
@@ -62,6 +66,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
         select: {
           sebiRegistrationNo: true,
           professionalType: true,
+          verificationDetails: true,
           experienceYears: true,
           bio: true,
           expertiseTags: true,
@@ -75,6 +80,7 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
   if (!advisor || !advisor.advisorProfile) notFound();
 
   const professionalType = advisor.advisorProfile.professionalType;
+  const professionalDetails = professionalDetailsFromUnknown(advisor.advisorProfile.verificationDetails);
   // Chart: Paid subscriptions ❌ for listed companies (and creators / brokers).
   const offersSubscriptions = can(professionalType, "monetize.paid_subscription");
   const offersCourses = can(professionalType, "course.sell");
@@ -243,7 +249,10 @@ export default async function PublicAdvisorProfile({ params }: { params: { id: s
                 fontFamily: "monospace",
               }}
             >
-              SEBI {advisor.advisorProfile.sebiRegistrationNo} ·{" "}
+              {professionalType === "finance_creator"
+                ? "Social profile links submitted"
+                : `${registrationCaption(professionalType, professionalDetails)} ${advisor.advisorProfile.sebiRegistrationNo}`}{" "}
+              ·{" "}
               {advisor.advisorProfile.experienceYears
                 ? `${advisor.advisorProfile.experienceYears}y experience`
                 : "Experience —"}

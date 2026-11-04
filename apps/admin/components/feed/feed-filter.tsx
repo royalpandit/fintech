@@ -60,11 +60,11 @@ export const FEED_FILTER_GROUPS: {
   },
   {
     key: "sentiment",
-    label: "Recommendation",
+    label: "Market sentiment",
     options: [
       { id: "all", label: "All" },
-      { id: "bullish", label: "Buy" },
-      { id: "bearish", label: "Sell" },
+      { id: "bullish", label: "Bullish" },
+      { id: "bearish", label: "Bearish" },
       { id: "neutral", label: "Neutral" },
     ],
   },

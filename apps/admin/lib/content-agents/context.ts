@@ -23,26 +23,28 @@ export type ContextPack =
   | "commodities"
   | "global"
   | "currency"
+  | "crypto"
   | "news"
   | "none";
 
 /**
  * Which facts an agent needs.
  *
- * Category alone was too coarse. "sectors" covers both Sector Pre-Open, which
- * reads index levels, and the AI and Defence desks, which need news — and
+ * Category alone was too coarse. "sectors" covers both Sector Rotation, which
+ * reads index levels, and the AI and Semiconductor desks, which need news — and
  * handed index levels the AI writer correctly replied that it had no AI data
- * and declined. Same for Corporate Announcement Movers, filed under "stocks"
- * and given large-cap prices when what it reports is announcements.
+ * and declined. Same for Corporate Action Watch, filed under "stocks" and given
+ * large-cap prices when what it reports is announcements.
  *
  * So the agents whose beat is events rather than levels are named here, and
- * category decides the rest.
+ * category decides the rest. Numbers are the brief's A-numbers (A015 = 15).
  */
 const NEWS_AGENTS = new Set([
-  13, 14, 15, 16, // policy, regulatory, announcements, orders
-  63, 64, 65, 66, 67, 68, 71, 72, // AI, semis, defence, power, data centres, cyber, EV, trends
-  77, 78, 80, // government policy, budget, geopolitics
-  51, // management quality
+  15, 19, // order book, corporate action
+  49, 50, 52, // underfollowed theme, next big theme, catalyst watch
+  57, 63, 64, 65, 66, 67, 68, 69, 71, 72, // AI, AI infra, semis, power, data centres, cyber, solar, nuclear, mobility, next decade
+  74, 75, 78, 79, 80, // inflation, GDP, consumption, employment, trade
+  94, 95, 96, 98, 99, 100, // contrarian, market story, what's missed, bull vs bear, future question, big idea
 ]);
 
 export function packForAgent(agentNo: number, category: string): ContextPack {
@@ -65,6 +67,8 @@ export function packForCategory(category: string): ContextPack {
       return "global";
     case "macro":
       return "currency";
+    case "crypto":
+      return "crypto";
     case "ipo":
     case "earnings":
     case "policy":
@@ -175,6 +179,20 @@ const CURRENCY: Row[] = [
 ];
 
 /*
+ * Crypto, because the brief asks for a crypto desk and the alternative is worse.
+ *
+ * Filed under no pack it would have fallen through to "none", which publishes
+ * without figures — and a crypto post with no figures is a model reciting a
+ * Bitcoin price from training data. Yahoo quotes the majors in USD, so the desk
+ * gets the same treatment as every other price-led beat.
+ */
+const CRYPTO: Row[] = [
+  { label: "Bitcoin $", ticker: "BTC-USD" },
+  { label: "Ethereum $", ticker: "ETH-USD" },
+  { label: "Solana $", ticker: "SOL-USD" },
+];
+
+/*
  * Public market RSS. Several, because any one of them can be having a bad
  * morning, and a writer with no headlines has nothing to write about.
  */
@@ -220,6 +238,7 @@ async function build(pack: ContextPack): Promise<string> {
     case "commodities": return `Commodities, live:\n${await quotes(COMMODITIES)}`;
     case "global":    return `Global markets, live:\n${await quotes(GLOBAL)}`;
     case "currency":  return `Currency and rates, live:\n${await quotes(CURRENCY)}\n\nIndian indices:\n${await quotes(INDIAN_INDICES)}`;
+    case "crypto":    return `Crypto, live:\n${await quotes(CRYPTO)}`;
     case "news":      return `Current market headlines:\n${await headlines()}`;
     case "none":      return "";
   }

@@ -12,6 +12,7 @@ type Initial = {
   targetPrice: string;
   stopLossPrice: string;
   disclaimer: string;
+  isTradePost: boolean;
 };
 
 export default function EditPostForm({ postId, initial }: { postId: number; initial: Initial }) {
@@ -23,12 +24,18 @@ export default function EditPostForm({ postId, initial }: { postId: number; init
   const [targetPrice, setTargetPrice] = useState(initial.targetPrice);
   const [stopLossPrice, setStopLossPrice] = useState(initial.stopLossPrice);
   const [disclaimer, setDisclaimer] = useState(initial.disclaimer);
+  const isTradePost =
+    initial.isTradePost || Boolean(targetPrice || stopLossPrice);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
+    if (isTradePost && disclaimer.trim().length < 20) {
+      setError("Trade calls need a disclaimer of at least 20 characters.");
+      return;
+    }
     setLoading(true);
 
     try {
@@ -42,7 +49,7 @@ export default function EditPostForm({ postId, initial }: { postId: number; init
           timeframe: timeframe.trim() || null,
           targetPrice: targetPrice ? Number(targetPrice) : null,
           stopLossPrice: stopLossPrice ? Number(stopLossPrice) : null,
-          disclaimer: disclaimer.trim(),
+          disclaimer: isTradePost ? disclaimer.trim() : "",
         }),
       });
       const data = await response.json();
@@ -132,18 +139,22 @@ export default function EditPostForm({ postId, initial }: { postId: number; init
             </div>
           </div>
 
-          <label className="metric-label" style={{ marginTop: 16 }}>
-            Disclaimer *
-          </label>
-          <textarea
-            className="input"
-            value={disclaimer}
-            onChange={(e) => setDisclaimer(e.target.value)}
-            rows={3}
-            required
-            minLength={20}
-            style={{ resize: "vertical", fontSize: 13 }}
-          />
+          {isTradePost && (
+            <>
+              <label className="metric-label" style={{ marginTop: 16 }}>
+                Trade-call disclaimer *
+              </label>
+              <textarea
+                className="input"
+                value={disclaimer}
+                onChange={(e) => setDisclaimer(e.target.value)}
+                rows={3}
+                required
+                minLength={20}
+                style={{ resize: "vertical", fontSize: 13 }}
+              />
+            </>
+          )}
 
           {error && (
             <div

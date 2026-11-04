@@ -4,13 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { FiArrowUpRight, FiArrowDownRight, FiBarChart2 } from "react-icons/fi";
 import MarketSearch from "@/components/trading/market-search";
-import MutualFundsView from "@/components/trading/mutual-funds-view";
 import CryptoView from "@/components/trading/crypto-view";
 import CurrenciesView from "@/components/trading/currencies-view";
 import MarketsAllView from "@/components/trading/markets-all-view";
 import MarketsPlaceholder from "@/components/trading/markets-placeholder";
 import GlobalMarketsView from "@/components/trading/global-markets-view";
-import IpoView from "@/components/trading/ipo-view";
 import EtfView from "@/components/trading/etf-view";
 import AddToWatchlistButton from "@/components/watchlist/add-to-watchlist-button";
 import TradeButtons from "@/components/trading/trade-buttons";
@@ -77,7 +75,7 @@ const TABS: { key: MarketTab; label: string }[] = [
   { key: "global", label: "Global" },
 ];
 
-export default function MarketsOverview() {
+export default function MarketsOverview({ showDelayedDataNotice = false }: { showDelayedDataNotice?: boolean }) {
   const [tab, setTab] = useState<MarketTab>("all");
   const [sector, setSector] = useState<string>("all");
   const [indices, setIndices] = useState<OverviewRow[]>([]);
@@ -195,6 +193,23 @@ export default function MarketsOverview() {
         )}
       </div>
 
+      {showDelayedDataNotice && (
+        <p
+          role="note"
+          style={{
+            margin: "0 0 16px",
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(245,158,11,0.12)",
+            border: "1px solid rgba(245,158,11,0.3)",
+            color: "#92400e",
+            fontSize: 12,
+          }}
+        >
+          Market data is delayed by 15 minutes. Please use it for informational purposes only.
+        </p>
+      )}
+
       {/* Instrument tabs */}
       {/* A segmented control rather than an underline rail: nine tabs on an
           underline read as a wall of grey text, and on a narrow screen the row
@@ -215,7 +230,13 @@ export default function MarketsOverview() {
       </div>
 
       {tab === "all" && <MarketsAllView stocks={stocks} indices={indices} loading={loading} />}
-      {tab === "mf" && <MutualFundsView />}
+      {tab === "mf" && (
+        <MarketsPlaceholder
+          title="Mutual Funds"
+          blurb="Mutual fund data isn't available in the current market feed yet. We're working on adding a reliable source."
+          needs="Mutual fund data feed"
+        />
+      )}
       {tab === "crypto" && <CryptoView />}
       {tab === "currencies" && <CurrenciesView />}
       {tab === "etf" && <EtfView />}
@@ -226,7 +247,13 @@ export default function MarketsOverview() {
           needs="MCX data segment on Demat"
         />
       )}
-      {tab === "ipo" && <IpoView />}
+      {tab === "ipo" && (
+        <MarketsPlaceholder
+          title="IPO"
+          blurb="IPO information isn't available in the current market feed yet. We're working on adding a reliable source."
+          needs="Verified IPO data feed"
+        />
+      )}
       {tab === "global" && <GlobalMarketsView />}
 
       {tab === "stocks" && (

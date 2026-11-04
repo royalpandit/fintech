@@ -92,9 +92,9 @@ type FeedPost = {
 };
 
 export type FeedClientProps = {
-  /** First page of the merged stream, already ranked follow-first. */
+  /** First page of the merged stream, ordered newest first. */
   initialItems: UnifiedFeedItem[];
-  /** Opaque `<phase>:<iso>` cursor; null when the stream is exhausted. */
+  /** Opaque pagination cursor; null when the stream is exhausted. */
   initialNextCursor: string | null;
   isAuthed: boolean;
   userId: number | null;
@@ -1132,47 +1132,15 @@ export default function FeedClient({
       return true;
     });
 
-    // Preserve the server's follow-first ranking on the default sort; an
-    // explicit oldest-first is a deliberate override, so it sorts across the
-    // whole stream.
-    if (filters.sort === "oldest") {
-      return [...keep].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
-    }
-    return keep;
+    return [...keep].sort((a, b) => {
+      const difference = Date.parse(b.at) - Date.parse(a.at);
+      return filters.sort === "latest" ? difference : -difference;
+    });
   }, [items, filters]);
 
-  const followedCount = visibleItems.filter((i) => i.followed).length;
-
-  function renderItem(item: UnifiedFeedItem, index: number) {
-    // A single divider where the followed run ends and discovery begins, so the
-    // ranking is legible instead of looking like an arbitrary jumble.
-    const showDivider =
-      filters.source === "all" &&
-      filters.sort === "latest" &&
-      followedCount > 0 &&
-      index === followedCount;
-
+  function renderItem(item: UnifiedFeedItem) {
     return (
       <div key={item.key}>
-        {showDivider && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              margin: "6px 0 14px",
-              color: "var(--text-muted)",
-              fontSize: 11,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: 1,
-            }}
-          >
-            <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
-            Suggested for you
-            <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
-          </div>
-        )}
         {item.kind === "advisor" ? (
           renderPost(item.post as FeedPost)
         ) : (

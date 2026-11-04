@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  registrationCaption,
+  validateProfessionalCredentials,
+  type ProfessionalDetails,
+  type ProfessionalType,
+} from "@/lib/professional-types";
 
 const fieldStyle = {
   width: "100%",
@@ -24,7 +30,15 @@ const labelStyle = {
   marginBottom: 6,
 };
 
-export default function AdvisorVerifyForm({ initialSebi }: { initialSebi: string }) {
+export default function AdvisorVerifyForm({
+  initialSebi,
+  professionalType,
+  initialDetails,
+}: {
+  initialSebi: string;
+  professionalType: ProfessionalType;
+  initialDetails: ProfessionalDetails;
+}) {
   const router = useRouter();
   const [legalName, setLegalName] = useState("");
   const [sebiRegistrationNo, setSebi] = useState(initialSebi);
@@ -39,11 +53,20 @@ export default function AdvisorVerifyForm({ initialSebi }: { initialSebi: string
     e.preventDefault();
     setError("");
     if (!legalName.trim() || !sebiRegistrationNo.trim() || !pan.trim()) {
-      setError("Please fill your legal name, SEBI registration number, and PAN.");
+      setError("Please fill your legal name, registration identifier, and PAN.");
       return;
     }
     if (!confirmed) {
       setError("Please confirm the declaration to continue.");
+      return;
+    }
+    const credentialError = validateProfessionalCredentials(
+      professionalType,
+      sebiRegistrationNo,
+      initialDetails,
+    );
+    if (credentialError) {
+      setError(credentialError);
       return;
     }
     setLoading(true);
@@ -86,25 +109,30 @@ export default function AdvisorVerifyForm({ initialSebi }: { initialSebi: string
       }}
     >
       <div>
-        <label style={labelStyle}>Full legal name (as per SEBI records)</label>
+        <label style={labelStyle}>Full legal name (as per registration records)</label>
         <input style={fieldStyle} value={legalName} onChange={(e) => setLegalName(e.target.value)} placeholder="e.g. Ananya Mehta" />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      {professionalType !== "finance_creator" && (
         <div>
-          <label style={labelStyle}>SEBI registration no.</label>
-          <input style={fieldStyle} value={sebiRegistrationNo} onChange={(e) => setSebi(e.target.value)} placeholder="INA000000000" />
+          <label style={labelStyle}>{registrationCaption(professionalType, initialDetails)}</label>
+          <input style={fieldStyle} value={sebiRegistrationNo} readOnly />
         </div>
-        <div>
-          <label style={labelStyle}>PAN</label>
-          <input style={fieldStyle} value={pan} onChange={(e) => setPan(e.target.value)} placeholder="ABCDE1234F" maxLength={10} />
+      )}
+
+      {Object.entries(initialDetails).map(([key, value]) => (
+        <div key={key}>
+          <label style={labelStyle}>
+            {key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase())}
+          </label>
+          <input style={fieldStyle} value={value} readOnly />
         </div>
-      </div>
+      ))}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <div>
-          <label style={labelStyle}>Firm / entity name (optional)</label>
-          <input style={fieldStyle} value={firmName} onChange={(e) => setFirmName(e.target.value)} placeholder="e.g. Mehta Capital Advisors" />
+          <label style={labelStyle}>PAN</label>
+          <input style={fieldStyle} value={pan} onChange={(e) => setPan(e.target.value.toUpperCase())} placeholder="ABCDE1234F" maxLength={10} />
         </div>
         <div>
           <label style={labelStyle}>Registration valid till (optional)</label>
@@ -112,11 +140,16 @@ export default function AdvisorVerifyForm({ initialSebi }: { initialSebi: string
         </div>
       </div>
 
+      <div>
+        <label style={labelStyle}>Additional firm / entity name (optional)</label>
+        <input style={fieldStyle} value={firmName} onChange={(e) => setFirmName(e.target.value)} placeholder="e.g. Mehta Capital Advisors" />
+      </div>
+
       <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 13, color: "var(--text)", lineHeight: 1.5, cursor: "pointer" }}>
         <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} style={{ marginTop: 3 }} />
         <span>
-          I confirm that I am a SEBI-registered investment adviser / government-approved
-          advisor and that the details above are true and accurate.
+          I confirm that I represent the professional / entity selected above and that the registration
+          and identity details are true and accurate. I understand the application remains subject to manual review.
         </span>
       </label>
 

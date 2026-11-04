@@ -1,5 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import {
+  professionalDetailsFromUnknown,
+  professionalTypeLabel,
+  registrationCaption,
+} from "@/lib/professional-types";
 
 export const dynamic = "force-dynamic";
 
@@ -97,7 +102,7 @@ export default async function AdminAdvisorsPage({
             Verification Queue
           </h1>
           <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
-            Review and act on advisor SEBI verifications
+            Review finance-professional applications and verify credentials
           </p>
         </div>
       </div>
@@ -181,7 +186,7 @@ export default async function AdminAdvisorsPage({
             <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "var(--surface-2)" }}>
-                  {["Advisor", "SEBI ID", "Experience", "Submitted", "Status", "Reviewed By", ""].map(
+                  {["Applicant", "Professional Type", "Registration", "Experience", "Submitted", "Status", "Reviewed By", ""].map(
                     (h) => (
                       <th
                         key={h}
@@ -204,6 +209,7 @@ export default async function AdminAdvisorsPage({
               </thead>
               <tbody>
                 {advisors.map((adv) => {
+                  const details = professionalDetailsFromUnknown(adv.verificationDetails);
                   const initials = (adv.user?.fullName ?? "??")
                     .split(" ")
                     .map((p) => p[0])
@@ -247,6 +253,9 @@ export default async function AdminAdvisorsPage({
                           </div>
                         </Link>
                       </td>
+                      <td style={{ padding: "14px 18px" }}>
+                        {professionalTypeLabel(adv.professionalType)}
+                      </td>
                       <td
                         style={{
                           padding: "14px 18px",
@@ -255,7 +264,12 @@ export default async function AdminAdvisorsPage({
                           color: "var(--text)",
                         }}
                       >
-                        {adv.sebiRegistrationNo}
+                        <div style={{ color: "var(--text-muted)", fontSize: 10, marginBottom: 3 }}>
+                          {registrationCaption(adv.professionalType, details)}
+                        </div>
+                        {adv.professionalType === "finance_creator"
+                          ? "See submitted profile links"
+                          : adv.sebiRegistrationNo}
                       </td>
                       <td style={{ padding: "14px 18px" }}>
                         {adv.experienceYears ? `${adv.experienceYears}y` : "—"}

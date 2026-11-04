@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PROFESSIONAL_TYPES, type ProfessionalType } from "@/lib/professional-types";
+import { professionalTypeLabel, type ProfessionalType } from "@/lib/professional-types";
 import { IMAGE_ACCEPT_ATTR } from "@/lib/upload-types";
 
 type Initial = {
@@ -40,7 +40,6 @@ export default function ProfileEditor({ initial }: { initial: Initial }) {
   const [newTag, setNewTag] = useState("");
   const [profileImageUrl, setProfileImageUrl] = useState(initial.profileImageUrl);
   const [experienceYears, setExperienceYears] = useState(String(initial.experienceYears));
-  const [professionalType, setProfessionalType] = useState<ProfessionalType>(initial.professionalType);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -99,7 +98,6 @@ export default function ProfileEditor({ initial }: { initial: Initial }) {
           expertiseTags: tags,
           profileImageUrl: profileImageUrl.trim() || null,
           experienceYears: Number(experienceYears) || 0,
-          professionalType,
         }),
       });
       const data = await response.json();
@@ -201,19 +199,9 @@ export default function ProfileEditor({ initial }: { initial: Initial }) {
         <label className="metric-label" style={{ marginTop: 16 }}>
           Professional Type
         </label>
-        <select
-          className="input"
-          value={professionalType}
-          onChange={(e) => setProfessionalType(e.target.value as ProfessionalType)}
-        >
-          {PROFESSIONAL_TYPES.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
-            </option>
-          ))}
-        </select>
+        <input className="input" value={professionalTypeLabel(initial.professionalType)} readOnly />
         <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
-          How you appear when users filter finance professionals.
+          Contact support if this needs correction; changes require a new verification review.
         </p>
 
         <label className="metric-label" style={{ marginTop: 16 }}>

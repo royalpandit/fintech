@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { streamGeminiChat } from "@/lib/gemini";
+import { PRO_AI_MONTHLY_QUERY_LIMIT, reserveUserAiQuery } from "@/lib/user-ai-quota";
 
 export const dynamic = "force-dynamic";
 
@@ -21,27 +22,48 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const userMessage: string = (body.message ?? "").trim();
   if (!userMessage) return NextResponse.json({ ok: false, error: "Message is required" }, { status: 400 });
 
-  let sessionId: number = body.sessionId ?? 0;
-
-  // Create session if needed
-  if (!sessionId) {
-    const title = userMessage.length > 60 ? userMessage.slice(0, 57) + "…" : userMessage;
-    const sess = await prisma.agentChatSession.create({
-      data: { agentId: agent.id, userId: auth.userId, title },
+  let sessionId = Number(body.sessionId) || 0;
+  if (sessionId) {
+    const session = await prisma.agentChatSession.findFirst({
+      where: { id: sessionId, userId: auth.userId, agentId: agent.id },
+      select: { id: true },
     });
-    sessionId = sess.id;
+    if (!session) return NextResponse.json({ ok: false, error: "Chat session not found" }, { status: 404 });
   }
 
-  // Load history (last 20 exchanges = 40 messages to keep context reasonable)
+  const quota = await reserveUserAiQuery(auth.userId, auth.role, "agent_chat");
+  if (!quota.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "AI_QUERY_LIMIT",
+        error: quota.isPro
+          ? `You've used all ${PRO_AI_MONTHLY_QUERY_LIMIT} Finuer Pro AI queries for this month. Your limit resets next month.`
+          : `You've used your ${quota.limit} free AI queries. Upgrade to Finuer Pro for ${PRO_AI_MONTHLY_QUERY_LIMIT} queries per month.`,
+        used: quota.used,
+        limit: quota.limit,
+        isPro: quota.isPro,
+        upgradeUrl: "/user/subscriptions#finuer-pro",
+      },
+      { status: 402 },
+    );
+  }
+
+  if (!sessionId) {
+    const title = userMessage.length > 60 ? userMessage.slice(0, 57) + "…" : userMessage;
+    const session = await prisma.agentChatSession.create({
+      data: { agentId: agent.id, userId: auth.userId, title },
+      select: { id: true },
+    });
+    sessionId = session.id;
+  }
+
   const rawHistory = await prisma.agentChatMessage.findMany({
     where: { sessionId },
     orderBy: { createdAt: "asc" },
     take: 40,
   });
-
   const history = rawHistory.map(m => ({ role: m.role as "user" | "model", content: m.content }));
-
-  // Save user message
   await prisma.agentChatMessage.create({
     data: { sessionId, role: "user", content: userMessage },
   });
@@ -62,7 +84,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const outStream = new ReadableStream<Uint8Array>({
     async start(controller) {
       // Send sessionId first so the client can store it
-      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ sessionId })}\n\n`));
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ sessionId, quota })}\n\n`));
 
       const reader = geminiStream.getReader();
       while (true) {

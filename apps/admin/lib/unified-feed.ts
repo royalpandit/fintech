@@ -20,11 +20,8 @@ type SerializedAdvisorPost = ReturnType<typeof serializeMarketFeedPost<AdvisorRo
  *                     which were the same query split by follow status)
  *   - `communityPost` — user social posts (the old "Community" tab)
  *
- * Ranking is follow-first, then recency, in two phases:
- *   phase "followed"  → everything authored by someone you follow
- *   phase "discover"  → everything else
- * The reader walks `followed` to exhaustion, then rolls into `discover`. That
- * gives "people you follow first, then others" without needing a global score.
+ * The default stream is globally chronological. Explicit following/discover
+ * filters restrict authors without changing the order.
  *
  * ── On the cursor ──────────────────────────────────────────────────────────
  * Two tables can't share one id cursor, so the cursor is `<phase>:<ISO time>`
@@ -54,11 +51,11 @@ export type UnifiedFeedItem =
       post: SocialPost;
     };
 
-export type FeedPhase = "followed" | "discover";
+export type FeedPhase = "all" | "followed" | "discover";
 
 export type UnifiedFeedPage = {
   items: UnifiedFeedItem[];
-  /** null when the whole stream (both phases) is exhausted. */
+  /** null when the stream is exhausted. */
   nextCursor: string | null;
 };
 
@@ -69,7 +66,7 @@ export type UnifiedFeedOptions = {
   userId: number | null;
   limit?: number;
   cursor?: string | null;
-  /** Which half of the stream to read. "all" walks followed then discover. */
+  /** Which author set to read. */
   source?: UnifiedFeedSource;
   /** Which post types to include. Empty or both = everything. */
   kinds?: UnifiedFeedKind[];
@@ -85,10 +82,12 @@ const DEFAULT_LIMIT = 15;
 const MAX_LIMIT = 30;
 
 function parseCursor(cursor: string | null | undefined): { phase: FeedPhase; before: Date | null } {
-  if (!cursor) return { phase: "followed", before: null };
+  if (!cursor) return { phase: "all", before: null };
   const idx = cursor.indexOf(":");
-  if (idx === -1) return { phase: "followed", before: null };
-  const phase = cursor.slice(0, idx) === "discover" ? "discover" : "followed";
+  if (idx === -1) return { phase: "all", before: null };
+  const rawPhase = cursor.slice(0, idx);
+  const phase: FeedPhase =
+    rawPhase === "discover" || rawPhase === "followed" ? rawPhase : "all";
   const raw = cursor.slice(idx + 1);
   const d = raw ? new Date(raw) : null;
   return { phase, before: d && !Number.isNaN(d.getTime()) ? d : null };
@@ -163,17 +162,11 @@ export async function fetchUnifiedFeed(opts: UnifiedFeedOptions): Promise<Unifie
 
   const { followedIds, blockedIds } = await getFeedAudience(userId);
 
-  // "following" with nobody followed can never return anything; skip straight
-  // to an empty page rather than running two queries that match everyone.
-  const hasFollows = followedIds.length > 0;
-
   const parsed = parseCursor(opts.cursor);
-  let phase: FeedPhase = parsed.phase;
-  if (source === "discover") phase = "discover";
-  if (source === "following") phase = "followed";
-  if (phase === "followed" && !hasFollows && source === "all") phase = "discover";
+  const phase: FeedPhase =
+    source === "discover" ? "discover" : source === "following" ? "followed" : "all";
 
-  const page = await readPhase({
+  return readPhase({
     phase,
     before: parsed.before,
     limit,
@@ -184,25 +177,6 @@ export async function fetchUnifiedFeed(opts: UnifiedFeedOptions): Promise<Unifie
     wantCommunity,
     q,
   });
-
-  // Followed ran dry and the caller wants the whole stream — roll into discover
-  // within the same request, so the reader never sees a blank page mid-scroll.
-  if (page.items.length === 0 && phase === "followed" && source === "all") {
-    const next = await readPhase({
-      phase: "discover",
-      before: null,
-      limit,
-      userId,
-      followedIds,
-      blockedIds,
-      wantAdvisor,
-      wantCommunity,
-      q,
-    });
-    return next;
-  }
-
-  return page;
 }
 
 async function readPhase(args: {
@@ -218,17 +192,18 @@ async function readPhase(args: {
 }): Promise<UnifiedFeedPage> {
   const { phase, before, limit, userId, followedIds, blockedIds, wantAdvisor, wantCommunity, q } =
     args;
-  const followed = phase === "followed";
+  const followedOnly = phase === "followed";
+  const discoverOnly = phase === "discover";
 
-  // In the followed phase we restrict to the follow list; in discover we
-  // exclude it (plus anyone blocked), so the two phases never overlap.
-  const authorScope = followed
+  const authorScope = followedOnly
     ? { in: followedIds.filter((id) => !blockedIds.includes(id)) }
-    : blockedIds.length > 0 || followedIds.length > 0
+    : discoverOnly && (blockedIds.length > 0 || followedIds.length > 0)
       ? { notIn: [...new Set([...followedIds, ...blockedIds])] }
-      : undefined;
+      : blockedIds.length > 0
+        ? { notIn: blockedIds }
+        : undefined;
 
-  if (followed && followedIds.length === 0) {
+  if (followedOnly && followedIds.length === 0) {
     return { items: [], nextCursor: null };
   }
 
@@ -312,7 +287,7 @@ async function readPhase(args: {
         kind: "advisor" as const,
         key: `advisor:${row.id}`,
         at,
-        followed,
+        followed: followedIds.includes(row.advisorUserId),
         post: serializeMarketFeedPost(row, { userId, unlockedPostIds }),
       };
     }),
@@ -320,7 +295,7 @@ async function readPhase(args: {
       kind: "community" as const,
       key: `community:${post.id}`,
       at: post.created_at,
-      followed,
+      followed: followedIds.includes(post.user.id),
       post,
     })),
   ];
@@ -333,8 +308,7 @@ async function readPhase(args: {
 
   const items = merged.slice(0, limit);
 
-  // More to read in this phase only if a source actually had an extra row AND
-  // the page filled up; otherwise this phase is done.
+  // More to read only if a source actually had an extra row AND the page filled up.
   const sourceHasMore = advisorRows.length > limit || communityRows.length > limit;
   const last = items[items.length - 1];
 
@@ -342,10 +316,5 @@ async function readPhase(args: {
     return { items, nextCursor: makeCursor(phase, last.at) };
   }
 
-  // Phase exhausted. From "followed" the reader continues into "discover";
-  // from "discover" the stream is over.
-  return {
-    items,
-    nextCursor: phase === "followed" ? makeCursor("discover", new Date().toISOString()) : null,
-  };
+  return { items, nextCursor: null };
 }

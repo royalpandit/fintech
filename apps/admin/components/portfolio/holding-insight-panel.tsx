@@ -2,14 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { FiRefreshCw } from "react-icons/fi";
+import Link from "next/link";
 import AgentMarkdown from "@/components/agents/agent-markdown";
 
 /**
- * One agent's read on the holding, fetched on mount.
- *
- * Each panel fetches independently so three slow model calls run at once
- * instead of in series, and a stalled or unavailable agent leaves the other two
- * — and the position data above them — perfectly usable.
+ * The user explicitly asks for an agent's read so opening the holding page
+ * does not start a paid model request.
  */
 export default function HoldingInsightPanel({
   symbol,
@@ -26,36 +24,42 @@ export default function HoldingInsightPanel({
 }) {
   const [text, setText] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
+  const [isPro, setIsPro] = useState(false);
 
   const run = useCallback(
-    async (signal?: AbortSignal) => {
+    async () => {
       setLoading(true);
       setError("");
+      setQuotaExceeded(false);
       try {
         const res = await fetch(
           `/api/v1/portfolio/holding-insight?symbol=${encodeURIComponent(symbol)}&agent=${agentKey}`,
-          { cache: "no-store", signal },
+          { cache: "no-store" },
         );
         const json = await res.json();
-        if (signal?.aborted) return;
         if (json.ok) setText(json.text);
-        else setError(json.error || "That agent could not answer right now.");
+        else {
+          setError(json.error || "That agent could not answer right now.");
+          setQuotaExceeded(json.code === "AI_QUERY_LIMIT");
+          setIsPro(Boolean(json.isPro));
+        }
       } catch (e) {
-        // An abort is the component unmounting, not a failure to report.
-        if ((e as Error)?.name !== "AbortError") setError("Network error.");
+        setError("Network error.");
       } finally {
-        if (!signal?.aborted) setLoading(false);
+        setLoading(false);
       }
     },
     [symbol, agentKey],
   );
 
   useEffect(() => {
-    const ac = new AbortController();
-    void run(ac.signal);
-    return () => ac.abort();
-  }, [run]);
+    setText("");
+    setError("");
+    setQuotaExceeded(false);
+    setIsPro(false);
+  }, [symbol, agentKey]);
 
   return (
     <article className="hi-panel">
@@ -72,17 +76,15 @@ export default function HoldingInsightPanel({
           className="hi-panel-refresh"
           onClick={() => void run()}
           disabled={loading}
-          title="Ask again"
-          aria-label={`Ask ${label} again`}
+          title={text ? "Ask again" : `Ask ${label}`}
+          aria-label={text ? `Ask ${label} again` : `Ask ${label}`}
         >
-          <FiRefreshCw size={13} className={loading ? "hi-spin" : undefined} />
+          {loading ? <FiRefreshCw size={13} className="hi-spin" /> : text ? <FiRefreshCw size={13} /> : "Ask"}
         </button>
       </header>
 
       <div className="hi-panel-body">
         {loading ? (
-          /* Shaped like the paragraphs it is replacing, so the panel does not
-             jump when the answer lands. */
           <div className="hi-skeleton" aria-label={`${label} is thinking`}>
             <span style={{ width: "92%" }} />
             <span style={{ width: "78%" }} />
@@ -92,9 +94,15 @@ export default function HoldingInsightPanel({
         ) : error ? (
           <div className="hi-error">
             <p>{error}</p>
-            <button type="button" onClick={() => void run()}>
-              Try again
-            </button>
+            {quotaExceeded && !isPro ? (
+              <Link href="/user/subscriptions#finuer-pro">Upgrade to Finuer Pro</Link>
+            ) : !quotaExceeded ? (
+              <button type="button" onClick={() => void run()}>Try again</button>
+            ) : null}
+          </div>
+        ) : !text ? (
+          <div className="hi-error">
+            <p>Ask this agent to analyze your holding. No AI query runs until you click Ask.</p>
           </div>
         ) : (
           <AgentMarkdown text={text} />

@@ -4,7 +4,10 @@ import { FiHeart, FiMessageSquare, FiAlertTriangle } from "react-icons/fi";
 import { prisma } from "@/lib/prisma";
 import PostModerationActions from "@/components/views/market-post-moderation-actions";
 import ProfileAvatar from "@/components/user/profile-avatar";
-import SebiRegNo from "@/components/advisor-ui/sebi-reg-no";
+import {
+  professionalDetailsFromUnknown,
+  registrationCaption,
+} from "@/lib/professional-types";
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -31,7 +34,15 @@ export default async function MarketPostDetailView({
         select: {
           id: true,
           fullName: true,
-          advisorProfile: { select: { verificationStatus: true, sebiRegistrationNo: true, profileImageUrl: true } },
+          advisorProfile: {
+            select: {
+              verificationStatus: true,
+              sebiRegistrationNo: true,
+              professionalType: true,
+              verificationDetails: true,
+              profileImageUrl: true,
+            },
+          },
         },
       },
       comments: {
@@ -58,6 +69,13 @@ export default async function MarketPostDetailView({
 
   const sentimentLabel = post.sentiment.charAt(0).toUpperCase() + post.sentiment.slice(1);
   const advisorVerified = post.advisor.advisorProfile?.verificationStatus === "approved";
+  const isTradePost = Boolean(
+    post.entryPriceMin || post.entryPriceMax || post.targetPrice || post.stopLossPrice,
+  );
+  const professionalDetails = professionalDetailsFromUnknown(post.advisor.advisorProfile?.verificationDetails);
+  const registrationLabel = post.advisor.advisorProfile
+    ? registrationCaption(post.advisor.advisorProfile.professionalType, professionalDetails)
+    : "Registration";
   const riskScoreText =
     post.complianceRiskScore !== null ? Number(post.complianceRiskScore).toFixed(2) : "N/A";
 
@@ -131,10 +149,9 @@ export default async function MarketPostDetailView({
               <div>
                 <p style={{ margin: 0, fontWeight: 600, fontSize: 22 }}>{post.advisor.fullName}</p>
                 <p className="page-subtitle" style={{ margin: 0 }}>
-                  <SebiRegNo
-                    value={post.advisor.advisorProfile?.sebiRegistrationNo}
-                    fallback="SEBI registration pending"
-                  />{" "}
+                  {post.advisor.advisorProfile?.sebiRegistrationNo
+                    ? `${registrationLabel} ${post.advisor.advisorProfile.sebiRegistrationNo}`
+                    : `${registrationLabel} pending`}{" "}
                   •{" "}
                   <span style={{ color: advisorVerified ? "#0b5bb5" : "#b45309", fontWeight: 700 }}>
                     {advisorVerified ? "Verified" : "Unverified"}
@@ -155,7 +172,7 @@ export default async function MarketPostDetailView({
           <p style={{ marginTop: 0, fontSize: 16, lineHeight: "28px", whiteSpace: "pre-wrap" }}>
             {post.content}
           </p>
-          {post.disclaimer && (
+          {isTradePost && post.disclaimer && (
             <p
               className="page-subtitle"
               style={{ marginTop: 12, fontSize: 13, lineHeight: "22px", fontStyle: "italic" }}

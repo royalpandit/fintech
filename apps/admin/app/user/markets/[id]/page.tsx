@@ -199,7 +199,10 @@ export default async function PostDetailPage({
   // Structured trades (entry/target/SL) live under /user/trades, so send the
   // back link there; plain sentiment posts go back to /user/markets.
   const isTrade =
-    post.entryPriceMin != null || post.targetPrice != null || post.stopLossPrice != null;
+    post.entryPriceMin != null ||
+    post.entryPriceMax != null ||
+    post.targetPrice != null ||
+    post.stopLossPrice != null;
   const origin = searchParams?.from ? BACK_TARGETS[searchParams.from] : undefined;
   const backHref = origin?.href ?? (isTrade ? "/user/trades" : "/user/markets");
   const backLabel = origin?.label ?? (isTrade ? "Trade Calls" : "Markets");
@@ -456,9 +459,11 @@ export default async function PostDetailPage({
               </div>
             )}
 
-            <div className="post-disclaimer">
-              <strong>Disclaimer:</strong> {post.disclaimer}
-            </div>
+            {isTrade && post.disclaimer && (
+              <div className="post-disclaimer">
+                <strong>Disclaimer:</strong> {post.disclaimer}
+              </div>
+            )}
             </MarketPostDetailBody>
             )}
 

@@ -1,8 +1,9 @@
 // Creates the hundred scheduled writers and the bot account each one posts as.
 //
-// Idempotent: upserts by agentNo and by bot email, so re-running after editing
-// lib/content-agents/catalogue.ts updates prompts, slots and targets without
-// touching anything already published.
+// Idempotent: everything is keyed by agentNo, so re-running after editing
+// lib/content-agents/catalogue.ts updates prompts, slots, names and targets
+// without touching anything already published. Posts keep the account that
+// wrote them, which keeps the feed's history honest.
 //
 // Run:  npx tsx scripts/seed-content-agents.ts
 
@@ -12,6 +13,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { AGENTS, agentBotEmail } from "../lib/content-agents/catalogue";
+import { personaForAgent } from "../lib/content-agents/personas";
 import { groqModelForAgent } from "../lib/content-agents/models";
 
 function sslForDb(url: string | undefined) {
@@ -47,31 +49,77 @@ function botPhone(no: number): string {
 async function main() {
   console.log(`Seeding ${AGENTS.length} content agents…\n`);
 
+  /*
+   * What is already there, read before anything is written.
+   *
+   * A desk keeps its row and its account across a change of brief: agent 25 is
+   * still agent 25 even though its beat went from Bulk Deals to Block Deals, and
+   * the posts it has already published should keep their author. So the account
+   * is found through the existing row, not through a name or an address that the
+   * new catalogue may have moved somewhere else.
+   */
+  const before = await prisma.contentAgent.findMany({
+    select: { agentNo: true, slug: true, botUserId: true },
+  });
+  const existingByNo = new Map(before.map(r => [r.agentNo, r]));
+
+  /*
+   * Slugs are parked before they are reassigned.
+   *
+   * ContentAgent.slug is unique and the new taxonomy reuses several old slugs on
+   * different numbers — "block-deals" was 27 and is now 25. Updating row by row
+   * would hit the constraint the moment a slug moves to a lower number than the
+   * row still holding it, and would do so halfway through, leaving the catalogue
+   * split between two briefs. Parking every slug first makes the order of the
+   * loop irrelevant. If this script dies after this point, slugs read "tmp-<n>"
+   * until it is run again.
+   */
+  if (before.length) {
+    await prisma.$executeRawUnsafe(`UPDATE content_agents SET slug = 'tmp-' || agent_no`);
+  }
+
   let created = 0;
   let updated = 0;
 
   for (const a of AGENTS) {
-    const email = agentBotEmail(a.slug);
+    const existing = existingByNo.get(a.no);
+    const email = agentBotEmail(a.no);
+    // The feed shows a person, not a desk — the brief's rule. Re-running this
+    // renames the existing bot accounts from "Finuer <desk>" to their persona.
+    const persona = personaForAgent(a.no);
 
-    const bot = await prisma.user.upsert({
-      where: { email },
-      update: { fullName: `Finuer ${a.name}` },
-      create: {
-        fullName: `Finuer ${a.name}`,
-        email,
-        phone: botPhone(a.no),
-        passwordHash: unusablePassword(),
-        role: "user",
-        status: "active",
-        emailVerifiedAt: new Date(),
-      },
-      select: { id: true },
-    });
+    /*
+     * The account: this desk's own if it has one, otherwise whoever already
+     * holds the numbered address, otherwise a new one. The email is only
+     * rewritten when nobody else holds it, because an account that exists is
+     * worth more than a tidy address.
+     */
+    const byEmail = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    let botId = existing?.botUserId ?? byEmail?.id;
 
-    const existing = await prisma.contentAgent.findUnique({
-      where: { agentNo: a.no },
-      select: { id: true },
-    });
+    if (botId) {
+      await prisma.user.update({
+        where: { id: botId },
+        data: {
+          fullName: persona,
+          ...(byEmail && byEmail.id !== botId ? {} : { email }),
+        },
+      });
+    } else {
+      const bot = await prisma.user.create({
+        data: {
+          fullName: persona,
+          email,
+          phone: botPhone(a.no),
+          passwordHash: unusablePassword(),
+          role: "user",
+          status: "active",
+          emailVerifiedAt: new Date(),
+        },
+        select: { id: true },
+      });
+      botId = bot.id;
+    }
 
     await prisma.contentAgent.upsert({
       where: { agentNo: a.no },
@@ -83,7 +131,7 @@ async function main() {
         target: a.target,
         category: a.category,
         slots: a.slots,
-        botUserId: bot.id,
+        botUserId: botId,
         model: groqModelForAgent(a.no),
       },
       create: {
@@ -95,14 +143,17 @@ async function main() {
         target: a.target,
         category: a.category,
         slots: a.slots,
-        botUserId: bot.id,
+        botUserId: botId,
         model: groqModelForAgent(a.no),
       },
     });
 
     if (existing) updated++;
     else created++;
-    process.stdout.write(`  ${String(a.no).padStart(3)} ${a.name.padEnd(32)} ${a.slots.join(" ")}  ${a.target === "market_post" ? "market" : "community"}\n`);
+    process.stdout.write(
+      `  ${String(a.no).padStart(3)} ${a.name.padEnd(30)} ${persona.padEnd(21)} ` +
+      `${a.slots.join(" ")}  ${a.target === "market_post" ? "market" : "community"}\n`,
+    );
   }
 
   const market = AGENTS.filter(a => a.target === "market_post").length;

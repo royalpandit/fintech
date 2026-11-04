@@ -7,7 +7,15 @@ import { canType } from "@/lib/capabilities-server";
 async function assertOwnership(postId: number, userId: number) {
   const post = await prisma.marketPost.findFirst({
     where: { id: postId, advisorUserId: userId, deletedAt: null },
-    select: { id: true, complianceStatus: true },
+    select: {
+      id: true,
+      complianceStatus: true,
+      entryPriceMin: true,
+      entryPriceMax: true,
+      targetPrice: true,
+      stopLossPrice: true,
+      disclaimer: true,
+    },
   });
   return post;
 }
@@ -70,12 +78,22 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (body.content.trim().length < 20) return err("Content too short");
     data.content = body.content.trim();
   }
-  if (typeof body.disclaimer === "string") {
-    if (body.disclaimer.trim().length < 20) return err("Disclaimer too short");
-    data.disclaimer = body.disclaimer.trim();
-  }
   if ("marketSymbol" in body) data.marketSymbol = body.marketSymbol?.trim() || null;
   if ("timeframe" in body) data.timeframe = body.timeframe?.trim() || null;
+
+  const targetPrice =
+    "targetPrice" in body ? body.targetPrice : existing.targetPrice;
+  const stopLossPrice =
+    "stopLossPrice" in body ? body.stopLossPrice : existing.stopLossPrice;
+  const isTradePost = Boolean(
+    existing.entryPriceMin || existing.entryPriceMax || targetPrice || stopLossPrice,
+  );
+  const disclaimer =
+    typeof body.disclaimer === "string" ? body.disclaimer.trim() : existing.disclaimer;
+  if (isTradePost && disclaimer.length < 20) {
+    return err("Trade calls need a disclaimer of at least 20 characters.");
+  }
+  if (typeof body.disclaimer === "string") data.disclaimer = disclaimer;
 
   // Adding a target / stop-loss turns a post into a buy/sell call — SEBI tiers only.
   const settingTradeFields =

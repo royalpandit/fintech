@@ -2,10 +2,14 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
+import {
+  isProfessionalType,
+  validateProfessionalCredentials,
+  type ProfessionalDetails,
+} from "@/lib/professional-types";
 
 export const dynamic = "force-dynamic";
 
-const SEBI_REGEX = /^INA[0-9]{9}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
 // Self-service advisor verification form submission (sets verificationFormSubmittedAt).
@@ -21,16 +25,13 @@ export async function POST(req: NextRequest) {
   }
 
   const legalName = String(body.legalName ?? "").trim();
-  const sebiRegistrationNo = String(body.sebiRegistrationNo ?? "").trim().toUpperCase();
+  const registrationNo = String(body.sebiRegistrationNo ?? "").trim().toUpperCase();
   const pan = String(body.pan ?? "").trim().toUpperCase();
   const firmName = body.firmName ? String(body.firmName).trim() : null;
   const validTill = body.validTill ? String(body.validTill) : null;
 
-  if (!legalName || !sebiRegistrationNo || !pan) {
-    return err("Legal name, SEBI registration number, and PAN are required.", 400);
-  }
-  if (!SEBI_REGEX.test(sebiRegistrationNo)) {
-    return err("SEBI registration number must look like INA000000000.", 400);
+  if (!legalName || !registrationNo || !pan) {
+    return err("Legal name, registration identifier, and PAN are required.", 400);
   }
   if (!PAN_REGEX.test(pan)) {
     return err("PAN must be a valid 10-character PAN (e.g. ABCDE1234F).", 400);
@@ -38,28 +39,54 @@ export async function POST(req: NextRequest) {
 
   const profile = await prisma.advisorProfile.findUnique({
     where: { userId: auth.userId },
-    select: { id: true, sebiRegistrationNo: true },
+    select: {
+      id: true,
+      sebiRegistrationNo: true,
+      professionalType: true,
+      verificationDetails: true,
+    },
   });
   if (!profile) return err("Advisor profile not found", 404);
 
-  if (sebiRegistrationNo !== profile.sebiRegistrationNo) {
-    const taken = await prisma.advisorProfile.findUnique({
-      where: { sebiRegistrationNo },
-      select: { id: true },
-    });
-    if (taken && taken.id !== profile.id) {
-      return err("That SEBI registration number is already in use.", 409);
-    }
+  if (registrationNo !== profile.sebiRegistrationNo) {
+    return err("The registration identifier must match the one submitted with your application.", 400);
+  }
+
+  const savedDetails: ProfessionalDetails =
+    profile.verificationDetails && typeof profile.verificationDetails === "object" &&
+    !Array.isArray(profile.verificationDetails)
+      ? Object.fromEntries(
+          Object.entries(profile.verificationDetails).filter(
+            (entry): entry is [string, string] => typeof entry[1] === "string",
+          ),
+        )
+      : {};
+  if (!isProfessionalType(profile.professionalType)) {
+    return err("Unsupported professional type. Contact support.", 400);
+  }
+  const credentialError = validateProfessionalCredentials(
+    profile.professionalType,
+    profile.sebiRegistrationNo,
+    savedDetails,
+  );
+  if (credentialError) {
+    return err(`Your application credentials need correction: ${credentialError}`, 400);
   }
 
   const now = new Date();
+  const updatedDetails: ProfessionalDetails = {
+    ...savedDetails,
+    legalName,
+    pan,
+    ...(firmName ? { firmName } : {}),
+    ...(validTill ? { validTill } : {}),
+  };
   await prisma.$transaction([
     prisma.advisorProfile.update({
       where: { userId: auth.userId },
       data: {
-        sebiRegistrationNo,
         verificationFormSubmittedAt: now,
-        verificationDetails: { legalName, pan, firmName, validTill },
+        verificationDetails: updatedDetails,
       },
     }),
     prisma.auditLog.create({
@@ -69,7 +96,7 @@ export async function POST(req: NextRequest) {
         module: "advisors",
         targetKind: "advisor_profile",
         targetId: profile.id,
-        payload: { sebiRegistrationNo, firmName, validTill },
+        payload: { registrationNo, firmName, validTill },
       },
     }),
   ]);

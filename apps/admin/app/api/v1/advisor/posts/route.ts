@@ -215,8 +215,8 @@ export async function POST(req: NextRequest) {
 
   if (!title || title.length < 5) return err("Title must be at least 5 characters");
   if (!content || content.length < 20) return err("Content must be at least 20 characters");
-  if (!disclaimer || disclaimer.length < 20) {
-    return err("Disclaimer is required (minimum 20 characters) — regulatory requirement");
+  if (isTradePost && disclaimer.length < 20) {
+    return err("Trade calls need a disclaimer of at least 20 characters.");
   }
   if (!assetType || !VALID_ASSET.includes(assetType as any)) return err("Invalid asset type");
   if (!sentiment || !VALID_SENTIMENT.includes(sentiment as any)) return err("Invalid sentiment");
@@ -289,7 +289,7 @@ export async function POST(req: NextRequest) {
       tradeStatus: saveDraft ? "draft" : "awaiting_entry",
       targetPrice,
       stopLossPrice,
-      disclaimer,
+      disclaimer: disclaimer || "",
       complianceStatus: saveDraft ? "pending" : (complianceStatus as any),
       complianceRiskScore: saveDraft ? null : complianceRiskScore,
       postAccessType,

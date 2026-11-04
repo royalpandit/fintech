@@ -3,6 +3,11 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import ProfileEditor from "./profile-editor";
+import {
+  professionalDetailsFromUnknown,
+  professionalTypeLabel,
+  registrationCaption,
+} from "@/lib/professional-types";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +28,7 @@ export default async function AdvisorProfilePage() {
         select: {
           sebiRegistrationNo: true,
           professionalType: true,
+          verificationDetails: true,
           experienceYears: true,
           bio: true,
           expertiseTags: true,
@@ -37,6 +43,7 @@ export default async function AdvisorProfilePage() {
 
   if (!user) redirect("/login");
   const profile = user.advisorProfile;
+  const professionalDetails = professionalDetailsFromUnknown(profile?.verificationDetails);
 
   const sessions = await prisma.userSession.findMany({
     where: { userId: auth.userId, revokedAt: null },
@@ -49,7 +56,7 @@ export default async function AdvisorProfilePage() {
     <section>
       <h1 className="page-title">Profile</h1>
       <p className="page-subtitle">
-        Your advisor identity. SEBI-verified fields are read-only — contact support to update.
+        Your professional identity. Registration details are read-only — contact support to request a correction.
       </p>
 
       <div className="grid" style={{ gridTemplateColumns: "2fr 1fr", marginTop: 16, alignItems: "start" }}>
@@ -66,10 +73,18 @@ export default async function AdvisorProfilePage() {
 
         <div style={{ display: "grid", gap: 16 }}>
           <article className="card">
-            <h3 style={{ marginTop: 0 }}>SEBI Verification</h3>
+            <h3 style={{ marginTop: 0 }}>Professional Verification</h3>
             <div style={{ display: "grid", gap: 10 }}>
               <div>
-                <p className="metric-label">Registration</p>
+                <p className="metric-label">Professional Type</p>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: 15 }}>
+                  {professionalTypeLabel(profile?.professionalType)}
+                </p>
+              </div>
+              <div>
+                <p className="metric-label">
+                  {profile ? registrationCaption(profile.professionalType, professionalDetails) : "Registration"}
+                </p>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 15 }}>
                   {profile?.sebiRegistrationNo ?? "—"}
                 </p>

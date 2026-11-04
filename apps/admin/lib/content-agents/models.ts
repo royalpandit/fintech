@@ -21,3 +21,31 @@ export const GROQ_DEFAULT_MODEL = GROQ_MODELS[0];
 export function groqModelForAgent(agentNo: number): string {
   return GROQ_MODELS[agentNo % GROQ_MODELS.length]!;
 }
+
+/*
+ * Where a call goes when its own model will not take it.
+ *
+ * The limits that actually bite are per model and per window: the response
+ * headers on this key report 8,000 tokens a minute and 1,000 requests a day
+ * each, and the free tier adds a daily token cap on top. One model meeting any
+ * of those is not a reason for an empty slot when another model is idle — so a
+ * refused call walks this list instead of failing.
+ *
+ * Order is by how well each writes these posts. qwen3.8-27b is last because it
+ * is a preview model — Groq labels preview models for evaluation, not
+ * production — so it carries the schedule only when both production models have
+ * nothing left to give. The rest of the account's catalogue is unusable here and
+ * deliberately absent: gpt-oss-safeguard-20b is a policy classifier, allam-2-7b
+ * has a 4,096-token window that these prompts do not fit in, and the whisper,
+ * orpheus and prompt-guard models are not chat models at all.
+ */
+export const GROQ_FALLBACK_ORDER = [
+  "openai/gpt-oss-120b",
+  "openai/gpt-oss-20b",
+  "qwen/qwen3.8-27b",
+] as const;
+
+/** The models to try for a call, preferred first and each listed once. */
+export function groqModelChain(preferred: string): string[] {
+  return [preferred, ...GROQ_FALLBACK_ORDER.filter(m => m !== preferred)];
+}

@@ -76,13 +76,40 @@ export async function resolveToken(
 const QUOTE_TTL_MS = 2_000;
 const quoteCache = new Map<string, { ltp: number; at: number }>();
 
-/*
- * NSE names a contract OPTSTKRELIANCE27-10-2026PE1100.00:
- * OPT, STK or IDX, the underlying, the expiry, the side, the strike.
- */
 const OPTION_ID = /^OPT(IDX|STK)([A-Z&-]+?)(\d{2}-\d{2}-\d{4})(CE|PE)([\d.]+)$/;
+const DHAN_OPTION_ID =
+  /^([A-Z&-]+?)(\d{2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2})([\d.]+)(CE|PE)$/;
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function parseOptionId(id: string) {
+  const nse = OPTION_ID.exec(id);
+  if (nse) {
+    const [, , underlying, date, side, strike] = nse;
+    const [day, month, year] = date!.split("-");
+    const monthIndex = Number(month) - 1;
+    if (monthIndex < 0 || monthIndex >= MONTHS.length) return null;
+    return {
+      underlying: underlying!,
+      expiry: `${day}-${MONTHS[monthIndex]}-${year}`,
+      side: side as "CE" | "PE",
+      strike: Number(strike),
+    };
+  }
+
+  // Dhan contracts use symbols such as RELIANCE27OCT261120CE.
+  const dhan = DHAN_OPTION_ID.exec(id);
+  if (!dhan) return null;
+  const [, underlying, day, month, year, strike, side] = dhan;
+  const monthIndex = MONTHS.findIndex(m => m.toUpperCase() === month);
+  if (monthIndex < 0) return null;
+  return {
+    underlying: underlying!,
+    expiry: `${day}-${MONTHS[monthIndex]}-20${year}`,
+    side: side as "CE" | "PE",
+    strike: Number(strike),
+  };
+}
 
 /**
  * Price for one option leg, read back off the chain.
@@ -103,13 +130,9 @@ async function optionLegPrice(input: QuoteInput): Promise<number | null> {
     .trim()
     .toUpperCase()
     .replace(/\s+/g, "");
-  const m = OPTION_ID.exec(id);
-  if (!m) return null;
-
-  const [, , underlying, ddmmyyyy, side, strikeRaw] = m;
-  const [dd, mm, yyyy] = ddmmyyyy!.split("-");
-  const expiry = `${dd}-${MONTHS[Number(mm) - 1]}-${yyyy}`;
-  const strike = Number(strikeRaw);
+  const option = parseOptionId(id);
+  if (!option) return null;
+  const { underlying, expiry, strike, side } = option;
 
   const { getNseOptionChain } = await import("@/lib/nse-option-chain");
   const { withFeedCache } = await import("@/lib/market-rate-limit");
@@ -119,10 +142,14 @@ async function optionLegPrice(input: QuoteInput): Promise<number | null> {
     `nse-oc:${underlying}:${expiry}:s`,
     60_000,
     2 * 60_000,
-    () => getNseOptionChain({ symbol: underlying!, expiry }),
+    () => getNseOptionChain({ symbol: underlying, expiry }),
   );
 
-  const row = chain?.rows.find(r => Math.abs(r.strike - strike) < 0.001);
+  if (!chain || chain.expiry !== expiry) {
+    throw new Error(`Option contract ${id} is no longer available — select a current expiry`);
+  }
+
+  const row = chain.rows.find(r => Math.abs(r.strike - strike) < 0.001);
   const leg = side === "CE" ? row?.ce : row?.pe;
   const price = Number(leg?.ltp);
 

@@ -3,6 +3,11 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import AdvisorActions from "@/components/views/advisor-actions";
 import { categoryLabel } from "@/lib/subscription-services";
+import {
+  professionalDetailsFromUnknown,
+  professionalTypeLabel,
+  registrationCaption,
+} from "@/lib/professional-types";
 
 function statusTag(status: string) {
   if (status === "approved") return <span className="tag success">Verified</span>;
@@ -38,6 +43,8 @@ export default async function AdvisorDetailView({
       advisorProfile: {
         select: {
           sebiRegistrationNo: true,
+          professionalType: true,
+          verificationDetails: true,
           experienceYears: true,
           bio: true,
           expertiseTags: true,
@@ -95,6 +102,7 @@ export default async function AdvisorDetailView({
   const grossSubscriptionRevenue = 0; // tracked via AdvisorWallet now
 
   const profile = advisor.advisorProfile;
+  const professionalDetails = professionalDetailsFromUnknown(profile.verificationDetails);
   const totalPosts = postStats.reduce((sum, row) => sum + row._count._all, 0);
   const approvedPosts = postStats.find((r) => r.complianceStatus === "approved")?._count._all ?? 0;
   const accuracy = latestMetrics?.accuracyPct ? Number(latestMetrics.accuracyPct) : 0;
@@ -123,7 +131,7 @@ export default async function AdvisorDetailView({
             {advisor.fullName}
           </h1>
           <p className="page-subtitle">
-            {profile.bio || `SEBI-registered advisor (${profile.sebiRegistrationNo}).`}
+            {profile.bio || `${professionalTypeLabel(profile.professionalType)} (${profile.sebiRegistrationNo}).`}
           </p>
         </div>
         <AdvisorActions
@@ -141,8 +149,18 @@ export default async function AdvisorDetailView({
               <input className="input" value={advisor.fullName} readOnly />
             </div>
             <div>
-              <p className="metric-label">SEBI ID</p>
-              <input className="input" value={profile.sebiRegistrationNo} readOnly />
+              <p className="metric-label">{registrationCaption(profile.professionalType, professionalDetails)}</p>
+              <input
+                className="input"
+                value={profile.professionalType === "finance_creator"
+                  ? "Social profile links are shown below"
+                  : profile.sebiRegistrationNo}
+                readOnly
+              />
+            </div>
+            <div>
+              <p className="metric-label">Professional Type</p>
+              <input className="input" value={professionalTypeLabel(profile.professionalType)} readOnly />
             </div>
             <div>
               <p className="metric-label">Email</p>
@@ -163,6 +181,26 @@ export default async function AdvisorDetailView({
             <div>
               <p className="metric-label">Joined</p>
               <input className="input" value={advisor.createdAt.toLocaleDateString()} readOnly />
+            </div>
+          </div>
+
+          <div style={{ marginTop: 16, padding: 12, borderRadius: 10, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)" }}>
+            <strong style={{ fontSize: 13 }}>Manual verification required</strong>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--text-muted)" }}>
+              Format checks do not confirm authenticity. Verify the registration and submitted entity / social details against official records before approval.
+            </p>
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <h4 style={{ margin: "0 0 10px" }}>Submitted registration details</h4>
+            <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {Object.entries(professionalDetails).map(([key, value]) => (
+                <div key={key}>
+                  <p className="metric-label">
+                    {key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase())}
+                  </p>
+                  <input className="input" value={value} readOnly />
+                </div>
+              ))}
             </div>
           </div>
 

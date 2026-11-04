@@ -104,6 +104,7 @@ export default function NewPostPage() {
   // Map the UI choices to the backend audience value.
   const audience: Audience =
     audienceTop === "public" ? "public" : shareAll ? "subscribers" : "custom";
+  const isTradePost = Boolean(entryMin || entryMax || targetPrice || stopLossPrice);
 
   const onChartUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -126,6 +127,11 @@ export default function NewPostPage() {
 
   const doSubmit = async (asDraft: boolean) => {
     setError("");
+
+    if (isTradePost && disclaimer.trim().length < 20) {
+      setError("Trade calls need a disclaimer of at least 20 characters.");
+      return;
+    }
 
     if (!asDraft) {
       if (postAccessType === "paid" && (!unlockPrice || Number(unlockPrice) <= 0)) {
@@ -171,7 +177,7 @@ export default function NewPostPage() {
           imageUrls: chartImages.length ? chartImages : undefined,
           targetPrice: targetPrice ? Number(targetPrice) : undefined,
           stopLossPrice: stopLossPrice ? Number(stopLossPrice) : undefined,
-          disclaimer: disclaimer.trim(),
+          disclaimer: disclaimer.trim() || undefined,
           postAccessType,
           unlockPrice: postAccessType === "paid" && unlockPrice ? Number(unlockPrice) : undefined,
           boostTier: boostTier || undefined,
@@ -293,11 +299,11 @@ export default function NewPostPage() {
                 </div>
               </div>
               <div>
-                <label className="metric-label">Recommendation *</label>
+                <label className="metric-label">Market sentiment *</label>
                 <div style={{ display: "flex", gap: 6 }}>
                   {([
-                    { id: "bullish", label: "BUY" },
-                    { id: "bearish", label: "SELL" },
+                    { id: "bullish", label: "Bullish" },
+                    { id: "bearish", label: "Bearish" },
                     { id: "neutral", label: "Neutral" },
                   ] as { id: Sentiment; label: string }[]).map((s) => (
                     <button
@@ -719,18 +725,22 @@ export default function NewPostPage() {
               )}
             </div>
 
-            <label className="metric-label" style={{ marginTop: 16 }}>
-              Disclaimer * <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(required by SEBI)</span>
-            </label>
-            <textarea
-              className="input"
-              value={disclaimer}
-              onChange={(e) => setDisclaimer(e.target.value)}
-              rows={4}
-              required
-              minLength={20}
-              style={{ resize: "vertical", fontSize: 13 }}
-            />
+            {isTradePost && (
+              <>
+                <label className="metric-label" style={{ marginTop: 16 }}>
+                  Trade-call disclaimer *
+                </label>
+                <textarea
+                  className="input"
+                  value={disclaimer}
+                  onChange={(e) => setDisclaimer(e.target.value)}
+                  rows={4}
+                  required
+                  minLength={20}
+                  style={{ resize: "vertical", fontSize: 13 }}
+                />
+              </>
+            )}
 
             {error && (
               <div
@@ -781,7 +791,7 @@ export default function NewPostPage() {
               <li>Do NOT claim something is "risk-free"</li>
               <li>Do NOT use "insider tip" / "sure shot" language</li>
               <li>Be specific with your reasoning</li>
-              <li>Include a disclaimer (automatic below)</li>
+              <li>Add a disclaimer when including entry, target, or stop-loss details</li>
               <li>Price targets must have context</li>
             </ul>
 

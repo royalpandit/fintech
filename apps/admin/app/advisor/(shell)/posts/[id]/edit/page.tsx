@@ -35,6 +35,9 @@ export default async function EditPostPage({ params }: { params: { id: string } 
         targetPrice: post.targetPrice ? String(post.targetPrice) : "",
         stopLossPrice: post.stopLossPrice ? String(post.stopLossPrice) : "",
         disclaimer: post.disclaimer,
+        isTradePost: Boolean(
+          post.entryPriceMin || post.entryPriceMax || post.targetPrice || post.stopLossPrice,
+        ),
       }}
     />
   );

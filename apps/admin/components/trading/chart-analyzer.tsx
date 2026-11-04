@@ -107,7 +107,7 @@ export default function ChartAnalyzer({
   token: string;
   exchange: string;
 }) {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
 
@@ -135,8 +135,9 @@ export default function ChartAnalyzer({
   }, [token, exchange]);
 
   useEffect(() => {
-    run();
-  }, [run]);
+    setError("");
+    setAnalysis(null);
+  }, [token, exchange]);
 
   const tone = analysis ? VERDICT_TONE[analysis.verdict] : null;
 
@@ -162,7 +163,7 @@ export default function ChartAnalyzer({
           disabled={loading}
           style={{ fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", cursor: loading ? "wait" : "pointer" }}
         >
-          {loading ? "Analyzing…" : "Re-analyze"}
+          {loading ? "Analyzing…" : analysis ? "Re-analyze" : "Analyze chart"}
         </button>
       </div>
 
@@ -170,7 +171,9 @@ export default function ChartAnalyzer({
         {error ? (
           <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }}>{error}</p>
         ) : !analysis ? (
-          <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }}>Analyzing the chart…</p>
+          <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }}>
+            Select Analyze chart to load daily candles and calculate technical indicators. This does not use AI queries.
+          </p>
         ) : (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>

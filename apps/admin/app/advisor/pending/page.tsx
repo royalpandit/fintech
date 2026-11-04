@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -5,6 +6,11 @@ import { prisma } from "@/lib/prisma";
 import { requireAuthToken } from "@/lib/auth";
 import ThemeHeaderButton from "@/components/theme/theme-header-button";
 import AdvisorApprovalWatcher from "@/components/advisor-approval-watcher";
+import {
+  professionalDetailsFromUnknown,
+  professionalTypeLabel,
+  registrationCaption,
+} from "@/lib/professional-types";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +28,8 @@ export default async function AdvisorPendingPage() {
       advisorProfile: {
         select: {
           sebiRegistrationNo: true,
+          professionalType: true,
+          verificationDetails: true,
           experienceYears: true,
           verificationStatus: true,
           verifiedAt: true,
@@ -34,6 +42,7 @@ export default async function AdvisorPendingPage() {
 
   if (!user) redirect("/login");
   const profile = user.advisorProfile;
+  const details = professionalDetailsFromUnknown(profile?.verificationDetails);
 
   if (profile?.verificationStatus === "approved") {
     redirect("/advisor/dashboard");
@@ -66,7 +75,7 @@ export default async function AdvisorPendingPage() {
           <p className="theme-muted" style={{ margin: "0 0 24px" }}>
             {profile?.verificationStatus === "rejected"
               ? "Our compliance team reviewed your submission and could not approve it at this time."
-              : "Our compliance team is verifying your SEBI registration. This typically takes 1–2 business days."}
+              : "Our compliance team is manually reviewing your professional registration details. This typically takes 1–2 business days."}
           </p>
 
           <div className="theme-panel-muted" style={{ marginBottom: 20 }}>
@@ -86,8 +95,22 @@ export default async function AdvisorPendingPage() {
               <dd style={{ margin: 0, fontWeight: 500 }}>{user.fullName}</dd>
               <dt className="theme-muted">Email</dt>
               <dd style={{ margin: 0, fontWeight: 500 }}>{user.email}</dd>
-              <dt className="theme-muted">SEBI Registration</dt>
+              <dt className="theme-muted">Professional Type</dt>
+              <dd style={{ margin: 0, fontWeight: 500 }}>
+                {professionalTypeLabel(profile?.professionalType)}
+              </dd>
+              <dt className="theme-muted">
+                {profile ? registrationCaption(profile.professionalType, details) : "Registration"}
+              </dt>
               <dd style={{ margin: 0, fontWeight: 500 }}>{profile?.sebiRegistrationNo ?? "—"}</dd>
+              {Object.entries(details).map(([key, value]) => (
+                <Fragment key={key}>
+                  <dt className="theme-muted">
+                    {key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase())}
+                  </dt>
+                  <dd style={{ margin: 0, fontWeight: 500 }}>{value}</dd>
+                </Fragment>
+              ))}
               <dt className="theme-muted">Experience</dt>
               <dd style={{ margin: 0, fontWeight: 500 }}>
                 {profile?.experienceYears ? `${profile.experienceYears} years` : "—"}

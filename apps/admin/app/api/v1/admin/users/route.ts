@@ -1,12 +1,26 @@
 import { NextRequest } from "next/server";
+import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parseBody } from "@/lib/api-helpers";
 import { requireRole } from "@/lib/auth";
+import {
+  isProfessionalType,
+  validateProfessionalCredentials,
+  type ProfessionalDetails,
+  type ProfessionalType,
+} from "@/lib/professional-types";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[+]?[0-9]{10,15}$/;
-const SEBI_REGEX = /^INA[0-9]{9}$/i;
+const PROFESSIONAL_DETAIL_FIELDS = new Set([
+  "regulatoryType",
+  "entityName",
+  "exchange",
+  "ticker",
+  "instagramUrl",
+  "youtubeUrl",
+]);
 
 type AccountStatusInput = "active" | "pending" | "suspended";
 type RoleInput = "user" | "advisor" | "admin" | "super_admin";
@@ -91,6 +105,9 @@ export async function POST(req: NextRequest) {
     role?: RoleInput;
     status?: AccountStatusInput;
     sebiRegistrationNo?: string;
+    registrationNo?: string;
+    professionalType?: string;
+    details?: Record<string, unknown>;
     experienceYears?: number;
     bio?: string;
     autoApproveAdvisor?: boolean;
@@ -111,10 +128,31 @@ export async function POST(req: NextRequest) {
   if (password.length < 8) return err("Password must be at least 8 characters");
 
   let sebiRegistrationNo: string | null = null;
+  let professionalType: ProfessionalType = "investment_advisor";
+  let verificationDetails: ProfessionalDetails = {};
   if (role === "advisor") {
-    sebiRegistrationNo = (body.sebiRegistrationNo ?? "").trim().toUpperCase();
-    if (!SEBI_REGEX.test(sebiRegistrationNo)) {
-      return err("Valid SEBI registration number is required for advisors");
+    if (body.autoApproveAdvisor === true) {
+      return err("Advisor credentials must go through manual verification.");
+    }
+    if (!isProfessionalType(body.professionalType)) return err("Select a valid professional type.");
+    professionalType = body.professionalType;
+    const rawDetails = body.details && typeof body.details === "object" && !Array.isArray(body.details)
+      ? body.details
+      : {};
+    verificationDetails = Object.fromEntries(
+      Object.entries(rawDetails)
+        .filter(([key, value]) => PROFESSIONAL_DETAIL_FIELDS.has(key) && typeof value === "string")
+        .map(([key, value]) => [key, String(value).trim().slice(0, 200)]),
+    );
+    sebiRegistrationNo = (body.registrationNo ?? body.sebiRegistrationNo ?? "").trim().toUpperCase();
+    const credentialError = validateProfessionalCredentials(
+      professionalType,
+      sebiRegistrationNo,
+      verificationDetails,
+    );
+    if (credentialError) return err(credentialError);
+    if (professionalType === "finance_creator") {
+      sebiRegistrationNo = `CREATOR-${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
     }
   }
 
@@ -145,12 +183,10 @@ export async function POST(req: NextRequest) {
       where: { sebiRegistrationNo },
       select: { id: true },
     });
-    if (sebiExists) return err("SEBI registration number already in use", 409);
+    if (sebiExists) return err("Registration identifier already in use", 409);
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const autoApprove = role === "advisor" && body.autoApproveAdvisor === true;
-
   const user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
       data: {
@@ -181,9 +217,9 @@ export async function POST(req: NextRequest) {
           sebiRegistrationNo,
           experienceYears: typeof body.experienceYears === "number" ? body.experienceYears : null,
           bio: body.bio?.trim() || null,
-          verificationStatus: autoApprove ? "approved" : "pending",
-          verifiedByAdminId: autoApprove ? auth.userId : null,
-          verifiedAt: autoApprove ? new Date() : null,
+          professionalType,
+          verificationDetails,
+          verificationStatus: "pending",
         },
       });
     }
@@ -195,7 +231,7 @@ export async function POST(req: NextRequest) {
         module: "users",
         targetKind: "user",
         targetId: created.id,
-        payload: { role, status, autoApproveAdvisor: autoApprove } as any,
+        payload: { role, status, professionalType } as any,
       },
     });
 

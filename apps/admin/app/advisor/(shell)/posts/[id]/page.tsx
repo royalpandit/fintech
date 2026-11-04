@@ -46,6 +46,9 @@ export default async function AdvisorPostDetailPage({ params }: { params: { id: 
   });
 
   const isEditable = post.complianceStatus !== "approved";
+  const isTradePost = Boolean(
+    post.entryPriceMin || post.entryPriceMax || post.targetPrice || post.stopLossPrice,
+  );
 
   return (
     <section>
@@ -167,7 +170,7 @@ export default async function AdvisorPostDetailPage({ params }: { params: { id: 
             </div>
           )}
 
-          {post.disclaimer && (
+          {isTradePost && post.disclaimer && (
             <p
               style={{
                 marginTop: 16,

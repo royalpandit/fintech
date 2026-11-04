@@ -5,45 +5,19 @@ import { useRouter } from "next/navigation";
 import PasswordField from "@/components/auth/password-field";
 import AltLoginMethods from "@/components/auth/alt-login-methods";
 import AuthSplitLayout from "@/components/auth/auth-split-layout";
-import { PROFESSIONAL_TYPES, type ProfessionalType } from "@/lib/professional-types";
+import {
+  PROFESSIONAL_TYPES,
+  REGULATED_REGISTRATION_TYPES,
+  registrationFieldLabel,
+  registrationFieldPlaceholder,
+  validateProfessionalCredentials,
+  type ProfessionalType,
+} from "@/lib/professional-types";
 import { normalizeIndianMobile } from "@/lib/phone";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Role = "user" | "advisor";
-
-// Group 1 — regulated professionals/entities: a registration number is MANDATORY.
-// The placeholder hints the expected format per profession.
-const GROUP1_PLACEHOLDER: Partial<Record<ProfessionalType, string>> = {
-  research_analyst: "INH000001234",
-  investment_advisor: "INA000012345",
-  portfolio_manager: "INP000001234",
-  advisory_firm: "INH… / INA…",
-  mutual_fund_distributor: "ARN-123456",
-};
-const GROUP1 = new Set<ProfessionalType>([
-  "research_analyst",
-  "investment_advisor",
-  "portfolio_manager",
-  "advisory_firm",
-  "mutual_fund_distributor",
-]);
-
-// Group 2 — no individual registration number; ask for identifying details instead.
-type AltField = { key: string; label: string; placeholder: string; optional?: boolean };
-const GROUP2_FIELDS: Partial<Record<ProfessionalType, AltField[]>> = {
-  wealth_manager: [{ key: "companyName", label: "Company Name", placeholder: "Your firm / company" }],
-  stock_broker: [
-    { key: "brokerName", label: "Broker Name", placeholder: "e.g. Zerodha, Angel One" },
-    { key: "employeeId", label: "Employee ID (optional)", placeholder: "Optional", optional: true },
-  ],
-  finance_creator: [{ key: "socialHandle", label: "Social Media Handle", placeholder: "@yourhandle or channel link" }],
-  listed_company: [
-    { key: "companyName", label: "Company Name", placeholder: "Registered company name" },
-    { key: "symbol", label: "NSE / BSE Symbol", placeholder: "e.g. ZENITH" },
-  ],
-  financial_platform: [{ key: "platformName", label: "Platform Name", placeholder: "Your platform / product name" }],
-};
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -54,15 +28,13 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [sebi, setSebi] = useState("");
+  const [registrationNo, setRegistrationNo] = useState("");
   const [details, setDetails] = useState<Record<string, string>>({});
   const [experienceYears, setExperienceYears] = useState("");
   const [bio, setBio] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const isGroup1 = GROUP1.has(professionalType);
-  const altFields = GROUP2_FIELDS[professionalType] ?? [];
   const setDetail = (k: string, v: string) => setDetails((d) => ({ ...d, [k]: v }));
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -94,6 +66,13 @@ export default function RegisterPage() {
       setError("Passwords do not match");
       return;
     }
+    if (role === "advisor") {
+      const credentialError = validateProfessionalCredentials(professionalType, registrationNo, details);
+      if (credentialError) {
+        setError(credentialError);
+        return;
+      }
+    }
 
     setLoading(true);
     try {
@@ -109,9 +88,10 @@ export default function RegisterPage() {
           ...(role === "advisor"
             ? {
                 professionalType,
-                ...(isGroup1
-                  ? { sebiRegistrationNo: sebi.trim().toUpperCase() }
-                  : { details }),
+                registrationNo: registrationNo.trim().toUpperCase(),
+                details: Object.fromEntries(
+                  Object.entries(details).map(([key, value]) => [key, value.trim()]),
+                ),
                 experienceYears: experienceYears ? Number(experienceYears) : undefined,
                 bio: bio.trim() || undefined,
               }
@@ -283,40 +263,123 @@ export default function RegisterPage() {
                 ))}
               </select>
 
-              {isGroup1 ? (
+              {(professionalType === "advisory_firm" ||
+                professionalType === "wealth_manager" ||
+                professionalType === "financial_platform" ||
+                professionalType === "listed_company") && (
+                <>
+                  <label className="theme-label" htmlFor="register-entity-name">
+                    Registered Company / Entity Name
+                  </label>
+                  <input
+                    id="register-entity-name"
+                    className="theme-input"
+                    value={details.entityName ?? ""}
+                    onChange={(e) => setDetail("entityName", e.target.value)}
+                    required
+                    style={{ marginBottom: 16 }}
+                  />
+                </>
+              )}
+
+              {(professionalType === "advisory_firm" || professionalType === "wealth_manager") && (
+                <>
+                  <label className="theme-label" htmlFor="register-regulatory-type">
+                    Registration category
+                  </label>
+                  <select
+                    id="register-regulatory-type"
+                    className="theme-input"
+                    value={details.regulatoryType ?? ""}
+                    onChange={(e) => setDetail("regulatoryType", e.target.value)}
+                    required
+                    style={{ marginBottom: 16 }}
+                  >
+                    <option value="">Select registration category</option>
+                    {REGULATED_REGISTRATION_TYPES.map((item) => (
+                      <option key={item.value} value={item.value}>{item.label}</option>
+                    ))}
+                  </select>
+                </>
+              )}
+
+              {professionalType !== "finance_creator" && (
                 <>
                   <label className="theme-label" htmlFor="register-reg">
-                    Registration No.
+                    {registrationFieldLabel(professionalType, details)}
                   </label>
                   <input
                     id="register-reg"
                     className="theme-input"
                     type="text"
-                    value={sebi}
-                    onChange={(e) => setSebi(e.target.value.toUpperCase())}
-                    placeholder={GROUP1_PLACEHOLDER[professionalType] ?? "Registration number"}
+                    value={registrationNo}
+                    onChange={(e) => setRegistrationNo(e.target.value.toUpperCase())}
+                    placeholder={registrationFieldPlaceholder(professionalType, details)}
+                    disabled={
+                      (professionalType === "advisory_firm" || professionalType === "wealth_manager") &&
+                      !details.regulatoryType
+                    }
                     required
                     style={{ marginBottom: 16 }}
                   />
                 </>
-              ) : (
-                altFields.map((f) => (
-                  <div key={f.key}>
-                    <label className="theme-label" htmlFor={`register-${f.key}`}>
-                      {f.label}
-                    </label>
-                    <input
-                      id={`register-${f.key}`}
+              )}
+
+              {professionalType === "listed_company" && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div>
+                    <label className="theme-label" htmlFor="register-exchange">Exchange</label>
+                    <select
+                      id="register-exchange"
                       className="theme-input"
-                      type="text"
-                      value={details[f.key] ?? ""}
-                      onChange={(e) => setDetail(f.key, e.target.value)}
-                      placeholder={f.placeholder}
-                      required={!f.optional}
-                      style={{ marginBottom: 16 }}
+                      value={details.exchange ?? ""}
+                      onChange={(e) => setDetail("exchange", e.target.value)}
+                      required
+                    >
+                      <option value="">Select</option>
+                      <option value="NSE">NSE</option>
+                      <option value="BSE">BSE</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="theme-label" htmlFor="register-ticker">Exchange ticker</label>
+                    <input
+                      id="register-ticker"
+                      className="theme-input"
+                      value={details.ticker ?? ""}
+                      onChange={(e) => setDetail("ticker", e.target.value.toUpperCase())}
+                      placeholder="e.g. INFY"
+                      required
                     />
                   </div>
-                ))
+                </div>
+              )}
+
+              {professionalType === "finance_creator" && (
+                <>
+                  <label className="theme-label" htmlFor="register-instagram">Instagram profile URL</label>
+                  <input
+                    id="register-instagram"
+                    className="theme-input"
+                    type="url"
+                    value={details.instagramUrl ?? ""}
+                    onChange={(e) => setDetail("instagramUrl", e.target.value)}
+                    placeholder="https://www.instagram.com/yourprofile"
+                    required
+                    style={{ marginBottom: 16 }}
+                  />
+                  <label className="theme-label" htmlFor="register-youtube">YouTube profile URL</label>
+                  <input
+                    id="register-youtube"
+                    className="theme-input"
+                    type="url"
+                    value={details.youtubeUrl ?? ""}
+                    onChange={(e) => setDetail("youtubeUrl", e.target.value)}
+                    placeholder="https://www.youtube.com/@yourchannel"
+                    required
+                    style={{ marginBottom: 16 }}
+                  />
+                </>
               )}
 
               <label className="theme-label" htmlFor="register-exp">
@@ -349,7 +412,8 @@ export default function RegisterPage() {
 
               <p className="theme-muted" style={{ margin: 0, fontSize: 12 }}>
                 Your account will be created as <strong>Pending Verification</strong>. An admin will
-                review your details before your professional capabilities are enabled.
+                manually check your registration and details against official records before approving
+                your profile. Matching the expected format alone does not verify a registration.
               </p>
             </div>
           )}

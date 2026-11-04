@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * The merged feed — advisor analysis and community posts in one stream,
- * follow-first then recency. Replaces the three separate tab feeds.
+ * ordered globally by recency. Following/discover filters restrict authors.
  *
  * Public: guests get the discover half (there is nothing to follow), which is
  * what the feed page already showed them.

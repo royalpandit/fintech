@@ -62,8 +62,8 @@ export async function POST(req: NextRequest) {
     unlockPrice?: number;
   }>(req);
 
-  if (!body.title || !body.content || !body.assetType || !body.sentiment || !body.riskLevel || !body.disclaimer) {
-    return err("title, content, assetType, sentiment, riskLevel, disclaimer are required");
+  if (!body.title || !body.content || !body.assetType || !body.sentiment || !body.riskLevel) {
+    return err("title, content, assetType, sentiment, and riskLevel are required");
   }
 
   const postAccessType = parsePostAccessType(body.postAccessType) ?? "free";
@@ -76,6 +76,10 @@ export async function POST(req: NextRequest) {
   const isTradePost =
     (typeof body.targetPrice === "number" && body.targetPrice > 0) ||
     (typeof body.stopLossPrice === "number" && body.stopLossPrice > 0);
+  const disclaimer = typeof body.disclaimer === "string" ? body.disclaimer.trim() : "";
+  if (isTradePost && disclaimer.length < 20) {
+    return err("Trade calls need a disclaimer of at least 20 characters.");
+  }
   if (isTradePost) {
     const profile = await prisma.advisorProfile.findUnique({
       where: { userId },
@@ -101,7 +105,7 @@ export async function POST(req: NextRequest) {
       timeframe: body.timeframe,
       targetPrice: body.targetPrice,
       stopLossPrice: body.stopLossPrice,
-      disclaimer: body.disclaimer,
+      disclaimer,
       complianceStatus: "approved",
       publishedAt: new Date(),
       postAccessType,

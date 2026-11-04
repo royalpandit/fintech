@@ -1,6 +1,7 @@
 import "server-only";
+import { prisma } from "@/lib/prisma";
 import { groqComplete } from "@/lib/groq";
-import { HOUSE_RULES } from "@/lib/content-agents/catalogue";
+import { HOUSE_RULES, MASTER_RULES } from "@/lib/content-agents/catalogue";
 import { buildContext, packForAgent } from "@/lib/content-agents/context";
 
 /**
@@ -41,6 +42,19 @@ function parseDraft(raw: string): Omit<DraftPost, "grounded"> {
 
   const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fence) text = fence[1]!.trim();
+
+  /*
+   * The brief's own refusal, taken literally.
+   *
+   * It tells the writer to output `NO POST` when nothing material is verified,
+   * and the house rules ask for that as JSON so the sweep can tell a decline
+   * from a post. Some runs follow the brief instead and return the bare words —
+   * which parsed as a broken response and was recorded as a failure, making a
+   * correct refusal look like an outage. Both forms mean the same thing.
+   */
+  if (/^\W*no\s*post\b/i.test(text) && text.length < 200) {
+    throw new SkipRun("no material story today");
+  }
 
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
@@ -128,6 +142,44 @@ function istNow(): string {
   });
 }
 
+/*
+ * What this desk has already published.
+ *
+ * The brief's second run rule: "Run 2 ka story / stock / asset / hook / format
+ * Run 1 se alag ho." The writer has no memory between runs, so the only way it
+ * can honour that is to be shown what it said last time. Titles and tickers are
+ * enough — they carry the story and the hook, which are the two things that may
+ * not repeat.
+ *
+ * A failure here is not a reason to skip the slot: an unavoidably repetitive
+ * post is worse than nothing, but a missing post is worse than a risk of one.
+ */
+async function recentlyPublished(agent: {
+  botUserId: number;
+  target: "market_post" | "community_post";
+}): Promise<string[]> {
+  try {
+    if (agent.target === "market_post") {
+      const rows = await prisma.marketPost.findMany({
+        where: { advisorUserId: agent.botUserId },
+        orderBy: { id: "desc" },
+        take: 6,
+        select: { title: true, marketSymbol: true },
+      });
+      return rows.map(r => (r.marketSymbol ? `${r.title}  [${r.marketSymbol}]` : r.title));
+    }
+    const rows = await prisma.communityPost.findMany({
+      where: { userId: agent.botUserId },
+      orderBy: { id: "desc" },
+      take: 6,
+      select: { title: true },
+    });
+    return rows.map(r => r.title ?? "").filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 export async function generateDraft(agent: {
   agentNo: number;
   name: string;
@@ -135,9 +187,11 @@ export async function generateDraft(agent: {
   model: string;
   temperature: number;
   category: string;
+  botUserId: number;
+  target: "market_post" | "community_post";
 }): Promise<DraftPost> {
   const pack = packForAgent(agent.agentNo, agent.category);
-  const facts = await buildContext(pack);
+  const [facts, recent] = await Promise.all([buildContext(pack), recentlyPublished(agent)]);
 
   // A pack that needs figures and could not get them. Caller decides; for a
   // market post that means no post rather than an invented one.
@@ -161,14 +215,74 @@ export async function generateDraft(agent: {
       facts,
       "",
     );
+  } else {
+    /*
+     * The desks that need no figures, told so explicitly.
+     *
+     * Compounding, tax, diversification, psychology: their value is arithmetic
+     * and principle, and "none" is the right pack for them. But the house rules
+     * say the data block is the only source of fact, and with no block at all a
+     * writer reads that as having nothing — Personal Finance Mistake declined a
+     * slot with "no verified data available". So the absence is named rather
+     * than left to inference, along with the one rule that still binds: an
+     * illustration may be invented, a market fact may not.
+     */
+    parts.push(
+      "",
+      "NO DATA BLOCK TODAY — your beat does not need one, so this is not a reason",
+      "to decline. Write from financial principles and arithmetic you can verify",
+      "yourself, and work the numbers correctly.",
+      "Any figure you use must be an explicitly labelled illustration — \"maan lo",
+      "12% annual return\", \"₹10,000 monthly SIP\" — and never a claim about what",
+      "the market, a stock, a fund, a rate or a tax rule currently is. No current",
+      "price, index level, flow, yield or event. Those you genuinely do not have.",
+      "",
+    );
   }
-  parts.push(`Write today's post as "${agent.name}".`);
+  if (recent.length) {
+    parts.push(
+      "YOUR RECENT POSTS — do not repeat any of these stories, stocks, hooks or formats:",
+      ...recent.map(t => `  • ${t}`),
+      "",
+    );
+  }
+
+  /*
+   * The beat is named as a brief, not as a byline.
+   *
+   * It used to read 'Write today's post as "Pre-Market Master"', and the brief
+   * now forbids any desk label reaching the post — a writer told to post AS a
+   * name will sign with it. The account's display name is a person's, set in
+   * personas.ts, and the post itself is written by a retail investor with no
+   * title.
+   */
+  parts.push(
+    `Your beat for this post: ${agent.name}. That is a brief for you, not a name`,
+    "to use — it must not appear anywhere in the post. Write one post now.",
+  );
 
   const raw = await groqComplete({
     model: agent.model,
-    systemPrompt: `${agent.systemPrompt}\n\n${HOUSE_RULES}`,
+    /*
+     * Master rules, then the desk's own block, then the house rules — in the
+     * brief's own order of precedence, with the platform's overrides last so
+     * they are the final word on the two places the brief cannot be followed
+     * literally (live search, and bold in a plain-text feed).
+     */
+    systemPrompt: `${MASTER_RULES}\n\n---\n\nYOUR OWN BRIEF — the master rules above win on any conflict:\n\n${agent.systemPrompt}\n\n---\n\n${HOUSE_RULES}`,
     userMessage: parts.join("\n"),
     temperature: agent.temperature,
+    /*
+     * Headroom for the thinking, not for the post.
+     *
+     * These models reason before answering and the reasoning is billed against
+     * max_tokens, so a 120-word post can spend 1,400 tokens getting there. At
+     * the 1,600 default the Compounding desk ran out mid-sentence and the run
+     * failed on a ceiling rather than on anything wrong with the draft. Billing
+     * is by tokens actually used, so a higher ceiling costs nothing on the runs
+     * that do not need it.
+     */
+    maxTokens: 2400,
     signal: AbortSignal.timeout(60_000),
   });
 

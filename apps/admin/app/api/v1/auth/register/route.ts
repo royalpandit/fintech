@@ -4,31 +4,23 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { err, parseBody } from "@/lib/api-helpers";
 import { createSession, signAccessToken } from "@/lib/auth";
-import { isProfessionalType, type ProfessionalType } from "@/lib/professional-types";
+import {
+  isProfessionalType,
+  validateProfessionalCredentials,
+  type ProfessionalDetails,
+  type ProfessionalType,
+} from "@/lib/professional-types";
 import { normalizeIndianMobile } from "@/lib/phone";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// Generic registration / licence / ARN / member-code format — covers every
-// professional type (SEBI INA/INH/INP, AMFI ARN, broker codes, platform IDs).
-const REG_NO_REGEX = /^[A-Z0-9][A-Z0-9-]{4,39}$/;
-
-// Group 1 — regulated professionals/entities: a registration number is required.
-// Group 2 (everything else): no individual registration — we generate a unique
-// internal id and keep the identifying details the user supplied.
-const GROUP1_TYPES = new Set<ProfessionalType>([
-  "research_analyst",
-  "investment_advisor",
-  "portfolio_manager",
-  "advisory_firm",
-  "mutual_fund_distributor",
+const PROFESSIONAL_DETAIL_FIELDS = new Set([
+  "regulatoryType",
+  "entityName",
+  "exchange",
+  "ticker",
+  "instagramUrl",
+  "youtubeUrl",
 ]);
-const GROUP2_PREFIX: Partial<Record<ProfessionalType, string>> = {
-  wealth_manager: "WEALTH",
-  stock_broker: "BROKER",
-  finance_creator: "CREATOR",
-  listed_company: "LISTCO",
-  financial_platform: "PLATFORM",
-};
 
 type RegisterBody = {
   fullName?: string;
@@ -40,7 +32,7 @@ type RegisterBody = {
   professionalType?: string;
   sebiRegistrationNo?: string;
   registrationNo?: string;
-  details?: Record<string, string>;
+  details?: Record<string, unknown>;
   experienceYears?: number;
   bio?: string;
 };
@@ -117,30 +109,35 @@ export async function POST(req: NextRequest) {
 
     let sebiRegistrationNo: string | null = null;
     let professionalType: ProfessionalType = "investment_advisor";
-    let verificationDetails: Record<string, string> | null = null;
+    let verificationDetails: ProfessionalDetails | null = null;
     if (role === "advisor") {
-      professionalType = isProfessionalType(body.professionalType)
-        ? body.professionalType
-        : "investment_advisor";
+      if (!isProfessionalType(body.professionalType)) {
+        return err("Select a valid professional type.");
+      }
+      professionalType = body.professionalType;
 
-      if (GROUP1_TYPES.has(professionalType)) {
-        sebiRegistrationNo = (body.sebiRegistrationNo ?? body.registrationNo ?? "").trim().toUpperCase();
-        if (!REG_NO_REGEX.test(sebiRegistrationNo)) {
-          warn("rejected: invalid registration number");
-          return err("A valid registration / licence / ARN number is required");
-        }
-      } else {
-        // No individual registration number — generate a unique internal id and
-        // keep the identifying details the user provided.
-        const prefix = GROUP2_PREFIX[professionalType] ?? "PRO";
-        sebiRegistrationNo = `${prefix}-${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
-        if (body.details && typeof body.details === "object") {
-          verificationDetails = Object.fromEntries(
-            Object.entries(body.details)
-              .filter(([, v]) => v != null && String(v).trim() !== "")
-              .map(([k, v]) => [k, String(v).slice(0, 200)]),
-          );
-        }
+      const rawDetails = body.details && typeof body.details === "object" && !Array.isArray(body.details)
+        ? body.details
+        : {};
+      verificationDetails = Object.fromEntries(
+        Object.entries(rawDetails)
+          .filter(([key, value]) => PROFESSIONAL_DETAIL_FIELDS.has(key) && typeof value === "string")
+          .map(([key, value]) => [key, String(value).trim().slice(0, 200)]),
+      );
+      sebiRegistrationNo = (body.registrationNo ?? body.sebiRegistrationNo ?? "").trim().toUpperCase();
+
+      const credentialError = validateProfessionalCredentials(
+        professionalType,
+        sebiRegistrationNo,
+        verificationDetails,
+      );
+      if (credentialError) {
+        warn("rejected: invalid professional credentials", { professionalType });
+        return err(credentialError);
+      }
+
+      if (professionalType === "finance_creator") {
+        sebiRegistrationNo = `CREATOR-${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
       }
     }
     log("field validation passed", { role, professionalType });
