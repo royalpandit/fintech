@@ -11,6 +11,30 @@ import {
 
 export const dynamic = "force-dynamic";
 
+/**
+ * What to tell the trader when an order does not go through.
+ *
+ * Most failures here are worth repeating word for word — insufficient balance,
+ * a price that could not be fetched, a quantity that makes no sense. The
+ * database's are not: a column that would not take an NSE option identifier
+ * reached the order ticket as "Invalid `prisma.paperOrder.create()` invocation:
+ * The provided value for the column is too long for the column's type. Column:
+ * (not available)", which tells the person nothing they can act on and tells
+ * whoever has to fix it nothing either, because it was never logged.
+ */
+function orderFailureMessage(e: unknown): string {
+  const message = e instanceof Error ? e.message : "Order failed";
+  const code = (e as { code?: unknown })?.code;
+  const fromDatabase =
+    (typeof code === "string" && /^P\d/.test(code)) || message.includes("prisma.");
+
+  if (fromDatabase) {
+    console.error("[paper-order] database rejected the order:", message);
+    return "Could not place this order right now. Please try again.";
+  }
+  return message;
+}
+
 /** GET — order book. POST — place order. PATCH — match pending with live quotes. */
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req);
@@ -103,7 +127,7 @@ export async function POST(req: NextRequest) {
       new_balance: wallet ? Number(wallet.balance) : null,
     });
   } catch (e) {
-    const reason = e instanceof Error ? e.message : "Order failed";
+    const reason = orderFailureMessage(e);
     // A rejected order is exactly the case the user needs telling about — this
     // is how every paper order silently failed before.
     await notifyPaperOrder({

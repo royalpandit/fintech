@@ -867,7 +867,9 @@ model CommunityPostSymbol {
   symbol        String   @db.VarChar(50)
   tradingSymbol String?  @map("trading_symbol") @db.VarChar(80)
   exchange      String?  @db.VarChar(16)
-  token         String?  @db.VarChar(32)
+  /// 64 for the same reason as PaperOrder.token: an NSE option identifier is a
+  /// 34-character string.
+  token         String?  @db.VarChar(64)
   sortOrder     Int      @default(0) @map("sort_order")
   createdAt     DateTime @default(now()) @map("created_at")
 
@@ -1283,7 +1285,11 @@ model PaperOrder {
   userId         Int              @map("user_id")
   symbol         String           @db.VarChar(120)
   tradingSymbol  String?          @map("trading_symbol") @db.VarChar(200)
-  token          String?          @db.VarChar(32)
+  /// 64, not 32: NSE identifies an option by a string rather than a number, and
+  /// OPTSTKBAJFINANCE23-11-2026CE970.00 is 34 characters. At 32 an index option
+  /// fitted and a stock option did not, so the order ticket failed on the
+  /// contract and not on anything the user had done.
+  token          String?          @db.VarChar(64)
   exchange       String?          @db.VarChar(16)
   side           TradeSide
   orderType      PaperOrderType   @map("order_type")
@@ -1852,7 +1858,9 @@ model WatchlistItem {
   instrumentKey  String    @map("instrument_key") @db.VarChar(80)
   displayName    String?   @map("display_name") @db.VarChar(120)
   tradingSymbol  String?   @map("trading_symbol") @db.VarChar(80)
-  token          String?   @db.VarChar(32)
+  /// 64 for the same reason as PaperOrder.token: an NSE option identifier is a
+  /// 34-character string.
+  token          String?   @db.VarChar(64)
   exchange       String?   @db.VarChar(16)
   instrumentType String?   @map("instrument_type") @db.VarChar(16)
   assetType      AssetType @default(equity) @map("asset_type")
