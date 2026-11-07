@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useThemeVersion } from "@/lib/use-theme-version";
 import type { Candle } from "@/lib/angelone-types";
 import {
   nseChartLocalization,
+  nseChartRangeLabel,
   nseChartTickMarkFormatter,
   parseCandleTimestampToUnix,
 } from "@/lib/nse-market-time";
@@ -455,6 +456,10 @@ export default function ChartWidget({
   const hasCustomOsc = customOscIndicators.length > 0;
   const hasLowerPanes = lowerPaneIds.length > 0 || hasCustomOsc;
 
+  // The dates on screen, printed in the corner. The axis can only date a tick
+  // that lands on a day boundary, and the terminal opens on 5-minute candles.
+  const [rangeLabel, setRangeLabel] = useState("");
+
   const containerRef  = useRef<HTMLDivElement>(null);
   const mainPaneWrapRef = useRef<HTMLDivElement>(null);
   const mainPaneRef   = useRef<HTMLDivElement>(null);
@@ -637,10 +642,23 @@ export default function ChartWidget({
         rightPriceScale: { borderColor: border },
         timeScale: {
           borderColor: border,
-          timeVisible: !hasLowerPanes,
+          /*
+           * On, always.
+           *
+           * This read `!hasLowerPanes`, which looks like an attempt to hide the
+           * main chart's axis once an indicator pane carries one — but
+           * timeVisible does not hide an axis, it drops the time from its
+           * labels. So adding an indicator silently coarsened every label on an
+           * intraday chart. Hiding the duplicate axis is done below, where it
+           * belongs.
+           */
+          timeVisible: true,
           secondsVisible: false,
           rightOffset: 8,
           tickMarkFormatter: nseChartTickMarkFormatter,
+          // Only the bottom-most pane shows the axis; the panes below override
+          // this. Stacked charts otherwise repeat the same dates three times.
+          visible: paneIds.length === 0 && !customPane,
         },
         handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
         handleScale: { mouseWheel: true, pinch: true },
@@ -765,7 +783,9 @@ export default function ChartWidget({
           ...chartOpts,
           timeScale: {
             ...chartOpts.timeScale,
-            visible: paneDef.pane === paneIds[paneIds.length - 1],
+            // The custom oscillator renders below these, so it takes the axis
+            // when it is present.
+            visible: !customPane && paneDef.pane === paneIds[paneIds.length - 1],
           },
         }) as unknown as ChartObj;
         lowerChartRefs.current.set(paneDef.pane, paneChart);
@@ -781,7 +801,8 @@ export default function ChartWidget({
           width: w,
           height: paneH,
           ...chartOpts,
-          timeScale: { ...chartOpts.timeScale, visible: paneIds.length === 0 },
+          // Bottom-most pane in the stack, so this one always carries the axis.
+          timeScale: { ...chartOpts.timeScale, visible: true },
         }) as unknown as ChartObj;
         lowerChartRefs.current.set("custom", oscChart);
         for (const ci of customOscIndicators) {
@@ -804,6 +825,29 @@ export default function ChartWidget({
       bindTimeScales(chart, lowerCharts);
       applyRecentViewport(chart, candles.length, visibleBarsRef.current);
       prevBarCountRef.current = candles.length;
+
+      /*
+       * Keep the corner date in step with what is actually on screen.
+       *
+       * The visible range is logical — fractional bar indices, and it runs past
+       * both ends into the empty margins — so it is clamped to real candles
+       * before either end is read. No unsubscribe: the chart is removed whole in
+       * this effect's cleanup and takes its listeners with it.
+       */
+      const refreshRangeLabel = () => {
+        try {
+          const r = chart.timeScale().getVisibleLogicalRange?.();
+          if (!r || !candles.length) return setRangeLabel("");
+          const first = candles[Math.min(candles.length - 1, Math.max(0, Math.floor(r.from)))];
+          const last = candles[Math.min(candles.length - 1, Math.max(0, Math.ceil(r.to)))];
+          if (!first || !last) return setRangeLabel("");
+          setRangeLabel(nseChartRangeLabel(candleTime(first), candleTime(last)));
+        } catch {
+          setRangeLabel("");
+        }
+      };
+      chart.timeScale().subscribeVisibleLogicalRangeChange?.(refreshRangeLabel);
+      refreshRangeLabel();
 
       // ── Click handler: H-lines ────────────────────────────────────────────
       chart.subscribeClick((param: { point?: { x: number; y: number }; time?: unknown }) => {
@@ -906,6 +950,21 @@ export default function ChartWidget({
         }}
       >
         <div ref={mainPaneRef} style={{ position: "absolute", inset: 0 }} />
+        {rangeLabel && (
+          // pointerEvents none: the drawing tools own every pixel of the chart,
+          // and a label that swallowed a click would break them in one corner.
+          <div
+            style={{
+              position: "absolute", top: 6, left: 8, zIndex: 2, pointerEvents: "none",
+              padding: "2px 7px", borderRadius: 5,
+              border: "1px solid var(--border)", background: "var(--surface-2)",
+              color: "var(--text-muted)", fontSize: 11, fontWeight: 600,
+              letterSpacing: 0.2, opacity: 0.92, whiteSpace: "nowrap",
+            }}
+          >
+            {rangeLabel}
+          </div>
+        )}
         <ChartDrawingLayer
           activeTool={activeTool}
           chartRef={chartRef as RefObject<{ timeScale: () => TimeScaleForDrawings } | null>}

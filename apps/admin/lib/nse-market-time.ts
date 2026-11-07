@@ -169,36 +169,114 @@ export function nseLiveCandleOpenUnix(
   return istWallToUnixSec(year, month, day, bh, bm);
 }
 
-/** lightweight-charts axis — always label in IST. */
+/** Anything the chart prints, always read in IST rather than the viewer's zone. */
+function istLabel(sec: number, opts: Intl.DateTimeFormatOptions): string {
+  return new Date(sec * 1000).toLocaleString("en-IN", { timeZone: NSE_TIMEZONE, ...opts });
+}
+
+/**
+ * The crosshair's label on the time axis.
+ *
+ * It used to be the time alone, which on a daily, weekly or monthly chart is
+ * the same "00:00" under every bar — the reader could not tell which day they
+ * were pointing at. A bar stamped exactly midnight carries no time worth
+ * printing (that is how Angel One stamps a daily candle), so it shows its date
+ * and nothing else; an intraday bar shows both, because on a one-day view the
+ * date appears nowhere else on the chart.
+ */
 export function nseChartTimeFormatter(time: number): string {
-  return new Date(time * 1000).toLocaleTimeString("en-IN", {
-    timeZone: NSE_TIMEZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
+  const sec = Number(time);
+  if (!Number.isFinite(sec)) return "";
+
+  const p = getIstParts(sec * 1000);
+  if (p.hour === 0 && p.minute === 0) {
+    return istLabel(sec, { day: "numeric", month: "short", year: "numeric" });
+  }
+  return istLabel(sec, {
+    day: "numeric", month: "short",
+    hour: "2-digit", minute: "2-digit", hour12: false,
   });
 }
 
-export function nseChartTickMarkFormatter(time: number): string {
-  const sec = typeof time === "number" ? time : Number(time);
-  const d = new Date(sec * 1000);
-  const p = getIstParts(sec * 1000);
-  const isSessionDay = p.hour === NSE_SESSION_OPEN.hour && p.minute === NSE_SESSION_OPEN.minute;
+/**
+ * The dates currently on screen, for the chart's own label.
+ *
+ * The axis can only date a tick that falls on a day boundary, so an intraday
+ * chart zoomed inside one session has no date anywhere on it — the common case,
+ * since the terminal opens on 5-minute candles. This is what the chart prints
+ * in its corner so the day being read is never a guess: one day in view gives
+ * the weekday and date, several give the span.
+ */
+export function nseChartRangeLabel(fromSec: number, toSec: number): string {
+  if (!Number.isFinite(fromSec) || !Number.isFinite(toSec)) return "";
 
-  if (isSessionDay && p.second === 0) {
-    return d.toLocaleDateString("en-IN", {
-      timeZone: NSE_TIMEZONE,
-      day: "numeric",
-      month: "short",
-    });
+  const a = getIstParts(fromSec * 1000);
+  const b = getIstParts(toSec * 1000);
+
+  if (a.year === b.year && a.month === b.month && a.day === b.day) {
+    // Built in two pieces: en-IN punctuates the one-call version as
+    // "Wed, 4 Nov, 2026", with a comma nobody wants in the middle of a date.
+    const weekday = istLabel(fromSec, { weekday: "short" });
+    const date = istLabel(fromSec, { day: "numeric", month: "short", year: "numeric" });
+    return `${weekday}, ${date}`;
   }
 
-  return d.toLocaleTimeString("en-IN", {
-    timeZone: NSE_TIMEZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  // The year is carried by the right-hand date unless the span crosses one.
+  const left = istLabel(fromSec, a.year === b.year
+    ? { day: "numeric", month: "short" }
+    : { day: "numeric", month: "short", year: "numeric" });
+  const right = istLabel(toSec, { day: "numeric", month: "short", year: "numeric" });
+  return `${left} – ${right}`;
+}
+
+/*
+ * lightweight-charts' TickMarkType, written out rather than imported.
+ *
+ * This module is shared with server code that must not pull in a charting
+ * library, and the enum is four stable numbers: Year, Month, DayOfMonth, Time,
+ * TimeWithSeconds.
+ */
+const TICK_YEAR = 0;
+const TICK_MONTH = 1;
+const TICK_DAY_OF_MONTH = 2;
+const TICK_TIME = 3;
+const TICK_TIME_WITH_SECONDS = 4;
+
+/**
+ * One label on the time axis.
+ *
+ * The chart tells us which boundary each tick is — a year, a month, a day, or a
+ * time within a day — and the label follows that, which is how a date gets onto
+ * the axis at all. The previous version ignored it and printed a date only for
+ * a bar stamped exactly 09:15, the NSE open. That left two charts with no date
+ * anywhere on them: a daily chart from Angel One, whose bars are stamped
+ * midnight, labelled every tick "00:00"; and any intraday chart zoomed into a
+ * single session, where no 09:15 bar is in view and every tick is a time.
+ */
+export function nseChartTickMarkFormatter(time: number, tickMarkType?: number): string {
+  const sec = Number(time);
+  if (!Number.isFinite(sec)) return "";
+
+  switch (tickMarkType) {
+    case TICK_YEAR:
+      return istLabel(sec, { year: "numeric" });
+    case TICK_MONTH:
+      return istLabel(sec, { month: "short" });
+    case TICK_DAY_OF_MONTH:
+      return istLabel(sec, { day: "numeric", month: "short" });
+    case TICK_TIME:
+      return istLabel(sec, { hour: "2-digit", minute: "2-digit", hour12: false });
+    case TICK_TIME_WITH_SECONDS:
+      return istLabel(sec, {
+        hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+      });
+  }
+
+  // Called without a type: date for a midnight-stamped bar, time otherwise.
+  const p = getIstParts(sec * 1000);
+  return p.hour === 0 && p.minute === 0
+    ? istLabel(sec, { day: "numeric", month: "short" })
+    : istLabel(sec, { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 export const nseChartLocalization = {
